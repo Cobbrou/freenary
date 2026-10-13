@@ -7,11 +7,9 @@ export type {
 export { environmentOwns, validateSettings } from "./candidate";
 export type { SetupState } from "./claim";
 export {
-  issueSetupToken,
+  claimForFirstSession,
   markSetupComplete,
   readSetupState,
-  redeemSetupToken,
-  SetupClaimRefused,
 } from "./claim";
 export type {
   Integration,

@@ -1,6 +1,6 @@
 ---
 title: The setup screen
-description: Claim a new instance, then set the bank and email providers from the app instead of the env file.
+description: Become the operator of a new instance, then set the bank and email providers from the app instead of the env file.
 icon: Wrench
 ---
 
@@ -20,67 +20,20 @@ The `.env` file keeps the values the instance needs before it can serve the scre
 | `BETTER_AUTH_SECRET` | It seals what the screen stores, and it signs the session that opens the screen |
 | `BETTER_AUTH_URL`, `CORS_ORIGIN` | The browser reaches the screen over these two origins |
 | `FREENARY_VERSION` | Compose reads it before any container starts |
-| `FREENARY_SETUP_TOKEN` | Optional. It sets the setup token before the first start, so you do not need the log to claim the instance |
 
 Everything the setup screen holds stays out of the file. [Configuration](/docs/self-hosting/configuration) lists every variable, and names the ones the screen owns.
 
-## Claim the instance
+## The first account becomes the operator
 
-The first account that opens `/setup` is not the operator yet. An instance on a public origin is open to anybody who finds it. The claim therefore needs a setup token that only the operator knows.
+The first account that signs in to a new instance becomes its operator. Only the operator can use the setup screen. Every account after it is an ordinary user, and `/setup` tells that user to ask the operator.
 
-<Steps>
+No screen and no endpoint gives the role to a second account. An instance on a public origin is open to anybody who finds it. Create the first account immediately after the first start.
 
-<Step>
-
-### Get the setup link
-
-Each start of an unclaimed instance prints a setup link to the server log:
-
-```bash
-docker compose logs server | grep "setup token"
-```
-
-The line holds the web app origin and the token:
-
-```text
-This instance is unclaimed. Open this link to claim it with its setup token: https://app.example.com/setup#token=s6kSPDviSE5J_r3wgUos1a06mq9Z1qmt
-```
-
-The server makes a new token at each start while the instance is unclaimed. Only the hash of it goes into the database. A restart therefore makes the last link useless. Read the log again after a restart.
-
-The token sits after the `#` in the link. The browser does not send that part to any server. The token therefore stays out of the logs of your reverse proxy. The web app removes it from the address bar when the page opens.
-
-</Step>
-
-<Step>
-
-### Open the link, sign up, then claim
-
-Open the link, and create an account in the usual way. The web app keeps the token while you sign up, then opens `/setup` with the token in the field. Press `Claim`.
-
-You can also open `/setup` directly and type the token.
-
-That account becomes the operator. The server prints no link after the claim, and no second account can take the role.
-
-</Step>
-
-</Steps>
-
-### Choose the token in advance
-
-Set `FREENARY_SETUP_TOKEN` in `.env` to choose the token yourself. Use a random value of 32 or more characters:
-
-```bash
-openssl rand -hex 32
-```
-
-The server then uses that value at each start, and a restart keeps it valid. The log line names the variable in place of the value. The server never prints a secret from the environment. Open `https://app.example.com/setup#token=` followed by your value.
-
-After the claim, the server ignores the variable. You can remove the line from `.env`.
+An instance that already had accounts before this release gives the role to its oldest account.
 
 ## Walk the steps
 
-The wizard runs `Claim`, then one step per integration, then `Done`. Each integration step has two screens. The first screen asks which provider to use. The second screen asks for the credentials of that provider.
+The wizard runs one step per integration, then `Done`. Each integration step has two screens. The first screen asks which provider to use. The second screen asks for the credentials of that provider.
 
 **Every integration step is optional.** Pick `Skip for now` and press `Continue` to go to the next step. When the app holds no provider for that integration, a skip writes nothing. When it holds one, a skip clears it. `Back` returns to the last screen.
 
@@ -119,7 +72,7 @@ After a failed call, the screen also offers `Save anyway`. It stores the values 
 
 ### Review, then press `Finish setup`
 
-The last step shows each integration, the provider in use, and its state: `Configured`, `Incomplete` or `Off`.
+The last step shows one row for each integration. A check mark and the provider name show a configured integration. Otherwise the row shows `Incomplete` or `Off`.
 
 The API server reads its configuration one time, at startup. When you saved a value that the server does not use yet, `Finish setup` restarts the server. The screen then waits, and opens the app when the server is back. When nothing changed, `Finish setup` opens the app at once.
 

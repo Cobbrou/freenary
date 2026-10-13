@@ -52,5 +52,3 @@ export const RATE_LIMIT_DEFAULT = { max: 100, window: 60 };
 export const ACCOUNT_EXISTS_RATE_LIMIT = { max: 20, window: 60 };
 
 export const AI_CHAT_RATE_LIMIT = { max: 30, window: 300 };
-
-export const SETUP_CLAIM_RATE_LIMIT = { max: 5, window: 300 };

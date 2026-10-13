@@ -1,4 +1,4 @@
-import { SETUP_CLAIM_RATE_LIMIT } from "@freenary/auth/policy";
+import prisma from "@freenary/db";
 import type {
   Integration,
   IntegrationField,
@@ -18,7 +18,6 @@ import {
   markSetupComplete,
   readSetupState,
   readStoredSettings,
-  redeemSetupToken,
   settings,
   storedSettingsInForce,
   validateSettings,
@@ -28,11 +27,7 @@ import { ORPCError } from "@orpc/server";
 import { Effect, Option, Result } from "effect";
 import { z } from "zod";
 
-import {
-  operatorProcedure,
-  protectedProcedure,
-  publicProcedure,
-} from "../index";
+import { operatorProcedure, publicProcedure } from "../index";
 import { maskEnvironmentValue } from "../instance/mask";
 import {
   candidateOf,
@@ -42,7 +37,6 @@ import {
   writesOf,
 } from "../instance/merge";
 import { findProbe } from "../instance/probes";
-import { callerBucket, consumeRateLimit } from "../lib/rate-limit";
 
 const RESTART_GRACE_MS = 250;
 
@@ -309,28 +303,6 @@ export const instanceRouter = {
       return { outcome: "verified" as const };
     }),
 
-  claim: protectedProcedure
-    .input(z.object({ token: z.string().min(1) }))
-    .handler(async ({ context, input }) => {
-      await consumeRateLimit(
-        `instance-claim:${callerBucket(context.headers)}`,
-        SETUP_CLAIM_RATE_LIMIT
-      );
-
-      const claimed = await Effect.runPromise(
-        Effect.result(redeemSetupToken(input.token, context.session.user.id))
-      );
-
-      if (Result.isFailure(claimed)) {
-        throw new ORPCError("FORBIDDEN", {
-          message:
-            "The setup token is wrong, or the instance is already claimed.",
-        });
-      }
-
-      return { claimed: true as const };
-    }),
-
   complete: operatorProcedure.handler(async () => {
     await Effect.runPromise(markSetupComplete());
 
@@ -388,5 +360,18 @@ export const instanceRouter = {
       return { outcome: "saved" as const, restartRequired: true };
     }),
 
-  status: publicProcedure.handler(() => Effect.runPromise(readSetupState())),
+  status: publicProcedure.handler(async ({ context }) => {
+    const state = await Effect.runPromise(readSetupState());
+    const userId = context.session?.user.id;
+
+    const account =
+      userId === undefined
+        ? null
+        : await prisma.user.findUnique({
+            select: { role: true },
+            where: { id: userId },
+          });
+
+    return { ...state, isOperator: account?.role === "OPERATOR" };
+  }),
 };

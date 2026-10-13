@@ -8,9 +8,6 @@ import { orpc } from "@/shared/api";
 import { authClient } from "@/shared/auth";
 
 import { waitForAppliedServer } from "../api/wait-for-server";
-import { clearLinkedSetupToken } from "../lib/setup-token-link";
-
-const CLAIM_STEP = "claim";
 
 const ADVANCING_OUTCOMES: ReadonlySet<string> = new Set([
   "saved",
@@ -30,12 +27,11 @@ export const useSetup = () => {
   const [direction, setDirection] = useState<1 | -1>(1);
 
   const status = useQuery(orpc.instance.status.queryOptions());
-
-  const isClaimed = status.data?.claimed ?? false;
+  const isOperator = status.data?.isOperator ?? false;
 
   const configuration = useQuery(
     orpc.instance.describe.queryOptions({
-      enabled: isClaimed && restartPhase === "idle",
+      enabled: isOperator && restartPhase === "idle",
       retry: false,
     })
   );
@@ -43,13 +39,9 @@ export const useSetup = () => {
   const integrationSteps =
     configuration.data?.integrations.map((integration) => integration.id) ?? [];
 
-  const steps = [
-    ...(isClaimed ? [] : [CLAIM_STEP]),
-    ...integrationSteps,
-    FINISH_STEP,
-  ];
+  const steps = [...integrationSteps, FINISH_STEP];
 
-  const stepId = chosenStep ?? steps[0] ?? CLAIM_STEP;
+  const stepId = chosenStep ?? steps[0] ?? FINISH_STEP;
   const stepIndex = Math.max(steps.indexOf(stepId), 0);
 
   const goTo = (next: string, heading: 1 | -1) => {
@@ -83,24 +75,6 @@ export const useSetup = () => {
       queryKey: orpc.instance.describe.queryOptions().queryKey,
     });
   };
-
-  const claim = useMutation(
-    orpc.instance.claim.mutationOptions({
-      onError: () => toast.error(m.setup_claim_error()),
-      onSuccess: async () => {
-        clearLinkedSetupToken();
-        toast.success(m.setup_claim_success());
-
-        await queryClient.invalidateQueries({
-          queryKey: orpc.instance.status.queryOptions().queryKey,
-        });
-
-        await refreshConfiguration();
-        setChosenStep(null);
-        setDirection(1);
-      },
-    })
-  );
 
   const save = useMutation(
     orpc.instance.save.mutationOptions({
@@ -158,15 +132,14 @@ export const useSetup = () => {
 
   return {
     check,
-    claim,
     complete,
     configuration,
     direction,
     handleBack,
     handleNext,
     handleSignOut,
-    isClaimed,
-    isPending: status.isPending || (isClaimed && configuration.isPending),
+    isOperator,
+    isPending: status.isPending || (isOperator && configuration.isPending),
     reconnect,
     restartPhase,
     save,

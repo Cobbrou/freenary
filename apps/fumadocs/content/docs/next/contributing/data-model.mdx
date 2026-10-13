@@ -164,9 +164,9 @@ The `ordinal` column orders a conversation and `createdAt` cannot, because both 
 | Model and table | Key fields | Constraints and notes |
 | --- | --- | --- |
 | `InstanceSetting`, table `instance_setting` | `key` (`@id`), `sealed`, `updatedAt`, `updatedBy?` | One row per environment variable the screen owns. `sealed` is AES-256-GCM ciphertext under a key derived from `BETTER_AUTH_SECRET`, with the row `key` as associated data. `updatedBy` holds a `User.id` and carries no foreign key, so deleting the operator leaves the row |
-| `InstanceSetup`, table `instance_setup` | `id` (`@id`, default `singleton`), `tokenHash?`, `claimedAt?`, `completedAt?`, `createdAt` | At most one row, for the whole setup lifecycle. `tokenHash` is the SHA-256 hex digest of the setup token, printed at start or read from `FREENARY_SETUP_TOKEN`, and the claim clears it. `claimedAt` marks the instance as owned; `completedAt` marks the wizard as finished, which is what stops the web app sending every visitor to `/setup` |
+| `InstanceSetup`, table `instance_setup` | `id` (`@id`, default `singleton`), `claimedAt?`, `completedAt?`, `createdAt` | At most one row, for the whole setup lifecycle. `claimedAt` marks the instance as owned; `completedAt` marks the wizard as finished, which is what stops the web app sending every visitor to `/setup` |
 
-The claim is one `updateMany` on `instance_setup`, matched on the hash and on `claimedAt: null`, inside the transaction that sets `User.role`. That conditional update is the lock. A second caller matches no row and is refused, so two callers cannot both become the operator.
+The claim runs in the better-auth `session.create.after` hook, at each new session. It upserts the row, then runs one `updateMany` on `instance_setup`, matched on `claimedAt: null`, inside the transaction that sets `User.role`. That conditional update is the lock. A second session matches no row, so two accounts cannot both become the operator. The migration that creates the table claims an instance that already has users for its oldest user.
 
 ## Enums
 
@@ -226,7 +226,7 @@ The last column is `isInvestmentAccountType`, a TypeScript lookup in `packages/a
 | Value | Meaning |
 | --- | --- |
 | `MEMBER` | The ordinary account. It reaches its own rows alone |
-| `OPERATOR` | The account that claimed the instance. It opens the setup screen, and it reads no financial row of another user |
+| `OPERATOR` | The first account that signed in to the instance. It opens the setup screen, and it reads no financial row of another user |
 
 One `user.update`, inside the claim transaction, is the only writer of `OPERATOR`. No endpoint writes the value back to `MEMBER`.
 

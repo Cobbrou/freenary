@@ -1,7 +1,6 @@
 import { z } from "zod";
 
 const IPV4_MAPPED_IPV6_PREFIX = /^::ffff:/iu;
-const URL_SAFE_TOKEN = /^[\w-]+$/u;
 const DEFAULT_PORT = 3000;
 
 export const CLASSIFIER_PROTOCOLS = ["llm", "system-one", "zero-shot"] as const;
@@ -218,24 +217,6 @@ export const serverEnvSchema = {
       onError: "Enable Banking needs both of its values.",
       secret: true,
       section: "bank",
-    }),
-  FREENARY_SETUP_TOKEN: z
-    .string()
-    .min(32)
-    .regex(
-      URL_SAFE_TOKEN,
-      "FREENARY_SETUP_TOKEN must use letters, digits, - and _ only"
-    )
-    .optional()
-    .describe(
-      "The setup token that claims an unclaimed instance on the setup screen. Unset, the server makes a new token at each start and prints it in its log."
-    )
-    .meta({
-      example: "choose_a_long_random_value_of_32_or_more_characters",
-      onError:
-        "Under 32 characters, or a character other than a letter, a digit, `-` or `_`, stops the start. After the claim the server ignores the value.",
-      secret: true,
-      section: "core",
     }),
   GOOGLE_CLIENT_ID: z
     .string()

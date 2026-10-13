@@ -15,13 +15,11 @@ import { WizardStepper } from "@/shared/ui/wizard-stepper";
 import { restartDocsUrl, stepLabel } from "../model/labels";
 import type { SaveOutcome } from "../model/outcome";
 import { useSetup } from "../model/use-setup";
-import { ClaimStep } from "./claim-step";
 import { EnvironmentSummary } from "./environment-summary";
 import { FinishStep } from "./finish-step";
 import { ProviderStep } from "./provider-step";
 import { SetupWizardSkeleton } from "./setup-wizard-skeleton";
 
-const CLAIM_STEP = "claim";
 const FINISH_STEP = "finish";
 const SKIP_VARIANT = "disabled";
 
@@ -78,7 +76,7 @@ export const SetupPage = () => {
       );
     }
 
-    if (setup.configuration.isError) {
+    if (!setup.isOperator || setup.configuration.isError) {
       return (
         <Empty>
           <EmptyTitle>{m.setup_not_operator_title()}</EmptyTitle>
@@ -86,15 +84,6 @@ export const SetupPage = () => {
             {m.setup_not_operator_description()}
           </EmptyDescription>
         </Empty>
-      );
-    }
-
-    if (setup.stepId === CLAIM_STEP) {
-      return (
-        <ClaimStep
-          isSubmitting={setup.claim.isPending}
-          onClaim={(token) => setup.claim.mutate({ token })}
-        />
       );
     }
 
@@ -212,7 +201,7 @@ export const SetupPage = () => {
       isPending={setup.isPending}
       skeleton={<SetupWizardSkeleton />}
       stepKey={setup.stepId}
-      stepper={stepper}
+      stepper={setup.isOperator ? stepper : null}
       toolbar={
         <Button onClick={setup.handleSignOut} type="button" variant="ghost">
           {m.account_sign_out()}

@@ -12,14 +12,12 @@ model InstanceSetting {
   @@map("instance_setting")
 }
 
-/// The setup lifecycle of this instance, in one row. `tokenHash` holds the hash
-/// of the token the server prints while the instance is unclaimed, so possession
-/// of the database is not possession of the claim. `claimedAt` is the mutex two
-/// concurrent claims compete for, and `completedAt` is what stops the landing page from
-/// sending everybody to the setup screen.
+/// The setup lifecycle of this instance, in one row. `claimedAt` is the mutex
+/// the first sessions compete for: the account whose sign-in sets it becomes the
+/// operator. `completedAt` is what stops the landing page from sending
+/// everybody to the setup screen.
 model InstanceSetup {
   id          String    @id @default("singleton")
-  tokenHash   String?
   claimedAt   DateTime?
   completedAt DateTime?
   createdAt   DateTime  @default(now())
@@ -28,8 +26,7 @@ model InstanceSetup {
 }
 
 /// OPERATOR configures the instance itself; MEMBER uses it. The first account
-/// to present the setup token becomes the operator, and nothing grants the role
-/// afterwards.
+/// to sign in becomes the operator, and nothing grants the role afterwards.
 enum UserRole {
   MEMBER
   OPERATOR

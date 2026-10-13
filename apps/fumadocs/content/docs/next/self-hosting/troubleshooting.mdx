@@ -381,6 +381,20 @@ The chat route answers with a bare machine code on every failure.
 
 [Assistant](/docs/self-hosting/assistant) covers the endpoints and what each question sends out.
 
+## The wrong account became the operator
+
+**What you see.** Your account opens `/setup` and reads `Only the operator can set up this instance`.
+
+**Why.** Another account signed in to the instance before yours. The first account to sign in becomes the operator, and no screen moves the role.
+
+**The fix.** When you made both accounts, move the role to your account. Put your email address in place of `you@example.com`:
+
+```bash
+docker compose exec -T postgres psql -U postgres -d freenary -c "UPDATE \"user\" SET role = CASE WHEN email = 'you@example.com' THEN 'OPERATOR'::\"UserRole\" ELSE 'MEMBER'::\"UserRole\" END;"
+```
+
+When a stranger made the first account, treat the instance as compromised. Stop it, remove the database volume, and install again before anybody else can reach it. [Security](/docs/self-hosting/security#the-operator) tells more.
+
 ## Every caller shares one rate-limit bucket
 
 **What you see.** Users reach the rate-limit error after one try each. The problem follows the instance, and not one person.

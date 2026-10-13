@@ -188,17 +188,9 @@ The wizard that opens proves the bank provider. It asks for a tax residency, the
 
 <Step>
 
-### Claim the instance
+### Open the setup screen
 
-The account you made is an ordinary user until it claims the instance. Freenary opens `/setup` for it. Read the setup link from the server log:
-
-```bash
-docker compose logs server | grep "setup token"
-```
-
-Open the link, and press `Claim`. That account becomes the operator, and no second account can take the role. An unclaimed instance on a public origin is claimable by anybody who finds it. Do this in the same sitting.
-
-To know the token before the first start, set `FREENARY_SETUP_TOKEN`. [The setup screen](/docs/self-hosting/setup#choose-the-token-in-advance) tells how.
+The account you made is the operator of the instance, because it signed in first. Freenary opens `/setup` for it. An instance on a public origin is open to anybody who finds it. Create that account in the same sitting as the install. [The setup screen](/docs/self-hosting/setup#the-first-account-becomes-the-operator) tells more.
 
 The setup screen is where the bank and email credentials go. [The setup screen](/docs/self-hosting/setup) walks each card and the restart that applies it.
 
@@ -217,7 +209,7 @@ The first sign-up is the moment to decide about email verification. With no emai
 <Card
   title="The setup screen"
   href="/docs/self-hosting/setup"
-  description="Claim the instance, then set the providers from the app."
+  description="Become the operator, then set the providers from the app."
 />
 
 <Card

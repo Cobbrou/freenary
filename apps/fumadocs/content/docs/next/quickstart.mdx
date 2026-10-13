@@ -134,17 +134,11 @@ With no email provider configured, Freenary signs you in at once and opens the o
 
 <Step>
 
-### Claim the instance, then add the credentials
+### Add the credentials
 
-The first account is an ordinary user until it claims the instance. Freenary opens `/setup` for it. Read the setup link from the server log:
+The first account to sign in becomes the operator of this instance. Freenary opens `/setup` for it, and no second account can take the role.
 
-```bash
-docker compose logs server | grep "setup token"
-```
-
-Open the link, and press `Claim`. The link puts the token into the field for you. That account becomes the operator of this instance, and no second account can take the role.
-
-Now go to the **Bank provider** step, pick `Powens`, and press `Continue`. Type the three values from the console, and press `Save and continue`. Freenary calls your Powens domain with the credentials, and saves them when the call succeeds.
+Go to the **Bank provider** step, pick `Powens`, and press `Continue`. Type the three values from the console, and press `Save and continue`. Freenary calls your Powens domain with the credentials, and saves them when the call succeeds.
 
 Go to the last step, and press `Finish setup`. The server restarts to use the credentials, and the page opens the app when the server is back.
 

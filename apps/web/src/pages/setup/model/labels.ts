@@ -1,5 +1,3 @@
-import type { BadgeColor } from "@freenary/ui/components/badge";
-
 import { m } from "@/paraglide/messages.js";
 import { docsUrl } from "@/shared/config";
 
@@ -38,7 +36,6 @@ const STATE_LABELS = {
 
 const STEP_LABELS = {
   banking: m.setup_step_bank,
-  claim: m.setup_step_claim,
   email: m.setup_step_email,
   finish: m.setup_step_finish,
 } satisfies Record<string, Label>;
@@ -58,12 +55,6 @@ const VARIANT_GUIDE_PATHS: Record<string, string> = {
   smtp: "/self-hosting/email#smtp",
 };
 
-const STATE_COLOURS: Record<string, BadgeColor> = {
-  configured: "green",
-  disabled: "gray",
-  incomplete: "amber",
-};
-
 const read = (table: Record<string, Label>, key: string): string =>
   table[key]?.() ?? key;
 
@@ -81,19 +72,11 @@ export const stateLabel = (id: string): string => read(STATE_LABELS, id);
 
 export const stepLabel = (id: string): string => read(STEP_LABELS, id);
 
-export const stateColour = (id: string): BadgeColor =>
-  STATE_COLOURS[id] ?? "gray";
-
-const SETUP_TOKEN_DOCS_PATH = "/self-hosting/setup#get-the-setup-link";
-
 const ENVIRONMENT_DOCS_PATH =
   "/self-hosting/setup#a-value-in-the-environment-wins";
 
 const RESTART_DOCS_PATH =
   "/self-hosting/troubleshooting#the-server-does-not-restart-after-setup";
-
-export const setupTokenDocsUrl = (): string =>
-  `${docsUrl()}${SETUP_TOKEN_DOCS_PATH}`;
 
 export const environmentDocsUrl = (): string =>
   `${docsUrl()}${ENVIRONMENT_DOCS_PATH}`;

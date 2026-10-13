@@ -187,6 +187,7 @@
         "@freenary/db": "workspace:*",
         "@freenary/email": "workspace:*",
         "@freenary/env": "workspace:*",
+        "@freenary/instance-config": "workspace:*",
         "better-auth": "catalog:",
         "dotenv": "catalog:",
         "effect": "catalog:",
