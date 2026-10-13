@@ -6,7 +6,7 @@ import { useState } from "react";
 import { m } from "@/paraglide/messages.js";
 import { WizardStepHeader } from "@/shared/ui/wizard-step-header";
 
-import { variantLabel } from "../model/labels";
+import { variantGuideUrl, variantLabel } from "../model/labels";
 import type { SaveOutcome } from "../model/outcome";
 import { GuideLink } from "./guide-link";
 import { OutcomeNotice } from "./outcome-notice";
@@ -54,6 +54,7 @@ export const ProviderCredentials = ({
   const ArrowLeftIcon = useIcon("arrow-left");
   const [values, setValues] = useState(() => filledValuesOf(variant.fields));
   const provider = variantLabel(variant.id);
+  const guideUrl = variantGuideUrl(variant.id);
 
   const fromServer = variant.fields.filter(isFromServer);
   const editable = variant.fields.filter((field) => !isFromServer(field));
@@ -80,7 +81,11 @@ export const ProviderCredentials = ({
           description={m.setup_credentials_description({ provider })}
           title={m.setup_credentials_title({ provider })}
         />
-        <GuideLink variantId={variant.id} />
+        {guideUrl === null ? null : (
+          <GuideLink href={guideUrl}>
+            {m.setup_variant_guide({ provider })}
+          </GuideLink>
+        )}
       </div>
 
       {fromServer.length > 0 ? (
