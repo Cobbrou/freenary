@@ -142,7 +142,7 @@ new Elysia()
   )
   .get("/", () => "OK")
   .listen(env.PORT, () => {
-    console.log(`Server is running on http://localhost:${env.PORT}`);
+    console.log(`Server is running on ${env.BETTER_AUTH_URL}`);
   });
 
 const setupState = await Effect.runPromise(readSetupState());

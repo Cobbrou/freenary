@@ -32,6 +32,8 @@ The stack needs no `.env` file. The `server` service declares `env_file` with `p
 
 Only `server` loads the root `.env` and the derived values. The `web` service gets `VITE_SERVER_URL` and `SERVER_URL`, which defaults to `http://freenary-server:3000`. A server-rendered page therefore reaches the API over the container network. Only the default network of the stack knows that alias. It therefore never reaches the API of another worktree. The `docs` service gets `DOCS_PORT`, which no code reads.
 
+The `web` and `docs` services also get `DEV_PUBLIC_URL`, their Traefik address. Their dev servers print that address in the logs, not the address inside the container. The `server` service prints `BETTER_AUTH_URL`.
+
 The `bootstrap` service is one-shot. It waits for `postgres` to report healthy, then applies the migrations. The `server` service waits for it with the condition `service_completed_successfully`, so the schema lands first. Bootstrap re-runs on every `up`, and it exits `0` when the schema is already current.
 
 ### The five scripts

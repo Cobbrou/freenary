@@ -257,6 +257,14 @@ const EXTERNAL: ExternalVariable[] = [
   },
   {
     description:
+      "The address the web and documentation dev servers print in place of their container address. Compose sets it from `WEB_HOST` and `DOCS_HOST`.",
+    envFile: "none",
+    kind: "raw",
+    name: "DEV_PUBLIC_URL",
+    readBy: "the web and documentation dev servers",
+  },
+  {
+    description:
       'The API origin the web app hands to the browser in the root document. Compose sets it from `BETTER_AUTH_URL`. A value that is not an absolute URL throws `PUBLIC_SERVER_URL must be an absolute URL such as https://api.example.com, got "…"`.',
     envFile: "none",
     kind: "raw",

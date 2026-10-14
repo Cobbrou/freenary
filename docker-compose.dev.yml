@@ -118,6 +118,7 @@ services:
       # What the web app's own server calls while rendering a page: the
       # container network, since `*.localhost` resolves to the container itself.
       SERVER_URL: ${SERVER_URL:-http://freenary-server:3000}
+      DEV_PUBLIC_URL: http://${WEB_HOST:-web.freenary.localhost}
     networks: *proxied
     labels:
       - traefik.enable=true
@@ -136,6 +137,7 @@ services:
     command: bun run dev -- --host 0.0.0.0
     environment:
       DOCS_PORT: ${DOCS_PORT:-4000}
+      DEV_PUBLIC_URL: http://${DOCS_HOST:-docs.freenary.localhost}
     networks: *proxied
     labels:
       - traefik.enable=true
