@@ -1,5 +1,9 @@
 import type { ProbeFailureReason } from "@freenary/instance-config/probe";
-import { IntegrationProbeFailed } from "@freenary/instance-config/probe";
+import {
+  IntegrationProbeFailed,
+  PROBE_TIMEOUT_MS,
+  probeDeadline,
+} from "@freenary/instance-config/probe";
 import { Effect, Match } from "effect";
 import { createTransport } from "nodemailer";
 
@@ -8,7 +12,6 @@ import type { EmailSettings } from "./registry";
 const RESEND_DOMAINS_ENDPOINT = "https://api.resend.com/domains";
 const IMPLICIT_TLS_PORT = 465;
 const STARTTLS_PORT = 587;
-const PROBE_TIMEOUT_MS = 10_000;
 
 const failure = (
   variantId: string,
@@ -25,7 +28,7 @@ const probeResend = Effect.fn("email.probeResend")(function* probeResend(
     try: (signal) =>
       fetch(RESEND_DOMAINS_ENDPOINT, {
         headers: { Authorization: `Bearer ${apiKey}` },
-        signal,
+        signal: probeDeadline(signal),
       }),
   });
 

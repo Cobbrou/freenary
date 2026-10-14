@@ -36,11 +36,9 @@ const stored = await loadStoredSettings();
 
 const built = validateSettings(stored);
 
-const inForce: StoredSettings = Result.isSuccess(built) ? stored : {};
-
 export const instanceConfigFault: Option.Option<InstanceSettingsRejected> =
   Result.getFailure(built);
 
 export const settings: ServerSettings = Result.getOrElse(built, () => env);
 
-export const storedSettingsInForce = (): StoredSettings => inForce;
+export const storedSettingsAtBoot = (): StoredSettings => stored;

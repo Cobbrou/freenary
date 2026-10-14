@@ -36,6 +36,12 @@ export const useSetup = () => {
     })
   );
 
+  const loadFailed = status.isError || configuration.isError;
+
+  const retryLoad = async () => {
+    await (status.isError ? status.refetch() : configuration.refetch());
+  };
+
   const integrationSteps =
     configuration.data?.integrations.map((integration) => integration.id) ?? [];
 
@@ -140,8 +146,10 @@ export const useSetup = () => {
     handleSignOut,
     isOperator,
     isPending: status.isPending || (isOperator && configuration.isPending),
+    loadFailed,
     reconnect,
     restartPhase,
+    retryLoad,
     save,
     stepId,
     stepIndex,

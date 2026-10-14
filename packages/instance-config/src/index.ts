@@ -27,11 +27,7 @@ export {
   isSecretField,
   keysOf,
 } from "./integrations";
-export {
-  instanceConfigFault,
-  settings,
-  storedSettingsInForce,
-} from "./resolve";
+export { instanceConfigFault, settings, storedSettingsAtBoot } from "./resolve";
 export {
   InstanceStoreUnavailable,
   readStoredSettings,

@@ -1,5 +1,8 @@
 import type { ProbeFailureReason } from "@freenary/instance-config/probe";
-import { IntegrationProbeFailed } from "@freenary/instance-config/probe";
+import {
+  IntegrationProbeFailed,
+  probeDeadline,
+} from "@freenary/instance-config/probe";
 import { Effect } from "effect";
 
 import type { EnableBankingCredentials } from "./client";
@@ -37,7 +40,7 @@ export const probeEnableBankingCredentials = Effect.fn("enableBanking.probe")(
       try: (signal) =>
         fetch(`${ENABLE_BANKING_ORIGIN}/application`, {
           headers: { Authorization: `Bearer ${token}` },
-          signal,
+          signal: probeDeadline(signal),
         }),
     });
 

@@ -1,5 +1,10 @@
 import { Data, Match } from "effect";
 
+export const PROBE_TIMEOUT_MS = 10_000;
+
+export const probeDeadline = (signal: AbortSignal): AbortSignal =>
+  AbortSignal.any([signal, AbortSignal.timeout(PROBE_TIMEOUT_MS)]);
+
 export type ProbeFailureReason =
   | { readonly kind: "unreachable"; readonly detail: string }
   | {

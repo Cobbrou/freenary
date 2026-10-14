@@ -246,7 +246,7 @@ One row per user, keyed by `userId`. A user therefore has one sync run at a time
 
 ### The dropped enum
 
-`BudgetLineKind` was a fourth type with the values `REVENUE`, `INVESTMENT` and `OUTGOING`. The migration `20260904120000_derive_budget_line_kind` dropped the type together with the column `budget_line.kind`. The three names survive as a TypeScript union, and `budgetLineKindOf` derives the value from the group of a category. One group maps to each name: `income` to `REVENUE`, `investments` to `INVESTMENT` and `spending` to `OUTGOING`.
+`BudgetLineKind` was another enum type, with the values `REVENUE`, `INVESTMENT` and `OUTGOING`. The migration `20260904120000_derive_budget_line_kind` dropped the type together with the column `budget_line.kind`. The three names survive as a TypeScript union, and `budgetLineKindOf` derives the value from the group of a category. One group maps to each name: `income` to `REVENUE`, `investments` to `INVESTMENT` and `spending` to `OUTGOING`.
 
 ### Free-text vocabularies
 

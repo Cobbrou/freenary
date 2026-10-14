@@ -8,7 +8,7 @@ A new instance serves a setup screen at `/setup`. It is a wizard with one step p
 
 **An instance that has not finished the wizard sends every signed-in visitor there.** The web app reads the setup state before it renders any protected screen. A fresh deployment therefore opens on the wizard, and not on an empty home screen. The redirect stops when an operator presses `Finish setup`.
 
-The screen can test each credential against the real service. `Check` makes the call and writes nothing. `Save` stores the values and makes no call.
+`Save and continue` tests each credential against the real service, then stores it.
 
 ## What the screen owns, and what stays in the file
 
@@ -96,7 +96,7 @@ This keeps two habits working. An operator who holds secrets in Kubernetes, in V
 
 ## Where the values live
 
-Each value sits in one row of the `instance_setting` table, sealed with AES-256-GCM. The key comes from `BETTER_AUTH_SECRET` and the row name, so a row moved to another name no longer opens.
+Each value sits in one row of the `instance_setting` table, sealed with AES-256-GCM. The key comes from `BETTER_AUTH_SECRET`. The row name is bound to the sealed value, so a row moved to another name no longer opens.
 
 Two results follow:
 
@@ -104,6 +104,8 @@ Two results follow:
 - A new `BETTER_AUTH_SECRET` makes every stored value unreadable. The server logs one warning for each row it cannot open. The integration then turns off until the operator types the credential again.
 
 The screen never sends a stored secret back to the browser. A secret field shows that a value exists, and an empty box keeps it.
+
+The server checks the stored values at startup. When they fail that check, the server ignores all of them and uses the environment alone. The setup screen then shows `Configuration problem` and the reason. Correct the value, save it, then press `Finish setup`.
 
 <Cards>
 

@@ -1,5 +1,8 @@
 import type { ProbeFailureReason } from "@freenary/instance-config/probe";
-import { IntegrationProbeFailed } from "@freenary/instance-config/probe";
+import {
+  IntegrationProbeFailed,
+  probeDeadline,
+} from "@freenary/instance-config/probe";
 import { Effect, Result, Schema } from "effect";
 
 import type { PowensCredentials } from "./client";
@@ -24,7 +27,7 @@ const releaseThrowawayUser = Effect.fn("powens.probeRelease")(
           fetch(`${origin}/users/me`, {
             headers: { Authorization: `Bearer ${token}` },
             method: "DELETE",
-            signal,
+            signal: probeDeadline(signal),
           }),
       })
     );
@@ -58,7 +61,7 @@ export const probePowensCredentials = Effect.fn("powens.probe")(
           }),
           headers: { "Content-Type": "application/json" },
           method: "POST",
-          signal,
+          signal: probeDeadline(signal),
         }),
     });
 

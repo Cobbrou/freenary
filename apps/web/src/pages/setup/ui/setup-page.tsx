@@ -16,6 +16,7 @@ import { restartDocsUrl, stepLabel } from "../model/labels";
 import type { SaveOutcome } from "../model/outcome";
 import { useSetup } from "../model/use-setup";
 import { EnvironmentSummary } from "./environment-summary";
+import { FaultNotice } from "./fault-notice";
 import { FinishStep } from "./finish-step";
 import { ProviderStep } from "./provider-step";
 import { SetupWizardSkeleton } from "./setup-wizard-skeleton";
@@ -29,6 +30,7 @@ export const SetupPage = () => {
 
   const described = setup.configuration.data;
   const integrations = described?.integrations ?? [];
+  const fault = described?.fault ?? null;
   const stepLabels = setup.steps.map((id) => () => stepLabel(id));
 
   const stepper = (
@@ -76,7 +78,21 @@ export const SetupPage = () => {
       );
     }
 
-    if (!setup.isOperator || setup.configuration.isError) {
+    if (setup.loadFailed) {
+      return (
+        <Empty>
+          <EmptyTitle>{m.setup_load_failed_title()}</EmptyTitle>
+          <EmptyDescription>
+            {m.setup_load_failed_description()}
+          </EmptyDescription>
+          <Button onClick={() => setup.retryLoad()} type="button">
+            {m.setup_try_again()}
+          </Button>
+        </Empty>
+      );
+    }
+
+    if (!setup.isOperator) {
       return (
         <Empty>
           <EmptyTitle>{m.setup_not_operator_title()}</EmptyTitle>
@@ -201,14 +217,21 @@ export const SetupPage = () => {
       isPending={setup.isPending}
       skeleton={<SetupWizardSkeleton />}
       stepKey={setup.stepId}
-      stepper={setup.isOperator ? stepper : null}
+      stepper={setup.isOperator && !setup.loadFailed ? stepper : null}
       toolbar={
         <Button onClick={setup.handleSignOut} type="button" variant="ghost">
           {m.account_sign_out()}
         </Button>
       }
     >
-      {body()}
+      {fault === null ? (
+        body()
+      ) : (
+        <div className="flex flex-col gap-6">
+          <FaultNotice detail={fault} />
+          {body()}
+        </div>
+      )}
     </WizardShell>
   );
 };

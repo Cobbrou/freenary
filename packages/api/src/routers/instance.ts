@@ -18,7 +18,7 @@ import {
   readSetupState,
   readStoredSettings,
   settings,
-  storedSettingsInForce,
+  storedSettingsAtBoot,
   validateSettings,
   writeStoredSettings,
 } from "@freenary/instance-config";
@@ -183,10 +183,10 @@ const describeIntegration = (
 };
 
 const hasUnappliedChange = (stored: StoredSettings): boolean => {
-  const applied = storedSettingsInForce();
+  const loaded = storedSettingsAtBoot();
 
   for (const key of instanceConfigurableKeys) {
-    if (!environmentOwns(key) && stored[key] !== applied[key]) {
+    if (!environmentOwns(key) && stored[key] !== loaded[key]) {
       return true;
     }
   }
