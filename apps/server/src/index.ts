@@ -149,6 +149,6 @@ const setupState = await Effect.runPromise(readSetupState());
 
 if (!setupState.claimed) {
   console.log(
-    `This instance has no operator yet. The first account to sign up at ${env.CORS_ORIGIN} becomes the operator.`
+    `This instance has no operator yet. The first account to sign in at ${env.CORS_ORIGIN} becomes the operator.`
   );
 }

@@ -25,11 +25,16 @@ CREATE TABLE "instance_setup" (
   CONSTRAINT "instance_setup_pkey" PRIMARY KEY ("id")
 );
 
--- An instance that already has accounts gives the operator role to the oldest
--- one, so the next sign-up on an upgraded instance does not take it.
-INSERT INTO "instance_setup" ("id", "claimedAt")
-SELECT 'singleton', CURRENT_TIMESTAMP
+-- An instance that already has accounts already runs from its environment, so
+-- it counts as claimed and set up: its members keep their screens, and the
+-- operator can still open the setup screen. The operator role goes to the
+-- oldest verified account, so the next sign-up on an upgraded instance does not
+-- take it; without an email provider no account is verified, and the oldest wins.
+INSERT INTO "instance_setup" ("id", "claimedAt", "completedAt")
+SELECT 'singleton', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
 WHERE EXISTS (SELECT 1 FROM "user");
 
 UPDATE "user" SET "role" = 'OPERATOR'
-WHERE "id" = (SELECT "id" FROM "user" ORDER BY "createdAt", "id" LIMIT 1);
+WHERE "id" = (
+  SELECT "id" FROM "user" ORDER BY "emailVerified" DESC, "createdAt", "id" LIMIT 1
+);

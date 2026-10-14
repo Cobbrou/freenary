@@ -180,9 +180,7 @@ docker compose logs -f server
 
 ### Create the first account
 
-Open the web app origin in a browser, then sign up with an email address and a password. [First steps](/docs/guides/first-steps) covers what that user does next.
-
-The wizard that opens proves the bank provider. It asks for a tax residency, then offers a bank step with the banks your domain activated. A missing bank step means Freenary read no credentials, and Settings then reads `Bank linking is unavailable`.
+Open the web app origin in a browser, then sign up with an email address and a password. An instance on a public origin is open to anybody who finds it. Create that account in the same sitting as the install.
 
 </Step>
 
@@ -190,9 +188,11 @@ The wizard that opens proves the bank provider. It asks for a tax residency, the
 
 ### Open the setup screen
 
-The account you made is the operator of the instance, because it signed in first. Freenary opens `/setup` for it. An instance on a public origin is open to anybody who finds it. Create that account in the same sitting as the install. [The setup screen](/docs/self-hosting/setup#the-first-account-becomes-the-operator) tells more.
+The account you made is the operator of the instance, because it signed in first. Freenary opens `/setup` for it. [The setup screen](/docs/self-hosting/setup#the-first-account-becomes-the-operator) tells more.
 
 The setup screen is where the bank and email credentials go. [The setup screen](/docs/self-hosting/setup) walks each card and the restart that applies it.
+
+After `Finish setup`, the onboarding wizard opens, and it proves the bank provider. It asks for a tax residency, then offers a bank step with the banks your domain activated. A missing bank step means Freenary read no credentials, and Settings then reads `Bank linking is unavailable`. [First steps](/docs/guides/first-steps) covers what the operator does next.
 
 </Step>
 

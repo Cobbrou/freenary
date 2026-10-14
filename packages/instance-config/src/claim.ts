@@ -1,8 +1,22 @@
 import prisma from "@freenary/db";
-import { Effect } from "effect";
+import { Data, Effect } from "effect";
 
 const SETUP_ROW_ID = "singleton";
 const OPERATOR_ROLE = "OPERATOR";
+
+export class InstanceSetupUnavailable extends Data.TaggedError(
+  "InstanceSetupUnavailable"
+)<{
+  readonly operation: string;
+  readonly detail: string;
+}> {
+  override get message(): string {
+    return `The instance setup could not be ${this.operation}: ${this.detail}`;
+  }
+}
+
+const unavailable = (operation: string) => (cause: unknown) =>
+  new InstanceSetupUnavailable({ detail: String(cause), operation });
 
 export interface SetupState {
   readonly claimed: boolean;
@@ -11,12 +25,14 @@ export interface SetupState {
 
 export const readSetupState = Effect.fn("instanceConfig.readSetupState")(
   function* readSetupState() {
-    const row = yield* Effect.promise(() =>
-      prisma.instanceSetup.findUnique({
-        select: { claimedAt: true, completedAt: true },
-        where: { id: SETUP_ROW_ID },
-      })
-    );
+    const row = yield* Effect.tryPromise({
+      catch: unavailable("read"),
+      try: () =>
+        prisma.instanceSetup.findUnique({
+          select: { claimedAt: true, completedAt: true },
+          where: { id: SETUP_ROW_ID },
+        }),
+    });
 
     return {
       claimed: (row?.claimedAt ?? null) !== null,
@@ -34,40 +50,43 @@ export const claimForFirstSession = Effect.fn(
     return false;
   }
 
-  return yield* Effect.promise(() =>
-    prisma.$transaction(async (tx) => {
-      await tx.instanceSetup.upsert({
-        create: { id: SETUP_ROW_ID },
-        update: {},
-        where: { id: SETUP_ROW_ID },
-      });
+  return yield* Effect.tryPromise({
+    catch: unavailable("claimed"),
+    try: () =>
+      prisma.$transaction(async (tx) => {
+        await tx.instanceSetup.createMany({
+          data: [{ id: SETUP_ROW_ID }],
+          skipDuplicates: true,
+        });
 
-      const taken = await tx.instanceSetup.updateMany({
-        data: { claimedAt: new Date() },
-        where: { claimedAt: null, id: SETUP_ROW_ID },
-      });
+        const taken = await tx.instanceSetup.updateMany({
+          data: { claimedAt: new Date() },
+          where: { claimedAt: null, id: SETUP_ROW_ID },
+        });
 
-      if (taken.count === 0) {
-        return false;
-      }
+        if (taken.count === 0) {
+          return false;
+        }
 
-      await tx.user.update({
-        data: { role: OPERATOR_ROLE },
-        where: { id: userId },
-      });
+        await tx.user.update({
+          data: { role: OPERATOR_ROLE },
+          where: { id: userId },
+        });
 
-      return true;
-    })
-  );
+        return true;
+      }),
+  });
 });
 
 export const markSetupComplete = Effect.fn("instanceConfig.markSetupComplete")(
   function* markSetupComplete() {
-    yield* Effect.promise(() =>
-      prisma.instanceSetup.updateMany({
-        data: { completedAt: new Date() },
-        where: { completedAt: null, id: SETUP_ROW_ID },
-      })
-    );
+    yield* Effect.tryPromise({
+      catch: unavailable("completed"),
+      try: () =>
+        prisma.instanceSetup.updateMany({
+          data: { completedAt: new Date() },
+          where: { completedAt: null, id: SETUP_ROW_ID },
+        }),
+    });
   }
 );

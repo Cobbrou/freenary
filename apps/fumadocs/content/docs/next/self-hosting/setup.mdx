@@ -29,7 +29,7 @@ The first account that signs in to a new instance becomes its operator. Only the
 
 No screen and no endpoint gives the role to a second account. An instance on a public origin is open to anybody who finds it. Create the first account immediately after the first start.
 
-An instance that already had accounts before this release gives the role to its oldest account.
+An instance with accounts from an earlier release gives the role to its oldest account with a confirmed email address. When no address is confirmed, the oldest account gets the role. That instance also counts as set up, so Freenary sends no account to `/setup`. The operator can still open `/setup` to change a provider.
 
 ## Walk the steps
 

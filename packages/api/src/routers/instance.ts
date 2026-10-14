@@ -1,4 +1,3 @@
-import prisma from "@freenary/db";
 import type {
   Integration,
   IntegrationField,
@@ -27,7 +26,7 @@ import { ORPCError } from "@orpc/server";
 import { Effect, Option, Result } from "effect";
 import { z } from "zod";
 
-import { operatorProcedure, publicProcedure } from "../index";
+import { isOperator, operatorProcedure, publicProcedure } from "../index";
 import { maskEnvironmentValue } from "../instance/mask";
 import {
   candidateOf,
@@ -363,15 +362,8 @@ export const instanceRouter = {
   status: publicProcedure.handler(async ({ context }) => {
     const state = await Effect.runPromise(readSetupState());
     const userId = context.session?.user.id;
+    const operator = userId === undefined ? false : await isOperator(userId);
 
-    const account =
-      userId === undefined
-        ? null
-        : await prisma.user.findUnique({
-            select: { role: true },
-            where: { id: userId },
-          });
-
-    return { ...state, isOperator: account?.role === "OPERATOR" };
+    return { ...state, isOperator: operator };
   }),
 };

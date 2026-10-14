@@ -161,7 +161,13 @@ export const createAuth = () => {
       session: {
         create: {
           after: async (session) => {
-            await Effect.runPromise(claimForFirstSession(session.userId));
+            await Effect.runPromise(
+              claimForFirstSession(session.userId).pipe(
+                Effect.catchTag("InstanceSetupUnavailable", (claimFailure) =>
+                  Effect.logWarning(claimFailure.message)
+                )
+              )
+            );
           },
         },
       },

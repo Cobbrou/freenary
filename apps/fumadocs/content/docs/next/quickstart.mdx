@@ -128,7 +128,7 @@ Open `http://localhost:3001` in a browser. The screen reads `Welcome to Freenary
 2. Write a name of 2 characters or more, and a password of 12 characters or more.
 3. Press `Create account`.
 
-With no email provider configured, Freenary signs you in at once and opens the onboarding wizard. With one configured, the screen moves to `Confirm your email` and asks for the 6-digit code it sent you. That code lives 10 minutes. Freenary signs you in after you enter it.
+With no email provider configured, Freenary signs you in at once and opens `/setup`. With one configured, the screen moves to `Confirm your email` and asks for the 6-digit code it sent you. That code lives 10 minutes. Freenary signs you in after you enter it, then opens `/setup`.
 
 </Step>
 
@@ -140,7 +140,7 @@ The first account to sign in becomes the operator of this instance. Freenary ope
 
 Go to the **Bank provider** step, pick `Powens`, and press `Continue`. Type the three values from the console, and press `Save and continue`. Freenary calls your Powens domain with the credentials, and saves them when the call succeeds.
 
-Go to the last step, and press `Finish setup`. The server restarts to use the credentials, and the page opens the app when the server is back.
+Go to the last step, and press `Finish setup`. The server restarts to use the credentials, and the page opens the app when the server is back. The onboarding wizard opens next.
 
 [The setup screen](/docs/self-hosting/setup) holds each card, each check and the last step in full.
 

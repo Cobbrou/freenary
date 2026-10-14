@@ -8,6 +8,7 @@ export { environmentOwns, validateSettings } from "./candidate";
 export type { SetupState } from "./claim";
 export {
   claimForFirstSession,
+  InstanceSetupUnavailable,
   markSetupComplete,
   readSetupState,
 } from "./claim";
