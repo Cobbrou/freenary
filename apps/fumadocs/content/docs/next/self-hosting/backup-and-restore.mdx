@@ -201,18 +201,19 @@ Type the `-p freenary-restore-check` flag in the `down -v` command. Without it, 
 
 ## What a dump does not hold
 
-A database dump holds no configuration. The root `.env` file sits on the host, next to `docker-compose.yml`. It is outside every volume, and `.dockerignore` keeps every `.env` file out of the image layers.
+A dump holds what [the setup screen](/docs/self-hosting/setup) saved. It holds nothing from the `.env` file, which sits on the host next to `docker-compose.yml`. It is outside every volume, and `.dockerignore` keeps every `.env` file out of the image layers.
 
 | Not in the dump | What you lose without it |
 | --- | --- |
-| `BETTER_AUTH_SECRET` | Every session, and every two-factor enrolment in the restored data |
+| `BETTER_AUTH_SECRET` | Every session, every two-factor enrolment, and every row of `instance_setting` |
 | `POSTGRES_PASSWORD` | Access to the volume the old container created with it |
-| The bank provider credentials | The bank sync of every user |
-| The email provider credentials | One-time code delivery, and therefore password reset |
+| A provider credential set in `.env` | The bank sync, or the one-time code delivery, of that adapter |
+
+The `instance_setting` table is in the dump. A provider credential typed into the setup screen therefore comes back with the data. Each row is sealed with a key made from `BETTER_AUTH_SECRET`, and opens under that secret alone.
 
 <Callout type="error">
 
-Keep `BETTER_AUTH_SECRET` with the dump. That one value signs the session cookie, and it encrypts the `secret` and `backupCodes` columns of the `two_factor` table. It also signs the bank connection state that round-trips through the provider. A restore under a new secret signs every user out and breaks every two-factor enrolment.
+Keep `BETTER_AUTH_SECRET` with the dump. That one value signs the session cookie, and it encrypts the `secret` and `backupCodes` columns of the `two_factor` table. It also seals every `instance_setting` row, and signs the bank connection state that round-trips through the provider. A restore under a new secret signs every user out and breaks every two-factor enrolment. It also turns off every provider the setup screen configured.
 
 </Callout>
 

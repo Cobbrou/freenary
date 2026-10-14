@@ -12,6 +12,8 @@ Freenary never talks to a bank itself. A bank provider holds that connection, an
 
 An unknown value fails the environment check at startup. A known value with no credentials turns bank linking off rather than half on.
 
+An operator sets the provider and its credentials in [the setup screen](/docs/self-hosting/setup), not only in `.env`. The screen calls the provider with the credentials before it saves them. A value already set in the environment wins, and the screen marks it read-only.
+
 **Choose Powens unless you have a reason not to.** It is the default, and it is the only adapter that imports accounts, balances and holdings. [Powens](#powens) below walks the console setup step by step. A sandbox domain costs nothing and needs no contract.
 
 ## The two adapters

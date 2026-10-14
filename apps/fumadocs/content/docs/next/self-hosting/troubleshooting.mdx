@@ -81,6 +81,26 @@ Do not set `SKIP_ENV_VALIDATION` to get past this report. The flag hides the mis
 
 </Callout>
 
+## The server does not restart after setup
+
+**What you see.** After `Finish setup`, the setup screen waits for one minute, then shows `The server did not restart`.
+
+**Why.** `Finish setup` stops the API server, so that it reads the saved configuration at the next start. A supervisor must start it again. The compose files set `restart: unless-stopped` for this. A server that runs with no supervisor, for example with `bun run dev`, stays stopped. A server that fails at startup also stays down.
+
+**Fix.** Read the log of the server:
+
+```bash
+docker compose logs server
+```
+
+Correct the error that the log names, then start the server:
+
+```bash
+docker compose up -d server
+```
+
+Press `Try again` on the setup screen. It waits for the server again, and opens the app when the server is back.
+
 ## The server refuses a proxy address
 
 **What you see.** The report above names `TRUSTED_PROXIES`, with this message:
@@ -360,6 +380,22 @@ The chat route answers with a bare machine code on every failure.
 | `400` | `bad_request` | The body was not JSON |
 
 [Assistant](/docs/self-hosting/assistant) covers the endpoints and what each question sends out.
+
+## The wrong account became the operator
+
+**What you see.** Your account opens `/setup` and reads `Only the operator can set up this instance`.
+
+**Why.** Another account signed in to the instance before yours. The first account to sign in becomes the operator, and no screen moves the role.
+
+An instance with accounts from an earlier release got its operator from the upgrade. The oldest account with a confirmed email address took the role, or the oldest account when none is confirmed.
+
+**The fix.** When you made both accounts, move the role to your account. Put your email address in place of `you@example.com`:
+
+```bash
+docker compose exec -T postgres psql -U postgres -d freenary -c "UPDATE \"user\" SET role = CASE WHEN email = 'you@example.com' THEN 'OPERATOR'::\"UserRole\" ELSE 'MEMBER'::\"UserRole\" END;"
+```
+
+When a stranger made the first account, treat the instance as compromised. Stop it, remove the database volume, and install again before anybody else can reach it. [Security](/docs/self-hosting/security#the-operator) tells more.
 
 ## Every caller shares one rate-limit bucket
 

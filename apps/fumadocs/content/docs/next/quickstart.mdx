@@ -87,16 +87,7 @@ The console work takes four steps, and [Bank providers](/docs/self-hosting/bank-
 3. Create a client application, and register `<CORS_ORIGIN>/callback/powens` as its redirect URI.
 4. Activate the connectors of the banks you want. A domain with no active connector answers with an empty list.
 
-Write the credentials into the same `.env` file:
-
-```dotenv
-BANKING_PROVIDER=powens
-POWENS_DOMAIN=acme-sandbox
-POWENS_CLIENT_ID=<client id>
-POWENS_CLIENT_SECRET=<client secret>
-```
-
-A later change of these values needs `docker compose up -d`. Compose recreates the `server` container with the new environment, and no image rebuild happens.
+Keep the domain, the client id and the client secret to hand. They go into the setup screen after the first start, and not into the `.env` file.
 
 </Step>
 
@@ -137,9 +128,21 @@ Open `http://localhost:3001` in a browser. The screen reads `Welcome to Freenary
 2. Write a name of 2 characters or more, and a password of 12 characters or more.
 3. Press `Create account`.
 
-With no email provider configured, Freenary signs you in at once and opens the onboarding wizard. With one configured, the screen moves to `Confirm your email` and asks for the 6-digit code it sent you. That code lives 10 minutes. Freenary signs you in after you enter it.
+With no email provider configured, Freenary signs you in at once and opens `/setup`. With one configured, the screen moves to `Confirm your email` and asks for the 6-digit code it sent you. That code lives 10 minutes. Freenary signs you in after you enter it, then opens `/setup`.
 
-Freenary has no admin account and no owner role. The first account is an ordinary user.
+</Step>
+
+<Step>
+
+### Add the credentials
+
+The first account to sign in becomes the operator of this instance. Freenary opens `/setup` for it, and no second account can take the role.
+
+Go to the **Bank provider** step, pick `Powens`, and press `Continue`. Type the three values from the console, and press `Save and continue`. Freenary calls your Powens domain with the credentials, and saves them when the call succeeds.
+
+Go to the last step, and press `Finish setup`. The server restarts to use the credentials, and the page opens the app when the server is back. The onboarding wizard opens next.
+
+[The setup screen](/docs/self-hosting/setup) holds each card, each check and the last step in full.
 
 </Step>
 
@@ -149,6 +152,7 @@ Freenary has no admin account and no owner role. The first account is an ordinar
 
 - You are signed in to your own instance.
 - Your account sits in the PostgreSQL database of that instance.
+- You are the operator of the instance, so `/setup` opens for you and for nobody else.
 - **Settings** lists the banks of your tax residencies, because the credentials of the provider are set.
 - No bank is connected, so the Budget screen asks you to connect one.
 
@@ -169,6 +173,11 @@ Freenary has no admin account and no owner role. The first account is an ordinar
     title="Serve it to other people"
     href="/docs/self-hosting"
     description="Public origins, real secrets, and the checks that prove them."
+  />
+  <Card
+    title="The setup screen"
+    href="/docs/self-hosting/setup"
+    description="Change a provider, check its credentials, and apply them."
   />
   <Card
     title="Configuration reference"

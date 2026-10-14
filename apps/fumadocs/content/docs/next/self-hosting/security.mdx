@@ -44,7 +44,7 @@ No Dockerfile in the repository sets a `USER` instruction, and neither compose f
 
 | Secret | Rule | What it protects |
 | --- | --- | --- |
-| `BETTER_AUTH_SECRET` | 32 characters or more | The session cookie, the two-factor data, the bank connection state |
+| `BETTER_AUTH_SECRET` | 32 characters or more | The session cookie, the two-factor data, the bank connection state, every `instance_setting` row |
 | `POSTGRES_PASSWORD` | No default in the stack | The database itself, and the volume that holds it |
 | The bank provider credentials | Set as a pair or a triple | The bank connection of every user |
 | The email provider key | One key per adapter | One-time code delivery, and password reset |
@@ -58,6 +58,20 @@ openssl rand -hex 32   # BETTER_AUTH_SECRET
 ```
 
 `docker compose up` stops before it creates a container when either value is unset or empty. So every Docker instance holds two values you chose.
+
+## The operator
+
+The first account that signs in to a new instance becomes the operator. One database transaction gives the role, so two sign-ins at the same time cannot both get it.
+
+A new instance on a public origin is open to anybody who finds it. If a stranger signs in first, that stranger becomes the operator. Create the first account in the same sitting as the install.
+
+| Rule | Detail |
+| --- | --- |
+| Who becomes the operator | The account of the first session on the instance |
+| An instance with accounts from an earlier release | The oldest account with a confirmed email address becomes the operator, or the oldest account when none is confirmed. The instance counts as set up |
+| How many operators | One. No screen and no endpoint grants the role a second time |
+
+The operator role opens `/setup` alone. It grants no access to the rows of another user.
 
 <Callout type="warn">
 
@@ -118,7 +132,9 @@ Treat the database and every dump of it as the financial data itself. Encrypt th
 
 Freenary enables no account deletion. No screen and no endpoint removes a user. An operator who must erase one person does it in the database. A user can delete a bank connection, and that delete removes its accounts, transactions and holdings through the database cascade.
 
-There are also no roles and no admin surface. Every signed-in account has the same rights, and each one reaches its own rows alone.
+One role exists, and it is the operator. It opens the setup screen and changes the provider settings of the instance. It reads no financial row of another user, and every signed-in account otherwise reaches its own rows alone.
+
+The `instance_setting` table holds the provider credentials the operator typed. Each row is sealed with AES-256-GCM, under a key made from `BETTER_AUTH_SECRET`. A reader of the table alone gets ciphertext.
 
 ## The checklist
 
@@ -132,7 +148,8 @@ Work through each line before real users arrive.
 - [ ] The `postgres` service publishes nothing, or it publishes to `127.0.0.1` alone.
 - [ ] `TRUSTED_PROXIES` lists every proxy in front of the API server.
 - [ ] `AUTH_COOKIE_DOMAIN` names the shared parent domain, for two subdomains.
-- [ ] `EMAIL_PROVIDER` is `resend` or `smtp`, so password reset works.
+- [ ] Your own account is the operator, so `/setup` refuses everybody else.
+- [ ] The email provider is `resend` or `smtp`, so password reset works.
 - [ ] `docker compose ps -a` shows `migrate` as `Exited (0)` and the rest as `healthy`.
 - [ ] You know which endpoint `AI_BASE_URL` names, or you left it unset.
 - [ ] A dump runs on a schedule, and you restored one to check it.

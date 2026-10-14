@@ -5,6 +5,7 @@
   "pages": [
     "index",
     "configuration",
+    "setup",
     "reverse-proxy",
     "scaling",
     "authentication",

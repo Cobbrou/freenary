@@ -1,7 +1,7 @@
-import { env } from "@freenary/env/server";
+import { settings } from "@freenary/instance-config";
 import { Data, Effect, Match, Option, Schema } from "effect";
 
-interface PowensCredentials {
+export interface PowensCredentials {
   clientId: string;
   clientSecret: string;
   domain: string;
@@ -50,7 +50,7 @@ const DOMAIN_SUFFIX = /\.biapi\.pro\/?$/u;
 const POWENS_UTC_DATETIME =
   /^(?<date>\d{4}-\d{2}-\d{2})[ T](?<time>\d{2}:\d{2}:\d{2})/u;
 
-const API_PATH = "/2.0";
+export const POWENS_API_PATH = "/2.0";
 const NOT_FOUND = 404;
 const MAX_TRANSACTIONS_PER_PAGE = 1000;
 const DEFAULT_CURRENCY_PRECISION = 2;
@@ -59,9 +59,9 @@ export const powensHost = (domain: string): string =>
   `${domain.trim().replace(DOMAIN_SUFFIX, "")}.biapi.pro`;
 
 const readCredentials = (): Option.Option<PowensCredentials> => {
-  const domain = env.POWENS_DOMAIN;
-  const clientId = env.POWENS_CLIENT_ID;
-  const clientSecret = env.POWENS_CLIENT_SECRET;
+  const domain = settings.POWENS_DOMAIN;
+  const clientId = settings.POWENS_CLIENT_ID;
+  const clientSecret = settings.POWENS_CLIENT_SECRET;
 
   return domain && clientId && clientSecret
     ? Option.some({ clientId, clientSecret, domain })
@@ -102,7 +102,7 @@ const powensUrl = Effect.fnUntraced(function* powensUrl(
 ) {
   const { domain } = yield* requireCredentials(operation);
 
-  return `https://${powensHost(domain)}${API_PATH}${path}`;
+  return `https://${powensHost(domain)}${POWENS_API_PATH}${path}`;
 });
 
 const send = Effect.fnUntraced(function* send(

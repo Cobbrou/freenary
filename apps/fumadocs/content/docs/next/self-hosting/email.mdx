@@ -26,6 +26,8 @@ Freenary checks `EMAIL_FROM` before `SMTP_HOST`. A stack that sets neither there
 
 [Configuration](/docs/self-hosting/configuration) defines every variable named here.
 
+An operator sets these values in [the setup screen](/docs/self-hosting/setup), and not only in the `.env` file. The screen opens the connection and signs in before it saves. A wrong password is therefore refused at the form, and not at the first one-time code. A value already set in the environment wins, and the screen marks it read-only.
+
 ## What stops with no adapter
 
 These sign-in paths still work: email and password, passkeys, and two-factor with an authenticator app.

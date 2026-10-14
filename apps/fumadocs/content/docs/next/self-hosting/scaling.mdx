@@ -36,20 +36,28 @@ The API server keeps one module-global cache. It holds read-only data that comes
 
 A second replica duplicates that memory. It cannot diverge from the first, because both load the same file from the same image. Each replica releases the dictionary when its reference count reaches zero.
 
+Each replica also reads the values of [the setup screen](/docs/self-hosting/setup) one time, at startup. Two replicas can therefore hold different values. [Settings from the setup screen](#settings-from-the-setup-screen) tells how to keep them equal.
+
 Nothing else on the request path is mutable. The API server builds a fresh context for each request, and the auth middleware keeps nothing between calls.
 
 ## What the stack does not hold
 
-Each fact below is one more reason a second API replica is safe:
+Each fact below supports a second API replica:
 
 | Fact about the code | Consequence |
 | --- | --- |
 | No background worker and no queue. No queue library and no Redis appear in any manifest. | Long work runs inside the request that asked for it. One bank sync loops over the connections in its own handler, with sequential provider calls. |
-| No scheduler and no cron. A search for a timer across the apps and the packages finds one interface timer in a development-only web route. | Nothing fires on its own, so two replicas cannot duplicate a job. |
+| No scheduler and no cron. The API server sets one timer: after `Finish setup`, it stops its own process. The web app sets one interface timer in a development-only route. | Nothing fires on its own, so two replicas cannot duplicate a job. |
 | No external cache. Better Auth declares no `secondaryStorage`. | Sessions and counters go to PostgreSQL, which both replicas share. |
 | No uploaded file on local disk. The whole HTTP surface is five route groups, and the server writes nothing to disk in production. | No replica holds a file the other one needs. |
 
 Neither compose file declares `deploy.replicas`, a load balancer or a proxy service. A second replica is therefore your own composition. The code contradicts none of it, and the stack configures none of it.
+
+## Settings from the setup screen
+
+`Finish setup` restarts only the replica that answers it. Every other replica keeps the values it read at startup. Restart each other replica after `Finish setup`, so that all of them use the new values.
+
+The setup screen waits for the restarted server before it opens the app. With more than one replica, it can ask a replica that did not restart. It then shows `The server did not restart`. Restart every replica, then press `Try again`.
 
 ## Connection pools
 

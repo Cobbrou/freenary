@@ -7,43 +7,46 @@ import { cn } from "@freenary/ui/lib/utils";
 import { AnimatePresence, motion } from "motion/react";
 import { Fragment } from "react";
 
-import { m } from "@/paraglide/messages.js";
+const LABELS_FIT_UP_TO = 3;
+const ICON_SWAP = { bounce: 0, duration: 0.3, type: "spring" } as const;
+const ICON_HIDDEN = { filter: "blur(4px)", opacity: 0, scale: 0.25 };
+const ICON_SHOWN = { filter: "blur(0px)", opacity: 1, scale: 1 };
 
-interface OnboardingStepperProps {
+interface WizardStepperProps {
   current: number;
+  label: string;
   steps: readonly (() => string)[];
 }
 
-export const OnboardingStepper = ({
+export const WizardStepper = ({
   current,
+  label,
   steps,
-}: OnboardingStepperProps) => {
+}: WizardStepperProps) => {
   const CheckIcon = useIcon("check");
   const size = useSize();
   const substrate = useSurface();
+  const showsEveryLabel = steps.length <= LABELS_FIT_UP_TO;
 
   return (
-    <ol
-      aria-label={m.onboarding_progress_label()}
-      className="flex items-center justify-center"
-    >
+    <ol aria-label={label} className="flex items-center justify-center">
       {steps.map((step, index) => {
-        const label = step();
+        const stepName = step();
         const isComplete = index < current;
         const isCurrent = index === current;
 
         return (
-          <Fragment key={label}>
+          <Fragment key={stepName}>
             <li className="flex items-center gap-2.5">
               <motion.span
                 aria-current={isCurrent ? "step" : undefined}
                 className={cn(
-                  "flex aspect-square shrink-0 items-center justify-center ring-1",
+                  "flex aspect-square shrink-0 items-center justify-center rounded-full ring-1",
                   size.control,
                   size.text,
                   isComplete &&
                     "bg-primary text-primary-foreground ring-primary",
-                  isCurrent && "bg-secondary text-primary ring-primary",
+                  isCurrent && "bg-secondary text-foreground ring-primary",
                   !(isComplete || isCurrent) &&
                     cn(
                       SURFACE_BG[substrate],
@@ -55,35 +58,37 @@ export const OnboardingStepper = ({
                 <AnimatePresence initial={false} mode="wait">
                   {isComplete ? (
                     <motion.span
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, transition: spring.fast.exit }}
-                      initial={{ opacity: 0, scale: 0.75 }}
+                      animate={ICON_SHOWN}
+                      exit={ICON_HIDDEN}
+                      initial={ICON_HIDDEN}
                       key="check"
-                      transition={spring.fast}
+                      transition={ICON_SWAP}
                     >
                       <CheckIcon size={size.icon} />
                     </motion.span>
                   ) : (
                     <motion.span
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0, transition: spring.fast.exit }}
-                      initial={{ opacity: 0 }}
+                      animate={ICON_SHOWN}
+                      exit={ICON_HIDDEN}
+                      initial={ICON_HIDDEN}
                       key="index"
-                      transition={spring.fast}
+                      transition={ICON_SWAP}
                     >
                       {index + 1}
                     </motion.span>
                   )}
                 </AnimatePresence>
               </motion.span>
-              <span
-                className={cn(
-                  size.text,
-                  isCurrent ? "text-foreground" : "text-muted-foreground"
-                )}
-              >
-                {label}
-              </span>
+              {showsEveryLabel || isCurrent ? (
+                <span
+                  className={cn(
+                    size.text,
+                    isCurrent ? "text-foreground" : "text-muted-foreground"
+                  )}
+                >
+                  {stepName}
+                </span>
+              ) : null}
             </li>
             {index < steps.length - 1 && (
               <span

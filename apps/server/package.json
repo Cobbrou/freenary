@@ -16,6 +16,7 @@
     "@freenary/auth": "workspace:*",
     "@freenary/db": "workspace:*",
     "@freenary/env": "workspace:*",
+    "@freenary/instance-config": "workspace:*",
     "@orpc/openapi": "catalog:",
     "@orpc/server": "catalog:",
     "@orpc/zod": "catalog:",

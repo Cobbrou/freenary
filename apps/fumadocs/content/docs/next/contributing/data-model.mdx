@@ -8,7 +8,7 @@ This page owns the vocabulary of the schema. Every model name, column name and e
 
 ## Where the schema lives
 
-Prisma reads a directory, not one file. Five files split the model by area.
+Prisma reads a directory, not one file. Six files split the model by area.
 
 <Files>
   <Folder name="packages/db" defaultOpen>
@@ -19,9 +19,10 @@ Prisma reads a directory, not one file. Five files split the model by area.
         <File name="budget.prisma" />
         <File name="budget-profile.prisma" />
         <File name="assistant.prisma" />
+        <File name="instance.prisma" />
       </Folder>
       <Folder name="migrations">
-        <File name="7 migration directories, migration_lock.toml, .gitkeep" />
+        <File name="12 migration directories, migration_lock.toml, .gitkeep" />
       </Folder>
     </Folder>
     <File name="prisma.config.ts" />
@@ -49,7 +50,7 @@ Two places supply the URL. `packages/db/prisma.config.ts` hands `process.env.DAT
 
 | Model and table | Key fields | Constraints and notes |
 | --- | --- | --- |
-| `User`, table `user` | `id`, `name`, `email`, `emailVerified` (`false`), `twoFactorEnabled` (`false`), `image?`, `taxCountries String[]`, `onboardingCompletedAt?`, `createdAt`, `updatedAt` | `@@unique([email])`. Ten child relations, each with a cascade delete |
+| `User`, table `user` | `id`, `name`, `email`, `emailVerified` (`false`), `twoFactorEnabled` (`false`), `image?`, `taxCountries String[]`, `onboardingCompletedAt?`, `role UserRole` (`MEMBER`), `createdAt`, `updatedAt` | `@@unique([email])`. Ten child relations, each with a cascade delete. Better Auth never writes `role` |
 | `Session`, table `session` | `expiresAt`, `token`, `ipAddress?`, `userAgent?`, `userId` | `@@unique([token])`, `@@index([userId])`, cascade |
 | `Account`, table `account` | `issuer`, `accountId`, `providerId`, `userId`, `accessToken?`, `refreshToken?`, `idToken?`, `accessTokenExpiresAt?`, `refreshTokenExpiresAt?`, `scope?`, `password?` | `@@unique([issuer, accountId], map: "account_issuer_accountId_uidx")`, `@@index([userId])`. The credential and OAuth link table, never a bank account. The password hash sits in `password` |
 | `Verification`, table `verification` | `identifier`, `value`, `expiresAt` | `@@index([identifier])`. No user column and no foreign key |
@@ -156,9 +157,22 @@ The colour a subcategory shows is the stored colour of its parent, through `cust
 
 The `ordinal` column orders a conversation and `createdAt` cannot, because both rows of one turn can share a millisecond. The `parts` column holds the AI SDK message parts as the stream wrote them. So a stored answer replays with its lookup rows intact.
 
+## Instance configuration
+
+`instance.prisma` holds what an operator sets in the setup screen, and the claim that names the operator. Neither model has a user relation, and neither one cascades.
+
+| Model and table | Key fields | Constraints and notes |
+| --- | --- | --- |
+| `InstanceSetting`, table `instance_setting` | `key` (`@id`), `sealed`, `updatedAt`, `updatedBy?` | One row per environment variable the screen owns. `sealed` is AES-256-GCM ciphertext under a key derived from `BETTER_AUTH_SECRET`, with the row `key` as associated data. `updatedBy` holds a `User.id` and carries no foreign key, so deleting the operator leaves the row |
+| `InstanceSetup`, table `instance_setup` | `id` (`@id`, default `singleton`), `claimedAt?`, `completedAt?`, `createdAt` | At most one row, for the whole setup lifecycle. `claimedAt` marks the instance as owned; `completedAt` marks the wizard as finished, which is what stops the web app sending every visitor to `/setup` |
+
+The claim runs in the better-auth `session.create.after` hook, at each new session. It inserts the row with `createMany` and `skipDuplicates`. Then one `updateMany` on `instance_setup`, matched on `claimedAt: null`, runs inside the transaction that sets `User.role`. That conditional update is the lock. A second session matches no row, so two accounts cannot both become the operator.
+
+The migration that creates the table sets `claimedAt` and `completedAt` on an instance that already has users. It gives the role to the oldest user with `emailVerified`, or to the oldest user when none is verified.
+
 ## Enums
 
-PostgreSQL holds exactly three enum types. Every value below is verbatim, in declaration order.
+PostgreSQL holds exactly five enum types. Every value below is verbatim, in declaration order.
 
 ### `BankConnectionStatus`
 
@@ -207,9 +221,32 @@ The last column is `isInvestmentAccountType`, a TypeScript lookup in `packages/a
 | `USER`      | The question of the reader |
 | `ASSISTANT` | The answer                 |
 
+### `UserRole`
+
+`User.role` uses it, with the column default `MEMBER`.
+
+| Value | Meaning |
+| --- | --- |
+| `MEMBER` | The ordinary account. It reaches its own rows alone |
+| `OPERATOR` | The first account that signed in to the instance. It opens the setup screen, and it reads no financial row of another user |
+
+Two code paths set `OPERATOR`: one `user.update` inside the claim transaction, and the backfill `UPDATE` in the migration `20260922120000_instance_configuration`. The SQL in [Troubleshooting](/docs/self-hosting/troubleshooting#the-wrong-account-became-the-operator) can also move the role to another account. No endpoint writes the value back to `MEMBER`.
+
+### `SyncPhase`
+
+`SyncRun.phase` uses it, and the column has no default.
+
+| Value | Meaning |
+| --- | --- |
+| `IMPORTING` | The run is reading accounts and transactions from the providers |
+| `CATEGORISING` | The import finished, and the run is resolving categories |
+| `FINISHED` | The run ended. `SyncRun.finishedAt` holds the moment |
+
+One row per user, keyed by `userId`. A user therefore has one sync run at a time, and a new run replaces the last one.
+
 ### The dropped enum
 
-`BudgetLineKind` was a fourth type with the values `REVENUE`, `INVESTMENT` and `OUTGOING`. The migration `20260904120000_derive_budget_line_kind` dropped the type together with the column `budget_line.kind`. The three names survive as a TypeScript union, and `budgetLineKindOf` derives the value from the group of a category. One group maps to each name: `income` to `REVENUE`, `investments` to `INVESTMENT` and `spending` to `OUTGOING`.
+`BudgetLineKind` was another enum type, with the values `REVENUE`, `INVESTMENT` and `OUTGOING`. The migration `20260904120000_derive_budget_line_kind` dropped the type together with the column `budget_line.kind`. The three names survive as a TypeScript union, and `budgetLineKindOf` derives the value from the group of a category. One group maps to each name: `income` to `REVENUE`, `investments` to `INVESTMENT` and `spending` to `OUTGOING`.
 
 ### Free-text vocabularies
 

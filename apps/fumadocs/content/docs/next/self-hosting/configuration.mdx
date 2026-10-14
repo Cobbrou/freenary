@@ -28,6 +28,19 @@ The development stack reads the same file, and the file is optional there. `dock
 
 `migrate` gets one key, `DATABASE_URL`. `postgres` gets three: `POSTGRES_DB`, `POSTGRES_USER` and `POSTGRES_PASSWORD`.
 
+## Where a value can be set
+
+Some of these variables also live in [the setup screen](/docs/self-hosting/setup). An operator types them into a form there, instead of into the file:
+
+| Integration | Variables the screen owns |
+| --- | --- |
+| Bank provider | `BANKING_PROVIDER`, `POWENS_DOMAIN`, `POWENS_CLIENT_ID`, `POWENS_CLIENT_SECRET`, `ENABLE_BANKING_APP_ID`, `ENABLE_BANKING_PRIVATE_KEY` |
+| Email delivery | `EMAIL_PROVIDER`, `EMAIL_FROM`, `RESEND_API_KEY`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASSWORD` |
+
+**A value in the environment wins.** The server reads a variable from the environment first, and falls back to the row the screen wrote. A line in `.env` therefore makes the matching field read-only, and the screen names the variable the environment owns.
+
+Every other variable on this page comes from the environment alone.
+
 ## How the server checks its environment
 
 {/* env-sync:start count */}

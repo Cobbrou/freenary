@@ -8,7 +8,7 @@ import { authClient } from "@/shared/auth";
 
 type Audience = "guest" | "member" | "onboarding";
 
-type Destination = "/" | "/login" | "/onboarding";
+type Destination = "/" | "/login" | "/onboarding" | "/setup";
 
 interface AuthGateProps {
   audience: Audience;
@@ -18,12 +18,20 @@ interface AuthGateProps {
 interface Visitor {
   completed: boolean | undefined;
   isPending: boolean;
+  isSetupUnsettled: boolean;
   isSignedIn: boolean;
+  setupCompleted: boolean | undefined;
 }
 
 const redirectFor = (
   audience: Audience,
-  { completed, isPending, isSignedIn }: Visitor
+  {
+    completed,
+    isPending,
+    isSetupUnsettled,
+    isSignedIn,
+    setupCompleted,
+  }: Visitor
 ): Destination | null => {
   if (audience === "guest") {
     return isSignedIn ? "/" : null;
@@ -37,6 +45,14 @@ const redirectFor = (
     return "/login";
   }
 
+  if (setupCompleted === false) {
+    return "/setup";
+  }
+
+  if (isSetupUnsettled) {
+    return null;
+  }
+
   if (audience === "member") {
     return completed === false ? "/onboarding" : null;
   }
@@ -45,21 +61,35 @@ const redirectFor = (
 };
 
 export const AuthGate = ({ audience, children }: AuthGateProps) => {
-  const viewer = useRouteContext({
+  const { instance, viewer } = useRouteContext({
     from: "__root__",
-    select: (context) => context.viewer,
+    select: (context) => ({
+      instance: context.instance,
+      viewer: context.viewer,
+    }),
   });
 
   const navigate = useNavigate();
   const { data: session, isPending } = authClient.useSession();
+  const isSignedIn = session !== null && session !== undefined;
   const status = useQuery(
     orpc.onboarding.getStatus.queryOptions({ enabled: session !== null })
   );
 
+  const setup = useQuery(
+    orpc.instance.status.queryOptions({
+      enabled: audience !== "guest" && isSignedIn,
+    })
+  );
+
+  const isSetupUnsettled = instance.kind !== "ready" && setup.isPending;
+
   const destination = redirectFor(audience, {
     completed: status.data?.completed,
     isPending,
+    isSetupUnsettled,
     isSignedIn: session !== null,
+    setupCompleted: setup.data?.completed,
   });
 
   useEffect(() => {
@@ -82,6 +112,10 @@ export const AuthGate = ({ audience, children }: AuthGateProps) => {
 
   if (isPending) {
     return wasServerRenderedForMember ? children : null;
+  }
+
+  if (isSetupUnsettled) {
+    return null;
   }
 
   const isOnboardingStatusUnreadable = audience === "member" && status.isError;

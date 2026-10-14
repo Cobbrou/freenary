@@ -108,7 +108,7 @@ Put your own hostnames in the last two lines. The API server refuses a secret un
 
 ### Set up the bank provider
 
-Do this before the first start, so the instance serves working screens from the beginning.
+Do the console work before the first start, so the instance serves working screens from the beginning.
 
 Create a sandbox domain and a client application in the [Powens console](https://console.powens.com). Register this redirect URI on the client:
 
@@ -120,16 +120,9 @@ The value is your `CORS_ORIGIN` and the path `/callback/powens`. Powens matches 
 
 Activate the connectors of the banks you want to offer. A domain with no active connector answers with an empty bank list.
 
-Then add the credentials of the client to `.env`:
+Keep the domain, the client id and the client secret to hand. The credentials go into [the setup screen](/docs/self-hosting/setup) after the first start, and not into the `.env` file.
 
-```dotenv
-BANKING_PROVIDER=powens
-POWENS_DOMAIN=acme-sandbox
-POWENS_CLIENT_ID=<client id>
-POWENS_CLIENT_SECRET=<client secret>
-```
-
-[Bank providers](/docs/self-hosting/bank-providers) holds each console step, the sandbox limits, and the Enable Banking alternative. An empty `POWENS_` variable turns bank linking off, and no message says so.
+[Bank providers](/docs/self-hosting/bank-providers) holds each console step, the sandbox limits, and the Enable Banking alternative. An instance with no credentials turns bank linking off, and no message says so.
 
 </Step>
 
@@ -187,9 +180,19 @@ docker compose logs -f server
 
 ### Create the first account
 
-Open the web app origin in a browser, then sign up with an email address and a password. Freenary has no admin account and no owner role, so the first account is an ordinary user. [First steps](/docs/guides/first-steps) covers what that user does next.
+Open the web app origin in a browser, then sign up with an email address and a password. An instance on a public origin is open to anybody who finds it. Create that account in the same sitting as the install.
 
-The wizard that opens proves the bank provider. It asks for a tax residency, then offers a bank step with the banks your domain activated. A missing bank step means Freenary read no credentials, and Settings then reads `Bank linking is unavailable`.
+</Step>
+
+<Step>
+
+### Open the setup screen
+
+The account you made is the operator of the instance, because it signed in first. Freenary opens `/setup` for it. [The setup screen](/docs/self-hosting/setup#the-first-account-becomes-the-operator) tells more.
+
+The setup screen is where the bank and email credentials go. [The setup screen](/docs/self-hosting/setup) walks each card and the restart that applies it.
+
+After `Finish setup`, the onboarding wizard opens, and it proves the bank provider. It asks for a tax residency, then offers a bank step with the banks your domain activated. A missing bank step means Freenary read no credentials, and Settings then reads `Bank linking is unavailable`. [First steps](/docs/guides/first-steps) covers what the operator does next.
 
 </Step>
 
@@ -202,6 +205,12 @@ The first sign-up is the moment to decide about email verification. With no emai
 </Callout>
 
 <Cards>
+
+<Card
+  title="The setup screen"
+  href="/docs/self-hosting/setup"
+  description="Become the operator, then set the providers from the app."
+/>
 
 <Card
   title="Configuration"
