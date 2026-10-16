@@ -29,6 +29,6 @@ The server is thin glue — business logic lives in `packages/api`, auth in `pac
 
 1. Define an oRPC procedure in `packages/api/src/routers/`.
 2. The existing RPC handler in `src/index.ts` picks it up automatically.
-3. For non-oRPC endpoints (webhooks, static files), add an Elysia route in `src/index.ts`.
+3. For non-oRPC endpoints (webhooks, static files), add an Elysia route in `src/index.ts`. Add its path prefix to `FORWARDED_PATH_PREFIXES` in `apps/web/src/shared/lib/forward-api-request.ts` too, or a single-origin deployment answers it with the web app's 404; `bun test scripts/deploy-templates.test.ts` catches the omission, but CI runs no tests, so run it by hand.
 
 A streaming route needs `{ parse: "none" }` like `/rpc*`, or Elysia consumes the body before the handler reads it. `/ai/chat` is the only such route today; its handler lives in `packages/api/src/assistant/` and returns a `Response`, so this app stays glue.

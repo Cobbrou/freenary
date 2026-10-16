@@ -4,6 +4,7 @@
   "description": "Install, configure, scale and operate one Freenary instance.",
   "pages": [
     "index",
+    "hosting-panels",
     "configuration",
     "setup",
     "reverse-proxy",

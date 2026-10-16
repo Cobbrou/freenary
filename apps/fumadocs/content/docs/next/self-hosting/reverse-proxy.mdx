@@ -1,10 +1,10 @@
 ---
 title: Behind a reverse proxy
-description: Put TLS and two public hostnames in front of the stack, and keep the session cookie alive.
+description: Put TLS and one or two public hostnames in front of the stack, and keep the session cookie alive.
 icon: Network
 ---
 
-Put a TLS terminator in front of the two published ports. Send the web app hostname to the web port, `3001` by default. Send the API server hostname to the API port, `3000` by default.
+Put a TLS terminator in front of the published ports. The simplest setup is one hostname for the web port, `3001` by default. A split setup sends a second hostname to the API port, `3000` by default.
 
 TLS stops at your proxy. The stack declares no proxy service, no certificate volume and no port 443.
 
@@ -48,6 +48,34 @@ The web app calls `http://server:3000` on the Docker network while it renders a 
 
 </Callout>
 
+## One hostname
+
+One hostname can serve the whole instance. The web app forwards `/api/auth`, `/rpc`, `/ai/chat` and `/api-reference` to the API server, over the Docker network. Set both origins to the web app URL:
+
+```dotenv
+BETTER_AUTH_URL=https://freenary.example.com
+CORS_ORIGIN=https://freenary.example.com
+```
+
+Send the hostname to the web port alone:
+
+```text
+freenary.example.com {
+	reverse_proxy 127.0.0.1:3001
+}
+```
+
+The browser then calls one origin. The session cookie stays `SameSite=Lax`, and `AUTH_COOKIE_DOMAIN` stays unset. Bind both ports to the loopback interface:
+
+```dotenv
+SERVER_PORT=127.0.0.1:3000
+WEB_PORT=127.0.0.1:3001
+```
+
+The web app passes `X-Forwarded-For` to the API server unchanged. A caller that reaches port `3001` directly can write any address into that header. Each fake address then gets its own rate-limit bucket. The loopback binding lets only the proxy reach the port.
+
+A hosting panel such as Dokploy or Coolify uses this setup with its own compose file. Read [Hosting panels](/docs/self-hosting/hosting-panels).
+
 ## Two subdomains
 
 A split like `app.example.com` and `api.example.com` needs one more value. Set `AUTH_COOKIE_DOMAIN` to the parent domain both hostnames sit under:
@@ -72,7 +100,7 @@ Two different hostnames, no `AUTH_COOKIE_DOMAIN` and an API server on plain HTTP
 
 </Callout>
 
-One hostname for both apps needs no cookie domain at all. The API server and the web app then share a hostname, so the cookie already stays `SameSite=Lax`.
+[One hostname](#one-hostname) needs no cookie domain at all.
 
 ## Trusted proxies
 

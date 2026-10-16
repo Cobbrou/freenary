@@ -74,6 +74,7 @@ The full documentation lives at [freenary.dev](https://freenary.dev) (source in 
 - [Concepts](https://freenary.dev/docs/concepts) — the vocabulary the interface uses
 - [Using Freenary](https://freenary.dev/docs/guides) — what you do on each screen
 - [Self-hosting](https://freenary.dev/docs/self-hosting) — the install that serves other people
+- [Hosting panels](https://freenary.dev/docs/self-hosting/hosting-panels) — Dokploy, Coolify and other Docker panels, behind one hostname
 - [Configuration](https://freenary.dev/docs/self-hosting/configuration) — every environment variable
 - [Integrations](https://freenary.dev/docs/integrations) — the API surface and procedures
 - [Contributing](https://freenary.dev/docs/contributing) — set up the code, run the checks, open a pull request

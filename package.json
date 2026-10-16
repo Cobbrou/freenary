@@ -58,6 +58,7 @@
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down",
     "docker:logs": "docker compose logs -f",
+    "deploy:dokploy": "bun scripts/dokploy-import.ts",
     "check": "ultracite check",
     "fix": "ultracite fix"
   },

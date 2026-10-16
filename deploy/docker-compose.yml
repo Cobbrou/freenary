@@ -1,0 +1,104 @@
+# The stack for a hosting panel or an existing reverse proxy: Dokploy,
+# Portainer, or any Traefik, Caddy or nginx that reaches containers on a
+# Docker network. It publishes no host port. Route one public hostname to the
+# `web` service on port 3001: the web app forwards the API paths to `server`
+# on the internal network, so the browser sees a single origin.
+#
+# Three values are required: FREENARY_URL, POSTGRES_PASSWORD and
+# BETTER_AUTH_SECRET. Every other server setting can come from an optional
+# `.env` file next to this file; `.env.example` at the repository root lists
+# them. `../docker-compose.yml` is the stack that publishes host ports.
+
+x-server-image: &server-image ghcr.io/suiramdev/freenary-server:${FREENARY_VERSION:-latest}
+
+x-database-url: &database-url postgresql://postgres:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}@postgres:5432/freenary
+
+x-public-url: &public-url "${FREENARY_URL:?Set FREENARY_URL to the public URL of the web app, such as https://freenary.example.com}"
+
+services:
+  postgres:
+    image: postgres:18
+    environment:
+      POSTGRES_DB: freenary
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+    volumes:
+      - freenary_postgres_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d freenary"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  migrate:
+    image: *server-image
+    working_dir: /app/packages/db
+    command: bun x prisma migrate deploy
+    environment:
+      DATABASE_URL: *database-url
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  server:
+    image: *server-image
+    init: true
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      DATABASE_URL: *database-url
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?Set BETTER_AUTH_SECRET to 32 characters or more}
+      BETTER_AUTH_URL: *public-url
+      CORS_ORIGIN: *public-url
+      NODE_ENV: production
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "bun",
+          "-e",
+          "fetch('http://localhost:3000/').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  web:
+    image: ghcr.io/suiramdev/freenary-web:${FREENARY_VERSION:-latest}
+    init: true
+    expose:
+      - "3001"
+    networks:
+      - default
+    environment:
+      SERVER_URL: http://server:3000
+      PUBLIC_SERVER_URL: *public-url
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "bun",
+          "-e",
+          "fetch('http://localhost:3001/').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    depends_on:
+      server:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  freenary_postgres_data:

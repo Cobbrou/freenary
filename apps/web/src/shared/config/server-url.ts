@@ -37,9 +37,17 @@ export const getPublicServerUrl = (): string | undefined => {
   return stripTrailingSlash(requestTimeUrl);
 };
 
+export const getInternalServerUrl = (): string | undefined => {
+  const internalUrl = processEnv?.SERVER_URL;
+
+  return internalUrl ? stripTrailingSlash(internalUrl) : undefined;
+};
+
 export const getServerUrl = (): string => {
-  if (isServer && processEnv?.SERVER_URL) {
-    return stripTrailingSlash(processEnv.SERVER_URL);
+  const internalUrl = isServer ? getInternalServerUrl() : undefined;
+
+  if (internalUrl) {
+    return internalUrl;
   }
 
   const publicUrl = getPublicServerUrl();

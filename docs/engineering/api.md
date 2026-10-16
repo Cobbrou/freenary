@@ -6,6 +6,7 @@ The reader-facing contracts live in the documentation site and are not repeated 
 
 ## Routers and the request boundary
 
+- `apps/server/src/index.ts › /api-reference*` — the handler rebuilds the request on `BETTER_AUTH_URL` before oRPC sees it. `OpenAPIReferencePlugin` builds `servers[0].url` and the spec URL in the docs page from `request.url.origin`, which behind a TLS proxy is `http://`, and behind the web app's forwarder is the Docker-internal `http://server:3000`.
 - `packages/api/src/routers/auth.ts › accountExists` — the endpoint deliberately leaks whether an address has an account, because the sign-in form cannot branch without it. The per-caller `ACCOUNT_EXISTS_RATE_LIMIT` is the mitigation, not a nicety.
 - `packages/api/src/routers/auth.ts › accountExists` — Better Auth stores email addresses lowercased, so a mixed-case entry must be folded before the lookup or the form offers sign-up for an account that exists.
 - `packages/api/src/routers/auth.ts › viewer` — public on purpose: a guest is an answer, not a refusal. It returns `sessionCookieShared` because without it `guest` only means "unreadable from this origin", which is what the web app's own server needs before it redirects.
