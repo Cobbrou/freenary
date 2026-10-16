@@ -1,0 +1,215 @@
+---
+title: API
+description: The base URL, paths, session cookie, request and error shapes, the assistant stream, and the limits of the Freenary HTTP API.
+icon: Webhook
+---
+
+Use this page to write a client for your instance. Your code calls the same procedures as the web app, with the session cookie of a real account. [Procedures](/docs/reference/procedures) lists each one.
+
+## Base URL
+
+With one hostname, the base URL is your public URL, for example `https://freenary.example.com`: the web app forwards the API paths to the API server. With two subdomains, it's `BETTER_AUTH_URL`. Locally the API server listens on `PORT`, default `3000`.
+
+Through the web app, each forwarded call must start answering within 9 seconds or gets `502 Bad Gateway`, and a caller that disconnects gets `499`. A long `budget.syncAccounts` can hit that 502 while the sync keeps running; follow it with `budget.getSyncStatus`.
+
+## Paths
+
+| Path | Answers |
+| --- | --- |
+| `GET /` | Plain text `OK`. The health checks read it |
+| `GET` or `POST /api/auth/*` | Better Auth: sign-up, sign-in, sessions, one-time codes, two-factor, passkeys. Other methods get `405 Method Not Allowed`, except `OPTIONS` |
+| `POST /rpc/<router>/<procedure>` | Every procedure, inside the oRPC envelope. The web app uses this |
+| `POST /api-reference/<router>/<procedure>` | The same procedures, plain JSON in and out |
+| `GET /api-reference` | The reference UI (Scalar, loaded from a CDN) |
+| `GET /api-reference/spec.json` | The OpenAPI document |
+| `POST /ai/chat` | The assistant stream. Not a procedure |
+
+There's no version prefix. An unknown procedure under `/rpc` or `/api-reference` gets `404` with the text `Not Found`; any other unknown path gets `404` with `NOT_FOUND`. `OPTIONS` on any path gets the CORS preflight answer, `204`.
+
+`/rpc` accepts any method except `GET`, which gets `405` with the code `METHOD_NOT_SUPPORTED`. `/api-reference` procedures accept `POST` only.
+
+<Callout type="warn">
+
+`/api-reference` is a live API, not just documentation. Anyone with a session can call every procedure there, and the reference UI has a send button. Block the prefix at your proxy if you don't want it public. With one hostname, block it on that hostname.
+
+</Callout>
+
+### The OpenAPI document
+
+`openapi` is `3.1.1`, `info.title` is `API Reference`, `info.version` is `0.0.0`, and `servers[0].url` is the origin of `BETTER_AUTH_URL` plus `/api-reference` (any path in `BETTER_AUTH_URL` is dropped). For a generated client, note that:
+
+- It declares no security scheme and no tags. [Procedures](/docs/reference/procedures) says which ones need a session.
+- No procedure declares an output schema, so every response schema accepts any value. Use the output tables in [Procedures](/docs/reference/procedures).
+- It omits `POST /ai/chat`.
+
+## Authentication
+
+The session cookie is the only credential. There's no API key and no bearer token: the instance registers neither plugin, and an `Authorization` header alone gets `401`.
+
+| Property | Value |
+| --- | --- |
+| Name | `__Secure-better-auth.session_token` when `BETTER_AUTH_URL` is `https://`, otherwise `better-auth.session_token` |
+| Attributes | `HttpOnly`, `Path=/`, `SameSite=Lax` (or `None` on two hostnames without `AUTH_COOKIE_DOMAIN`), `Secure` over HTTPS, `Domain` when `AUTH_COOKIE_DOMAIN` is set |
+| Lifetime | 7 days. A sign-in with `rememberMe: false` gets a browser-session cookie instead |
+
+Five procedures answer without a session: `healthCheck`, `auth.capabilities`, `auth.accountExists`, `auth.viewer` and `instance.status`. The rest return:
+
+```json
+{
+  "defined": false,
+  "code": "UNAUTHORIZED",
+  "status": 401,
+  "message": "Unauthorized"
+}
+```
+
+Operator procedures (`instance.describe`, `check`, `save`, `complete`) also return `FORBIDDEN` (403) to any account that isn't the operator.
+
+### Sign in and call a procedure
+
+```bash
+curl -c jar.txt -X POST https://freenary.example.com/api/auth/sign-in/email \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"you@example.com","password":"<your password>"}'
+
+curl -b jar.txt -X POST https://freenary.example.com/api-reference/onboarding/getStatus \
+  -H 'Content-Type: application/json' -d '{}'
+# {"completed":false,"taxCountries":[]}
+```
+
+The first call writes the session cookie to `jar.txt`; the second sends it back. An account with two-factor gets no cookie from the first call: the answer asks for the second factor.
+
+`POST /api/auth/sign-up/email` with `name`, `email` and `password` creates an account. With no email provider, it signs you in at once. With one, it answers `token: null`, emails a one-time code, and you sign in after confirming.
+
+### CORS
+
+The API server allows one origin, `CORS_ORIGIN`, with credentials, methods `GET`, `POST` and `OPTIONS`, and headers `Content-Type` and `Authorization`. A browser client must run on that origin and send credentials. Server-to-server callers can ignore CORS.
+
+## Request shape
+
+A procedure's dot path becomes its URL: `budget.getTransactions` is `/api-reference/budget/getTransactions`, and `healthCheck` is `/api-reference/healthCheck`.
+
+|              | `/rpc`               | `/api-reference` |
+| ------------ | -------------------- | ---------------- |
+| Request body | `{"json": <input>}`  | `<input>`        |
+| No input     | `{}`                 | `{}`             |
+| Success body | `{"json": <output>}` | `<output>`       |
+
+Use `/api-reference` for hand-written calls and `/rpc` with the oRPC client. There's no published SDK: the `AppRouter` type lives inside the repository.
+
+<Callout type="warn">
+
+Send `{}` for a procedure with no input, never `{"json":null}`. `null` fails on `budget.syncAccounts`, whose optional input accepts an absent value but not `null`.
+
+</Callout>
+
+## Errors
+
+| Field     | Meaning                                                        |
+| --------- | -------------------------------------------------------------- |
+| `defined` | Always `false` in Freenary                                     |
+| `code`    | One of the codes below                                         |
+| `status`  | The HTTP status, repeated                                      |
+| `message` | An English message. Not translated                             |
+| `data`    | On a validation failure, `data.issues` holds the schema issues |
+
+On `/api-reference` that object is the body; on `/rpc` it's inside `json`.
+
+| Code | HTTP | Cause |
+| --- | --- | --- |
+| `BAD_REQUEST` | 400 | Input failed the schema (`Input validation failed`), or a procedure refused it with its own message |
+| `UNAUTHORIZED` | 401 | No session on a protected procedure |
+| `FORBIDDEN` | 403 | An operator procedure called by another account |
+| `NOT_FOUND` | 404 | A bank connection, transaction, category, bank provider, active conversation, integration or variant doesn't match |
+| `METHOD_NOT_SUPPORTED` | 405 | `GET` on `/rpc` |
+| `CONFLICT` | 409 | A custom category name already exists |
+| `TOO_MANY_REQUESTS` | 429 | `auth.accountExists` or `assistant.saveTurn` over its limit |
+| `INTERNAL_SERVER_ERROR` | 500 | An unhandled failure, such as a provider network error |
+| `NOT_IMPLEMENTED` | 501 | `instance.check` with no check for that variant |
+| `SERVICE_UNAVAILABLE` | 503 | The bank provider couldn't list banks for a country |
+
+## The assistant stream
+
+```http
+POST /ai/chat
+```
+
+It uses the same session cookie. The body is the AI SDK's UI message request plus `locale`:
+
+| Field | Required | Notes |
+| --- | --- | --- |
+| `messages` | No, default `[]` | Only the last entry is read. It must be a user message whose `parts` are text parts: `{ "type": "text", "text": "<question>" }` |
+| `trigger` | No | `regenerate-message` redoes the last stored answer. Anything else asks a new question |
+| `messageId` | No | With `regenerate-message`, the id of the last stored assistant message. Any other id becomes a new question |
+| `locale` | No | `en` or `fr-FR` style |
+
+Earlier turns are rebuilt from the stored conversation, so one user message is a complete request, and a caller can't inject context.
+
+Success is `200` with an AI SDK UI message stream (`content-type: text/event-stream`, `x-vercel-ai-ui-message-stream: v1`, `x-accel-buffering: no`). Chunks include `start`, `text-delta`, `reasoning-delta`, `tool-input-available`, `tool-output-available`, `finish` and `error`. The turn is stored when the answer finishes; an aborted, failed or empty stream stores nothing.
+
+Refusals are plain-text bodies, checked in this order:
+
+| Status | Body | Cause |
+| --- | --- | --- |
+| 401 | `unauthorized` | No session |
+| 503 | `unconfigured` | No model configured |
+| 429 | `rate_limited` | Over the question limit, or the limiter's database failed |
+| 400 | `bad_request` | Not JSON, fails the schema, last message isn't a text-only user message, or the question exceeds 8000 characters |
+
+The rate limit is charged before the body is checked, so a malformed request still counts.
+
+## Limits
+
+### Rate limits
+
+Better Auth limits `/api/auth/*` per caller address and path. Counters live in the database.
+
+| Path | Limit |
+| --- | --- |
+| `/api/auth/sign-in/email`, `/api/auth/sign-in/social` | 10 per 60 s |
+| `/api/auth/sign-up/email` | 5 per 300 s |
+| `/api/auth/two-factor/verify-totp` | 10 per 300 s |
+| `/api/auth/two-factor/verify-backup-code` | 5 per 300 s |
+| Other `/api/auth/two-factor/*` | 3 per 10 s |
+| `/api/auth/passkey/generate-authenticate-options`, `/api/auth/passkey/verify-authentication` | 20 per 60 s |
+| Other `/api/auth/sign-in*` and `/api/auth/sign-up*`, `/api/auth/change-password`, `/api/auth/change-email` | 3 per 10 s |
+| Password reset and one-time-code paths (with an email provider) | 3 per 60 s |
+| Every other `/api/auth/*` path | 100 per 60 s |
+
+The caller address comes from `X-Forwarded-For`. See [Trusted proxies](/docs/reference/reverse-proxy#trusted-proxies).
+
+| Surface | Limit | Counted per |
+| --- | --- | --- |
+| `auth.accountExists` | 20 per 60 s | Caller address |
+| `assistant.saveTurn` and `POST /ai/chat`, shared | 30 per 300 s | Account |
+
+The other 40 procedures have no limit. `budget.syncAccounts` calls the bank provider, `budget.recategorise` reprocesses every transaction, and `budget.getSankeyData` reads the whole date range, so pace those yourself.
+
+### Sizes
+
+| Limit | Value |
+| --- | --- |
+| Request body | No application limit, only Bun's default |
+| `budget.getTransactions` page | `limit` 1 to 100, default 50. The only paged procedure: pass `nextCursor` as `cursor` |
+| `budget.getMerchants` | `limit` 1 to 100, default 30 |
+| Budget lines | 200 per account, label 60 characters, amount 0 to 2147483647 minor units |
+| Custom category name | 1 to 40 characters |
+| Assistant question | 8000 characters |
+| `assistant.saveTurn` answer | 200000 characters as JSON |
+| `from` / `to` date range | No maximum, and no check that `from` is before `to` |
+
+<Cards>
+
+<Card
+  title="Procedures"
+  href="/docs/reference/procedures"
+  description="Every procedure, its input, output and errors."
+/>
+
+<Card
+  title="Security"
+  href="/docs/reference/security"
+  description="What to block at the proxy."
+/>
+
+</Cards>

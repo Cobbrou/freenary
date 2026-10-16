@@ -1,0 +1,88 @@
+---
+title: Contribute
+description: Clone Freenary, run it locally, run the checks CI runs, and open a pull request against dev.
+icon: GitPullRequest
+---
+
+Freenary is open source under the AGPL-3.0-or-later, and contributions are welcome. This page gets you from a clone to a pull request. How the code works lives in the repository, under [`docs/engineering/`](https://github.com/suiramdev/freenary/tree/main/docs/engineering).
+
+## Set up
+
+You need [Bun](https://bun.sh) `1.3.14` (pinned in `package.json`) and Docker.
+
+```bash
+git clone https://github.com/suiramdev/freenary.git
+cd freenary
+bun install
+bun run build:data
+```
+
+`bun install` also generates the Prisma client. `bun run build:data` downloads the merchant dictionary once; without it, merchant names aren't matched and fewer transactions get a category.
+
+## Run it
+
+**With Docker (recommended).** Needs port `80` free:
+
+```bash
+bun run dev:up
+```
+
+This builds the images, applies migrations and starts PostgreSQL, the API server, the web app and these docs, each on its own hostname. The banner prints them, for example `http://web.<branch>.freenary.localhost`. Use Chrome or Firefox. Each git worktree gets its own containers, database and hostnames. `bun run dev:mail` adds a Mailpit inbox for testing sign-up codes, and `bun run dev:reset` wipes the database.
+
+**Without Docker for the apps.** PostgreSQL still runs in a container:
+
+```bash
+cp .env.example .env
+echo 'DATABASE_URL=postgresql://postgres:password@localhost:5432/freenary' > apps/server/.env
+docker compose up -d --wait postgres
+(cd packages/db && bun run db:migrate:deploy)
+bun run dev
+```
+
+`.env.example` holds development values for `POSTGRES_PASSWORD` and `BETTER_AUTH_SECRET`, which Compose needs to read `docker-compose.yml`. The Prisma commands read `DATABASE_URL` from `apps/server/.env`. The API server runs on port `3000`, the web app on `3001`, and the docs on `4000`.
+
+There's no seed data: create an account on the sign-in screen. Without an email provider, sign-up signs you in straight away.
+
+## Check your change
+
+Run what CI runs before you push:
+
+```bash
+bun install --frozen-lockfile
+bun run check
+bun run check-types
+bun run check:fsd
+bun run docs:check
+bun run env:check
+bun run build
+```
+
+`bun run fix` fixes most lint and format issues. CI runs no tests, so run the test files your change touches with `bun test <path>`. If you change a Compose file, reproduce CI's `compose` job as [`docs/engineering/local-stack.md`](https://github.com/suiramdev/freenary/blob/main/docs/engineering/local-stack.md) shows. Check interface changes in the browser, in light and dark mode.
+
+## Open a pull request
+
+1. Branch with a descriptive name, such as `fix/login-redirect-loop`.
+2. Sign off each commit with `git commit -s`, which certifies the [Developer Certificate of Origin](https://developercertificate.org).
+3. Open the pull request against **`dev`**, not `main`, and fill in the template briefly.
+4. If you changed behaviour that's documented, such as a screen, an API route, an environment variable or a script, update `apps/fumadocs/content/docs/next` in the same pull request.
+
+Maintainers handle tags, version bumps and releases.
+
+## Where the rules live
+
+- [`.github/CONTRIBUTING.md`](https://github.com/suiramdev/freenary/blob/main/.github/CONTRIBUTING.md): the full contribution rules, licensing and dependency licences.
+- [`CONTEXT.md`](https://github.com/suiramdev/freenary/blob/main/CONTEXT.md): the product vision and domain terms.
+- [`AGENTS.md`](https://github.com/suiramdev/freenary/blob/main/AGENTS.md): code standards, and the `AGENTS.md` next to each workspace.
+
+Engineering notes in [`docs/engineering/`](https://github.com/suiramdev/freenary/tree/main/docs/engineering):
+
+- [Local stack](https://github.com/suiramdev/freenary/blob/main/docs/engineering/local-stack.md): both ways to run, hostnames, database commands, checks and common failures.
+- [Platform](https://github.com/suiramdev/freenary/blob/main/docs/engineering/platform.md): workspaces, the path of a request, the build graph, auth and the instance configuration.
+- [Web app](https://github.com/suiramdev/freenary/blob/main/docs/engineering/web-app.md) and [web UI](https://github.com/suiramdev/freenary/blob/main/docs/engineering/web-ui.md): Feature-Sliced Design layers, routing, components.
+- [API](https://github.com/suiramdev/freenary/blob/main/docs/engineering/api.md): routers, budget aggregation, the taxonomy.
+- [Data model](https://github.com/suiramdev/freenary/blob/main/docs/engineering/data-model.md): every Prisma model, enum and migration.
+- [Categorisation](https://github.com/suiramdev/freenary/blob/main/docs/engineering/categorisation.md): how transactions get categories.
+- [Data pipeline](https://github.com/suiramdev/freenary/blob/main/docs/engineering/data-pipeline.md): how the merchant dictionary is built.
+- [Bank provider](https://github.com/suiramdev/freenary/blob/main/docs/engineering/bank-provider.md): the adapter interface for adding a provider.
+- [Writing docs](https://github.com/suiramdev/freenary/blob/main/docs/engineering/writing-docs.md): how to write and check these pages.
+- [Dependencies](https://github.com/suiramdev/freenary/blob/main/docs/engineering/dependencies.md) and [releasing](https://github.com/suiramdev/freenary/blob/main/docs/engineering/releasing.md): Renovate, and how a version ships.

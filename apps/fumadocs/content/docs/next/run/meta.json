@@ -1,0 +1,6 @@
+{
+  "title": "Run your instance",
+  "description": "Email, sign-in, updates, backups and troubleshooting for the operator.",
+  "icon": "Server",
+  "pages": ["email", "sign-in", "updates-and-backups", "troubleshooting"]
+}

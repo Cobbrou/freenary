@@ -1,0 +1,138 @@
+---
+title: Troubleshooting
+description: Fix the most common problems with a Freenary instance, and read its logs.
+icon: CircleAlert
+---
+
+Find your symptom below. Most fixes start with two commands, run from the folder that holds your `docker-compose.yml`:
+
+```bash
+docker compose ps -a
+docker compose logs --tail 100 server
+```
+
+With a hosting panel, the same information is in the app's container list and its logs view.
+
+## You can't sign in
+
+**What you see.** Signing in fails, or you're signed in and land straight back on the sign-in screen. The passkey button may be missing.
+
+**Why.** The address Freenary is configured with doesn't exactly match the one in your browser. Scheme, host and port must all match.
+
+**Fix.** Set it to the exact address you open, with `https://` and no trailing slash:
+
+```dotenv
+FREENARY_URL=https://freenary.example.com
+```
+
+- **Dokploy:** the template starts with `http://`. Change it to `https://` once HTTPS is on for your domain.
+- **Coolify:** there's no `FREENARY_URL`. Set the `web` service's domain with `https://` and redeploy.
+- **Root `docker-compose.yml`:** it has no `FREENARY_URL`. Set `BETTER_AUTH_URL` and `CORS_ORIGIN` to the same address instead. If they're unset, the browser tries to reach `http://localhost:3000` and every request fails.
+
+Then redeploy, or run `docker compose up -d`. A `restart` isn't enough: it keeps the old values.
+
+Changing the hostname makes existing passkeys stop working; users add new ones.
+
+## The bank list is empty
+
+**`Bank linking is unavailable`.** No bank provider is set up. As the operator, open `https://freenary.example.com/setup` and complete the `Bank` step. See [Connect a bank](/docs/get-started/connect-a-bank).
+
+**The bank section shows `No banks available`.** Freenary reached your provider, which returned no bank. Either:
+
+- your Powens domain has no active connectors: activate them in the [Powens console](https://console.powens.com), then reload; or
+- no country in your tax residency is covered by the provider.
+
+**`Freenary could not load banks for` a country.** The provider refused the request or couldn't be reached: check the Powens domain and credentials (or the Enable Banking ones) in the setup screen.
+
+**Connecting a bank ends on an error page.** The redirect URI registered at the provider doesn't match. For Powens, it must be exactly `https://freenary.example.com/callback/powens`. On `localhost`, bank linking can't work: Powens needs an HTTPS address.
+
+## The server does not restart after setup
+
+**What you see.** After `Finish setup`, the setup screen waits for a minute, then shows `The server did not restart`.
+
+**Why.** `Finish setup` stops the server so it picks up the new settings at its next start. Something has to start it again. The compose files tell Docker to, and Coolify does it by default; a server started by hand stays down, and one that crashes on startup keeps restarting.
+
+**Fix.** Read the server log:
+
+```bash
+docker compose logs server
+```
+
+Fix the error it names, then start the server:
+
+```bash
+docker compose up -d server
+```
+
+With a hosting panel, read the `server` logs there and redeploy. Then press `Try again` on the setup screen.
+
+## The page shows 502 Bad Gateway
+
+- **Freenary is still starting.** On first start, the database, `migrate`, `server` and `web` start in turn. Wait a minute and reload.
+- **Your proxy or panel points at the wrong place.** Your domain must go to the `web` service on port `3001`. The web app forwards the rest to the server.
+- **The server is down.** The web app answers `502` for sign-in and data when it can't reach the server. Check `docker compose ps -a` and the server log.
+
+## Freenary won't start
+
+| What you see | Fix |
+| --- | --- |
+| `Set FREENARY_URL…`, `Set POSTGRES_PASSWORD…` or `Set BETTER_AUTH_SECRET…`, and nothing starts | Set the value named. For a secret, generate one with `openssl rand -hex 32` |
+| The server log shows `Invalid environment variables` | The `path` line names the wrong variable. Fix it and redeploy |
+| `service "migrate" didn't complete successfully` | Read `docker compose logs migrate`. A failed connection means `POSTGRES_PASSWORD` changed since the first start: put the original back |
+| A line such as `EMAIL_PROVIDER=smtp requires …` | An email variable is half set in the environment. Complete it or remove it. See [Email](/docs/run/email) |
+
+Never use `SKIP_ENV_VALIDATION` to get past a startup error. The server then runs with a broken configuration.
+
+## The assistant has no model
+
+Users see `Choose a model`, or `This instance has no model configured`. Set `AI_BASE_URL` and `AI_MODEL`, then redeploy (on Coolify, [add them to the compose file](/docs/reference/configuration#add-a-variable-on-coolify) first). See [Turn on the assistant](/docs/use/assistant#turn-on-the-assistant-operator).
+
+## The wrong account became the operator
+
+The first account to sign in becomes the operator. If you created both accounts, move the role to yours. Replace `you@example.com`, and check the address first: a typo leaves the instance with no operator.
+
+```bash
+docker compose exec -T postgres psql -U postgres -d freenary -c "UPDATE \"user\" SET role = CASE WHEN email = 'you@example.com' THEN 'OPERATOR'::\"UserRole\" ELSE 'MEMBER'::\"UserRole\" END;"
+```
+
+If a stranger signed in first, treat the instance as compromised: remove it together with its database volume, and install again.
+
+## Read the logs
+
+```bash
+docker compose logs -f server
+```
+
+| Command                                  | Shows                        |
+| ---------------------------------------- | ---------------------------- |
+| `docker compose logs -f`                 | Every container, live        |
+| `docker compose logs --tail 200 server`  | The last 200 server lines    |
+| `docker compose logs --since 15m server` | The last 15 minutes          |
+| `docker compose logs migrate`            | What the database update did |
+
+Docker keeps logs without limit by default. To cap them, add this under each service in `docker-compose.yml`:
+
+```yaml
+logging:
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+```
+
+## Still stuck?
+
+Open an issue at [github.com/suiramdev/freenary/issues](https://github.com/suiramdev/freenary/issues/new/choose). Include the version you run, what you did, the exact error, the output of `docker compose ps -a`, and the variables you set, with secrets removed.
+
+<Cards>
+  <Card
+    title="Updates and backups"
+    href="/docs/run/updates-and-backups"
+    description="Update, back up and restore your instance."
+  />
+  <Card
+    title="Configuration"
+    href="/docs/reference/configuration"
+    description="Every variable and its default."
+  />
+</Cards>

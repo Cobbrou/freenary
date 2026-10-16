@@ -1,0 +1,108 @@
+---
+title: Email
+description: Let Freenary send confirmation and password-reset codes, through Resend or any SMTP server, set in the setup screen.
+icon: Mail
+---
+
+Freenary sends email for two things: confirming a new account's address and resetting a forgotten password. Both use a one-time code. Set up email before you invite anyone.
+
+## Why set it up
+
+A fresh instance sends no email. Sign-in still works with a password or a passkey, but:
+
+- New accounts aren't asked to confirm their address.
+- There's no `Forgot password?` link. A user who forgets their password can't get back in on their own.
+
+Once email works, new accounts confirm their address with a 6-digit code, and anyone can reset a password from the sign-in screen. Accounts created before that, yours included, confirm their address with a code at their next password sign-in.
+
+## Choose a service
+
+| Service | Good for | You need |
+| --- | --- | --- |
+| [Resend](#resend) | The quickest start | A Resend account and a domain you can add DNS records to |
+| [SMTP](#smtp) | A mail provider or relay you already use | The server address, port and login |
+
+Both are set in the [setup screen](/docs/get-started/connect-a-bank), at `https://freenary.example.com/setup`, in the `Email` step. As the operator, you can open `/setup` again at any time to change them.
+
+The setup screen tests the connection before it saves, so a wrong key or password shows up right away rather than at someone's first sign-up. If the test fails but you're sure of the values, `Save anyway` keeps them.
+
+## Resend
+
+<Steps>
+
+<Step>
+
+### Get an API key
+
+In the [Resend dashboard](https://resend.com), add and verify your domain, then create an API key with full access. The setup screen's test reads your domains, which a sending-only key can't do.
+
+</Step>
+
+<Step>
+
+### Enter it in the setup screen
+
+Open `/setup`, go to `Email`, choose `Resend`, and fill in:
+
+- `Sender address` — for example `Freenary <no-reply@example.com>`. Use an address on the domain you verified.
+- `API key` — the key from Resend, starting with `re_`.
+
+</Step>
+
+<Step>
+
+### Save and finish
+
+Press `Save and continue`, then `Finish setup`. Freenary restarts to apply the change.
+
+</Step>
+
+</Steps>
+
+## SMTP
+
+Open `/setup`, go to `Email`, choose `SMTP`, and fill in what your provider gives you. `Port`, `Implicit TLS`, `User` and `Password` are under `More options`.
+
+| Field | What to enter |
+| --- | --- |
+| `Sender address` | For example `Freenary <no-reply@example.com>` |
+| `Host` | Your provider's SMTP server, such as `smtp.example.com` |
+| `Port` | Usually `587`. Leave it empty for the default |
+| `Implicit TLS` | Turn it on for port `465`. Leave it off for `587`, which upgrades to TLS on its own |
+| `User` and `Password` | Your SMTP login. Leave both empty for a relay that needs no login |
+
+Press `Save and continue`, then `Finish setup`.
+
+## Check that it works
+
+Sign up with an address that has no account yet. A code titled "Confirm your Freenary email address" should arrive within a minute. To test a reset instead, press `Forgot password?` on the sign-in screen.
+
+## If emails don't arrive
+
+| Problem | Fix |
+| --- | --- |
+| The message lands in spam | Add SPF, DKIM and DMARC records for your sender's domain, as your provider explains |
+| The provider refuses the sender | Use a sender address on a domain you verified with that provider |
+| The code no longer works | A code lasts 10 minutes, and three wrong tries cancel it. Ask for a new one |
+| A new code doesn't arrive | Codes are limited to 3 requests per minute. Wait, then try again |
+
+Emails are plain text and in English only.
+
+<Callout type="info">
+
+You can also set email with environment variables (`EMAIL_PROVIDER`, `EMAIL_FROM` and the rest). A value set there wins, and the setup screen shows it as `Set by your server`. See [Configuration](/docs/reference/configuration#a-value-in-the-environment-wins).
+
+</Callout>
+
+<Cards>
+  <Card
+    title="Sign-in"
+    href="/docs/run/sign-in"
+    description="Who can create an account, and the sign-in methods you can offer."
+  />
+  <Card
+    title="Troubleshooting"
+    href="/docs/run/troubleshooting"
+    description="Fix common problems with your instance."
+  />
+</Cards>

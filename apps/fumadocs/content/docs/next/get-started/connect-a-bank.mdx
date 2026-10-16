@@ -1,0 +1,90 @@
+---
+title: Connect a bank
+description: Create a free Powens sandbox, enter it in the setup screen, and link a test bank so your budget fills.
+icon: Landmark
+---
+
+A bank connection is the only way transactions get into Freenary, so this is the step that makes it useful. You'll use a free Powens sandbox and a test bank, so you don't need your real bank credentials yet.
+
+Powens is the bank provider that links Freenary to banks. You need to be the operator for this page.
+
+<Steps>
+
+<Step>
+
+### Create a Powens sandbox
+
+Everything here happens in the [Powens console](https://console.powens.com). The sandbox is free and needs no contract.
+
+1. [Sign up](https://console.powens.com/auth/register), confirm your email, and fill in the organization details.
+2. Create a domain. Powens adds `-sandbox` to its name, so `acme` becomes `acme-sandbox`. Note this full name.
+3. Open the domain's **Client Applications** and add a client. Register exactly one redirect URI, with your own hostname:
+
+   ```text
+   https://freenary.example.com/callback/powens
+   ```
+
+   Powens sends you back to this address after the bank sign-in. It must match your Freenary address character for character.
+
+4. Note the client ID and the client secret.
+5. Activate the connectors (banks) you want to offer, or all of them. A domain with no active connector shows an empty bank list.
+
+</Step>
+
+<Step>
+
+### Enter it in the setup screen
+
+Go back to the setup screen, or open `https://freenary.example.com/setup`.
+
+1. On **Bank provider**, pick **Powens** and press **Continue**.
+2. Fill in **Powens domain** (for example `acme-sandbox`), **Client ID** and **Client secret**.
+3. Press **Save and continue**. Freenary checks the credentials with Powens before it saves them.
+4. On **Email delivery**, choose **Skip for now** and press **Continue**. You can add email later, see [Email](/docs/run/email).
+5. Press **Finish setup**. The server restarts to apply the credentials, and the page reloads by itself when it's back.
+
+</Step>
+
+<Step>
+
+### Link the test bank
+
+Freenary now asks two quick questions.
+
+1. **Tax residency.** Pick the countries you pay tax in, then press **Continue**. France has the fullest support today.
+2. **Connect your bank.** Search for `Connecteur de test`, the Powens test bank, and press **Connect**.
+3. On the Powens page, sign in with any user name and the password `1234`.
+4. Freenary brings you back and lists the new connection. Press **Finish** to open Freenary.
+
+</Step>
+
+<Step>
+
+### See your budget fill
+
+Open **Budget**. Freenary syncs the new connection and the test transactions appear, each one sorted into a category.
+
+</Step>
+
+</Steps>
+
+<Callout type="warn">
+
+**The test bank isn't in the list?** It only shows up if your Powens domain leaves it active and visible. Check the connectors in the Powens console. If the list is empty, check that your tax residency includes a country your activated banks cover.
+
+</Callout>
+
+When you're ready for your real banks, connect them the same way from **Settings**. A sandbox domain holds a limited number of connections. For a production domain or the other provider, Enable Banking, see [Bank providers](/docs/reference/bank-providers).
+
+<Cards>
+  <Card
+    title="Your budget"
+    href="/docs/use/budget"
+    description="Read the budget screen, fix categories and plan each period."
+  />
+  <Card
+    title="Email (optional)"
+    href="/docs/run/email"
+    description="Send sign-in codes and password resets with Resend or SMTP."
+  />
+</Cards>

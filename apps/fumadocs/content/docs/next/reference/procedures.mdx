@@ -1,0 +1,1066 @@
+---
+title: Procedure reference
+description: Every procedure of the Freenary API, with who can call it, its input bounds, its output and its errors.
+icon: ListTree
+---
+
+All 42 procedures, grouped by router. [API](/docs/reference/api) covers the base URL, the cookie and the request shapes.
+
+- **Path.** `budget.getTransactions` is `POST /rpc/budget/getTransactions` or `POST /api-reference/budget/getTransactions`.
+- **Access.** **Public** needs no session. **Protected** needs the session cookie, or returns `UNAUTHORIZED` (401). **Operator** also returns `FORBIDDEN` (403) to any account that isn't the operator. The 401 and 403 aren't repeated below.
+- **Dates** are ISO 8601 strings. **Money** is an integer in minor units: 12.34 EUR is `1234`.
+
+## Root procedures
+
+### healthCheck
+
+Public. Returns a fixed string, so a caller can probe the router itself.
+
+**Input**: none.
+
+**Output**: the string `"OK"`.
+
+**Errors**: none.
+
+### privateData
+
+Protected. Returns a fixed string and the Better Auth user of the session.
+
+**Input**: none.
+
+**Output**
+
+| Field     | Type                  | Note                                    |
+| --------- | --------------------- | --------------------------------------- |
+| `message` | string                | Always the literal `"This is private"`. |
+| `user`    | object or `undefined` | The raw Better Auth user record.        |
+
+**Errors**: none.
+
+The web app never calls it. Use it to check that your cookie works.
+
+## `assistant`
+
+### assistant.getConversation
+
+Protected. Returns the active conversation of the caller, and the model of the instance.
+
+**Input**: none.
+
+**Output**
+
+| Field | Type | Note |
+| --- | --- | --- |
+| `conversationId` | string | The id of the active conversation. The read creates one when the caller has none. |
+| `messages` | array of `{ id, parts, role }` | The stored transcript, oldest first. An archived conversation never appears. |
+| `serverModel` | string or `null` | The model id of the instance, and `null` when the instance holds none. |
+
+| Field of one message | Type | Note |
+| --- | --- | --- |
+| `id` | string | The row id. Pass it as `messageId` to redo that turn. |
+| `parts` | array | The `UIMessage.parts` array of the AI SDK, as the stream route stored it. |
+| `role` | `"user"` or `"assistant"` | The two stored roles. |
+
+**Errors**: none.
+
+### assistant.saveTurn
+
+Protected. Stores one finished turn that the caller answered itself.
+
+**Input**
+
+| Field | Type | Required | Bounds |
+| --- | --- | --- | --- |
+| `answer.id` | string | yes | A UUID. It becomes the id of the answer row. |
+| `answer.parts` | array | yes | At least one part. A part is a text part, a reasoning part, a step-start part or a tool part. |
+| `conversationId` | string | yes | Must name the active conversation of the caller. |
+| `question` | array of `{ text, type: "text" }` | yes | At least one part. Text parts only. |
+| `regeneratedMessageId` | string | no | The id of the stored answer this turn replaces. |
+
+**Output**
+
+| Field | Type    | Note           |
+| ----- | ------- | -------------- |
+| `ok`  | boolean | Always `true`. |
+
+**Errors**
+
+- `TOO_MANY_REQUESTS` (429) — over 30 turns per 300 seconds, shared with `POST /ai/chat`. Checked first.
+- `BAD_REQUEST` (400) `Turn too large` — the question exceeds 8000 characters, or the answer parts exceed 200000 characters as JSON.
+- `NOT_FOUND` (404) `Conversation is not the active one`.
+- `BAD_REQUEST` (400) `Empty answer` — no text part and no resolved tool part survived the filter.
+
+### assistant.startNewConversation
+
+Protected. Archives the active conversation of the caller, and deletes nothing.
+
+**Input**: none.
+
+**Output**
+
+| Field | Type    | Note           |
+| ----- | ------- | -------------- |
+| `ok`  | boolean | Always `true`. |
+
+**Errors**: none.
+
+## `auth`
+
+### auth.accountExists
+
+Public. Tells a caller whether an address already holds an account.
+
+**Input**
+
+| Field   | Type   | Required | Bounds                          |
+| ------- | ------ | -------- | ------------------------------- |
+| `email` | string | yes      | Must parse as an email address. |
+
+**Output**
+
+| Field    | Type    | Note                                              |
+| -------- | ------- | ------------------------------------------------- |
+| `exists` | boolean | The lookup folds the address to lower case first. |
+
+**Errors**
+
+- `TOO_MANY_REQUESTS` (429) — over 20 calls per 60 seconds per caller address.
+- `BAD_REQUEST` (400) `Input validation failed` — the address does not parse.
+
+### auth.capabilities
+
+Public. Describes the sign-in doors this instance opens.
+
+**Input**: none.
+
+**Output**
+
+| Field | Type | Note |
+| --- | --- | --- |
+| `emailDelivery` | boolean | `true` only when the operator set an email provider. |
+| `maxPasswordLength` | number | The password ceiling. |
+| `minPasswordLength` | number | The password floor. |
+| `oauth` | array of `{ id, name }` | One entry per configured provider. Empty with none. |
+| `otpLength` | number | The digit count of a one-time code. |
+| `passkey` | boolean | Always `true`. |
+| `sessionCookieShared` | boolean | `true` when the API server and the web app share the session cookie. |
+| `trustedDeviceDays` | number | The trusted-device window in days. |
+
+**Errors**: none.
+
+### auth.viewer
+
+Public. Names the caller. A caller with no session gets a `guest` answer, and not a 401.
+
+**Input**: none.
+
+**Output**
+
+| Field | Type | Note |
+| --- | --- | --- |
+| `kind` | `"guest"` or `"member"` | `member` when the request carries a session. |
+| `onboarded` | boolean | On a `member` answer only. `true` once the caller finished the first-run flow. |
+| `sessionCookieShared` | boolean | The same value `auth.capabilities` reports. |
+
+**Errors**: none.
+
+## `bankConnection`
+
+### bankConnection.disconnect
+
+Protected. Deletes one bank connection and every row under it.
+
+**Input**
+
+| Field          | Type   | Required | Bounds                     |
+| -------------- | ------ | -------- | -------------------------- |
+| `connectionId` | string | yes      | Must belong to the caller. |
+
+**Output**
+
+| Field | Type | Note |
+| --- | --- | --- |
+| `accountsRemoved` | number | Bank accounts the delete removed. |
+| `institutionName` | string | The bank name of the deleted connection. |
+| `revocationRequested` | boolean | `false` when the provider refused the revoke call, or when no provider is configured. |
+
+**Errors**
+
+- `NOT_FOUND` (404) `Bank connection not found`.
+
+### bankConnection.exchangeCode
+
+Protected. Turns the bank provider callback query into a bank connection.
+
+**Input**
+
+| Field | Type | Required | Bounds |
+| --- | --- | --- | --- |
+| `params` | object of string to string | yes | The raw callback query. It must hold a `state` key. |
+| `providerId` | string | yes | `powens` or `enable-banking`. Any other value gets `Unknown banking provider`. |
+
+**Output**
+
+| Field | Type | Note |
+| --- | --- | --- |
+| `accounts` | array of `{ iban?, name?, uid }` | The accounts the bank provider returned. `iban` and `name` can be absent. |
+| `connectionId` | string | The new bank connection. |
+| `institutionName` | string | The bank name, trimmed. |
+| `returnTo` | `"onboarding"` or `"settings"` | The target the caller signed into the state. |
+| `sessionId` | string | The bank provider session id. |
+
+**Errors**
+
+- `NOT_FOUND` (404) `Unknown banking provider`.
+- `BAD_REQUEST` (400) `Missing bank connection state`.
+- `BAD_REQUEST` (400) `Invalid bank connection state`.
+- `BAD_REQUEST` (400) `Invalid banking provider in connection state`.
+- `BAD_REQUEST` (400) `Bank connection state does not belong to this session`.
+- `BAD_REQUEST` (400) `Bank institution is no longer available`.
+- `SERVICE_UNAVAILABLE` (503) `Could not load banks for this country`.
+- `BAD_REQUEST` (400) `No provider session for this user`.
+
+### bankConnection.getProviderAvailability
+
+Protected. Reports whether the operator configured the bank provider.
+
+**Input**: none.
+
+**Output**
+
+| Field       | Type    | Note                                              |
+| ----------- | ------- | ------------------------------------------------- |
+| `available` | boolean | `false` when the provider credentials are absent. |
+
+**Errors**: none.
+
+### bankConnection.listConnections
+
+Protected. Lists the bank connections of the caller and their bank accounts, oldest first.
+
+**Input**: none.
+
+**Output**: `{ connections: [...] }`.
+
+| Field of one connection | Type | Note |
+| --- | --- | --- |
+| `accounts` | array of `{ iban, id, name }` | Oldest first. |
+| `id` | string | Pass it as `connectionId` to `disconnect` or to `budget.syncAccounts`. |
+| `institutionCountry` | string or `null` | The country code of the bank. `null` when the provider gave none. |
+| `institutionId` | string | The bank provider id of the bank. |
+| `institutionName` | string | The bank name. |
+| `lastSyncedAt` | date or `null` | `null` before the first sync. |
+| `status` | string | The connection status value. |
+
+**Errors**: none.
+
+### bankConnection.listInstitutions
+
+Protected. Lists the banks the provider can link in one country or more. The provider answers one country at a time, so the result is the union of the answers. A bank is identified by the pair of `id` and `country`. The same `id` in two countries is two banks here, and a duplicate pair is dropped. A country whose call fails is left out of `banks` and named in `unavailableCountries`.
+
+**Input**
+
+| Field | Type | Required | Default | Bounds |
+| --- | --- | --- | --- | --- |
+| `countries` | array of string | no | The caller's tax countries (also when empty) | Uppercase ISO 3166-1 alpha-2 codes, 10 at most. Duplicates are removed. |
+
+**Output**: `{ banks: [...], unavailableCountries: [...] }`.
+
+| Field of one bank | Type | Note |
+| --- | --- | --- |
+| `bic` | string or `null` | The bank identifier code. |
+| `country` | string | The country code of the bank. |
+| `id` | string | Pass it as `institutionId` to `startConnection`. |
+| `logo` | string or `null` | A logo URL. |
+| `name` | string | The display name of the bank. |
+
+`unavailableCountries` holds the requested country codes whose provider call failed. A country that returned no bank is absent from it.
+
+**Errors**
+
+- `BAD_REQUEST` (400) `No country to list banks for` — no input country, and the account holds none.
+
+### bankConnection.startConnection
+
+Protected. Opens a bank consent session and returns the URL to send the user to.
+
+**Input**
+
+| Field | Type | Required | Bounds |
+| --- | --- | --- | --- |
+| `bankCountry` | string | yes | An uppercase ISO 3166-1 alpha-2 code. It must match the country of the institution. |
+| `institutionId` | string | yes | An `id` from `listInstitutions`. |
+| `returnTo` | enum | yes | `onboarding` or `settings`. |
+| `state` | string | no | Your own value. It comes back in the callback state. |
+
+**Output**
+
+| Field | Type   | Note                               |
+| ----- | ------ | ---------------------------------- |
+| `url` | string | Send the browser of the user here. |
+
+**Errors**
+
+- `BAD_REQUEST` (400) `Unknown bank institution`.
+- `SERVICE_UNAVAILABLE` (503) `Could not load banks for this country`.
+
+The redirect URL is `CORS_ORIGIN` plus `/callback/powens` or `/callback/enable-banking`, a page of the web app. Don't route `/callback` to the API server.
+
+## `budget`
+
+### budget.getAccounts
+
+Protected. Lists the bank accounts of the caller and the date bounds of their transactions.
+
+**Input**: none.
+
+**Output**
+
+| Field | Type | Note |
+| --- | --- | --- |
+| `accounts` | array of `{ iban, id, institutionName, name }` | Every bank account of the caller. |
+| `firstTransactionDate` | date or `null` | The oldest transaction date, `null` with none. |
+| `hasAccounts` | boolean | `true` with at least one bank account. |
+| `lastTransactionDate` | date or `null` | The newest transaction date, `null` with none. |
+
+**Errors**: none.
+
+### budget.getBudgetVsActual
+
+Protected. Compares the planned amount per spending category with the real spend.
+
+**Input**
+
+| Field         | Type | Required | Default | Bounds                          |
+| ------------- | ---- | -------- | ------- | ------------------------------- |
+| `aggregation` | enum | no       | `total` | `total`, `average` or `median`. |
+| `from`        | date | yes      | —       | No minimum, and no maximum.     |
+| `to`          | date | yes      | —       | No check against `from`.        |
+
+**Output**
+
+| Field | Type | Note |
+| --- | --- | --- |
+| `categories` | array of `{ actual, category, planned }` | `category` is a [spending category](#spending-categories). A row lands here when the plan or the spend is not zero. Largest planned amount first, then largest actual. |
+| `hasPlan` | boolean | `false` when the caller saved no outgoing budget line. |
+
+With `aggregation: "total"`, `planned` is the monthly plan times the months in the range.
+
+**Errors**: none.
+
+### budget.getCashFlow
+
+Protected. Sums money in and money out per period.
+
+**Input**
+
+| Field | Type | Required | Bounds |
+| --- | --- | --- | --- |
+| `from` | date | yes | The range includes this date. |
+| `to` | date | yes | The range includes this date. No check against `from`. |
+
+**Output**
+
+| Field | Type | Note |
+| --- | --- | --- |
+| `periods` | array of `{ incoming, label, outgoing }` | Oldest first. `label` is a day (`YYYY-MM-DD`) for ranges up to 31 days, a week's Monday up to 93 days, and a month (`YYYY-MM`) beyond. |
+
+**Errors**: none.
+
+### budget.getFixedVsVariable
+
+Protected. Splits money out into a recurrent part and the rest.
+
+**Input**
+
+| Field         | Type | Required | Default | Bounds                          |
+| ------------- | ---- | -------- | ------- | ------------------------------- |
+| `aggregation` | enum | no       | `total` | `total`, `average` or `median`. |
+| `from`        | date | yes      | —       | The range includes this date.   |
+| `to`          | date | yes      | —       | No check against `from`.        |
+
+**Output**
+
+| Field      | Type   | Note                                   |
+| ---------- | ------ | -------------------------------------- |
+| `fixed`    | number | Minor units.                           |
+| `variable` | number | Minor units. The two sum to the total. |
+
+**Errors**: none.
+
+### budget.getMerchants
+
+Protected. Lists the companies the transactions of a date range name, most frequent first.
+
+**Input**
+
+| Field | Type | Required | Default | Bounds |
+| --- | --- | --- | --- | --- |
+| `direction` | enum | no | — | `incoming` or `outgoing`. |
+| `from` | date | yes | — | The range includes this date. |
+| `limit` | number | no | `30` | 1 to 100. |
+| `search` | string | no | — | A case-insensitive substring of the company name. |
+| `to` | date | yes | — | No check against `from`. |
+
+**Output**
+
+| Field | Type | Note |
+| --- | --- | --- |
+| `merchants` | array of `{ count, name, totalMinor }` | Highest count first, then the name. `totalMinor` sums the absolute amounts. |
+
+**Errors**: none.
+
+### budget.getRecurring
+
+Protected. Returns everything the Recurring page of the Budget screen reads, in one call. The detection rules behind `confidence` and `kind` are in [`docs/engineering/categorisation.md`](https://github.com/suiramdev/freenary/blob/main/docs/engineering/categorisation.md#recurrence-detection).
+
+**Input**: none.
+
+**Output**
+
+| Field | Type | Note |
+| --- | --- | --- |
+| `asOf` | string | ISO 8601 date-time. When the detection ran. Every projection counts from here. |
+| `availableBalanceMinor` | number or `null` | Minor units. The sum of every account balance, and `null` when no account reports one. |
+| `currency` | string | The most common account currency. `EUR` when no account reports one. |
+| `items` | array | One detected pattern per entry. |
+| `monthly` | array | Exactly the trailing 12 calendar months, oldest first, zero-filled. |
+| `monthlyIncomeMinor` | number or `null` | Minor units. The window's incoming sum divided by the months from its first incoming transaction, and `null` when none came in. A short history is therefore not divided by 12. |
+| `plannedOutgoingMinor` | number or `null` | Minor units. The monthly sum of the outgoing budget lines, and `null` with no plan. |
+
+| Field of one item | Type | Note |
+| --- | --- | --- |
+| `amountSpread` | number | The relative spread of the amounts. `0` when they are all the same. |
+| `category` | string | A [spending category](#spending-categories) slug. |
+| `confidence` | enum | `confirmed`, `likely` or `pattern`. |
+| `currency` | string | The ISO 4217 code of the most recent occurrence. |
+| `frequency` | enum | `weekly`, `monthly`, `quarterly`, `annual` or `irregular`. |
+| `intervalDays` | number | The median day gap between two occurrences. |
+| `kind` | enum | `fixed` or `behavioral`. |
+| `lastSeen` | string | ISO 8601 date-time. |
+| `merchantKey` | string | The lookup key of the merchant. |
+| `merchantName` | string or `null` | The counterparty name of the most recent occurrence. |
+| `nextExpected` | string | ISO 8601 date-time. |
+| `occurrences` | number | The transaction count inside the trailing year of `asOf`. |
+| `typicalAmountMinor` | number | Minor units, positive. |
+
+| Field of one month | Type | Note |
+| --- | --- | --- |
+| `behavioralMinor` | number | Minor units. The part of the month the repeated purchases hold. |
+| `discretionaryMinor` | number | Minor units. The rest of the money out of that month. |
+| `fixedMinor` | number | Minor units. The part of the month the commitments hold. |
+| `month` | string | `YYYY-MM`. The month number is 1-based. |
+
+**Errors**: none.
+
+### budget.getRecurringExpenses
+
+Protected. Lists the merchants the recurrence detector holds as regular.
+
+**Input**: none.
+
+**Output**: `{ expenses: [...] }`, biggest typical amount first.
+
+| Field of one expense | Type | Note |
+| --- | --- | --- |
+| `category` | string | A [spending category](#spending-categories) slug. |
+| `currency` | string | The ISO 4217 code of the most recent occurrence. |
+| `frequency` | enum | `weekly`, `monthly`, `quarterly`, `annual` or `irregular`. |
+| `intervalDays` | number | The median day gap between two occurrences. |
+| `lastSeen` | string | ISO 8601. |
+| `merchantKey` | string | The lookup key of the merchant. |
+| `merchantName` | string or `null` | The counterparty name of the most recent occurrence. |
+| `nextExpected` | string | ISO 8601. |
+| `occurrences` | number | The transaction count inside the 365-day window. |
+| `typicalAmountMinor` | number | Minor units. |
+
+**Errors**: none.
+
+### budget.getSankeyData
+
+Protected. Returns the nodes of the income-to-category flow.
+
+**Input**
+
+| Field         | Type | Required | Default | Bounds                          |
+| ------------- | ---- | -------- | ------- | ------------------------------- |
+| `aggregation` | enum | no       | `total` | `total`, `average` or `median`. |
+| `from`        | date | yes      | —       | The range includes this date.   |
+| `to`          | date | yes      | —       | No check against `from`.        |
+
+**Output**
+
+| Field | Type | Note |
+| --- | --- | --- |
+| `groups` | array of `{ categories, group, value }` | `categories` holds `{ category, value }` rows. |
+| `incomeNodes` | array of `{ name, value }` | The 10 largest sources. The rest fold into the literal name `Other Income`. |
+| `moneyLeft` | number | `totalIncome` minus `totalExpenses`, never below 0. |
+| `totalExpenses` | number | The sum of every group value. |
+| `totalIncome` | number | The sum of every income node value. |
+
+**Errors**: none.
+
+### budget.getSpendingBreakdown
+
+Protected. Sums money out per spending category.
+
+**Input**
+
+| Field         | Type | Required | Default | Bounds                          |
+| ------------- | ---- | -------- | ------- | ------------------------------- |
+| `aggregation` | enum | no       | `total` | `total`, `average` or `median`. |
+| `from`        | date | yes      | —       | The range includes this date.   |
+| `to`          | date | yes      | —       | No check against `from`.        |
+
+**Output**
+
+| Field        | Type                            | Note                  |
+| ------------ | ------------------------------- | --------------------- |
+| `categories` | array of `{ amount, category }` | Largest amount first. |
+
+**Errors**: none.
+
+### budget.getSyncStatus
+
+Protected. Reports the sync the caller has in flight, and `null` when none runs.
+
+**Input**: none.
+
+**Output**: `null`, or one object.
+
+| Field | Type | Note |
+| --- | --- | --- |
+| `accountsDone` | number | Accounts read so far. |
+| `accountsTotal` | number | Accounts the run will read. |
+| `categorised` | number | Transactions the phase has decided so far, filed or left uncategorised. |
+| `categorisedTotal` | number | Transactions the phase has to decide. `0` until it starts. |
+| `phase` | enum | `importing` or `categorising`. |
+| `startedAt` | date | When the run claimed the user. |
+| `transactionsImported` | number | Transactions written so far, new and updated alike. |
+
+**Errors**: none.
+
+Poll it while a sync runs: it reads one row and calls no provider. Counters update at most once a second, and a run silent for five minutes reads as `null`.
+
+### budget.getTransactions
+
+Protected. The one paged procedure. Returns transactions in a date range, with the range totals.
+
+**Input**
+
+| Field | Type | Required | Default | Bounds |
+| --- | --- | --- | --- | --- |
+| `amountMax` | number | no | — | An integer of 0 or more, in minor units. It reads the absolute amount. |
+| `amountMin` | number | no | — | An integer of 0 or more, in minor units. It reads the absolute amount. |
+| `categories` | array of enum | no | — | Items from the 27 [spending categories](#spending-categories). |
+| `cursor` | string | no | — | A `nextCursor` from an earlier call. |
+| `direction` | enum | no | — | `incoming` or `outgoing`. |
+| `from` | date | yes | — | The range includes this date. |
+| `groups` | array of enum | no | — | Items from the 3 [category groups](#category-groups). The server adds every category of a named group. |
+| `limit` | number | no | `50` | 1 to 100. |
+| `merchants` | array of string | no | — | Company names as `budget.getMerchants` returns them, each at least 1 character. |
+| `search` | string | no | — | A case-insensitive substring of the description or the counterparty name. |
+| `sort` | enum | no | `date` | `date` (newest first) or `amount` (largest first: descending for `incoming`, most negative first otherwise). |
+| `to` | date | yes | — | No check against `from`. |
+
+**Output**
+
+| Field | Type | Note |
+| --- | --- | --- |
+| `nextCursor` | string or `null` | Pass it as `cursor` for the next page. `null` on the last page. |
+| `totals` | `{ incoming, outgoing }` | Over the whole filter, and not over the page. |
+| `transactions` | array | The fields below. |
+
+| Field of one transaction | Type | Note |
+| --- | --- | --- |
+| `amount` | number | Minor units. Negative for money out. |
+| `category` | string | The effective category, so an override of the user wins. |
+| `counterpartyName` | string or `null` | The counterparty name the bank sends. |
+| `currency` | string | The ISO 4217 code of the transaction. |
+| `date` | string | ISO 8601. |
+| `derivedCategory` | string | What the pipeline resolved, before any override. |
+| `description` | string | The narrative of the bank. |
+| `id` | string | The transaction id. |
+
+**Errors**: none.
+
+### budget.recategorise
+
+Protected. Drops the pipeline verdicts and runs the pipeline again. It claims the sync run of the caller first, so it refuses while a sync runs.
+
+**Input**: none.
+
+**Output**
+
+| Field         | Type    | Note                                             |
+| ------------- | ------- | ------------------------------------------------ |
+| `categorised` | number  | Transactions the run resolved. `0` when refused. |
+| `started`     | boolean | `false` when another run already holds the user. |
+
+**Errors**: none.
+
+### budget.syncAccounts
+
+Protected. Pulls fresh data from the bank provider, then categorises what is new.
+
+**Input**: the whole object is optional. Send `{}` to sync every active connection.
+
+| Field | Type | Required | Default | Bounds |
+| --- | --- | --- | --- | --- |
+| `connectionId` | string | no | Every active connection | Narrows the sync to one bank connection. |
+| `force` | boolean | no | `false` | `true` re-reads the whole provider window. |
+
+**Output**
+
+| Field | Type | Note |
+| --- | --- | --- |
+| `categorised` | number | Transactions the run resolved. |
+| `error` | string or `undefined` | Provider failures, joined together. |
+| `started` | boolean | `false` when another run already holds the user. Nothing ran. |
+| `success` | boolean | `false` when at least one connection failed. |
+| `warning` | string or `undefined` | A categorisation failure. |
+
+**Errors**: none.
+
+<Callout type="warn">
+
+It returns HTTP 200 even when every connection failed: read `success`, not the status. One sync runs per user; a second call answers `started: false` and does nothing, so follow `budget.getSyncStatus` instead. A run silent for five minutes counts as abandoned.
+
+</Callout>
+
+### budget.updateTransactionCategory
+
+Protected. Sets the category of one transaction, and remembers the merchant.
+
+**Input**
+
+| Field | Type | Required | Bounds |
+| --- | --- | --- | --- |
+| `category` | enum or `null` | yes | One of the 27 [spending categories](#spending-categories). `null` clears the override. |
+| `transactionId` | string | yes | Must belong to the caller. |
+
+**Output**
+
+| Field | Type | Note |
+| --- | --- | --- |
+| `additionalUpdated` | number | Sibling transactions of the same merchant the write also moved. |
+| `category` | string | The effective category after the write. |
+| `derivedCategory` | string | What the pipeline resolves without the override. |
+
+**Errors**
+
+- `NOT_FOUND` (404) `Transaction not found`.
+
+## `instance`
+
+The setup screen's procedures. Integration ids are `banking` (variants `disabled`, `powens`, `enable-banking`) and `email` (variants `disabled`, `resend`, `smtp`).
+
+### instance.status
+
+Public. Reports the setup state.
+
+**Input**: none.
+
+**Output**
+
+| Field | Type | Note |
+| --- | --- | --- |
+| `claimed` | boolean | `true` once an operator exists. |
+| `completed` | boolean | `true` once the operator pressed `Finish setup`. |
+| `isOperator` | boolean | `true` when the caller is the operator. `false` with no session. |
+
+**Errors**: none.
+
+### instance.describe
+
+Operator. Describes each integration and where its values come from.
+
+**Input**: none.
+
+**Output**
+
+| Field | Type | Note |
+| --- | --- | --- |
+| `fault` | string or `null` | Why the stored values were rejected at startup, `null` when they weren't. |
+| `integrations` | array | One entry per integration, below. |
+| `restartRequired` | boolean | `true` when a saved value isn't in use yet. |
+
+| Field of one integration | Type | Note |
+| --- | --- | --- |
+| `configuredBy` | `"environment"`, `"instance"` or `null` | Who configures the selected variant. |
+| `discriminantKey` | string | The variable that picks the variant, such as `BANKING_PROVIDER`. |
+| `discriminantSource` | `"environment"`, `"instance"` or `"unset"` | Where that variable comes from. |
+| `id` | string | `banking` or `email`. |
+| `selectedVariantId` | string | The variant in use. |
+| `state` | `"disabled"`, `"incomplete"` or `"configured"` |  |
+| `variants` | array of `{ id, fields }` | Each field is `{ key, kind, present, required, source, value }`. `value` is `null` for a secret, and masked when the environment owns it. |
+
+**Errors**: none.
+
+### instance.check
+
+Operator. Tests credentials against the provider without saving them.
+
+**Input**
+
+| Field | Type | Required | Bounds |
+| --- | --- | --- | --- |
+| `integrationId` | string | yes | `banking` or `email`. |
+| `values` | object of string to string | yes | Variable name to value. Environment-owned values are filled in by the server. |
+| `variantId` | string | yes | A variant of that integration. |
+
+**Output**: one object, by `outcome`.
+
+| `outcome` | Other fields | Meaning |
+| --- | --- | --- |
+| `verified` | — | The provider accepted the credentials. |
+| `probe-failed` | `detail`, `reason`, `status` | The provider refused or couldn't be reached. `status` is the HTTP status of a refusal, else `null`. |
+| `missing-fields` | `keys` | Required fields are empty. |
+| `invalid` | `detail` | A value fails validation. |
+| `environment-owned` | `keys` | The environment picks another variant. `keys` names the variable, such as `BANKING_PROVIDER`. |
+
+**Errors**
+
+- `NOT_FOUND` (404) `Unknown integration` or `Unknown variant`.
+- `NOT_IMPLEMENTED` (501) `No check exists`.
+
+### instance.save
+
+Operator. Stores the values the environment doesn't set. Same input as `instance.check`.
+
+**Output**: `{ outcome: "saved", restartRequired: true }`, `{ outcome: "nothing-to-save" }` when the environment owns the whole variant, or one of the `missing-fields`, `invalid` and `environment-owned` refusals above.
+
+Saving one variant clears the stored values of the integration's other variants.
+
+**Errors**
+
+- `NOT_FOUND` (404) `Unknown integration` or `Unknown variant`.
+
+### instance.complete
+
+Operator. Marks setup as finished.
+
+**Input**: none.
+
+**Output**
+
+| Field | Type | Note |
+| --- | --- | --- |
+| `completed` | `true` |  |
+| `restarting` | boolean | `true` when a saved value isn't in use yet. The server then exits 250 ms later, so its restart policy starts it with the new values. |
+
+**Errors**: none.
+
+## `onboarding`
+
+### onboarding.completeOnboarding
+
+Protected. Stores the tax jurisdictions of the caller and marks the first-run flow as done.
+
+**Input**
+
+| Field | Type | Required | Bounds |
+| --- | --- | --- | --- |
+| `taxCountries` | array of string | yes | A minimum of one ISO 3166-1 alpha-2 code, uppercase. A maximum of 10 entries. |
+
+**Output**
+
+| Field     | Type    | Note           |
+| --------- | ------- | -------------- |
+| `success` | boolean | Always `true`. |
+
+**Errors**: none.
+
+### onboarding.getStatus
+
+Protected. Reports whether the caller finished the first-run flow.
+
+**Input**: none.
+
+**Output**
+
+| Field | Type | Note |
+| --- | --- | --- |
+| `completed` | boolean | `true` once the account holds a completion date. |
+| `taxCountries` | array of string | The jurisdictions the caller picked, empty before that. |
+
+**Errors**: none.
+
+## `settings`
+
+### settings.createCustomCategory
+
+Protected. Creates one custom category for the caller.
+
+**Input**
+
+| Field | Type | Required | Bounds |
+| --- | --- | --- | --- |
+| `color` | enum | yes | One of the 7 [category colours](#category-colours). |
+| `icon` | enum | yes | One of the 28 [category icons](#category-icons). |
+| `label` | string | yes | Trimmed, 1 to 40 characters. |
+| `parentKey` | string or `null` | yes | A [category group](#category-groups) slug, or `custom:<id>` of a top-level category the caller owns. `null` makes a top-level category. |
+
+**Output**
+
+| Field | Type   | Note                                                      |
+| ----- | ------ | --------------------------------------------------------- |
+| `key` | string | `custom:` plus the new row id. Use it as a `categoryKey`. |
+
+**Errors**
+
+- `BAD_REQUEST` (400) `Unknown parent category` or `A subcategory cannot hold subcategories`.
+- `NOT_FOUND` (404) `Parent category not found`.
+- `CONFLICT` (409) `A category with that name already exists`. The comparison ignores case.
+
+### settings.deleteCustomCategory
+
+Protected. Deletes one custom category with its subcategories, and rehomes every budget line they hold.
+
+**Input**
+
+| Field | Type | Required | Bounds |
+| --- | --- | --- | --- |
+| `id` | string | yes | The row id, and not the `custom:` key. Must belong to the caller. |
+
+**Output**
+
+| Field | Type | Note |
+| --- | --- | --- |
+| `fallbackSlug` | string | The slug the budget lines moved to. |
+| `reassignedLines` | number | Budget lines the delete moved, subcategories included. |
+| `deletedSubcategories` | number | Subcategories the cascade removed. |
+
+**Errors**
+
+- `NOT_FOUND` (404) `Category not found`.
+
+### settings.getBudgetProfile
+
+Protected. Returns the budget lines of the caller in their saved order.
+
+**Input**: none.
+
+**Output**: `{ lines: [...] }`.
+
+| Field of one line | Type | Note |
+| --- | --- | --- |
+| `amount` | number | Minor units per month. |
+| `categoryKey` | string | A spending category slug, or `custom:<id>`. |
+| `id` | string | The row id of the budget line. |
+| `label` | string or `null` | `null` when the line holds no name of its own. |
+
+**Errors**: none.
+
+### settings.listCategories
+
+Protected. Returns the whole category tree the caller can pick from.
+
+**Input**: none.
+
+**Output**: `{ categories: [...] }`.
+
+The array is flat, and its order is the display order. Each of the 3 groups comes first. Inside one group come its built-in categories, then the custom categories of the caller. Each top-level custom category follows, in its stored order, with its own subcategories after it.
+
+| Field of one entry | Type | Note |
+| --- | --- | --- |
+| `color` | string | One of the 7 [category colours](#category-colours). What the entry shows. For a category under a parent it is the colour of that parent, and not the value stored on the row. |
+| `icon` | string | One of the 28 [category icons](#category-icons). |
+| `isAssignable` | boolean | `false` for a built-in group header. |
+| `isCustom` | boolean | `true` for a category of the caller. |
+| `isGroup` | boolean | `true` for a group header, and for a top-level custom category. A subcategory is `false`. |
+| `key` | string | A slug, or `custom:<id>`. |
+| `label` | string | An English display name. |
+| `parentKey` | string or `null` | A [category group](#category-groups) slug, `custom:<id>` for a subcategory, or `null` for a top-level row. |
+| `pickedColor` | string | Present on a custom category only. The colour stored on the row, which `color` hides while the category sits under a parent. Send this back as `color` on `settings.updateCustomCategory` to keep the choice. |
+| `usageCount` | number | Budget lines on a custom category. Always `0` for a built-in one. |
+
+**Errors**: none.
+
+### settings.moveCustomCategory
+
+Protected. Swaps one custom category with its neighbour inside the same parent. A group parent and a custom parent both scope the order.
+
+**Input**
+
+| Field       | Type   | Required | Bounds                     |
+| ----------- | ------ | -------- | -------------------------- |
+| `direction` | enum   | yes      | `up` or `down`.            |
+| `id`        | string | yes      | Must belong to the caller. |
+
+**Output**
+
+| Field   | Type    | Note                                           |
+| ------- | ------- | ---------------------------------------------- |
+| `moved` | boolean | `false` when the row is already first or last. |
+
+**Errors**
+
+- `NOT_FOUND` (404) `Category not found`.
+
+### settings.saveBudgetProfile
+
+Protected. Replaces every budget line of the caller in one write.
+
+**Input**
+
+| Field | Type | Required | Bounds |
+| --- | --- | --- | --- |
+| `lines` | array | yes | 200 items at most. The array position becomes the sort order. |
+
+| Field of one line | Type | Required | Bounds |
+| --- | --- | --- | --- |
+| `amount` | integer | yes | 0 to 2147483647 minor units. |
+| `categoryKey` | string | yes | A spending category slug, or a `custom:<id>` the caller owns. A group slug fails. |
+| `label` | string | yes | Trimmed, 60 characters at most. Send `""` for no name. |
+
+**Output**
+
+| Field       | Type   | Note                    |
+| ----------- | ------ | ----------------------- |
+| `lineCount` | number | Lines the write stored. |
+
+**Errors**
+
+- `BAD_REQUEST` (400) `Unknown category: <categoryKey>`.
+
+<Callout type="warn">
+
+The write replaces every line, so lines missing from the array are deleted. `label` has no default: leaving it out fails validation.
+
+</Callout>
+
+### settings.updateCustomCategory
+
+Protected. Rewrites one custom category.
+
+**Input**
+
+| Field | Type | Required | Bounds |
+| --- | --- | --- | --- |
+| `color` | enum | yes | One of the 7 [category colours](#category-colours). |
+| `icon` | enum | yes | One of the 28 [category icons](#category-icons). |
+| `id` | string | yes | Must belong to the caller. |
+| `label` | string | yes | Trimmed, 1 to 40 characters. |
+| `parentKey` | string or `null` | yes | A [category group](#category-groups) slug, `custom:<id>` of a top-level category the caller owns, or `null`. |
+
+**Output**
+
+| Field     | Type    | Note           |
+| --------- | ------- | -------------- |
+| `success` | boolean | Always `true`. |
+
+**Errors**
+
+- `BAD_REQUEST` (400) `Unknown parent category`, `A subcategory cannot hold subcategories`, `A category with subcategories cannot be nested`, or `A category cannot be its own parent`.
+- `NOT_FOUND` (404) `Category not found`, or `Parent category not found`.
+- `CONFLICT` (409) `A category with that name already exists`.
+
+## Enum values
+
+The literal values the input schemas accept. [Budget](/docs/use/budget) explains what they mean to a user.
+
+### Category groups
+
+3 values, in flow order:
+
+```json
+["income", "investments", "spending"]
+```
+
+### Spending categories
+
+27 values, grouped by the comments. Each category also has a direction (money in, out or both), listed in [`docs/engineering/categorisation.md`](https://github.com/suiramdev/freenary/blob/main/docs/engineering/categorisation.md#the-taxonomy).
+
+```jsonc
+[
+  // income
+  "salary",
+  "self-employment",
+  "investment-income",
+  "rental-income",
+  "benefits",
+  "refunds",
+  "other-income",
+  // investments
+  "savings",
+  "securities",
+  "retirement",
+  "crypto",
+  // spending
+  "groceries",
+  "restaurants",
+  "rent-mortgage",
+  "bills-utilities",
+  "car-fuel",
+  "transport-travel",
+  "shopping",
+  "entertainment",
+  "subscriptions",
+  "health",
+  "family-education",
+  "taxes",
+  "loans-bank-fees",
+  "people",
+  "cash-withdrawal",
+  "uncategorised",
+]
+```
+
+### Category colours
+
+7 values:
+
+```json
+["blue", "green", "grey", "orange", "pink", "purple", "red"]
+```
+
+### Category icons
+
+28 values:
+
+```json
+[
+  "AirplaneIcon",
+  "ArrowsLeftRightIcon",
+  "BankIcon",
+  "BitcoinIcon",
+  "BriefcaseIcon",
+  "CarIcon",
+  "CashIcon",
+  "ChartPieIcon",
+  "CoinsIcon",
+  "DotsThreeIcon",
+  "FilmSlateIcon",
+  "FirstAidIcon",
+  "ForkKnifeIcon",
+  "GraduationCapIcon",
+  "HouseIcon",
+  "KeyIcon",
+  "LightningIcon",
+  "PiggyBankIcon",
+  "PlantIcon",
+  "ReceiptIcon",
+  "RefundIcon",
+  "RepeatIcon",
+  "ShieldCheckIcon",
+  "ShoppingBagIcon",
+  "ShoppingCartIcon",
+  "StorefrontIcon",
+  "TrendUpIcon",
+  "UsersIcon"
+]
+```
+
+<Cards>
+  <Card
+    title="API"
+    href="/docs/reference/api"
+    description="Base URL, the session cookie, errors and limits."
+  />
+  <Card
+    title="Glossary"
+    href="/docs/reference/glossary"
+    description="What each term means in the app."
+  />
+</Cards>

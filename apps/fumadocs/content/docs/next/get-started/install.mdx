@@ -1,0 +1,130 @@
+---
+title: Install Freenary
+description: Deploy Freenary with Dokploy, Coolify or Docker Compose, then create the operator account.
+icon: Rocket
+---
+
+Pick the tab that matches your server. Each one ends with Freenary running at `https://freenary.example.com`. Replace that hostname with your own everywhere on this page.
+
+<Tabs items={["Dokploy", "Coolify", "Docker Compose"]}>
+
+<Tab value="Dokploy">
+
+1. In a Dokploy project, create a **Compose** service and keep the type **Docker Compose**.
+2. In **General**, set the provider to **Git**:
+   - Repository URL: `https://github.com/suiramdev/freenary.git`
+   - Branch: `main`
+   - Compose Path: `./deploy/docker-compose.yml`
+3. Generate two secrets on any machine with OpenSSL:
+
+   ```bash
+   echo "POSTGRES_PASSWORD=$(openssl rand -hex 16)"
+   echo "BETTER_AUTH_SECRET=$(openssl rand -hex 32)"
+   ```
+
+4. Open **Environment** and add these four lines, with your hostname and the two lines the commands printed:
+
+   ```dotenv
+   FREENARY_URL=https://freenary.example.com
+   FREENARY_VERSION=latest
+   POSTGRES_PASSWORD=<printed value>
+   BETTER_AUTH_SECRET=<printed value>
+   ```
+
+5. Open **Domains** and add one domain: service `web`, host `freenary.example.com`, container port `3001`, HTTPS on.
+6. Press **Deploy**.
+
+Prefer one paste? Run `bun run deploy:dokploy` in a clone of the repository and import the string under **Advanced** → **Import**. The template generates the secrets and a free `http://` test hostname. To use your own domain, change the host under **Domains** (HTTPS on), set `FREENARY_URL` to the same `https://` address, and deploy again.
+
+</Tab>
+
+<Tab value="Coolify">
+
+1. In a Coolify project, select **New** → **Docker Compose Empty**.
+2. Paste the contents of [`deploy/coolify.yml`](https://raw.githubusercontent.com/suiramdev/freenary/main/deploy/coolify.yml). Coolify generates the database password and the auth secret for you.
+3. Open the `web` service and set its domain to your hostname followed by the container port:
+
+   ```text
+   https://freenary.example.com:3001
+   ```
+
+   The `:3001` only tells Coolify which container port to use. Visitors still reach the normal HTTPS address.
+
+4. Press **Deploy**.
+
+</Tab>
+
+<Tab value="Docker Compose">
+
+Use this tab if you run your own reverse proxy on the server, such as Caddy or nginx. Freenary listens on the loopback interface only, and your proxy sends `https://freenary.example.com` to `127.0.0.1:3001`. See [Reverse proxy](/docs/reference/reverse-proxy) for proxy examples, and for proxies that run in Docker.
+
+1. Download the Compose file:
+
+   ```bash
+   mkdir freenary && cd freenary
+   curl -O https://raw.githubusercontent.com/suiramdev/freenary/main/docker-compose.yml
+   ```
+
+2. Create the `.env` file. Replace the hostname on both URL lines first:
+
+   ```bash
+   cat > .env <<EOF
+   FREENARY_VERSION=latest
+   POSTGRES_PASSWORD=$(openssl rand -hex 16)
+   BETTER_AUTH_SECRET=$(openssl rand -hex 32)
+   BETTER_AUTH_URL=https://freenary.example.com
+   CORS_ORIGIN=https://freenary.example.com
+   SERVER_PORT=127.0.0.1:3000
+   WEB_PORT=127.0.0.1:3001
+   EOF
+   ```
+
+   Both URLs are the same on purpose: the web app forwards API calls to the server, so one hostname serves everything.
+
+3. Start Freenary:
+
+   ```bash
+   docker compose up -d
+   ```
+
+4. Point your proxy at `127.0.0.1:3001`.
+
+</Tab>
+
+</Tabs>
+
+`FREENARY_VERSION=latest` follows each new release. To stay on one version, see [Updates and backups](/docs/run/updates-and-backups).
+
+<Callout type="warn">
+
+Keep `BETTER_AUTH_SECRET` once the instance is running. Freenary uses it to encrypt the bank and email credentials you enter later. A new secret makes them unreadable.
+
+</Callout>
+
+## Check that it works
+
+Open `https://freenary.example.com` in a browser. The first start takes a minute while the database is prepared. You should see the **Welcome to Freenary** sign-in screen.
+
+Something else? See [Troubleshooting](/docs/run/troubleshooting).
+
+## Create your account now
+
+**The first account to sign in becomes the operator.** It's the only account that can change the instance's settings. Until you create it, anyone who finds your address can claim that role, so do it right away.
+
+1. Type your email address. Freenary shows a **Name** and a **Password** field.
+2. Fill them in and press **Create account**.
+
+## The setup screen
+
+You land on the setup screen, where the operator enters the bank and email credentials. You have two options:
+
+- **Connect a bank now.** Keep this tab open and continue to the next page.
+- **Skip it for now.** Choose **Skip for now** and press **Continue** on each step, then press **Finish setup**. You can come back any time at `https://freenary.example.com/setup`.
+
+<Cards>
+  <Card
+    title="Connect a bank"
+    href="/docs/get-started/connect-a-bank"
+    description="Create a free Powens sandbox and link a test bank."
+  />
+</Cards>

@@ -1,0 +1,16 @@
+{
+  "title": "Reference",
+  "description": "Every variable, provider detail and API surface, in one place.",
+  "icon": "BookOpen",
+  "pages": [
+    "configuration",
+    "bank-providers",
+    "reverse-proxy",
+    "security",
+    "scaling",
+    "from-source",
+    "api",
+    "procedures",
+    "glossary"
+  ]
+}

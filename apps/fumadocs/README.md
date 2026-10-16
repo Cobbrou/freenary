@@ -11,10 +11,10 @@ cd apps/fumadocs && bun run dev
 
 Open http://localhost:4000.
 
-The pages live in [`content/docs/next`](content/docs/next) — one folder per version, and `next` is the one a change edits. The authoring rules live in [`AGENTS.md`](AGENTS.md), and the reader-facing version of those rules is [`content/docs/next/contributing/writing-docs.mdx`](content/docs/next/contributing/writing-docs.mdx).
+The pages live in [`content/docs/next`](content/docs/next) — one folder per version, and `next` is the one a change edits. The writing rules and the page tree live in [`AGENTS.md`](AGENTS.md).
 
 ```bash
-bun run docs:check    # icons, components, links, navigation, audience split, language
+bun run docs:check    # frontmatter, icons, components, links, anchors, navigation, moved pages
 bun run build         # production build
 bun run types:check   # TypeScript
 ```

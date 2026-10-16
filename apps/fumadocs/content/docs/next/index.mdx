@@ -1,56 +1,36 @@
 ---
 title: Freenary
-description: Freenary is an open-source personal finance app that you host yourself, with your data in your own database.
+description: An open-source personal finance app you host yourself, with your data in your own database.
 icon: House
 ---
 
-Freenary is an open-source personal finance app that you host yourself. It connects your banks and imports your accounts and transactions. It files each transaction under a category, and shows a Budget area beside your own monthly plan. Every figure lives in the PostgreSQL database of your own instance. One exception: each question you ask the assistant sends financial data to the model endpoint the operator configured. Read [Assistant](/docs/self-hosting/assistant).
+Freenary is an open-source personal finance app you host yourself. It connects to your banks, imports your accounts and transactions, sorts each transaction into a category, and shows how your spending compares with your plan. It runs on your own server, and your data stays in your own PostgreSQL database.
 
-This site holds one copy of the documentation for each version of Freenary. The dropdown at the top of the sidebar switches between them. The account menu of your own instance opens the version it runs.
+## Who it's for
+
+Freenary is for people who want to see where their money goes without handing their bank data to a third-party app. You install it once on a server, for yourself or your household. The person who installs it is the **operator**. Everyone else just signs in and uses it.
+
+## What you get
+
+- **Bank sync.** Link your banks through a bank provider (Powens or Enable Banking). Accounts and transactions arrive on their own.
+- **Automatic categories.** Each transaction lands in a category, and you can correct it or add your own.
+- **A budget.** Plan what you want to spend each period, then compare it with what you actually spent.
+- **An assistant.** Ask questions about your money in plain language, like "Where did my money go last month?"
+- **Your data, your server.** Everything lives in your instance's database. One exception: when you ask the assistant a question, Freenary sends the data it needs to the model endpoint the operator configured. Read [The assistant](/docs/use/assistant) to see what that means for your instance.
+
+## Status
+
+Freenary is young. The **Budget** screen works today. **Portfolio**, **Analysis** and **Goals** are planned.
 
 <Cards>
   <Card
-    title="Quickstart"
-    href="/docs/quickstart"
-    description="Run Freenary on one machine with Docker, then sign in."
+    title="Get started"
+    href="/docs/get-started/before-you-install"
+    description="Install Freenary on your server and connect your first bank in about 15 minutes."
   />
   <Card
     title="Use Freenary"
-    href="/docs/guides"
-    description="What you do on each screen of a running instance."
-  />
-  <Card
-    title="Self-host Freenary"
-    href="/docs/self-hosting"
-    description="Serve one instance to other people, and keep it running."
-  />
-  <Card
-    title="Concepts"
-    href="/docs/concepts"
-    description="The words the interface uses, and what each one means."
+    href="/docs/use/budget"
+    description="Read your budget, fix categories and keep your bank connections in sync."
   />
 </Cards>
-
-## Run it
-
-- [**Self-hosting**](/docs/self-hosting) — the install that other people reach, with its own origins and secrets.
-- [**Configuration**](/docs/self-hosting/configuration) — every environment variable the stack reads, with its default.
-- [**Scaling**](/docs/self-hosting/scaling) — replicas, connection pools and what limits growth.
-- [**Backup and restore**](/docs/self-hosting/backup-and-restore) — what holds your state, and how to put it back.
-
-## Use it
-
-- [**First steps**](/docs/guides/first-steps) — the tax residency question, and the three-item checklist a new account gets.
-- [**Bank connections**](/docs/guides/bank-connections) — connect a bank, sync it, disconnect it.
-- [**Budget**](/docs/guides/budget) — the period, the two charts and the transaction list.
-- [**The assistant**](/docs/guides/assistant) — ask a question about your money and read the answer.
-
-## Build on it
-
-- [**API**](/docs/integrations/api) — the HTTP surface of the server, and how a client signs in.
-- [**Procedures**](/docs/integrations/procedures) — every procedure, with its input and its output.
-
-## Contribute
-
-- [**Contributing**](/docs/contributing) — the workflow, the checks and the conventions.
-- [**Architecture**](/docs/contributing/architecture) — the workspaces, the request flow and the build.

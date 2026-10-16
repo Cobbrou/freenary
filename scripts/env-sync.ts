@@ -32,7 +32,7 @@ const ENV_EXAMPLE_FILE = ".env.example";
 const GENERATOR_FILE = "scripts/env-sync.ts";
 
 const CONFIGURATION_PAGE =
-  "apps/fumadocs/content/docs/next/self-hosting/configuration.mdx";
+  "apps/fumadocs/content/docs/next/reference/configuration.mdx";
 
 const REPOSITORY_BLOB = "https://github.com/suiramdev/freenary/blob/main";
 

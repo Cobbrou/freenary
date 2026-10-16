@@ -1,0 +1,130 @@
+---
+title: Build from source
+description: Build the two images from a checkout, build for a fork, or run Freenary without Docker.
+icon: Hammer
+---
+
+The published images suit most installs. Build your own when you've changed the code, run a fork, or can't pull from GitHub's container registry. Both published images already cover `linux/amd64` and `linux/arm64`.
+
+You need a clone of the repository, Docker Compose v2 with BuildKit, and network access during the build. The build reads no `.env` file: configuration arrives at runtime, as with the published images.
+
+## Build with Compose
+
+In the root `docker-compose.yml`, replace each `image:` line with a `build:` block. `migrate` and `server` share the server image:
+
+```yaml
+services:
+  migrate:
+    build:
+      context: .
+      dockerfile: apps/server/Dockerfile
+  server:
+    build:
+      context: .
+      dockerfile: apps/server/Dockerfile
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+```
+
+```bash
+docker compose up -d --build
+```
+
+The first build takes several minutes, mostly for the merchant dictionary. The build downloads the newest dictionary release and, if that fails, generates it from its sources, which takes much longer. With no network access, the build fails.
+
+## Build arguments
+
+Compose passes none of these; build the image by hand to set them.
+
+| Image | Argument | Default | Purpose |
+| --- | --- | --- | --- |
+| Server | `GITHUB_REPOSITORY` | `suiramdev/freenary` | Repository the merchant dictionary is downloaded from. Set it on a fork |
+| Server | `GITHUB_TOKEN` (BuildKit secret) | none | Raises the GitHub API rate limit for that download. Never stored in a layer |
+| Web | `FREENARY_VERSION` | empty | Release the account menu's documentation link opens. A value like `1.2.0` opens the `1.2` docs; anything else opens `next` |
+
+```bash
+export GITHUB_TOKEN=<personal access token>
+docker build -f apps/server/Dockerfile \
+  --build-arg GITHUB_REPOSITORY=my-org/freenary \
+  --secret id=GITHUB_TOKEN,env=GITHUB_TOKEN \
+  -t freenary-server .
+
+docker build -f apps/web/Dockerfile \
+  --build-arg FREENARY_VERSION=1.2.0 \
+  -t freenary-web .
+```
+
+Then use `image: freenary-server` on `migrate` and `server`, and `image: freenary-web` on `web`.
+
+## What the images contain
+
+|            | Server               | Web                            |
+| ---------- | -------------------- | ------------------------------ |
+| Base image | `oven/bun:1`         | `oven/bun:1`                   |
+| Port       | `3000`               | `3001`                         |
+| Command    | `bun dist/index.mjs` | `bun .output/server/index.mjs` |
+| `NODE_ENV` | `production`         | `production`                   |
+
+The server image keeps its development dependencies, which is why the `prisma` CLI is there and `migrate` can run from it. Neither image declares a `HEALTHCHECK` or a `USER`; the Compose files define the health checks.
+
+## Run without Docker
+
+For a server with its own PostgreSQL 18 and process supervisor. You need Bun `1.3.14`.
+
+1. Install dependencies:
+
+   ```bash
+   bun install
+   ```
+
+2. Create `apps/server/.env`. The API server and the Prisma CLI both read it. Without Compose, set `NODE_ENV` yourself:
+
+   ```dotenv
+   NODE_ENV=production
+   BETTER_AUTH_SECRET=<output of: openssl rand -hex 32>
+   BETTER_AUTH_URL=https://freenary.example.com
+   CORS_ORIGIN=https://freenary.example.com
+   DATABASE_URL=postgresql://freenary:<database password>@127.0.0.1:5432/freenary
+   ```
+
+3. Apply the migrations, fetch the merchant dictionary and build:
+
+   ```bash
+   cd packages/db && bun x prisma migrate deploy && cd ../..
+   bun run build:data
+   bun run build
+   ```
+
+4. Start the API server:
+
+   ```bash
+   cd apps/server && bun run start
+   ```
+
+5. Start the web app in a second shell. `SERVER_URL` is where it forwards API calls; `PUBLIC_SERVER_URL` is the address the browser uses:
+
+   ```bash
+   cd apps/web && HOST=127.0.0.1 PORT=3001 SERVER_URL=http://127.0.0.1:3000 PUBLIC_SERVER_URL=https://freenary.example.com bun .output/server/index.mjs
+   ```
+
+Point your proxy at `127.0.0.1:3001`. See [Reverse proxy](/docs/reference/reverse-proxy).
+
+This isn't the contributor workflow; for that, see [Contribute](/docs/contribute).
+
+<Cards>
+
+<Card
+  title="Configuration"
+  href="/docs/reference/configuration"
+  description="Every variable the server reads."
+/>
+
+<Card
+  title="Updates and backups"
+  href="/docs/run/updates-and-backups"
+  description="Image tags, updates and rollbacks."
+/>
+
+</Cards>

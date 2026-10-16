@@ -1,0 +1,137 @@
+---
+title: Updates and backups
+description: Update Freenary to a newer version, back up and restore your database, and keep your instance healthy.
+icon: DatabaseBackup
+---
+
+Updating Freenary means pulling newer images and redeploying. Database changes apply on their own. Back up first, because they can't be undone.
+
+## Back up before you update
+
+Your whole instance is two things:
+
+- **The database** — every account, transaction, plan, and the credentials you typed into the setup screen.
+- **Your secrets** — `BETTER_AUTH_SECRET` and `POSTGRES_PASSWORD`, in your `.env` file or your hosting panel's environment settings. Coolify names them `SERVICE_HEX_64_AUTHSECRET` and `SERVICE_PASSWORD_POSTGRES`.
+
+Run the commands on this page from the folder that holds your `docker-compose.yml`.
+
+```bash
+docker compose exec -T postgres pg_dump -U postgres -d freenary -Fc > freenary.dump
+```
+
+Keep `-T`, so Docker doesn't attach a terminal to the command.
+
+<Callout type="error">
+
+Store `BETTER_AUTH_SECRET` with every dump. A database restored under a different secret signs everyone out, breaks two-factor for every user, and loses the bank and email credentials saved in the setup screen.
+
+</Callout>
+
+Freenary doesn't back itself up. Schedule the dump command with cron or your hosting panel, and copy the file off the server.
+
+### With a hosting panel
+
+Your panel names the database container. Find it, then dump through it:
+
+```bash
+docker ps --filter name=postgres
+docker exec <postgres-container> pg_dump -U postgres -d freenary -Fc > freenary.dump
+```
+
+Replace `<postgres-container>` with the name from the first command. Your secrets are in the panel's environment settings for the app.
+
+## Update
+
+`FREENARY_VERSION` picks which image version runs. It's `latest` by default, which follows each new release.
+
+<Tabs items={["Hosting panel", "Docker Compose"]}>
+
+<Tab value="Hosting panel">
+
+1. In Dokploy or Coolify, open your Freenary app's environment settings.
+2. Keep `FREENARY_VERSION=latest`, or set the version you want, such as `1.2.0`.
+3. Redeploy the app.
+
+If the app still runs the old version after a redeploy on `latest`, your panel reused the image it already had. Set an exact version instead, such as `1.2.0`, and redeploy.
+
+</Tab>
+
+<Tab value="Docker Compose">
+
+Keep or change `FREENARY_VERSION` in your `.env` file, then pull and restart:
+
+```bash
+docker compose pull && docker compose up -d
+```
+
+Your database container and its data stay as they are.
+
+</Tab>
+
+</Tabs>
+
+On every start, a one-time `migrate` container updates the database, then the server starts. In a panel, check that the containers are running and healthy. With Docker Compose:
+
+```bash
+docker compose ps -a
+```
+
+`migrate` should show `Exited (0)`; `postgres`, `server` and `web` should show `healthy`. Then sign in and open Budget.
+
+### Version tags
+
+| Tag                 | What you get                                         |
+| ------------------- | ---------------------------------------------------- |
+| `latest`            | The newest release. The default                      |
+| `1.2.0`, `1.2`, `1` | A specific release, or the newest within that series |
+| `main`, `dev`       | The latest code on that branch. Not for everyday use |
+| `sha-1a2b3c4`       | One exact build. Never changes                       |
+
+Pin a version, such as `1.2.0`, if you want to choose when updates happen.
+
+## Roll back an update
+
+Database changes only go forward, so going back to an older version means restoring the dump you took before updating. Follow [Restore a backup](#restore-a-backup), and set `FREENARY_VERSION` back to the version you ran before the last step.
+
+## Restore a backup
+
+This replaces the current database with the dump. Stop the apps, empty the database, load the dump, then start again:
+
+```bash
+docker compose stop web server
+docker compose exec -T postgres dropdb -U postgres --force freenary
+docker compose exec -T postgres createdb -U postgres freenary
+docker compose exec -T postgres pg_restore -U postgres -d freenary < freenary.dump
+docker compose up -d
+```
+
+With a hosting panel, stop the `web` and `server` services in the panel, run the three database commands with `docker exec -i <postgres-container>` in place of `docker compose exec -T postgres`, then redeploy.
+
+Make sure `BETTER_AUTH_SECRET` is the one that matches the dump, then sign in to check your data is back.
+
+## Keep it healthy
+
+<Callout type="error">
+
+Never run `docker compose down -v`. The `-v` deletes the volume that holds your database.
+
+</Callout>
+
+- **After changing `.env`**, run `docker compose up -d`, not `restart`. A restart keeps the old values. With a panel, redeploy.
+- **Free disk space** after updates by removing old images: `docker image prune -f`.
+- **Watch disk use.** The database grows with your transaction history; `docker system df -v` shows sizes.
+- **Cap log size.** Docker keeps container logs without limit by default. See [Troubleshooting](/docs/run/troubleshooting#read-the-logs).
+- **Test a restore** once in a while, on a copy, so you know your dumps work.
+
+<Cards>
+  <Card
+    title="Troubleshooting"
+    href="/docs/run/troubleshooting"
+    description="What to do when an update or a restore doesn't come back up."
+  />
+  <Card
+    title="Security"
+    href="/docs/reference/security"
+    description="Your secrets, and what changing them costs."
+  />
+</Cards>

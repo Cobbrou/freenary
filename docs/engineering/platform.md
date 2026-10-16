@@ -1,8 +1,144 @@
 # Platform
 
+The architecture of the repository first: the workspaces, the path of one request, the server routes, the boundaries and the build graph. Then the durable facts per module.
+
+## Architecture
+
+One instance runs three parts. The web app renders each screen, the API server holds the rules, and PostgreSQL keeps every row. This section maps the code that does it. [Local development stack](./local-stack.md) starts it on your machine.
+
+### Workspaces
+
+The root `package.json` declares two workspace globs, `apps/*` and `packages/*`. Ten workspaces sit under them: three applications and seven packages. A Bun catalog pins each shared version once. `zod`, `effect`, `typescript`, `elysia`, `better-auth` and `react` resolve to one version each. So do `@orpc/*`, `evlog`, `lucide-react`, `next-themes`, `sonner` and `tailwindcss`. `effect` is a dependency of the root, `apps/web`, `packages/api`, `packages/auth` and `packages/email`; `apps/fumadocs` does not carry it.
+
+| Workspace | Path | Owns | Workspace dependencies | Depended on by |
+| --- | --- | --- | --- | --- |
+| `web` | `apps/web` | The web app: routes, screens, message catalogs, the oRPC client | `@freenary/api`, `@freenary/env`, `@freenary/ui` | nothing |
+| `server` | `apps/server` | The HTTP surface only, described in its own manifest as thin glue | `@freenary/api`, `@freenary/auth`, `@freenary/db`, `@freenary/env` | nothing |
+| `fumadocs` | `apps/fumadocs` | This documentation site | **none** | nothing |
+| `@freenary/api` | `packages/api` | oRPC routers, the assistant, the bank adapters, the categorisation pipeline, the taxonomy | `@freenary/auth`, `@freenary/db`, `@freenary/env` | `web`, `server` |
+| `@freenary/auth` | `packages/auth` | The Better Auth setup, the cookie policy, the rate-limit policy | `@freenary/db`, `@freenary/email`, `@freenary/env` | `@freenary/api`, `server` |
+| `@freenary/db` | `packages/db` | The Prisma schema, the migrations, the client singleton | `@freenary/env` | `@freenary/api`, `@freenary/auth`, `server` |
+| `@freenary/email` | `packages/email` | The email provider registry | `@freenary/env` | `@freenary/auth` |
+| `@freenary/env` | `packages/env` | Two environment schemas, exported as `./server` and `./web` | none | `api`, `auth`, `db`, `email`, `server`, `web`, and the repository root |
+| `@freenary/ui` | `packages/ui` | React primitives, one export per file | none | `web` |
+| `@freenary/config` | `packages/config` | One file, `tsconfig.base.json` | none | every workspace but `apps/fumadocs`, and the repository root |
+
+Two entries in that table surprise a reader:
+
+- **`apps/fumadocs` depends on no workspace package**, not even `@freenary/config`. It carries its own `.oxlintrc.json` and its own `oxlint` dependency. It is a standalone application inside the repository.
+- **`@freenary/env` and `@freenary/config` are also root dependencies.** The root `package.json` declares both, beside the seven workspaces that declare them.
+
+`packages/config` holds exactly two files, its manifest and `tsconfig.base.json`. It carries no lint, format, Tailwind or Vite preset.
+
+### The path of one request
+
+The worked example is one click: a reader picks a category on a transaction row. Eleven hops carry it to a PostgreSQL row.
+
+| # | Hop | File | Detail |
+| --- | --- | --- | --- |
+| 1 | The click runs a mutation | `apps/web/src/pages/budget/model/use-transaction-category.ts` | `mutationFn` calls `client.budget.updateTransactionCategory({ category, transactionId })`. The cache is patched first and rolled back on error |
+| 2 | The oRPC client serialises the call | `apps/web/src/shared/api/orpc.ts` | One `RPCLink` at `${getServerUrl()}/rpc`, with `fetch` forced to `credentials: "include"`. Queries default to `staleTime: 60 * 1000`, and a failed query raises a retry toast |
+| 3 | The API origin resolves | `apps/web/src/shared/config/server-url.ts` | On the server `SERVER_URL` wins, then the public URL, then `VITE_SERVER_URL`, then the three Vercel values, then `http://localhost:3000`. In the browser the inline script value wins |
+| 4 | An inline script wrote that value | `apps/web/src/app/routes/__root.tsx` | The `head()` of the root route emits the script before any module script, so the browser learns the origin from the container it talks to |
+| 5 | Elysia receives the request | `apps/server/src/index.ts` | `.all("/rpc*", …, { parse: "none" })`, so Elysia never reads the body. CORS admits one origin with credentials, and `evlog()` plus a `.derive` already attached the wide event and the identified user |
+| 6 | The request context is built | `packages/api/src/context.ts` | `auth.api.getSession({ headers })`, then the three fields `{ auth: null, headers, session }` |
+| 7 | `RPCHandler` matches and runs the middleware | `packages/api/src/index.ts` | `protectedProcedure` throws `ORPCError("UNAUTHORIZED")` when `context.session?.user` is absent |
+| 8 | The procedure resolves | `packages/api/src/routers/index.ts` | Eight keys: `assistant`, `auth`, `bankConnection`, `budget`, `healthCheck`, `onboarding`, `privateData`, `settings` |
+| 9 | The handler validates and reads | `packages/api/src/routers/budget.ts` | Zod input, then `where: { account: { connection: { userId } }, id }`. A missing row throws `ORPCError("NOT_FOUND")` |
+| 10 | One Prisma transaction writes | `packages/api/src/routers/budget.ts` | The row update, then the merchant override upsert or delete, then an `updateMany` over the siblings that share `merchantKey` |
+| 11 | Prisma reaches PostgreSQL | `packages/db/src/index.ts` | `new PrismaPg({ connectionString: env.DATABASE_URL })` feeds `new PrismaClient({ adapter })`. The default export is that one singleton |
+
+The response goes back through `recordStatus` in `apps/server/src/index.ts`. It copies the real status onto `set.status`, so the wide event stays honest. A request that matched no procedure under `/rpc` answers `new Response("Not Found", { status: 404 })`.
+
+A server-rendered page takes a shorter path with no click. The entry in `apps/web/src/server.ts` wraps TanStack Start with `paraglideMiddleware`, then appends `Vary: Accept-Language, Cookie`. The `beforeLoad` of the root route calls `getViewer()` on the server alone. That server function forwards the cookie header of the request into `client.auth.viewer`. Each request also builds its own router and query client, in `apps/web/src/app/router/router.tsx`.
+
+That entry first sends the API paths elsewhere. `forwardApiRequest` in `apps/web/src/shared/lib/forward-api-request.ts` passes a request under `/api/auth`, `/rpc`, `/ai/chat` or `/api-reference` to `SERVER_URL`. It drops the hop headers, keeps `X-Forwarded-For`, and does not follow a redirect. It asks for an uncompressed answer, and removes `Content-Encoding` and `Content-Length` from that answer.
+
+An API server that does not answer in 9 seconds gives `502`. A caller that leaves gives `499`. The log line names the path, but not the query string.
+
+This forwarding lets one public origin serve both apps. `scripts/deploy-templates.test.ts` fails when a server route is missing from that list. CI does not run it, so run it by hand after you add a route.
+
+### The other server routes
+
+`apps/server/src/index.ts` mounts four handlers and one root route. Only the second one carries the procedures.
+
+| Route | What it does |
+| --- | --- |
+| `/api/auth/*` | Better Auth. Any method but `POST` and `GET` answers 405 |
+| `/rpc*` | The `RPCHandler` with the prefix `/rpc`, the path of the eleven hops above |
+| `POST /ai/chat` | The assistant token stream, also `parse: "none"`, handled by `handleAssistantChat`. A comment states the reason: a token stream does not fit a unary oRPC procedure |
+| `/api-reference*` | The OpenAPI handler, with `OpenAPIReferencePlugin` and `ZodToJsonSchemaConverter` |
+| `GET /` | The literal string `OK`, which every compose file uses as the health probe |
+
+The listener takes `env.PORT`, default `3000`. A new top-level route also goes into `FORWARDED_PATH_PREFIXES` of the web app. [API](../../apps/fumadocs/content/docs/next/reference/api.mdx) documents these routes for a caller, and [Procedure reference](../../apps/fumadocs/content/docs/next/reference/procedures.mdx) documents each procedure.
+
+### Boundaries
+
+Three boundaries hold the code apart. Each package states its own rule beside its code.
+
+**`packages/api` imports the data and identity packages only.** Its dependencies are `@freenary/auth`, `@freenary/db` and `@freenary/env`. It must not import `@freenary/ui`, `apps/web` or a compiled message module. The `elysia` package is a development dependency for one type in `packages/api/src/context.ts`. A framework change therefore stops at that file.
+
+**`apps/web` imports the router type, never the implementation.** `apps/web/src/shared/api/orpc.ts` imports `AppRouter` as a type and calls each procedure over HTTP.
+
+**A response carries slugs and enum members, never display strings.** The web app holds the translations and the API server holds none. So the API sends a stable key, and the web app maps that key to a message. Text from the user, the bank or the bank provider is data, and it passes through as it arrives. Interface strings live in `apps/web/messages/en.json` and `apps/web/messages/fr.json`, and both catalogs change in one commit.
+
+`packages/env` is the one seam for configuration. It holds two schemas: the server schema and the `VITE_` prefixed web schema. Add the Zod field there, then read `env`. [Configuration](../../apps/fumadocs/content/docs/next/reference/configuration.mdx) is the operator reference for every variable.
+
+### The build graph
+
+`turbo.json` declares the task graph and sets `"ui": "tui"`.
+
+| Task | Depends on | Cached | Notes |
+| --- | --- | --- | --- |
+| `build` | `^build` | yes | `inputs`: `$TURBO_DEFAULT$` and `.env*`; `outputs`: `dist/**` |
+| `build:data` | nothing | **no** | The merchant data artifacts. `@freenary/api` declares it |
+| `lint` | `^lint` | yes | Only `apps/fumadocs` declares the script |
+| `check-types` | `^check-types` | yes | Only `apps/server` and `@freenary/ui` declare the script |
+| `docs:check` | nothing | yes | Only `apps/fumadocs` declares it. `inputs`: `content/**`, `scripts/**`, `src/shared/ui/mdx.tsx`, `src/shared/lib/versions.ts` |
+| `lint:fsd` | nothing | yes | `apps/web` and `apps/fumadocs` both declare it. `inputs`: `src/**`, `steiger.config.ts`, `tsconfig.json` |
+| `dev` | nothing | no | `persistent: true`. `web`, `server` and `fumadocs` declare it |
+| `db:push`, `db:generate`, `db:migrate` | nothing | no | `interactive: true`. `@freenary/db` declares them |
+| `db:studio` | nothing | no | `persistent: true` |
+| `db:start`, `db:stop`, `db:watch`, `db:down` | nothing | no | No workspace declares them. The root scripts call `docker compose` straight |
+
+Each application builds to its own output:
+
+| Application | Command | Output |
+| --- | --- | --- |
+| `apps/server` | `tsdown` | `dist/index.mjs`, ESM, with `clean: true` and `deps.alwaysBundle: [/@freenary\/.*/u]`, so the workspace packages sit inside the bundle. The image runs `bun dist/index.mjs` |
+| `apps/web` | `vite build` | Nitro with the preset `bun`. The image runs `bun .output/server/index.mjs` |
+| `apps/fumadocs` | `vite build` | Nitro with the preset `vercel` and prerender turned on. No Dockerfile builds it, and no compose service runs it |
+
+`apps/server/package.json` also declares a single-file `bun build --compile` command. No workflow calls it.
+
+#### What the caches hold
+
+- **`ci.yml` caches nothing.** It declares no `actions/cache` step and no Turbo remote cache.
+- **`images.yml` caches each image layer set per application and per platform**, with `cache-from: type=gha,scope=<app>-<platform>` and `cache-to: type=gha,mode=max`.
+- **`build` declares no dependency on `build:data`.** The server image orders the two by hand. It passes the build argument `GITHUB_REPOSITORY` and the BuildKit secret `GITHUB_TOKEN`, which never lands in the image.
+
+`build:data` is `bun scripts/download-data.ts || bun run build:data:generate`. The download takes the newest release whose tag starts with `data-`. The fallback rebuilds every artifact from the upstream sources, which costs many minutes and much network. [Transaction categorisation](./categorisation.md) covers both paths.
+
+#### Generated files
+
+| Artifact | Path | Written by |
+| --- | --- | --- |
+| Prisma client | `packages/db/prisma/generated` | `prisma generate`, and `postinstall` on every install |
+| Route tree | `apps/web/src/routeTree.gen.ts` | The TanStack Start Vite plugin |
+| Compiled messages | `apps/web/src/paraglide/` | `paraglide-js compile`, and the Paraglide Vite plugin |
+| Merchant data | `packages/api/data/*` | The `build:data` scripts. The one tracked file there is `README.md` |
+| Server bundle | `apps/server/dist` | `tsdown` |
+| Web bundle | `apps/web/.output` | `vite build` |
+
+> [!WARNING] **No gitignore rule covers `apps/web/src/paraglide/`.** The directory appears in the Oxlint ignore list and in the compose sync ignore list, which are different things. The `dev` script of `apps/web` writes the whole compiled catalog there, so it turns up as untracked files. Never commit them.
+>
+> A stale Prisma client is the other common trap. A schema edit with no `bun run db:generate` leaves the old field types in place. The query then fails the type check, and the new column never reaches PostgreSQL.
+
+## Module notes
+
 Durable facts that the code cannot carry in a name. Each bullet names the module it belongs to. Source: comments deleted when the `no-comments` rule was adopted.
 
-## Environment and email
+### Environment and email
 
 - `packages/env/src/schema.ts › IPV4_MAPPED_IPV6_PREFIX` — Better Auth collapses an IPv4-mapped address to four bytes and then rejects any prefix above /32, so a `::ffff:…` entry parses in the schema and is silently dropped there, reinstating the single shared rate-limit bucket `TRUSTED_PROXIES` exists to prevent. Refusing the whole `::ffff:` form is wider than strictly needed, but the plain IPv4 spelling is equivalent. The fully uncompressed `0:0:0:0:0:ffff:…` form still slips through.
 - `packages/env/src/schema.ts › declaredPort` — `||`, not `??`: a declared-but-blank `PORT=` has to fall through to the default, which is what this object's `emptyStringAsUndefined` contract promises everywhere else.
@@ -14,7 +150,7 @@ Durable facts that the code cannot carry in a name. Each bullet names the module
 - `packages/email/src/providers/smtp.ts › createSmtpEmailProvider` — without `pool: true` nodemailer opens a fresh TCP and TLS handshake for every message, so the transport is built once per process.
 - `packages/email/src/index.ts › isEmailEnabled` — a flow that cannot work without a provider (one-time codes, password reset) is hidden rather than offered and failed; `authCapabilities.emailDelivery` is how that reaches the web app.
 
-## Auth and sessions
+### Auth and sessions
 
 - `packages/auth/src/cookies.ts › resolveCookiePolicy` — browsers judge same-site by registrable domain, which cannot be derived from a hostname without a public-suffix list. Only two cases are provable: identical hostnames, and an operator-declared `AUTH_COOKIE_DOMAIN` both origins sit under. Everything else falls back to `SameSite=None`, which browsers honour over HTTPS alone, so that combination is refused in production instead of shipping a login whose cookie the browser drops.
 - `packages/auth/src/cookies.ts › resolveCookiePolicy` — a declared domain the browser would not domain-match is worse than none: it emits `Lax; Domain=…`, the browser discards the `Set-Cookie`, and sign-in answers 200 while nobody is signed in. Hosts are compared case-folded because Domain matching is case-insensitive, and only a leading dot is stripped — RFC 6265 §5.2.3 is the one browsers ignore, so a trailing dot is refused rather than tidied.
@@ -38,7 +174,7 @@ Durable facts that the code cannot carry in a name. Each bullet names the module
 - `packages/auth/src/providers.ts › genericOAuthProviders` — the account's identity is the verified `sub` claim, so `requireIdTokenVerification` is on and the discovery document has to publish the JWKS that proves it.
 - `packages/auth/src/providers.ts › APPLE_CALLBACK_ORIGIN` — Apple posts its callback from its own origin, so `appleid.apple.com` must be a trusted origin whenever Apple is configured.
 
-## Instance configuration
+### Instance configuration
 
 - `packages/instance-config` — a package of its own rather than a second entry point of `@freenary/env`, because resolving a stored setting needs Prisma and `packages/db` already imports `@freenary/env` for `DATABASE_URL`. Putting the store beside the schema would make the two packages depend on each other. The direction that holds is `db → env`, then `instance-config → db, env`, then `auth`, `email` and `api` on top.
 - `packages/instance-config/src/resolve.ts › stored` — a top-level `await`, not an exported `init()` the server calls first. ESM evaluates a module's dependencies before its own body, so every consumer reads a resolved `settings` synchronously and no call site can observe the unresolved value. An explicit `init()` cannot give that guarantee here: `apps/server/src/index.ts` imports `@freenary/auth`, which builds the Better Auth instance in its module body, and a static import is hoisted above any `await` the entry file could run first.
@@ -54,13 +190,13 @@ Durable facts that the code cannot carry in a name. Each bullet names the module
 - `packages/auth/src/index.ts › databaseHooks.session.create.after` — the claim runs on session creation, not on user creation, so with email verification on, an account takes the role only once it can sign in. Every sign-in pays one `readSetupState` read for it. Better Auth runs this hook after it saves the session and gives it no error handler, so a rejection would fail the sign-in with a 500, set no cookie and leave the session row behind. The hook therefore recovers `InstanceSetupUnavailable` with `Effect.logWarning`: the sign-in succeeds, and the next sign-in retries the claim. The migration `20260922120000_instance_configuration` marks an upgraded instance as claimed and set up, because it already runs from its environment, and gives the role to its oldest verified user, or its oldest user when none is verified. The next sign-up there does not take the role, and no existing member is sent to `/setup`.
 - `apps/web/src/app/api/get-instance.ts › getInstanceSetup` — the router context carries the setup state beside the viewer, because the redirect has to happen in `beforeLoad` rather than in a component: a signed-in visitor whose instance is unconfigured must reach `/setup` without the protected shell rendering first. `completedAt`, not `claimedAt`, is the gate, so an operator who claimed the instance and stopped half way is sent back to the step they left.
 
-## API server entry
+### API server entry
 
 - `apps/server/src/index.ts › isCallerRefusal` — only faults reach the console. A refused call is an answer the caller asked for — an unauthenticated read, a rejected input — and printing its stack buries the crashes worth reading; the request's own wide event already records that it was refused.
 - `apps/server/src/index.ts › copyResponseStatusOntoWideEvent` — Elysia leaves `set.status` at its default when a handler returns a `Response` of its own, and the request's wide event reads exactly that, so every refusal on `/api/auth/*`, `/rpc*` and `/api-reference*` would be recorded as a 200.
 - `apps/server/src/index.ts › POST /ai/chat` — token streaming does not fit a unary oRPC procedure, so the assistant's stream is a raw route; everything it reads still goes through `appRouter`. `parse: "none"` there and on `/rpc*` and `/api-reference*`, because Elysia would otherwise consume the body.
 
-## Dev stack
+### Dev stack
 
 - `scripts/dev-identity.ts › MAX_SLUG_LENGTH` — 40 characters keeps every derived label of `<web|server|docs>.<slug>.freenary.localhost` inside the 63-character DNS label limit, with headroom for the prefix and the suffix.
 - `scripts/dev-identity.ts › deriveDevIdentity` — git refuses to check out the same branch in two worktrees, which is what makes a branch-derived slug collision-free across concurrent dev stacks.
@@ -71,11 +207,11 @@ Durable facts that the code cannot carry in a name. Each bullet names the module
 - `scripts/dev.ts › PROXY_SUBNET` — `172.30.0.0/16` is the subnet other projects that share `devproxy` create it with, and they pin their proxy at `172.30.0.2` for container-to-proxy callbacks; a network created on any other range would stay (they keep an existing `devproxy`) and break that pin. When the range is already taken on the machine, the network is created on a Docker-chosen subnet instead. The same sharing is why `server` and `mailpit` carry the aliases `freenary-server` and `freenary-mailpit` on the default network only: Compose registers a service's own name on every network it joins, so a bare `server` resolves on `devproxy` to the API of every running worktree.
 - `scripts/dev.ts › readBranch` — `git rev-parse --abbrev-ref HEAD` prints the literal `HEAD` on a detached HEAD, which is why that ref is treated as "no branch" and the worktree directory name is used instead.
 - `scripts/dev.ts › readEnvOverride` — a value already exported in the shell outranks the worktree-local `.env`, which is read with one regexp so the script needs no dotenv dependency. `FREENARY_SLUG=… bun run dev:up` therefore renames a stack without editing a file.
-- `scripts/env-sync.ts › main` — a variable used to be declared in four places: the schema, `.env.example`, the tables of `self-hosting/configuration.mdx` and the `x-app-env` pass-through list. Only the schema had a gate, so the other three drifted silently and a reader met a variable the code had renamed or dropped. The schema is now the one authored source and both artifacts are generated from it, which turns a missing description, example or `onError` into a failed build instead of a reader's surprise.
+- `scripts/env-sync.ts › main` — a variable used to be declared in four places: the schema, `.env.example`, the tables of `reference/configuration.mdx` and the `x-app-env` pass-through list. Only the schema had a gate, so the other three drifted silently and a reader met a variable the code had renamed or dropped. The schema is now the one authored source and both artifacts are generated from it, which turns a missing description, example or `onError` into a failed build instead of a reader's surprise.
 - `.docker/dockerfile.dev` — the workspace `package.json` files are copied one line at a time, before the source, so that `bun install` caches on the manifests alone. A new workspace therefore needs a line here or the image build fails at `bun install --frozen-lockfile` with `listed in bun.lock but not on disk`, naming every workspace that depends on the missing one. Docker has no glob that preserves the directory layout, so the list stays manual; the production images escape it because they `COPY . .` and cache on the bun install cache mount instead.
 - `docker-compose.dev.yml › x-app-env-file`, `x-app-env` — the anchor carried 32 `FOO: ${FOO:-}` lines so that a contributor's own `.env` reached the container, and every new variable needed a compose edit nobody remembered. `env_file` with `required: false` passes the whole optional root `.env` instead, and Compose gives `environment` precedence over `env_file`, so the six values derived from the worktree identity stay authoritative while nothing else has to be listed at all.
 
-## Documentation site
+### Documentation site
 
 - `apps/fumadocs/src/shared/lib/versions.ts › releaseFolder` — a released docs folder is named `X.Y`, not `X.Y.Z`, because `.github/workflows/images.yml` publishes `X.Y.Z`, `X.Y`, `X` and `latest` for a stable tag and `X.Y` is the finest tag an operator pins. `1.2.1` therefore reuses the `1.2` folder.
 - `apps/fumadocs/src/shared/lib/versions.ts › resolveDocsHref` — an authored docs link carries no version and resolves inside the version the reader is on. That invariant, enforced by `checkLinks` in `apps/fumadocs/scripts/check-docs.ts`, is what makes a release snapshot a plain copy that rewrites no docs link.
@@ -91,14 +227,14 @@ Durable facts that the code cannot carry in a name. Each bullet names the module
 - `.github/workflows/release.yml › publish` — with no earlier `v*` tag, GitHub's generated notes start at the previous _release_, which is a `data-<YYYY-MM-DD>` merchant-data release, so the first version lists its merged pull requests itself. `pull-requests: read` in the top-level `permissions` exists for that one `gh pr list` call, because naming any scope sets the rest to `none`.
 - `apps/fumadocs/scripts/snapshot-version.ts › STAGING_DIR_OUTSIDE_DOCS` — the copy is staged outside `content/docs` and moved in with one `rename`, so an interrupted run leaves no half-written version for the site to serve, and no folder a retry would mistake for a finished snapshot.
 - `apps/fumadocs/scripts/snapshot-version.ts › module` — the root `meta.json` version-list rewrite sits outside the `exists(target)` branch on purpose: a run that copied the folder and then stopped left the release out of the version list, and the retry has to finish that half rather than report success.
-- `apps/fumadocs/scripts/moving-refs.ts › MOVING_REFS` — one table names every reference a frozen page has to pin, and both the writer (`snapshot-version.ts`) and the gate (`check-docs.ts`) read it, so they cannot disagree about which forms exist. Two entries are anchored to the syntax that carries them, because an authoring page names the moving form in prose on purpose: `](<repository blob url>` and not the URL a sentence quotes, which `contributing/writing-docs.mdx` does where it explains this rewrite; the whole-line `\nFREENARY_VERSION=main\n` and not the inline mention, which `contributing/releasing.mdx` and `contributing/writing-docs.mdx` both carry. The raw download URL is the bare string and therefore matches in prose too, because it exists only as the target of a `curl` in an install fence; a page that names that prefix in a sentence gets rewritten by the writer and flagged by the gate, so name the bare host instead. Every moving form is built from `gitConfig.branch`, so renaming the branch moves the pin and the gate together.
+- `apps/fumadocs/scripts/moving-refs.ts › MOVING_REFS` — one table names every reference a frozen page has to pin, and both the writer (`snapshot-version.ts`) and the gate (`check-docs.ts`) read it, so they cannot disagree about which forms exist. Two entries are anchored to the syntax that carries them, because an authoring page names the moving form in prose on purpose: `](<repository blob url>` and not the URL a sentence quotes, which the frozen `contributing/writing-docs.mdx` does where it explains this rewrite; the whole-line `\nFREENARY_VERSION=main\n` and not the inline mention, which the frozen `contributing/releasing.mdx` and `contributing/writing-docs.mdx` both carry. The raw download URL is the bare string and therefore matches in prose too, because it exists only as the target of a `curl` in an install fence; a page that names that prefix in a sentence gets rewritten by the writer and flagged by the gate, so name the bare host instead. Every moving form is built from `gitConfig.branch`, so renaming the branch moves the pin and the gate together.
 - `apps/fumadocs/scripts/moving-refs.ts › indexOfMatchedText` — a moving form anchored to the start of a line begins at the newline that ends the line before it, so the reported line is one past the match. Without this the `FREENARY_VERSION` finding names the fence opener instead of the offending line.
-- `apps/fumadocs/scripts/check-docs.ts › RULE_DISABLE_DIRECTIVE` — a page switches rules off for itself by writing `{/* docs-check disable: ste-word, no-roadmap */}`. One page uses it: `content/docs/next/contributing/writing-docs.mdx` has to name the words the language rules ban.
+- `apps/fumadocs/scripts/check-docs.ts › RULE_DISABLE_DIRECTIVE` — a page switches rules off for itself by writing `{/* docs-check disable: ste-word, no-roadmap */}`. Only the frozen `content/docs/0.1/contributing/writing-docs.mdx` uses it, because it names the words the old language rules banned. The writing rules for `next` now live in [writing-docs.md](./writing-docs.md), outside the docs tree.
 - `apps/fumadocs/scripts/check-docs.ts › checkAuthoredLanguage` — the language rules run on `next` alone, because a frozen version passed them when it was written and the word lists keep moving. A frozen page gets `checkMovingRefsArePinned` in their place; its structure rules still apply.
 - `apps/fumadocs/scripts/docs-model.ts › maskNonProse` — every mask replaces characters one for one and keeps the newlines, so a byte offset in the masked text still maps to the line it came from; `lineAt` over `maskedProse` depends on that invariant. `maskAsCapitalisedWord` masks inline code to a run of `X` rather than spaces because inline code is one word to a reader and can open a sentence: the sentence splitter needs the capital and the word counter needs the token.
 - `apps/fumadocs/scripts/docs-rules.ts › module` — every table here restates a rule `apps/fumadocs/AGENTS.md` already states in prose and the build does not catch. The two have to be kept in step.
 
-## Lint and tooling
+### Lint and tooling
 
 - `eslint(max-classes-per-file)` allows 1 — `ultracite/oxlint/core` sets it with no option, so the eslint default stands. A module therefore carries at most one tagged error, and a boundary with several failure modes gives that error a `reason` union instead of a class each: see `packages/email/src/registry.ts › EmailProviderUnavailableReason`.
 - `eslint(sort-keys)` orders `catch` before `try` in `Effect.try` and `Effect.tryPromise`, so the handler is written above the body it handles (`packages/api/scripts/download-data.ts`). The rule is switched off only under `**/routes/**` by `ultracite/oxlint/tanstack`, where route option types are order-sensitive; everywhere else, sorting wins.

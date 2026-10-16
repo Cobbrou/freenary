@@ -1,0 +1,126 @@
+---
+title: Your account
+description: Your first steps after signing in, the ways to sign in, how to protect your account, and what each Settings pane holds.
+icon: UserRound
+---
+
+This page covers your own account: getting started, signing in, keeping it safe, and changing Freenary's language and look.
+
+## First steps
+
+The first time you sign in, Freenary asks two short questions:
+
+1. **Your tax residency.** Pick every country you pay tax in. It decides which banks you can connect and how transactions get sorted. France has full support; other countries are marked `Limited support`, so fewer transactions get a category automatically.
+2. **Your bank.** Connect a bank now, or press `Skip for now` and do it later from Settings.
+
+If you're the operator, the [setup screen](/docs/get-started/connect-a-bank) opens before these questions.
+
+Then a **First steps** checklist appears at the bottom of the sidebar. Each item links to the right place:
+
+| Item | Done when |
+| --- | --- |
+| `Connect your bank` | You have at least one [bank connection](/docs/use/bank-connections) |
+| `Set up your budget` | Your [plan](/docs/use/budget#plan-a-monthly-amount) has at least one line |
+| `Protect your account` | You turn on two-factor authentication or add a passkey |
+
+The checklist disappears once all three are done.
+
+## Sign in
+
+Type your email address on the sign-in screen. Freenary checks it, then asks for your password, or for a name and password if you're new. A new password needs at least 12 characters.
+
+Depending on how your instance is set up, you may also see:
+
+- **A confirmation code.** On an instance that sends email, a new account gets a 6-digit code by email. It's valid for 10 minutes. No code? Press `Send a new code` and check your spam folder.
+- **Forgot password?** It emails you a code to choose a new password, then you sign in with it. This link only appears on an instance that sends email.
+- **Sign in with a passkey** — use your device's fingerprint, face or PIN instead of a password.
+- **Continue with Google**, **Apple** or **single sign-on**, if your operator turned them on.
+
+You stay signed in for 7 days on each browser.
+
+<Callout type="info">
+
+Your operator decides which methods exist and whether Freenary sends email. If a code never arrives or there's no `Forgot password?` link, ask them. Operator details: [Sign-in](/docs/run/sign-in) and [Email](/docs/run/email).
+
+</Callout>
+
+## Protect your account
+
+Do at least one of these, from Settings, `Security`.
+
+### Turn on two-factor authentication
+
+With two-factor on, signing in with your password also asks for a code from an authenticator app.
+
+<Steps>
+
+<Step>
+
+### Start
+
+In `Two-factor authentication`, turn the switch on and confirm your password.
+
+</Step>
+
+<Step>
+
+### Scan the code
+
+Scan the QR code with your authenticator app, then type the 6-digit code it shows.
+
+</Step>
+
+<Step>
+
+### Save your recovery codes
+
+Copy the recovery codes and keep them somewhere safe. Each one works once if you lose your phone.
+
+</Step>
+
+</Steps>
+
+At sign-in you can tick "Remember this device" to skip the code on that browser for 30 days.
+
+Two-factor protects password sign-in only. If you created your account with Google, Apple or single sign-on, you have no password, so add a passkey instead.
+
+### Add a passkey
+
+In `Passkeys`, press `Add a passkey`, name it, and follow your browser's prompt. Passkeys need a recent browser and an HTTPS address.
+
+## Settings
+
+Open Settings from the sidebar. It has four panes:
+
+| Pane | What you do there |
+| --- | --- |
+| `Appearance` | Theme and language |
+| `Connections` | Connect, re-sync and disconnect banks |
+| `Budget` | Your monthly plan and your categories |
+| `Security` | Two-factor, passkeys, signed-in browsers, and linked Google, Apple or single sign-on accounts |
+
+In `Active sessions` you can sign out a single browser with `Revoke`, or all others at once with `Sign out other sessions`.
+
+Freenary has no screen to change your name or email address, or to delete your account. To change your password, use `Forgot password?` on the sign-in screen.
+
+## Language and theme
+
+Change them from Settings, `Appearance`, or from the menu under your name at the bottom of the sidebar. Both are also on the sign-in screen.
+
+- **Language:** English or Français. The page reloads, so save any unsaved plan first.
+- **Theme:** `System` (follows your device), `Dark` or `Light`.
+
+Both choices belong to the browser, not to your account.
+
+<Cards>
+  <Card
+    title="Bank connections"
+    href="/docs/use/bank-connections"
+    description="Connect your first bank."
+  />
+  <Card
+    title="Budget"
+    href="/docs/use/budget"
+    description="Read your spending and plan a monthly amount."
+  />
+</Cards>

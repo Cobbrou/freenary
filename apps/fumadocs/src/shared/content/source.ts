@@ -4,6 +4,7 @@ import { pageSchema } from "fumadocs-core/source/schema";
 import { defineDocs } from "fumadocs-mdx/macro";
 import { z } from "zod";
 
+import { MOVED_PAGES, type MovedPage } from "../config/moved-pages";
 import { docsRoute } from "../config/site";
 import { compareVersionIds, isVersionId, NEXT_VERSION } from "../lib/versions";
 
@@ -52,6 +53,45 @@ export const versionNode = (version: string) =>
     .children.find(
       (child) => child.type === "folder" && child.name === version
     );
+
+const pageAt = (version: string, path: string) =>
+  source.getPage([version, ...path.split("/")]);
+
+const counterpartOf = (
+  path: string,
+  [before, after]: MovedPage
+): string | undefined => {
+  if (before === path) {
+    return after;
+  }
+
+  if (after === path) {
+    return before;
+  }
+
+  return undefined;
+};
+
+export const findMovedPage = (slugs: readonly string[]) => {
+  const [version, ...rest] = slugs;
+  const path = rest.join("/");
+
+  if (version === undefined || path === "") {
+    return undefined;
+  }
+
+  for (const moved of MOVED_PAGES) {
+    const counterpart = counterpartOf(path, moved);
+    const page =
+      counterpart === undefined ? undefined : pageAt(version, counterpart);
+
+    if (page) {
+      return page;
+    }
+  }
+
+  return undefined;
+};
 
 export async function getLLMText(page: (typeof source)["$inferPage"]) {
   const processed = await page.data.getText("processed");

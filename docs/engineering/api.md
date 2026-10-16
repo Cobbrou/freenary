@@ -2,7 +2,7 @@
 
 Durable facts that the code cannot carry in a name. Each bullet names the module it belongs to. Source: comments deleted when the `no-comments` rule was adopted.
 
-The reader-facing contracts live in the documentation site and are not repeated here: [`contributing/bank-provider.mdx`](../../apps/fumadocs/content/docs/next/contributing/bank-provider.mdx) owns the `BankingProvider` boundary, and [`integrations/`](../../apps/fumadocs/content/docs/next/integrations) owns the public route surface, the caps and the error codes.
+The reader-facing contracts live in the documentation site and are not repeated here: [bank-provider.md](./bank-provider.md) owns the `BankingProvider` boundary, and [`reference/api.mdx`](../../apps/fumadocs/content/docs/next/reference/api.mdx) with [`reference/procedures.mdx`](../../apps/fumadocs/content/docs/next/reference/procedures.mdx) own the public route surface, the caps and the error codes.
 
 ## Routers and the request boundary
 

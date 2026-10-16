@@ -1,0 +1,152 @@
+---
+title: Reverse proxy
+description: Put HTTPS in front of Freenary with one hostname or two subdomains, keep the real caller address, and add a CDN.
+icon: Network
+---
+
+Freenary serves plain HTTP. Your reverse proxy adds HTTPS and a hostname in front of it. Use one hostname unless you have a reason to split.
+
+Hosting panels (Dokploy, Coolify) do this for you. This page is for your own Caddy, nginx or Traefik.
+
+## One hostname (recommended)
+
+The web app forwards `/api/auth`, `/rpc`, `/ai/chat` and `/api-reference` to the API server over the Docker network. So one hostname, sent to the web app on port `3001`, serves the whole instance. You need no CORS rule and no cookie domain.
+
+### A proxy on the server itself
+
+Use the root `docker-compose.yml`, which publishes ports. Set both URLs to the same address, and bind both ports to the loopback interface so only the proxy can reach them:
+
+```dotenv
+BETTER_AUTH_URL=https://freenary.example.com
+CORS_ORIGIN=https://freenary.example.com
+SERVER_PORT=127.0.0.1:3000
+WEB_PORT=127.0.0.1:3001
+```
+
+Without the `127.0.0.1` prefix, both ports listen on every network the server is on. Someone reaching port `3001` directly could then send any `X-Forwarded-For` they like and dodge the rate limits.
+
+Caddy gets the certificate on its own:
+
+```text
+freenary.example.com {
+	reverse_proxy 127.0.0.1:3001
+}
+```
+
+nginx, with a certificate from Certbot:
+
+```text
+server {
+    listen 443 ssl;
+    server_name freenary.example.com;
+
+    ssl_certificate     /etc/letsencrypt/live/freenary.example.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/freenary.example.com/privkey.pem;
+
+    location / {
+        proxy_pass http://127.0.0.1:3001;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+`X-Forwarded-For $remote_addr` sends one address, which Freenary trusts without any setting. See [Trusted proxies](#trusted-proxies) before you use `$proxy_add_x_forwarded_for`.
+
+### A proxy in Docker
+
+A Traefik, Caddy or nginx container on a Docker network can run `deploy/docker-compose.yml` instead. It publishes no port, and `FREENARY_URL` sets all three URLs at once:
+
+```bash
+curl -O https://raw.githubusercontent.com/suiramdev/freenary/main/deploy/docker-compose.yml
+```
+
+Set `FREENARY_URL`, `POSTGRES_PASSWORD` and `BETTER_AUTH_SECRET`, attach the `web` service to the proxy's network, and route your hostname to `web` on port `3001`. Add no route to `server`.
+
+### Check it
+
+```bash
+curl -L -o /dev/null -w '%{http_code} %{url_effective}\n' https://freenary.example.com/
+curl https://freenary.example.com/api/auth/ok
+```
+
+The first prints `200 https://freenary.example.com/login`, the second `{"ok":true}`. A `502 Bad Gateway` on the second means the web app didn't reach the API server; read the `server` logs.
+
+## Two subdomains
+
+Split only if you need the API on its own hostname, for example `app.example.com` and `api.example.com`. Send each hostname to its port and set:
+
+```dotenv
+BETTER_AUTH_URL=https://api.example.com
+CORS_ORIGIN=https://app.example.com
+AUTH_COOKIE_DOMAIN=.example.com
+SERVER_PORT=127.0.0.1:3000
+WEB_PORT=127.0.0.1:3001
+```
+
+```text
+api.example.com {
+	reverse_proxy 127.0.0.1:3000
+}
+
+app.example.com {
+	reverse_proxy 127.0.0.1:3001
+}
+```
+
+What each value does:
+
+- `BETTER_AUTH_URL` is the API's public URL. The browser receives it as `PUBLIC_SERVER_URL`, which Compose copies from it, so changing it needs no new image: run `docker compose up -d`.
+- `CORS_ORIGIN` must match the web app's address exactly. It's the one origin the API accepts, and the passkey relying party.
+- `AUTH_COOKIE_DOMAIN` is the parent domain both hostnames share. It keeps the session cookie `SameSite=Lax`. Without it the cookie falls back to `SameSite=None`, and browsers that block third-party cookies drop the session.
+
+The API refuses to start when `AUTH_COOKIE_DOMAIN` ends with a dot, has a single label, or isn't a parent of both hostnames. A multi-label public suffix such as `.co.uk` isn't detected, so name the domain you actually own.
+
+<Callout type="warn">
+
+Two hostnames, no `AUTH_COOKIE_DOMAIN`, and an `http://` `BETTER_AUTH_URL` stop the `server` container from starting. Use HTTPS, one hostname, or the shared parent domain.
+
+</Callout>
+
+Check it with `curl https://api.example.com/`, which answers `OK`.
+
+## Trusted proxies
+
+Sign-in rate limits are counted per caller address, read from `X-Forwarded-For`. The web app passes that header to the API server unchanged.
+
+- **One address in the header**: Freenary trusts it. A single proxy that replaces the header (Caddy's default, nginx with `$remote_addr`, Traefik in a panel) needs no setting.
+- **Several addresses**: Freenary can't tell which one is real unless you list the proxies. With no list, all visitors share one rate-limit bucket, and one visitor can use up everyone's sign-in attempts.
+
+List every proxy address that appears in the chain, as single addresses or CIDR ranges, IPv4 or IPv6, separated by commas:
+
+```dotenv
+TRUSTED_PROXIES=10.0.0.0/24,192.0.2.10
+```
+
+Freenary reads the chain from the right and takes the first address that isn't listed. Write IPv4 addresses in IPv4 form: `::ffff:10.0.0.1` stops the start.
+
+## Behind a CDN
+
+A CDN such as Cloudflare adds one more hop. Two settings keep the real address:
+
+1. Tell your proxy to trust the CDN's address ranges, so it keeps the CDN's `X-Forwarded-For` instead of replacing it with the CDN address. On Dokploy and Coolify, add the ranges to `forwardedHeaders.trustedIPs` of Traefik's HTTPS entry point. In Caddy, use the `trusted_proxies` option. In nginx, switch to `$proxy_add_x_forwarded_for`.
+2. Set `TRUSTED_PROXIES` to the same CDN ranges.
+
+Get the ranges from your CDN's documentation; they change over time.
+
+<Cards>
+
+<Card
+  title="Configuration"
+  href="/docs/reference/configuration"
+  description="Every variable, its default and what stops a start."
+/>
+
+<Card
+  title="Security"
+  href="/docs/reference/security"
+  description="Ports, secrets and the checklist before real users arrive."
+/>
+
+</Cards>

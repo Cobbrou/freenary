@@ -27,7 +27,7 @@ The dev stack needs no `.env`: the `server` service declares `env_file` with `re
 
 The production stack is `docker-compose.yml` (`bun run docker:up`, which is `docker compose up -d`). It runs the published `ghcr.io/suiramdev/freenary-server` and `ghcr.io/suiramdev/freenary-web` images, and applies the migrations itself through its one-shot `migrate` service. Its root `.env` carries `POSTGRES_PASSWORD`, `BETTER_AUTH_SECRET` and `FREENARY_VERSION`. The compose default is `latest`, the newest release; the other published tags are `X.Y.Z`, `X.Y`, `X`, `main`, `dev` and `sha-<7 characters>`.
 
-Full walkthrough: [Local development stack](apps/fumadocs/content/docs/next/contributing/local-stack.mdx) and [Self-hosting](apps/fumadocs/content/docs/next/self-hosting/index.mdx).
+Full walkthrough: [Contribute](apps/fumadocs/content/docs/next/contribute.mdx) and [Install Freenary](apps/fumadocs/content/docs/next/get-started/install.mdx).
 
 ## Frontend Architecture: Feature-Sliced Design
 
@@ -73,30 +73,16 @@ Run it from the app directory or through the script: steiger finds `steiger.conf
 
 Pure refactors, internal helpers, and dependency bumps that change no documented behavior need no docs change. Say so in the PR rather than leaving it ambiguous.
 
-**The docs are versioned.** `content/docs` holds one folder per version of Freenary: `next` for the unreleased code, and one frozen `X.Y` folder per release. **A change edits `next` and nothing else** — the `Release` workflow copies `next` to `content/docs/X.Y` before it tags, and a released folder only ever takes a correction to that release. Every page is served under its version (`/docs/next/guides/budget`), a path with no version redirects to the newest release, and **an authored link never names a version**: write `/docs/guides/budget` and the site resolves it inside the version being read.
+**The docs are versioned.** `content/docs` holds one folder per version of Freenary: `next` for the unreleased code, and one frozen `X.Y` folder per release. **A change edits `next` and nothing else** — the `Release` workflow copies `next` to `content/docs/X.Y` before it tags, and a released folder only ever takes a correction to that release. Every page is served under its version (`/docs/next/use/budget`), a path with no version redirects to the newest release, and **an authored link never names a version**: write `/docs/use/budget` and the site resolves it inside the version being read. A moved or deleted page gets a pair in `apps/fumadocs/src/shared/config/moved-pages.ts` so its old URL still lands somewhere.
 
-**Put it in the right section.** `content/docs/next/` is split by audience, and the split is what makes the site navigable:
+**Put it in the right section.** `content/docs/next/` holds `index.mdx`, then `get-started/` (install and first bank), `use/` (anyone signed in, no terminal), `run/` (the operator after install), `reference/` (every variable and alternative setup) and `contribute.mdx`. Each folder's `meta.json` holds the order. Internals go to `docs/engineering/`, not to the site. A fact lives in **exactly one** page; everywhere else links to it.
 
-| Section | Audience | Never contains |
-| --- | --- | --- |
-| `index.mdx` | Everyone | Instructions |
-| `quickstart.mdx` | A reader with Docker and no instance | The served install: public origins, reverse proxy, hardening |
-| `concepts.mdx` | Users | Prisma model names, enum values, columns — those live in `contributing/data-model.mdx` |
-| `self-hosting/` | Operators | Product walkthroughs |
-| `guides/` | Users of a running instance | Env vars, Docker, file paths, package names, database or enum names |
-| `integrations/` | Developers calling the API | Internal design rationale |
-| `contributing/` | Contributors and engineers | Anything an end user needs |
-
-The sidebar order is each version folder's own `meta.json`, and its four separators name the audiences: `index`, `quickstart`, `concepts`, `---Run Freenary---`, `self-hosting`, `---Use Freenary---`, `guides`, `---Build on Freenary---`, `integrations`, `---Contribute---`, `contributing`. The root `content/docs/meta.json` lists the versions instead, and orders the dropdown. `quickstart.mdx` owns the shortest install on one machine; `self-hosting/index.mdx` owns the install that serves other people. A folder's index page carries the name of its subject, and no page is titled `Overview`.
-
-A fact lives in **exactly one** section; everywhere else links to it. Duplicated prose is the failure mode this structure exists to prevent. How the system works — architecture, request flow, internals — belongs to `contributing/`; a user wants to run the app and use it.
-
-**Document what is true, and only what is true.** Read the code before writing the page, quote real names, and never describe a screen, flag, or endpoint that does not exist. No page carries a roadmap: never write that a feature is planned, is coming soon, or is not built yet, and never write a "what Freenary does today" list or a Built-against-Planned table. State what a reader can do, link them to it, and leave the rest out. (The repository `README.md` is not a docs page and does carry the state of the project.)
+**Document what is true, and only what is true.** Read the code before writing the page, quote real names, and never describe a screen, flag, or endpoint that does not exist. Write plain, short, second-person prose; the full writing rules are in [`apps/fumadocs/AGENTS.md`](apps/fumadocs/AGENTS.md).
 
 **Verify it.** Two gates, and neither one alone is enough:
 
 ```bash
-bun run docs:check   # icons, components, links, navigation, audience split, language
+bun run docs:check   # frontmatter, icons, components, links, anchors, navigation, moved pages
 cd apps/fumadocs && bun run build
 ```
 
@@ -108,15 +94,15 @@ cd apps/fumadocs && bun run build
 | MDX component not registered in `src/shared/ui/mdx.tsx` | **Passes** — renders nothing | Fails |
 | Dead internal link or `#anchor` | **Passes** | Fails |
 | Page missing from its folder's `meta.json` | **Passes** | Fails |
-| A shell command or an env var inside `guides/` | **Passes** | Fails |
 | A link that names a version, or a version folder without `"root": true` | **Passes** | Fails |
-| A contraction, a banned word, roadmap language, a 26-word sentence | **Passes** | Fails (in `next`; a frozen version keeps the structure rules only) |
+| An operator code block in `use/` | **Passes** | Fails |
+| A moved page with no pair in `moved-pages.ts` | **Passes** | Fails |
 
-A green gate therefore is not proof the page is right. Load the page you changed and look at it. The authoring rules and the five-step writing workflow live in [`apps/fumadocs/AGENTS.md`](apps/fumadocs/AGENTS.md), and the reader-facing version is [`content/docs/next/contributing/writing-docs.mdx`](apps/fumadocs/content/docs/next/contributing/writing-docs.mdx) — update both together when the conventions change. Every page is written in ASD-STE100 Simplified Technical English; that rule is part of the authoring standard, not a style preference.
+A green gate therefore is not proof the page is right. Load the page you changed and look at it.
 
 ## Environment Variables: One Schema, Two Generated Files
 
-Every server variable is declared once, in [`packages/env/src/schema.ts`](packages/env/src/schema.ts), with a `.describe()` sentence and a `.meta({ section, example, onError })` block; `packages/env/src/server.ts` only hands that object to `createEnv`, and the client variables live in `schema-web.ts`. `bun run env:sync` writes the two artifacts from it: the root `.env.example`, and the tables of `apps/fumadocs/content/docs/next/self-hosting/configuration.mdx`, between the `{/* env-sync:start … */}` and `{/* env-sync:end */}` markers. **Neither artifact is edited by hand** — the next sync overwrites the edit.
+Every server variable is declared once, in [`packages/env/src/schema.ts`](packages/env/src/schema.ts), with a `.describe()` sentence and a `.meta({ section, example, onError })` block; `packages/env/src/server.ts` only hands that object to `createEnv`, and the client variables live in `schema-web.ts`. `bun run env:sync` writes the two artifacts from it: the root `.env.example`, and the tables of `apps/fumadocs/content/docs/next/reference/configuration.mdx`, between the `{/* env-sync:start … */}` and `{/* env-sync:end */}` markers. **Neither artifact is edited by hand** — the next sync overwrites the edit.
 
 `bun run env:check` is the same script with `--check`, and CI runs it as the **Environment** step; a `lefthook` pre-commit job runs `env:sync` and stages what it writes. The generator also refuses a schema key that carries no `.describe()`, `example` or `onError`, a `process.env.X` read that no schema and no allow-list declares, a `${VAR}` in a compose file that nothing declares, and an allow-list entry that no file uses. Adding a variable is therefore a schema edit plus `bun run env:sync`: the compose files no longer list pass-through variables, so no compose edit is part of it.
 
@@ -124,11 +110,11 @@ Every server variable is declared once, in [`packages/env/src/schema.ts`](packag
 
 `apps/web` ships in English and French. Every user-facing string it renders is a key in `apps/web/messages/en.json` and `messages/fr.json`, and **a change that adds or edits UI adds or edits both catalogs in the same commit**. A key present in `en.json` and missing from `fr.json` compiles with no error and no warning — the French branch aliases to the English one, so English reaches French readers and no build step catches it.
 
-The rules live next to the code they govern: [`apps/web/AGENTS.md`](apps/web/AGENTS.md#internationalization) for catalogs, message discipline and locale-aware formatting; [`packages/ui/AGENTS.md`](packages/ui/AGENTS.md) for primitives' accessible names; [`packages/api/AGENTS.md`](packages/api/AGENTS.md) for why responses carry slugs rather than labels. The mechanism is Paraglide: `apps/web/src/paraglide/` is generated, and every component imports the message functions as `m`. What readers see is documented at [`content/docs/next/guides/interface.mdx`](apps/fumadocs/content/docs/next/guides/interface.mdx).
+The rules live next to the code they govern: [`apps/web/AGENTS.md`](apps/web/AGENTS.md#internationalization) for catalogs, message discipline and locale-aware formatting; [`packages/ui/AGENTS.md`](packages/ui/AGENTS.md) for primitives' accessible names; [`packages/api/AGENTS.md`](packages/api/AGENTS.md) for why responses carry slugs rather than labels. The mechanism is Paraglide: `apps/web/src/paraglide/` is generated, and every component imports the message functions as `m`. What readers see is documented at [`content/docs/next/use/account.mdx`](apps/fumadocs/content/docs/next/use/account.mdx).
 
 ## Branches and Releases
 
-Pull requests target `dev`, the integration branch; `main` holds released code, and a push to either branch publishes the `ghcr.io/suiramdev/freenary-server` and `ghcr.io/suiramdev/freenary-web` images under that branch name. A maintainer releases by merging a docs snapshot (`bun run docs:snapshot X.Y.Z`) into `dev`, merging `dev` into `main`, and running the `Release` workflow, which refuses a stable version without its snapshot, then creates the `vX.Y.Z` tag, the versioned images and the GitHub release. The web image carries its version from the build argument `FREENARY_VERSION`, which is what its account-menu documentation link points at. Contributors never tag and never bump a version — see [Release a version](apps/fumadocs/content/docs/next/contributing/releasing.mdx).
+Pull requests target `dev`, the integration branch; `main` holds released code, and a push to either branch publishes the `ghcr.io/suiramdev/freenary-server` and `ghcr.io/suiramdev/freenary-web` images under that branch name. A maintainer releases by merging a docs snapshot (`bun run docs:snapshot X.Y.Z`) into `dev`, merging `dev` into `main`, and running the `Release` workflow, which refuses a stable version without its snapshot, then creates the `vX.Y.Z` tag, the versioned images and the GitHub release. The web image carries its version from the build argument `FREENARY_VERSION`, which is what its account-menu documentation link points at. Contributors never tag and never bump a version — see [Contribute](apps/fumadocs/content/docs/next/contribute.mdx).
 
 ## Pull Request Descriptions: Complete, Then Brief
 

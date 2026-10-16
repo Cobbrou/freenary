@@ -1,0 +1,76 @@
+---
+title: Assistant
+description: Ask questions about your money in plain words, see how each answer was found, and turn the assistant on as an operator.
+icon: Sparkles
+---
+
+The assistant is the question box on Home. Ask it about your accounts, spending or budget, and it answers from the data your banks sent to Freenary.
+
+Connect a bank first, or the assistant has little to read. See [Bank connections](/docs/use/bank-connections).
+
+## Ask a question
+
+Type your question on Home and send it. For example:
+
+- How much did I spend on eating out this year?
+- Where did my money go last month?
+- Which subscriptions am I paying for?
+
+On a new conversation, Freenary suggests a few questions. Pick one to fill the box, edit it if you like, then send.
+
+## Read an answer
+
+Above each answer, Freenary lists the steps it took, such as `Searching your transactions` or `Comparing your plan with what you spent`. Press the header to open them and check where a figure came from.
+
+Some answers include a chart. Use `Copy` to copy an answer and `Retry` to ask again.
+
+Press `New conversation` to start over. You have one conversation at a time; the previous one isn't kept in a list.
+
+## What it can't do
+
+The assistant only reads. It doesn't change categories or budget lines, doesn't start a sync, and never moves money.
+
+## Pick a model
+
+The model button in the question box shows which model answers.
+
+- **A model on your instance** — set up by your operator. It works straight away.
+- **A model on this device** — if your browser supports WebGPU (a current Chrome, Edge or Safari), you can pick a model that runs on your own graphics card. It downloads once, and your questions stay in that browser. Answers are simpler than with a large hosted model.
+
+If the button says `Choose a model` and the box is greyed out, your instance has no model. Pick one for your device, or ask your operator to turn the assistant on.
+
+## What leaves your instance
+
+To answer, the model receives your question and the data it looked up: account names, transactions, and spending by category. Freenary never sends your IBAN.
+
+- With a model on your instance, that data goes to the endpoint your operator chose.
+- With a model on your device, everything stays in your browser.
+
+## Turn on the assistant (operator)
+
+Freenary ships without a model. To give everyone a model on the instance, point Freenary at any OpenAI-compatible endpoint: a hosted gateway such as OpenRouter, or a runtime on your own hardware such as Ollama.
+
+Set `AI_BASE_URL` and `AI_MODEL`, plus `AI_API_KEY` if the endpoint needs a key, in your instance's environment and redeploy. They aren't in the setup screen. [Configuration](/docs/reference/configuration#assistant) has examples, and on Coolify you first add them to the compose file, see [Add a variable on Coolify](/docs/reference/configuration#add-a-variable-on-coolify).
+
+<Callout type="warn">
+
+**Pick a model that supports tool calling.** The assistant reads your data through tool calls. A model without them still answers, but invents every figure, and no error tells you. After setup, ask a question that needs a number and check the answer.
+
+</Callout>
+
+With a hosted gateway, the data in each question goes to that provider under its terms. A runtime on your own hardware keeps it on your server.
+
+Each account can ask about 30 questions per 5 minutes.
+
+<Cards>
+  <Card
+    title="Budget"
+    href="/docs/use/budget"
+    description="The charts and transactions behind every figure an answer quotes."
+  />
+  <Card
+    title="Configuration"
+    href="/docs/reference/configuration"
+    description="Every environment variable, and where to set it."
+  />
+</Cards>

@@ -1,6 +1,0 @@
-{
-  "title": "Integrations",
-  "description": "The HTTP surface a developer calls from their own code.",
-  "icon": "Plug",
-  "pages": ["index", "api", "procedures"]
-}
