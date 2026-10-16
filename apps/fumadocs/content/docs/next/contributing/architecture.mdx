@@ -94,6 +94,12 @@ The response goes back through `recordStatus` in `apps/server/src/index.ts`. It 
 
 A server-rendered page takes a shorter path with no click. The entry in `apps/web/src/server.ts` wraps TanStack Start with `paraglideMiddleware`, then appends `Vary: Accept-Language, Cookie`. The `beforeLoad` of the root route calls `getViewer()` on the server alone. That server function forwards the cookie header of the request into `client.auth.viewer`. Each request also builds its own router and query client, in `apps/web/src/app/router/router.tsx`.
 
+That entry first sends the API paths elsewhere. `forwardApiRequest` in `apps/web/src/shared/lib/forward-api-request.ts` passes a request under `/api/auth`, `/rpc`, `/ai/chat` or `/api-reference` to `SERVER_URL`. It drops the hop headers, keeps `X-Forwarded-For`, and does not follow a redirect. It asks for an uncompressed answer, and removes `Content-Encoding` and `Content-Length` from that answer.
+
+An API server that does not answer in 9 seconds gives `502`. A caller that leaves gives `499`. The log line names the path, but not the query string.
+
+This forwarding lets one public origin serve both apps. `scripts/deploy-templates.test.ts` fails when a server route is missing from that list. CI does not run it, so run it by hand after you add a route.
+
 ## The other server routes
 
 `apps/server/src/index.ts` mounts four handlers and one root route. Only the second one carries the procedures.
@@ -104,9 +110,9 @@ A server-rendered page takes a shorter path with no click. The entry in `apps/we
 | `/rpc*` | The `RPCHandler` with the prefix `/rpc`, the path of the eleven hops above |
 | `POST /ai/chat` | The assistant token stream, also `parse: "none"`, handled by `handleAssistantChat`. A comment states the reason: a token stream does not fit a unary oRPC procedure |
 | `/api-reference*` | The OpenAPI handler, with `OpenAPIReferencePlugin` and `ZodToJsonSchemaConverter` |
-| `GET /` | The literal string `OK`, which both compose files use as the health probe |
+| `GET /` | The literal string `OK`, which every compose file uses as the health probe |
 
-The listener takes `env.PORT`, default `3000`. [API](/docs/integrations/api) documents these routes for a caller, and [Procedure reference](/docs/integrations/procedures) documents each procedure.
+The listener takes `env.PORT`, default `3000`. A new top-level route also goes into `FORWARDED_PATH_PREFIXES` of the web app. [API](/docs/integrations/api) documents these routes for a caller, and [Procedure reference](/docs/integrations/procedures) documents each procedure.
 
 ## Boundaries
 

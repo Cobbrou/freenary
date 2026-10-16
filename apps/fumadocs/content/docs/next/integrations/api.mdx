@@ -36,14 +36,14 @@ A path under `/rpc` or `/api-reference` that matches no procedure returns HTTP 4
 
 `GET /api-reference` returns an HTML page. The page loads the Scalar reader from a CDN at render time. A browser with no internet access shows an empty page.
 
-`GET /api-reference/spec.json` returns the document itself. The plugin emits these values:
+`GET /api-reference/spec.json` returns the document itself. The server builds the URLs in it from `BETTER_AUTH_URL`, the public origin of the API. The plugin emits these values:
 
-| Field            | Value                              |
-| ---------------- | ---------------------------------- |
-| `openapi`        | `3.1.1`                            |
-| `info.title`     | `API Reference`                    |
-| `info.version`   | `0.0.0`                            |
-| `servers[0].url` | The base URL plus `/api-reference` |
+| Field            | Value                                   |
+| ---------------- | --------------------------------------- |
+| `openapi`        | `3.1.1`                                 |
+| `info.title`     | `API Reference`                         |
+| `info.version`   | `0.0.0`                                 |
+| `servers[0].url` | `BETTER_AUTH_URL` plus `/api-reference` |
 
 ```bash
 curl http://localhost:3000/api-reference/spec.json

@@ -1,0 +1,86 @@
+# documentation: https://freenary.dev/docs/self-hosting/hosting-panels
+# slogan: Self-hosted personal finance: budgets, goals and bank sync on your own server.
+# category: finance
+# tags: finance,budget,banking,money,personal-finance
+# logo: svgs/freenary.svg
+# port: 3001
+
+services:
+  postgres:
+    image: postgres:18
+    environment:
+      - POSTGRES_DB=freenary
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=${SERVICE_PASSWORD_POSTGRES}
+    volumes:
+      - freenary-postgres-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d freenary"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  migrate:
+    image: ghcr.io/suiramdev/freenary-server:${FREENARY_VERSION:-latest}
+    working_dir: /app/packages/db
+    command: bun x prisma migrate deploy
+    environment:
+      - DATABASE_URL=postgresql://postgres:${SERVICE_PASSWORD_POSTGRES}@postgres:5432/freenary
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+    exclude_from_hc: true
+
+  server:
+    image: ghcr.io/suiramdev/freenary-server:${FREENARY_VERSION:-latest}
+    init: true
+    environment:
+      - DATABASE_URL=postgresql://postgres:${SERVICE_PASSWORD_POSTGRES}@postgres:5432/freenary
+      - BETTER_AUTH_SECRET=${SERVICE_HEX_64_AUTHSECRET}
+      - BETTER_AUTH_URL=${SERVICE_URL_WEB}
+      - CORS_ORIGIN=${SERVICE_URL_WEB}
+      - NODE_ENV=production
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "bun",
+          "-e",
+          "fetch('http://localhost:3000/').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
+  web:
+    image: ghcr.io/suiramdev/freenary-web:${FREENARY_VERSION:-latest}
+    init: true
+    environment:
+      - SERVICE_URL_WEB_3001
+      - SERVER_URL=http://server:3000
+      - PUBLIC_SERVER_URL=${SERVICE_URL_WEB}
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "bun",
+          "-e",
+          "fetch('http://localhost:3001/').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    depends_on:
+      server:
+        condition: service_healthy
+
+volumes:
+  freenary-postgres-data:

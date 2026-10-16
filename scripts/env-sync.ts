@@ -41,6 +41,7 @@ const COMPOSE_FILES = [
   "docker-compose.dev.yml",
   "docker-compose.mail.yml",
   "docker-compose.proxy.yml",
+  "deploy/docker-compose.yml",
 ];
 
 const SOURCE_GLOBS = [
@@ -176,6 +177,17 @@ const EXTERNAL: ExternalVariable[] = [
       "An unset value falls back to `latest`, the newest release. A value that names no tag fails the pull with `not found`. The tags are `X.Y.Z`, `X.Y`, `X`, `latest`, `main`, `dev` and `sha-<7 characters>`.",
   },
   {
+    default: "none",
+    description:
+      "The public URL of the web app in `deploy/docker-compose.yml`, the stack for a hosting panel. It fills `BETTER_AUTH_URL`, `CORS_ORIGIN` and `PUBLIC_SERVER_URL`, so the API server shares the web app origin.",
+    envFile: "none",
+    example: "https://freenary.example.com",
+    kind: "compose",
+    name: "FREENARY_URL",
+    onError:
+      "`deploy/docker-compose.yml` refuses an unset or empty value. A value that differs from the browser origin makes every sign-in fail.",
+  },
+  {
     default: "`3000`",
     description: "The host port of the API server.",
     envFile: "commented",
@@ -273,7 +285,7 @@ const EXTERNAL: ExternalVariable[] = [
   },
   {
     description:
-      "The origin the web app itself calls while it renders a page. It wins over `PUBLIC_SERVER_URL` there. Compose sets `http://server:3000`.",
+      "The origin the web app itself calls while it renders a page. It wins over `PUBLIC_SERVER_URL` there. The web app also forwards the API paths it receives (`/api/auth`, `/rpc`, `/ai/chat` and `/api-reference`) to it, so one public origin can serve both apps. Compose sets `http://server:3000`.",
     envFile: "none",
     kind: "raw",
     name: "SERVER_URL",

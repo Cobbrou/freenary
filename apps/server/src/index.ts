@@ -126,7 +126,13 @@ new Elysia()
   .all(
     "/api-reference*",
     async (context) => {
-      const { response } = await apiHandler.handle(context.request, {
+      const { pathname, search } = new URL(context.request.url);
+      const publicRequest = new Request(
+        new URL(`${pathname}${search}`, env.BETTER_AUTH_URL).href,
+        context.request
+      );
+
+      const { response } = await apiHandler.handle(publicRequest, {
         context: await createContext({ context }),
         prefix: "/api-reference",
       });
