@@ -1,124 +1,121 @@
 ---
 title: Security
-description: What the instance exposes, the secrets it depends on, the operator account, the sign-in protections, and a checklist before real users arrive.
+description: Network exposure, secret rotation, access boundaries, and every path that sends data outside your instance.
 icon: ShieldCheck
 ---
 
-Freenary holds every user's bank data. Your part is the network edge and the secrets. Work through [the checklist](#checklist) before you invite anyone.
+Use these boundaries to deploy Freenary safely. Start with HTTPS, private database access, and a secret you can restore with the database.
 
-## Ports
+## Network edge
 
-| File | `server` (3000) | `web` (3001) | `postgres` (5432) |
-| --- | --- | --- | --- |
-| `deploy/docker-compose.yml`, `deploy/coolify.yml` | Not published | Not published | Not published |
-| Root `docker-compose.yml` | Every interface | Every interface | `127.0.0.1` only |
+The root `docker-compose.yml` publishes the API on port 3000 and the web app on 3001, on every host interface by default. PostgreSQL binds to `127.0.0.1` only.
 
-With the root file, prefix both app ports with `127.0.0.1` (`SERVER_PORT=127.0.0.1:3000`, `WEB_PORT=127.0.0.1:3001`) and point your proxy at the loopback interface. The database port is there for host tools like `pg_dump`; delete the `ports:` block of `postgres` if you don't need it.
+The panel-oriented `deploy/docker-compose.yml` publishes no host ports. Its proxy routes one hostname to the web container on port 3001.
 
-Neither app handles TLS. Your proxy must serve HTTPS, and `BETTER_AUTH_URL` must start with `https://`, because the session cookie takes its `Secure` flag from it. See [Reverse proxy](/docs/reference/reverse-proxy).
+If a proxy runs on the host with the root compose file, bind the public services to loopback:
 
-No Dockerfile sets a `USER` and no Compose file sets `user:`, so each container runs as its base image's default user.
-
-## Secrets
-
-| Secret | Rule | Protects |
-| --- | --- | --- |
-| `BETTER_AUTH_SECRET` | 32 characters or more | Session cookies, two-factor data, the bank connection state, and the setup values |
-| `POSTGRES_PASSWORD` | No default | The database |
-| Bank and email credentials | Entered on the setup screen, or in the environment | Every user's bank connections, sign-in codes and password resets |
-| `AI_API_KEY` | Optional | Your account at the model endpoint |
-
-Generate the two required values with `openssl rand -hex 32` and `openssl rand -hex 16`. Compose refuses to start with either one empty. Coolify and the Dokploy template generate them for you.
-
-<Callout type="warn">
-
-Outside production mode, `BETTER_AUTH_SECRET` falls back to a public development value, and anyone can forge a session against it. The self-hosting Compose files always set `NODE_ENV=production`, which removes that fallback. If you run Freenary without Docker, set `NODE_ENV=production` too.
-
-</Callout>
-
-### What a rotation costs
-
-| Rotate | Cost |
-| --- | --- |
-| `BETTER_AUTH_SECRET` | Everyone is signed out, every two-factor enrolment stops, bank connections in progress fail, and the setup values become unreadable, so the operator enters them again |
-| `POSTGRES_PASSWORD` | The database volume keeps its first password. Change it inside the database first, then update the variable and run `docker compose up -d` |
-| A bank or email credential | Rotate it at the provider, then enter it on the setup screen and press `Finish setup`. If it's in the environment, update it there and run `docker compose up -d` |
-
-To change the database password inside the running container:
-
-```bash
-docker compose exec postgres psql -U postgres -c "ALTER USER postgres PASSWORD '<new password>'"
+```dotenv
+SERVER_PORT=127.0.0.1:3000
+WEB_PORT=127.0.0.1:3001
 ```
 
-## The operator account
+Don't publish PostgreSQL publicly. Docker-published ports can bypass host firewall rules, so verify the listening addresses after deployment changes.
 
-The first account to sign in becomes the operator. One database transaction grants the role, so two sign-ins at the same moment can't both get it. On an instance upgraded from an older release, the oldest account with a confirmed email gets the role, or the oldest account if none is confirmed.
+The server and web images declare no non-root user, so their application processes run as root inside each container. Add no host mounts, Docker socket or capabilities.
 
-There's one operator, and no screen gives the role to anyone else. It opens the setup screen and nothing more: the operator can't see other users' financial data.
+Session cookies are always `HttpOnly`. They get `Secure` only when `BETTER_AUTH_URL` starts with `https://`; TLS at the proxy doesn't change a value left as `http://`.
 
-<Callout type="warn">
+Cookie scope, one-hostname and two-subdomain setups are in [Reverse proxy](/docs/reference/reverse-proxy). Set [trusted proxies](/docs/reference/reverse-proxy#trusted-proxies) so rate limits see each caller instead of one shared address.
 
-A new instance on a public address is open to whoever finds it first. Create your account right after the first start.
+## Secrets and sealing
 
-</Callout>
+`BETTER_AUTH_SECRET` must have at least 32 characters. It protects:
+
+- session and trusted-device cookie signatures;
+- authenticator secrets and two-factor backup codes;
+- bank-link state against tampering;
+- bank and email values saved on the setup screen.
+
+Setup values use authenticated encryption with a key derived from this secret. Environment values are never sealed and win over stored values.
+
+Passwords and emailed one-time codes are hashed. Keep `BETTER_AUTH_SECRET`, credentials, `.env` files and database dumps together: a dump alone can't recover sealed setup values.
+
+## What a rotation costs
+
+Changing `BETTER_AUTH_SECRET` signs everyone out. Trusted-device cookies stop working, bank-link state fails verification, and stored authenticator secrets and backup codes no longer decrypt.
+
+Restore the old secret when possible. Otherwise, a user with a passkey or linked provider can sign in, disable two-factor with their password, then enrol again.
+
+With no alternate sign-in, the operator must clear that user's two-factor flag and row in PostgreSQL. The user then signs in by password and enrols again.
+
+Every setup value sealed under the old secret is skipped. The server logs one warning per value, including this exact form:
+
+```text
+The stored value of EMAIL_PROVIDER does not open with the current BETTER_AUTH_SECRET.
+```
+
+Environment values keep working. Re-enter skipped values on the setup screen, or restore the old secret. [Troubleshooting](/docs/run/troubleshooting#the-server-does-not-restart-after-setup) explains the restart.
+
+## Operator boundary
+
+The first account to create a session wins the operator claim. No later sign-in changes it.
+
+The operator can inspect, test, save and finish instance setup. The role grants no access to another user's finances or conversations. Freenary has no in-app role transfer.
+
+If the wrong account won, follow [The wrong account became the operator](/docs/run/troubleshooting#the-wrong-account-became-the-operator). Treat an unknown operator as a compromised installation.
 
 ## Sign-in protections
 
-On by default, no setting needed:
+Freenary supports password checks, database-backed rate limits, two-factor authentication, trusted devices, passkeys and recent-session checks.
 
-- Passwords are 12 to 128 characters, hashed with scrypt.
-- New passwords are checked against Have I Been Pwned. This fails closed: without a route to `api.pwnedpasswords.com`, sign-up and password reset fail. Set `AUTH_PASSWORD_BREACH_CHECK=false` on an offline server.
-- Ten wrong second-factor codes in a row lock the account for 15 minutes.
-- Sensitive account changes, such as removing a passkey, need a session under 15 minutes old.
-- Rate-limit counters live in the database, so a restart doesn't clear a lockout.
-- Passkeys work, bound to `CORS_ORIGIN`.
+The leaked-password check sends the first five hexadecimal characters of a password's SHA-1 hash to Have I Been Pwned. It blocks changes when that service can't answer.
 
-Turned on by your configuration:
-
-| Protection | Needs |
-| --- | --- |
-| Email confirmation and password reset | An email provider. See [Email](/docs/run/email) |
-| Google, Apple or single sign-on | Both variables of that provider. See [Sign-in](/docs/run/sign-in) |
-| One rate-limit bucket per visitor | A single proxy, or `TRUSTED_PROXIES` for a chain. See [Trusted proxies](/docs/reference/reverse-proxy#trusted-proxies) |
+[Sign-in](/docs/run/sign-in) gives the password limits, session lifetime, lockout figures, verification-code limits and provider behaviour.
 
 ## Data
 
-The database holds every user's accounts, transactions and bank provider tokens. The tokens are stored as the provider sent them, so anyone who can read the database can call the provider as that user. The setup values are encrypted with AES-256-GCM under a key derived from `BETTER_AUTH_SECRET`.
+Accounts, transactions, plans, conversations and credentials live in PostgreSQL. Production writes no application data to the container filesystem.
 
-<Callout type="warn">
+Data leaves the instance through these paths:
 
-Treat the database and every dump as the financial data itself. Encrypt dumps, limit who can read them, and keep them apart from the server.
+- **Bank providers** receive connection and sync requests. A database reader gets a usable Powens user token. Enable Banking stores no per-user token; requests need the application's private key.
+- **The assistant endpoint** receives the question, conversation context and requested finance data. This can include account and bank names, transactions, counterparties, categories and aggregates, but not IBANs or balances.
+- **Classifier endpoints** receive merchant descriptors, counterparties, country, currency, direction, channel, merchant category, a coarse amount bucket and routing fields. They don't receive exact amounts, dates, IBANs or accounts.
+- **Email and sign-in providers** receive the addresses, codes and provider requests their feature needs.
+- **The breach check** receives the five-character hash prefix described above.
 
-</Callout>
+A device model downloads into the user's browser. Finance data stays there, while the conversation is saved on the instance.
 
-- **Account deletion.** No screen or endpoint deletes a user. To erase one person, the operator does it in the database. Disconnecting a bank deletes its accounts, transactions and holdings.
-- **The assistant.** With a model endpoint configured, each question sends that user's financial data to it. See [Assistant](/docs/use/assistant).
-- **The API reference.** `/api-reference` is a live API: anyone with a session can call every procedure there. Block the prefix at your proxy if you don't want it public. See [API](/docs/reference/api).
+The server-image build downloads its merchant dictionary from this repository's GitHub releases. Its fallback contacts GeoNames, Wikidata and npm. It sends no user data, and the running image reads the file locally.
+
+`/api-reference` is a live OpenAPI endpoint. It and `/rpc` reach the same handlers with the same session and role checks. See [API](/docs/reference/api) before automating either path.
 
 ## Checklist
 
-- [ ] `BETTER_AUTH_SECRET` and `POSTGRES_PASSWORD` are your own values.
-- [ ] The public URL is `https://` and matches the browser address exactly.
-- [ ] No app port faces the internet, and `postgres` is published on `127.0.0.1` at most.
-- [ ] `TRUSTED_PROXIES` lists every proxy in a multi-hop chain.
-- [ ] Two subdomains only: `AUTH_COOKIE_DOMAIN` names the shared parent domain.
-- [ ] Your own account is the operator.
-- [ ] Email is set up, so password reset works.
-- [ ] You know which endpoint `AI_BASE_URL` names, or it's unset.
-- [ ] Backups run on a schedule, and you've restored one. See [Updates and backups](/docs/run/updates-and-backups).
+- Put the public edge behind HTTPS and set `BETTER_AUTH_URL` to the exact HTTPS address.
+- Expose only the required web or proxy ports, and keep PostgreSQL private.
+- Restrict container privileges and access to `.env` files, provider keys and backups.
+- Store `BETTER_AUTH_SECRET` with each database backup and test restoring both together.
+- Configure trusted proxies, review enabled integrations, and keep Freenary and PostgreSQL updated.
 
 <Cards>
 
 <Card
-  title="Reverse proxy"
-  href="/docs/reference/reverse-proxy"
-  description="HTTPS, one hostname, and trusted proxies."
+  title="Sign-in"
+  href="/docs/run/sign-in"
+  description="Passwords, sessions, two-factor authentication and providers."
 />
 
 <Card
-  title="Sign-in"
-  href="/docs/run/sign-in"
-  description="Sign-up policy, passkeys, single sign-on and two-factor."
+  title="Reverse proxy"
+  href="/docs/reference/reverse-proxy"
+  description="TLS, cookie scope and trusted proxy configuration."
+/>
+
+<Card
+  title="Updates and backups"
+  href="/docs/run/updates-and-backups"
+  description="Protect and restore the database and its matching secret."
 />
 
 </Cards>

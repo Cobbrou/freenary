@@ -21,7 +21,9 @@
         "content/**",
         "scripts/**",
         "src/shared/ui/mdx.tsx",
-        "src/shared/lib/versions.ts"
+        "src/shared/lib/versions.ts",
+        "src/shared/config/moved-pages.ts",
+        "src/shared/config/site.ts"
       ]
     },
     "lint:fsd": {

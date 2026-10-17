@@ -44,7 +44,7 @@ A maintainer freezes `next` before a release, in a pull request to `dev`:
 cd apps/fumadocs && bun run docs:snapshot 1.2.0
 ```
 
-The script takes the release version and writes the `1.2` folder. It refuses a pre-release, and it leaves the pages alone when the folder already exists. It labels the copy, adds it to the root `meta.json`, and pins every moving reference in the copy: a repository link and a `raw.githubusercontent.com` download URL take the release tag, and a `FREENARY_VERSION=main` line takes `1.2`. `docs:check` fails a frozen page that still holds one of these. The `Release` workflow refuses a stable version without its folder. See [Releasing](./releasing.md).
+The script takes the release version and writes the `1.2` folder. It refuses a pre-release, and it leaves the pages alone when the folder already exists. It labels the copy, adds it to the root `meta.json`, and pins every moving reference in the copy: a repository link and a `raw.githubusercontent.com` download URL take the release tag, and a `FREENARY_VERSION=dev` line takes `1.2`. `docs:check` fails a frozen page that still holds one of these. The `Release` workflow refuses a stable version without its folder. See [Releasing](./releasing.md).
 
 ## Where a page goes
 
@@ -69,6 +69,7 @@ Every path is inside a version folder. Each folder's `meta.json` holds the order
 
 - Second person, present tense, active voice. A natural tone: contractions and `-ing` forms are fine.
 - Short sentences and short paragraphs. `docs:check` warns on a sentence over 35 words.
+- No filler and no sales words: "note that", "it's worth noting", "in summary", "seamless", "robust", "powerful", "simply run" and the like. Delete the phrase, or state the fact it stands in for. `docs:check` warns on each one (`no-filler`), and `FILLER_PHRASES` in `apps/fumadocs/scripts/docs-rules.ts` holds the list.
 - Lead with what the reader wants to do, then how. Explain why a step exists in one clause, not a paragraph.
 - State the page's purpose in its first two lines.
 - One term per concept (see [Terminology](#terminology)). Explain jargon at first use, or avoid it.
@@ -179,7 +180,7 @@ An internal link is an absolute site path with no extension and no version:
 | A heading on a page   | `/docs/run/email#smtp` |
 | A folder's index page | the folder path itself |
 
-`docs:check` resolves every link and `#anchor` against the real page tree. A relative `.mdx` link doesn't work. Link a repository file with its full URL under `https://github.com/suiramdev/freenary/blob/main/`; the snapshot pins `main` to the release tag in a frozen copy.
+`docs:check` resolves every link and `#anchor` against the real page tree. A relative `.mdx` link doesn't work. Link a repository file with its full URL under `https://github.com/suiramdev/freenary/blob/dev/`, the branch that holds the unreleased code; the snapshot pins `dev` to the release tag in a frozen copy.
 
 Some anchors are linked from the app itself, in `apps/web/src/pages/setup/model/labels.ts`. Keep them, or update that file in the same pull request.
 
@@ -218,11 +219,11 @@ Add every new page to `pages`. `docs:check` fails a page the array omits, and an
 | A page missing from `meta.json`, or an entry with no page | Passes | Fails |
 | A moved page with no pair in `moved-pages.ts` | Passes | Fails |
 | A version folder without `"root": true`, or with a stale title | Passes, drops out of the dropdown | Fails |
-| A moving reference (`blob/main`, a `main` download URL, `FREENARY_VERSION=main`) in a frozen version | Passes | Fails |
+| A moving reference (`blob/dev`, a `dev` download URL, `FREENARY_VERSION=dev`) in a frozen version | Passes | Fails |
 | An operator code fence in `use/` | Passes | Fails |
-| An environment variable in `use/`, roadmap language, a sentence over 35 words | Passes | Warns (`next` only) |
+| An environment variable in `use/`, roadmap language, filler or a sales word (`no-filler`), a sentence over 35 words | Passes | Warns (`next` only) |
 
-Add `--strict` to `docs:check` to fail on warnings too. `apps/fumadocs/scripts/check-docs.ts` holds the checks, `docs-rules.ts` the lists.
+Add `--strict` to fail on warnings too. It works only from `apps/fumadocs` (`cd apps/fumadocs && bun run docs:check --strict`); at the root, turbo rejects the flag. `apps/fumadocs/scripts/check-docs.ts` holds the checks, `docs-rules.ts` the lists.
 
 A page that has to quote a banned phrase can switch a rule off for itself:
 
@@ -234,7 +235,7 @@ Use it for a page that quotes the rules, never to pass the gate on ordinary pros
 
 ## Before you open the pull request
 
-1. Read the code that owns the behaviour. Quote the real names.
+1. Read the code that owns the behaviour. Quote the real names. Treat the existing page as a claim to check, not a source: verify it against the code, and delete what is wrong or redundant rather than rewording it.
 2. Run `bun run docs:check` and `bun run build` in `apps/fumadocs` until both are silent.
 3. If you changed `packages/env/src/schema.ts`, run `bun run env:sync`: it regenerates the variable tables in `reference/configuration.mdx`.
 4. Open every page you changed with `bun run dev`.

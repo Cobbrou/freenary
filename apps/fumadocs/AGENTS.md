@@ -46,11 +46,11 @@ Every page is served under a version segment: `/docs/next/get-started/install`, 
 - **Author in `content/docs/next`.** A change edits that folder alone. `content/docs/<X.Y>` is frozen: only a correction to that release touches it.
 - **A folder under `content/docs` is a version.** Its `meta.json` carries `"root": true` and a `title` equal to the folder name. `root: true` is what scopes the sidebar to one version and makes Fumadocs render the version dropdown (`getLayoutTabs`, `TreeContextProvider`). `docs:check` fails a folder that breaks either rule.
 - **A docs link never names a version.** Pages write `/docs/use/budget`; the `a` and `Card` wrappers in `src/shared/ui/mdx.tsx` prepend the version of the page being read, and `getLLMText` does the same for the `.md` output. `docs:check` fails an authored link that names a version.
-- **A repository link names the branch, and the snapshot pins it.** Pages write `https://github.com/suiramdev/freenary/blob/main/…`; the snapshot rewrites each one to `blob/v<X.Y.Z>/` in the copy, because that link cannot resolve at render time. `docs:check` fails a `blob/main` link inside a frozen version.
+- **A repository link names the branch, and the snapshot pins it.** Pages write `https://github.com/suiramdev/freenary/blob/dev/…`, the branch that holds the unreleased code; the snapshot rewrites each one to `blob/v<X.Y.Z>/` in the copy, because that link cannot resolve at render time. `docs:check` fails a `blob/dev` link inside a frozen version. The branch is `gitConfig.branch` in `src/shared/config/site.ts`.
 - **`/docs/*` with no version redirects** (307) to the newest release. `unversionedDocsRedirect` in `src/app/start.ts` owns it. The newest release is `newestRelease()` in `src/shared/content/source.ts`: the highest `X.Y` folder, or `next` while no release exists.
 - **A moved page keeps its old URL.** `src/shared/config/moved-pages.ts` lists `[before, after]` slug pairs. When a version has no page at the requested slug, `findMovedPage` looks up the pair in both directions and redirects to the counterpart that exists in that same version: `/docs/next/quickstart` lands on `get-started/install`, and `/docs/0.1/get-started/install` lands on `quickstart`. `loadDoc` and the `.md` route both use it. When you move or delete a page, add a pair. `docs:check` fails a pair whose `after` is missing from `next`, and a page of the newest release that is gone from `next` with no pair.
 - **The language rules apply to `next` alone**; the structure rules apply to every version. `check-docs.ts` skips `checkAuthoredLanguage` outside `next`.
-- **A release needs its snapshot first, and it snapshots last.** A maintainer runs `bun run docs:snapshot X.Y.Z` in a pull request to `dev`; the `tag` job of `.github/workflows/release.yml` refuses a stable version whose `content/docs/X.Y` folder is missing (the `main and dev` ruleset admits no workflow push). The folder freezes at that merge, so a documentation change merged between it and the release reaches `next` alone and no gate reports it. The script derives the `X.Y` folder from the release version and pins the three moving forms `scripts/moving-refs.ts` holds: a repository link and a `raw.githubusercontent.com` download URL take `v<X.Y.Z>`, and a `FREENARY_VERSION=main` line takes `X.Y`. `docs:check` reads the same table, so it fails a frozen page that still carries any of them. It stages the copy outside `content/docs` and rewrites the root `meta.json` on every run, so a repeat run finishes an interrupted one; a pre-release snapshots nothing.
+- **A release needs its snapshot first, and it snapshots last.** A maintainer runs `bun run docs:snapshot X.Y.Z` in a pull request to `dev`; the `tag` job of `.github/workflows/release.yml` refuses a stable version whose `content/docs/X.Y` folder is missing (the `main and dev` ruleset admits no workflow push). The folder freezes at that merge, so a documentation change merged between it and the release reaches `next` alone and no gate reports it. The script derives the `X.Y` folder from the release version and pins the three moving forms `scripts/moving-refs.ts` holds: a repository link and a `raw.githubusercontent.com` download URL take `v<X.Y.Z>`, and a `FREENARY_VERSION=dev` line takes `X.Y`. `docs:check` reads the same table, so it fails a frozen page that still carries any of them. It stages the copy outside `content/docs` and rewrites the root `meta.json` on every run, so a repeat run finishes an interrupted one; a pre-release snapshots nothing.
 - **Search, the AI panel and the LLM endpoints are scoped.** `/api/search` tags each record with its version and the default dialog passes `defaultTag` — the version of the pathname, or the newest release off the docs tree, from the root loader in `src/app/routes/__root.tsx`. `/api/chat` builds one index per version and honours the request body's version only when `listVersions()` holds it. `/llms.txt` and `/llms-full.txt` serve the newest release alone.
 
 ## Content structure
@@ -76,6 +76,7 @@ contribute.mdx        clone, run, checks, pull request
 
 - Second person, present tense, active voice, natural tone. Contractions and `-ing` forms are fine.
 - Short sentences and paragraphs. Start with what the reader wants to do, then how. Explain why a step exists in one clause.
+- No filler or sales words ("note that", "in summary", "seamless", "robust", "simply run"). `docs:check` warns on each (`no-filler`); the list is `FILLER_PHRASES` in `scripts/docs-rules.ts`.
 - One term per concept: **instance**, **operator** (the first account), **setup screen** (`/setup`), **your domain** and **`FREENARY_URL`**, **hosting panel**, **bank provider**, **bank connection**, **sync**, **assistant**. Avoid "the stack" and "origin" on beginner pages.
 - Quote a UI label only when the reader has to find or press it. Never list every label, button or option.
 - Code blocks are copy-paste correct and use `freenary.example.com` as the placeholder. Check every command and variable against the code.
@@ -87,7 +88,7 @@ contribute.mdx        clone, run, checks, pull request
 
 ```bash
 bun run docs:check          # from apps/fumadocs, or at the root
-bun run docs:check --strict # warnings fail too
+bun run docs:check --strict # warnings fail too; from apps/fumadocs only, turbo rejects the flag at the root
 bun run build               # frontmatter schema, MDX compile, fence languages, prerender
 ```
 
@@ -103,9 +104,9 @@ Then `bun run dev` and open every page you changed. A green gate proves the page
 | A page missing from its folder's `meta.json`, or a `meta.json` entry with no page | Passes | Fails |
 | A version folder without `"root": true`, or with a stale title | Passes, drops out of the dropdown | Fails |
 | A moved page with no pair in `moved-pages.ts`, or a pair pointing nowhere | Passes | Fails |
-| A `blob/main` repository link in a frozen version | Passes | Fails (releases only) |
+| A `blob/dev` repository link in a frozen version | Passes | Fails (releases only) |
 | An operator code block in `use/` | Passes | Fails |
-| An environment variable in `use/`, roadmap language, a sentence over 35 words | Passes | Warns (`next` only) |
+| An environment variable in `use/`, roadmap language, filler or a sales word (`no-filler`), a sentence over 35 words | Passes | Warns (`next` only) |
 
 `scripts/check-docs.ts` reads the component list from `getMDXComponents()` and the icon list from lucide's own record, so neither can drift from the site. `scripts/docs-rules.ts` holds the fence languages and the phrase lists. A page switches a rule off for itself with `{/* docs-check disable: no-roadmap */}`.
 

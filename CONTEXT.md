@@ -34,6 +34,8 @@ Areas are perspectives on one shared model — never independent mini-applicatio
 
 Terms defined here are canonical; do not drift to synonyms.
 
+The shipped app and the docs word some of them differently: a **Connection** is a "bank connection", an **Account** below is a "bank account" there, "account" alone means the sign-in account, a **Recurring expense** is a "recurring payment", and a **Budget period** is a "period".
+
 - **Financial model** — the single internal representation of a user's financial life that every area reads from.
 - **Connection** — the external institution/provider link through which data is synchronized (e.g. a bank connected via Powens).
 - **Account** — a container of holdings within a connection or created manually (bank account, brokerage account, life-insurance contract, crypto account). Hierarchy: Connection → Account → Holding / Transaction.

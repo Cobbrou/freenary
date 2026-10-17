@@ -5,7 +5,7 @@ export const docsImageRoute = "/og/docs";
 export const gitConfig = {
   user: "suiramdev",
   repo: "freenary",
-  branch: "main",
+  branch: "dev",
 };
 
 export const repoBlobUrl = (ref: string) =>

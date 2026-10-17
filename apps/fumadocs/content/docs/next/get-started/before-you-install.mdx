@@ -1,33 +1,36 @@
 ---
 title: Before you install
-description: What you need before you install Freenary - a server with Docker, a domain, and HTTPS.
+description: What you need before you install Freenary - a server, a domain, and HTTPS.
 icon: Compass
 ---
 
-Freenary runs on a server you control and is reached through your own domain over HTTPS. Check this list first, so the install takes one pass.
+Freenary runs on a server you control, and you reach it through your own domain over HTTPS. Check this list first, so the install takes one pass.
 
 ## What you need
 
-- **A server with Docker.** A VPS or a home server with Docker Engine and Docker Compose v2. A hosting panel such as [Dokploy](https://dokploy.com) or [Coolify](https://coolify.io) works too, and does most of the work for you.
+- **A server.** A VPS or a home server with Docker Engine and Docker Compose v2, or a hosting panel such as [Dokploy](https://dokploy.com) or [Coolify](https://coolify.io) that runs Docker for you.
 - **A domain that points at the server.** One hostname is enough, for example `freenary.example.com`. Freenary serves the whole instance from it.
-- **HTTPS from your platform.** Freenary doesn't ship its own proxy or certificates. Dokploy and Coolify handle HTTPS for you. On a plain Docker host, your own reverse proxy does.
-- **About 15 minutes.**
+- **HTTPS.** Freenary ships no proxy and no certificates. Dokploy and Coolify provide HTTPS. On a plain Docker host, your own reverse proxy does, or a tunnel.
 
-On the last page, [Connect a bank](/docs/get-started/connect-a-bank), you'll also create a free Powens sandbox account, so you can connect a test bank. You don't need it to install.
+You need HTTPS to link a bank: the bank provider only sends you back to an `https://` address, see [The redirect URI must be HTTPS](/docs/reference/bank-providers#the-redirect-uri-must-be-https).
 
-<Callout title="Getting a domain">
+<Callout title="Getting a domain and HTTPS">
 
-Pick whichever fits your setup:
-
-- **Buy one.** Any registrar sells a domain for around 10 EUR a year. Add a DNS record that points a hostname, such as `freenary.example.com`, at your server's public IP address.
-- **Free dynamic DNS, for a home server.** A service such as [DuckDNS](https://www.duckdns.org) gives you a free hostname that follows your home IP address. Your router must forward ports 80 and 443 to the server.
-- **A tunnel, when you can't open ports.** [Cloudflare Tunnel](https://developers.cloudflare.com/tunnel/get-started/) publishes a hostname on a domain you've added to Cloudflare. [Tailscale Funnel](https://tailscale.com/docs/features/tailscale-funnel) publishes a `*.ts.net` hostname over HTTPS. Both reach your server from the outside without any open port.
+- **Buy a domain.** Add a DNS record that points a hostname, such as `freenary.example.com`, at your server's public IP address.
+- **Free dynamic DNS, for a home server.** A service such as [DuckDNS](https://www.duckdns.org) gives you a hostname that follows your home IP address. Your router must forward ports 80 and 443 to the server.
+- **A tunnel, when you can't open ports.** [Cloudflare Tunnel](https://developers.cloudflare.com/tunnel/get-started/) and [Tailscale Funnel](https://tailscale.com/docs/features/tailscale-funnel) publish a hostname over HTTPS with no open port.
 
 </Callout>
 
-## Trying it on your own computer
+## Try it on your own computer
 
-You can run Freenary on `localhost` to look around: follow the **Docker Compose** tab of the install page, keep only the `FREENARY_VERSION`, `POSTGRES_PASSWORD` and `BETTER_AUTH_SECRET` lines in `.env`, and open `http://localhost:3001`. You can't connect a bank there, though: Powens only accepts an HTTPS address to send you back to after the bank sign-in. Use a server and a domain for a real instance.
+You can run Freenary on `localhost` to look around. Follow the **Docker Compose** tab of [Install Freenary](/docs/get-started/install), with two changes to `.env`:
+
+- Leave out the `BETTER_AUTH_URL` and `CORS_ORIGIN` lines. Their defaults, `http://localhost:3000` and `http://localhost:3001`, match the default ports.
+- Keep `SERVER_PORT=127.0.0.1:3000` and `WEB_PORT=127.0.0.1:3001`, so only your computer reaches the instance.
+- If another program holds one of those ports, or PostgreSQL's `5432`, pick free ones. For the web or API port, also set `BETTER_AUTH_URL` and `CORS_ORIGIN` to `http://localhost:<web port>`. For PostgreSQL, set `POSTGRES_PORT`.
+
+Then open `http://localhost:3001`. You can't link a bank there, because the address isn't HTTPS.
 
 <Cards>
   <Card

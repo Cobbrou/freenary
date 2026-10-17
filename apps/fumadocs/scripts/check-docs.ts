@@ -21,6 +21,7 @@ import {
 } from "./docs-model";
 import {
   ENV_VAR_OR_ENUM_NAME,
+  FILLER_PHRASES,
   isAllowedCodeLanguage,
   isAllowedFrontmatterKey,
   isOperatorOnlyCodeLanguage,
@@ -420,6 +421,15 @@ const checkPhrases = (page: DocPage, report: Report) => {
       "no-roadmap",
       (hit) =>
         `\`${hit}\` is roadmap language, and it goes stale. State what the code does now.`
+    );
+  }
+
+  for (const phrase of FILLER_PHRASES) {
+    flag(
+      phrase,
+      "no-filler",
+      (hit) =>
+        `\`${hit}\` is filler or a sales word. Delete it, or state the concrete fact it stands in for.`
     );
   }
 

@@ -16,9 +16,11 @@ bun run dev:up     # PostgreSQL, migrations, API server, web app, docs site
 `dev:up` runs `docker-compose.dev.yml` under a per-worktree Compose project and prints the URLs it serves. No dev service publishes a host port: one shared Traefik on port 80 routes plain-HTTP hostnames (`web.<slug>.freenary.localhost`, `server.<slug>.freenary.localhost`, `docs.<slug>.freenary.localhost`) to the containers, and the slug comes from the git branch. `scripts/dev.ts` reuses a Traefik already on the `devproxy` network, or starts `docker-compose.proxy.yml`; the self-hosting `docker-compose.yml` never involves it. Use Chrome or Firefox, which treat `*.localhost` as a secure context. Without Docker for the apps, use the local path instead:
 
 ```bash
-bun run db:start   # PostgreSQL container from docker-compose.yml (needs the root .env: cp .env.example .env)
-bun run db:push    # apply the Prisma schema
-bun run dev        # web 3001, server 3000, docs 4000
+cp .env.example .env                    # POSTGRES_PASSWORD and BETTER_AUTH_SECRET for docker-compose.yml
+echo 'DATABASE_URL=postgresql://postgres:password@localhost:5432/freenary' > apps/server/.env
+docker compose up -d --wait postgres
+(cd packages/db && bun run db:migrate:deploy)   # the Prisma CLI reads DATABASE_URL from apps/server/.env
+bun run dev                             # web 3001, server 3000, docs 4000
 ```
 
 The dev stack needs no `.env`: the `server` service declares `env_file` with `required: false`, so an optional root `.env` reaches the container line by line, and `environment` carries only the six values the stack derives from the worktree — `DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `CORS_ORIGIN`, `AUTH_COOKIE_DOMAIN` and `NODE_ENV` (Compose gives `environment` precedence over `env_file`). It configures no email provider, so the one-time-code flows are off. `bun run dev:mail` layers `docker-compose.mail.yml` over it: that file starts `axllent/mailpit:v1.28` and points the server at it with `EMAIL_PROVIDER=smtp`, `SMTP_HOST=freenary-mailpit`, `SMTP_PORT=1025` and `EMAIL_FROM=Freenary <no-reply@freenary.test>`, and the inbox is a web page at `http://mail.<slug>.freenary.localhost`. `bun run dev:reset` destroys the volumes and starts over. The `bootstrap` service runs `prisma migrate deploy` before the API server starts.
@@ -79,6 +81,8 @@ Pure refactors, internal helpers, and dependency bumps that change no documented
 
 **Document what is true, and only what is true.** Read the code before writing the page, quote real names, and never describe a screen, flag, or endpoint that does not exist. Write plain, short, second-person prose; the full writing rules are in [`apps/fumadocs/AGENTS.md`](apps/fumadocs/AGENTS.md).
 
+**A page is not evidence.** Existing documentation, including this file, can be stale or machine-written, so verify every technical claim against code, tests, schemas, command output or an approved specification before you repeat it. Never grow an existing page by paraphrasing it: update only the pages the change affects, keep accurate human-written text as it is, and delete what is obsolete or redundant. Never state a reason behind a design choice that the code does not show; ask a maintainer instead.
+
 **Verify it.** Two gates, and neither one alone is enough:
 
 ```bash
@@ -114,14 +118,14 @@ The rules live next to the code they govern: [`apps/web/AGENTS.md`](apps/web/AGE
 
 ## Branches and Releases
 
-Pull requests target `dev`, the integration branch; `main` holds released code, and a push to either branch publishes the `ghcr.io/suiramdev/freenary-server` and `ghcr.io/suiramdev/freenary-web` images under that branch name. A maintainer releases by merging a docs snapshot (`bun run docs:snapshot X.Y.Z`) into `dev`, merging `dev` into `main`, and running the `Release` workflow, which refuses a stable version without its snapshot, then creates the `vX.Y.Z` tag, the versioned images and the GitHub release. The web image carries its version from the build argument `FREENARY_VERSION`, which is what its account-menu documentation link points at. Contributors never tag and never bump a version — see [Contribute](apps/fumadocs/content/docs/next/contribute.mdx).
+Pull requests target `dev`, the integration branch; `main` holds released code, and a push to either branch publishes the `ghcr.io/suiramdev/freenary-server` and `ghcr.io/suiramdev/freenary-web` images under that branch name. A maintainer releases by merging a docs snapshot (`cd apps/fumadocs && bun run docs:snapshot X.Y.Z`) into `dev`, merging `dev` into `main`, and running the `Release` workflow, which refuses a stable version without its snapshot, then creates the `vX.Y.Z` tag, the versioned images and the GitHub release. The web image carries its version from the build argument `FREENARY_VERSION`, which is what its account-menu documentation link points at. Contributors never tag and never bump a version — see [Contribute](apps/fumadocs/content/docs/next/contribute.mdx).
 
 ## Pull Request Descriptions: Complete, Then Brief
 
 - **Reviewers skim.** A description they have to scroll does not get read, so keep the whole body under ~400 words. Fill every section; pad none.
 - **Summary:** at most four sentences — what changed, and what to look at first.
 - **Motivation, Drawbacks, Prior art:** at most four short bullets each. Drawbacks and Prior art carry the honest costs and the rejected alternatives, not a sales pitch.
-- **Notes:** one line per fact — `Closes #n`, the visual change (or explicitly none), the tests added, the `apps/fumadocs` pages updated (or explicitly none, and why), the short review summary `CONTRIBUTING.md` asks for, and any migration, breaking change, or merge-order constraint.
+- **Notes:** one line per fact — `Closes #n`, the visual change (or explicitly none), the tests added, the `apps/fumadocs` pages updated (or explicitly none, and why), and any migration, breaking change, or merge-order constraint.
 - Don't restate the issue, list changed files, narrate the implementation, or paste command output — reviewers open the diff and the linked issue for that.
 - Evidence a reviewer may want but need not read (verification logs, benchmark runs) belongs in a PR comment, not the description.
 - A section that needs a table or a code block is a smell: that detail belongs in the issue, the code, or a comment.

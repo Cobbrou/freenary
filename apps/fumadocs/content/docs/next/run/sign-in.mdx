@@ -1,64 +1,60 @@
 ---
 title: Sign-in
-description: Who can create an account on your instance, the sign-in methods it offers, and how to add Google, Apple or single sign-on.
+description: The sign-in methods your instance offers, how long sessions last, and how to add Google, Apple or single sign-on.
 icon: KeyRound
 ---
 
-This page is for operators. It explains who can join your instance and which ways in you can offer. What users see is in [Your account](/docs/use/account#sign-in).
+Choose the sign-in methods available on your instance and configure external providers here. Users manage their own methods from [Your account](/docs/use/account#sign-in).
 
-The variables on this page go in your instance's environment, then you redeploy. On Coolify, first [add each one to the compose file](/docs/reference/configuration#add-a-variable-on-coolify).
+Set provider variables in the deployment environment. Recreate the containers with `docker compose up -d`, or redeploy through your hosting panel.
 
-## Who can create an account
+## Built-in methods
 
-Anyone who can reach your instance's address can create an account. There's no setting to close sign-up or require an invitation.
+Every instance supports these methods:
 
-- **The first account to sign in becomes the operator.** Only the operator can open the setup screen. Create your account right after you install, before you share the address.
-- Every account sees only its own banks, transactions and plan. The operator can't see other users' data.
-- To keep strangers out, put the instance behind something that limits who can reach it, such as a VPN, a tunnel with access rules, or your proxy's authentication.
+- **Password:** between 12 and 128 characters.
+- **Passkey:** a device uses its fingerprint, face or PIN.
+- **Two-factor authentication:** an authenticator-app code after password sign-in.
 
-<Callout type="warn">
+## Sessions
 
-If someone else became the operator on a fresh instance, treat it as compromised: remove it with its database volume and install again. See [Troubleshooting](/docs/run/troubleshooting#the-wrong-account-became-the-operator).
+A session expires after 7 days. Using it after one day renews that period, so inactivity signs a user out after about 6 to 7 days.
 
-</Callout>
+Don't change `BETTER_AUTH_SECRET` to shorten sessions. Rotation has wider effects, described in [Security](/docs/reference/security).
 
-## What every instance offers
+## One-time codes
 
-These work with no configuration:
+[Email delivery](/docs/run/email) adds codes for address confirmation and password resets. Each code has 6 digits, expires after 10 minutes and stops working after 3 wrong attempts. Freenary sends at most 3 codes a minute.
 
-| Method | Notes |
-| --- | --- |
-| Email and password | Passwords need 12 to 128 characters |
-| Passkeys | Sign in with a device's fingerprint, face or PIN. Needs HTTPS |
-| Two-factor authentication | An authenticator-app code on top of the password. Each user turns it on in Settings |
+## Passkeys and your hostname
 
-[Email delivery](/docs/run/email) adds address confirmation and password reset. Without it, a user who forgets their password can't reset it.
+Freenary takes the passkey hostname from `CORS_ORIGIN`. Browsers allow passkeys on HTTPS addresses and `localhost`.
 
-## Passkeys depend on your hostname
-
-A passkey is tied to the hostname of your instance: the one in `FREENARY_URL`, or in `CORS_ORIGIN` with the root `docker-compose.yml`.
-
-If you change the hostname, every passkey stops working and users must add a new one. Choose your final domain before people start using passkeys.
+Changing that hostname makes existing passkeys unusable. Each affected user must add another one under the new hostname.
 
 ## Add Google, Apple or single sign-on
 
-Each provider appears as a `Continue with …` button once both of its variables are set. They aren't in the setup screen.
+External sign-in buttons appear when their variables are complete. These settings aren't available in the setup screen.
 
-| Provider | Variables, both required |
-| --- | --- |
-| Google | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` |
-| Apple | `APPLE_CLIENT_ID`, `APPLE_CLIENT_SECRET` |
-| Single sign-on (OpenID Connect: Authentik, Keycloak, Zitadel, Entra…) | `OIDC_DISCOVERY_URL`, `OIDC_CLIENT_ID` |
+| Provider       | Required variables                         |
+| -------------- | ------------------------------------------ |
+| Google         | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` |
+| Apple          | `APPLE_CLIENT_ID`, `APPLE_CLIENT_SECRET`   |
+| OpenID Connect | `OIDC_DISCOVERY_URL`, `OIDC_CLIENT_ID`     |
 
-Setting only one half of a pair does nothing.
-
-At the provider, register this redirect URI, with `google`, `apple` or `oidc` at the end:
+Register this callback pattern with the provider:
 
 ```text
-https://freenary.example.com/api/auth/callback/google
+<BETTER_AUTH_URL>/api/auth/callback/<id>
 ```
 
-For single sign-on, a typical setup looks like this:
+Use `google`, `apple` or `oidc` as `<id>`. For example:
+
+```text
+https://freenary.example.com/api/auth/callback/oidc
+```
+
+An OpenID Connect configuration can be:
 
 ```dotenv
 OIDC_DISCOVERY_URL=https://idp.example.com/.well-known/openid-configuration
@@ -67,37 +63,63 @@ OIDC_CLIENT_SECRET=xxxxxxxxxxxxxxxxxxxxxxxx
 OIDC_PROVIDER_NAME=Example SSO
 ```
 
-`OIDC_PROVIDER_NAME` sets the button text (`Continue with Example SSO`). Leave `OIDC_CLIENT_SECRET` out for a public client. Use `OIDC_SCOPES` to request extra scopes, comma-separated; `openid`, `email` and `profile` are always included.
+`OIDC_CLIENT_SECRET` is optional for a public client. `OIDC_PROVIDER_NAME` changes the button label. `OIDC_SCOPES` adds comma-separated scopes to the required `openid`, `email` and `profile` scopes.
 
-A provider sign-in joins an existing account only when both use the same, confirmed email address.
+The discovery document must provide both `issuer` and `jwks_uri`, because Freenary verifies ID tokens. When it can't build that verification, the server records:
+
+```text
+Provider "oidc": requires verified ID tokens, but discovery did not provide a usable issuer and jwks_uri.
+```
+
+An external provider joins an existing account only when its address matches and the account's address is confirmed.
+
+## Provider sign-in on an instance without email
+
+An instance with no email service never confirms account addresses. A provider sign-in that matches an existing password account is therefore refused with:
+
+```text
+This address already has an account that has not been confirmed yet. Confirm it first, then the provider can be used with it.
+```
+
+Resolve it in either of these ways:
+
+- Configure [email delivery](/docs/run/email). The next password sign-in sends the user a confirmation code. They can use the provider after entering it.
+- Ask the user to sign in with their password. Within 15 minutes, they open Settings, `Security`, then press `Connect` for that provider under `Connected accounts`.
 
 ## Leaked-password check
 
-When someone picks a password, Freenary checks it against the public [Have I Been Pwned](https://haveibeenpwned.com/Passwords) list and refuses known leaked passwords. Only the first 5 characters of the password's hash leave your server.
+By default, Freenary rejects a password found in the [Have I Been Pwned](https://haveibeenpwned.com/Passwords) corpus. The check runs on sign-up, change and reset. It sends only the first 5 characters of the password hash.
 
-If your server can't reach the internet, new passwords fail to save. Turn the check off:
+When `api.pwnedpasswords.com` is unreachable, [new passwords fail to save](/docs/run/troubleshooting#new-passwords-dont-save). Disable this fail-closed check only when necessary:
 
 ```dotenv
 AUTH_PASSWORD_BREACH_CHECK=false
 ```
 
-## Sessions and limits
+## Rate limits
 
-- Users stay signed in until they're inactive for 7 days on that browser. They see and sign out their sessions in Settings.
-- Changing `BETTER_AUTH_SECRET` signs everyone out, breaks two-factor for every user, and makes the bank and email credentials saved on the setup screen unreadable. Keep it with your backups.
-- Sign-in attempts are rate-limited per caller address. If requests pass through more than one proxy, for example a CDN in front of your proxy, list those proxies in `TRUSTED_PROXIES` so users don't share one limit. See [Reverse proxy](/docs/reference/reverse-proxy#trusted-proxies).
+Limits are counted by caller address:
 
-Every variable, with its default: [Configuration](/docs/reference/configuration).
+| Request                       | Limit            |
+| ----------------------------- | ---------------- |
+| Password or provider sign-in  | 10 per minute    |
+| Sign-up                       | 5 per 5 minutes  |
+| Passkey sign-in               | 20 per minute    |
+| Two-factor code               | 10 per 5 minutes |
+| Two-factor backup code        | 5 per 5 minutes  |
+| Other authentication requests | 100 per minute   |
+
+A blocked request shows `Too many attempts. Wait a moment and try again.` When more than one proxy forwards requests, add them to `TRUSTED_PROXIES`. Otherwise visitors can share a caller address and exhaust one limit. See [Trusted proxies](/docs/reference/reverse-proxy#trusted-proxies).
 
 <Cards>
   <Card
     title="Email"
     href="/docs/run/email"
-    description="Turn on address confirmation and password reset."
+    description="Enable confirmation and reset codes."
   />
   <Card
     title="Security"
     href="/docs/reference/security"
-    description="Secrets, exposed ports and the operator role."
+    description="See what your instance secrets protect."
   />
 </Cards>

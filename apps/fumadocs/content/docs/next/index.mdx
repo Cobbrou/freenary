@@ -4,29 +4,31 @@ description: An open-source personal finance app you host yourself, with your da
 icon: House
 ---
 
-Freenary is an open-source personal finance app you host yourself. It connects to your banks, imports your accounts and transactions, sorts each transaction into a category, and shows how your spending compares with your plan. It runs on your own server, and your data stays in your own PostgreSQL database.
+Freenary is an open-source personal finance app you run on your own server. It links your banks, sorts each transaction into a category, and compares your spending with a monthly plan.
 
-## Who it's for
+## What it does today
 
-Freenary is for people who want to see where their money goes without handing their bank data to a third-party app. You install it once on a server, for yourself or your household. The person who installs it is the **operator**. Everyone else just signs in and uses it.
+- **Bank connections.** Link your banks through a bank provider, Powens or Enable Banking. Freenary fetches new transactions when you open **Budget** or press **Sync transactions**.
+- **Budget.** **Transactions** shows what came in and went out over a period, by category. **Recurring** lists subscriptions, rent and other payments that repeat.
+- **Categories.** Freenary sorts transactions into built-in categories, and you can correct each one. Your own categories are for budget lines.
+- **A monthly plan.** Set an amount per category in **Settings**, then compare it with what you spent.
+- **The assistant.** Ask questions about your money in plain words from **Home**.
 
-## What you get
+The sidebar also shows Portfolio, Analysis and Goals with a **Planned** badge. Those screens don't exist yet.
 
-- **Bank sync.** Link your banks through a bank provider (Powens or Enable Banking). Accounts and transactions arrive on their own.
-- **Automatic categories.** Each transaction lands in a category, and you can correct it or add your own.
-- **A budget.** Plan what you want to spend each period, then compare it with what you actually spent.
-- **An assistant.** Ask questions about your money in plain language, like "Where did my money go last month?"
-- **Your data, your server.** Everything lives in your instance's database. One exception: when you ask the assistant a question, Freenary sends the data it needs to the model endpoint the operator configured. Read [The assistant](/docs/use/assistant) to see what that means for your instance.
+## Who runs it, who uses it
 
-## Status
+One person installs Freenary on a server: that copy is your **instance**. The first account that signs in becomes the **operator**, who enters the bank and email credentials on the setup screen. Everyone else creates an account on the same address and sees only their own data. The operator can't see other users' finances.
 
-Freenary is young. The **Budget** screen works today. **Portfolio**, **Analysis** and **Goals** are planned.
+## Where your data lives
+
+Accounts, transactions, categories and plans stay in the instance's own PostgreSQL database. Data leaves it through the bank provider, the assistant's model endpoint, the classifier endpoints, email and sign-in providers, and the leaked-password check. [Security](/docs/reference/security#data) lists what each one receives.
 
 <Cards>
   <Card
     title="Get started"
     href="/docs/get-started/before-you-install"
-    description="Install Freenary on your server and connect your first bank in about 15 minutes."
+    description="Install Freenary on your server and connect your first bank."
   />
   <Card
     title="Use Freenary"

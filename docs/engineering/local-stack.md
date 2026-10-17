@@ -6,8 +6,8 @@ Two paths run Freenary on your machine. The containerised path runs every part i
 
 | Path | Start it with | It needs | It gives you |
 | --- | --- | --- | --- |
-| Containerised | `bun run dev:up` | Docker and a free port `80` | Five services, one hostname per application, one isolated stack per worktree |
-| Local | `bun run db:start`, then `bun run dev` | Docker and two variables in two files | Three host processes and PostgreSQL on `127.0.0.1:5432` |
+| Containerised | `bun run dev:up` | Docker, and port `80` free or held by the shared dev proxy | Five services, one hostname per application, one isolated stack per worktree |
+| Local | PostgreSQL, `db:migrate:deploy`, then `bun run dev` | Docker and two variables in two files | Three host processes and PostgreSQL on `127.0.0.1:5432` |
 
 ## The containerised path
 
@@ -128,21 +128,26 @@ The paraglide ignore prevents one exact failure. Both sides compile that directo
 ## The local path
 
 ```bash
-bun run db:start
-bun run db:generate
+cp .env.example .env
+echo 'DATABASE_URL=postgresql://postgres:password@localhost:5432/freenary' > apps/server/.env
+docker compose up -d --wait postgres
+(cd packages/db && bun run db:migrate:deploy)
 bun run dev
 ```
 
+The API server does not migrate at boot, so the schema step is not optional: without it the server exits at startup, because it reads the `instance_setup` table. `bun install` already generated the Prisma client.
+
 | Command | What it does |
 | --- | --- |
-| `bun run db:start` | `docker compose up -d postgres` against `docker-compose.yml`. It publishes `127.0.0.1:5432` and names the database `freenary` |
+| `docker compose up -d --wait postgres` | Starts PostgreSQL from `docker-compose.yml` and waits for its `pg_isready` health check. It publishes `127.0.0.1:5432` and names the database `freenary`. `bun run db:start` is the same call without `--wait` |
+| `(cd packages/db && bun run db:migrate:deploy)` | `prisma migrate deploy`. The script lives in `packages/db` alone. It applies every migration to the empty database |
 | `bun run dev` | `turbo run dev` for the three applications |
 | `bun run dev:web`, `bun run dev:server` | The same task for one application |
 | `bun run db:watch`, `bun run db:stop`, `bun run db:down` | Follow, stop and remove the same PostgreSQL container |
 
-> [!WARNING] **`docker-compose.yml` needs two variables, not a file.** It writes `POSTGRES_PASSWORD` and `BETTER_AUTH_SECRET` as `${VAR:?…}`, which fails on an unset or empty value from any source. A root `.env` file is the usual source, and a shell export works the same. The CI `compose` job proves the rule. It parses the file with an emptied `.env`, and it fails when the parse succeeds.
+> [!WARNING] **`docker-compose.yml` needs two variables, not a file.** It writes `POSTGRES_PASSWORD` and `BETTER_AUTH_SECRET` as `${VAR:?…}`, which fails on an unset or empty value from any source. A shell export satisfies that check, but the `server` service also reads `env_file: .env`, so the file must exist. The CI `compose` job proves the rule. It parses the file with an emptied `.env`, and it fails when the parse succeeds.
 
-The Prisma CLI reads its own file. `packages/db/prisma.config.ts` loads `apps/server/.env` with dotenv, then hands `process.env.DATABASE_URL || undefined` to the datasource. It sets no default on purpose, so `db:generate` works in a checkout with no database. The commands that connect — `db:push`, `db:migrate` and `db:studio` — need `DATABASE_URL` in `apps/server/.env`:
+The Prisma CLI reads its own file. `packages/db/prisma.config.ts` loads `apps/server/.env` with dotenv, then hands `process.env.DATABASE_URL || undefined` to the datasource. It sets no default on purpose, so `db:generate` works in a checkout with no database. The commands that connect — `db:migrate:deploy`, `db:migrate`, `db:push` and `db:studio` — need `DATABASE_URL` in `apps/server/.env`, which the second line above writes:
 
 ```dotenv
 DATABASE_URL=postgresql://postgres:password@localhost:5432/freenary
@@ -190,7 +195,7 @@ On the local path PostgreSQL answers on `127.0.0.1:5432`, so `psql` and `bun run
 | `bun run db:generate` | `prisma generate` | A fresh client after a schema edit or a branch switch |
 | `bun run db:studio` | `prisma studio` | A table browser on the database in `DATABASE_URL` |
 | `bun run db:migrate:deploy` | `prisma migrate deploy` | Apply pending migrations. It lives in `packages/db` alone, with no root passthrough |
-| `FREENARY_DB_PUSH=1 bun run db:push` | `prisma db push` | A scratch database only. The gate variable is deliberate |
+| `bun run db:push` | `prisma db push` | A scratch database only. It writes no migration history, so it drifts a migrated database |
 
 [Data model](./data-model.md#migrations) holds the migration rules and the whole list of migrations.
 
@@ -226,7 +231,7 @@ Read the code in that inbox, then type it in the form. The local path sets no em
 
 | Tool | Version | Why you need it |
 | --- | --- | --- |
-| Bun | `1.3.14` | The runtime, the package manager and the test runner. `packageManager` in the root `package.json` pins it. |
+| Bun | `1.3.14` | The runtime, the package manager and the test runner. `packageManager` in the root `package.json` pins it locally. CI installs `bun-version: latest` instead. |
 | Docker | Any current release | Both stack paths run PostgreSQL in a container. |
 | Port `80` | Free, or held by a Traefik on the `devproxy` network | The containerised path only. One shared proxy on that port serves every stack. |
 | PostgreSQL | `18` | The image `bun run db:start` starts for you. You install nothing by hand. |
@@ -283,37 +288,31 @@ bun run build
 | 6 | Environment | `bun run env:check` | `scripts/env-sync.ts --check`, which compares `.env.example` and the configuration reference against `packages/env/src/schema.ts` |
 | 7 | Build | `bun run build` | `turbo run build`, which builds the three applications |
 
-The `compose` job needs no Bun and no install. It checks five things:
+The `compose` job needs no Bun and no install. It runs `docker compose config --quiet` eight times:
 
-- `docker compose -f docker-compose.dev.yml config --quiet` parses the development stack.
-- The same command with `-f docker-compose.mail.yml` added parses the Mailpit layer over it.
-- The same command against `docker-compose.proxy.yml` parses the development proxy.
-- The same command against `docker-compose.yml` parses the production stack, with a temporary `.env` that sets `POSTGRES_PASSWORD` and `BETTER_AUTH_SECRET`.
-- The same command with an empty `.env` must fail. A pass means the production file accepted two empty secrets, so the job fails.
+- Against `docker-compose.dev.yml`, the development stack.
+- With `-f docker-compose.mail.yml` added, the Mailpit layer over it.
+- Against `docker-compose.proxy.yml`, the development proxy.
+- Against `docker-compose.yml`, the production stack, with a temporary `.env` that sets `POSTGRES_PASSWORD` and `BETTER_AUTH_SECRET`.
+- Against `docker-compose.yml` with an empty `.env`, which must fail. A pass means the production file accepted two empty secrets, so the job fails.
+- Against `deploy/docker-compose.yml`, with a temporary `deploy/.env` that sets `FREENARY_URL`, `POSTGRES_PASSWORD` and `BETTER_AUTH_SECRET`.
+- Against `deploy/docker-compose.yml` with an empty `deploy/.env`, which must fail in the same way.
+- Against `deploy/coolify.yml`, with the Coolify-only `exclude_from_hc` lines removed and the three `SERVICE_*` values set in the shell.
 
-That job is the one CI check no root script covers. Reproduce it by hand before you change either compose file.
+That job is the one CI check no root script covers. Reproduce it from `.github/workflows/ci.yml` before you change any of these compose files.
 
 > [!WARNING] `bun run check-types` reaches two workspaces only. `apps/server` and `@freenary/ui` declare the script. `apps/web` declares none. `apps/fumadocs` names its own script `types:check`, so `turbo run check-types` skips it. Type-check those two workspaces by hand before you push.
 
 ### Tests run by hand, one file at a time
 
-CI runs no tests. The root `package.json` and all ten workspace manifests declare no `test` script, and `turbo.json` declares no `test` task. Run the files your change touches:
+CI runs no tests. No `package.json` in the repository declares a `test` script, and `turbo.json` declares no `test` task. Run the files your change touches:
 
 ```bash
 bun test scripts/dev-identity.test.ts
 bun test packages/api/src
 ```
 
-The repository holds 50 test files outside `node_modules`, each named `*.test.ts` or `*.test.tsx`:
-
-| Location         | Test files |
-| ---------------- | ---------- |
-| `packages/api`   | 28         |
-| `apps/web/src`   | 17         |
-| `packages/ui`    | 2          |
-| `packages/auth`  | 1          |
-| `packages/email` | 1          |
-| `scripts`        | 1          |
+Test files are named `*.test.ts` or `*.test.tsx`.
 
 Assertions sit inside `it()` or `test()`. Suites stay flat, no test uses a done callback, and no `.only` or `.skip` reaches a commit.
 
@@ -342,13 +341,13 @@ A comment therefore never holds a fact. `docs/engineering/` in the repository ho
 
 `lefthook.yml` declares one hook. On `pre-commit` it runs three jobs in parallel:
 
-| Job        | Command                            |
-| ---------- | ---------------------------------- |
-| `oxlint`   | `bun oxlint --fix {staged_files}`  |
-| `oxfmt`    | `bun oxfmt --write {staged_files}` |
-| `env-sync` | `bun run env:sync`                 |
+| Job | Command |
+| --- | --- |
+| `oxlint` | `bun oxlint --fix --no-error-on-unmatched-pattern {staged_files}` |
+| `oxfmt` | `bun oxfmt --write {staged_files}` |
+| `env-sync` | `bun run env:sync` |
 
-All three set `stage_fixed: true`, so each job re-stages the files it changed. The `env-sync` job runs on a change to the environment schema, a compose file or the generator. The repository declares no `pre-push` hook and no `commit-msg` hook.
+All three set `stage_fixed: true`, so each job re-stages the files it changed. The `oxlint` job runs only when a JavaScript or TypeScript file is staged. The `env-sync` job runs on a change to the environment schema, a compose file or the generator. The repository declares no `pre-push` hook and no `commit-msg` hook.
 
 ## Branches, commits and pull requests
 
@@ -423,7 +422,7 @@ Check an interface change in the browser, in light mode and in dark mode. A tag 
 
 | Source | Scope |
 | --- | --- |
-| [`.github/CONTRIBUTING.md`](https://github.com/suiramdev/freenary/blob/main/.github/CONTRIBUTING.md) | Setup, branch names, the pre-pull-request checks, the pull request rules, the sign-off and the license of a contribution |
+| [`.github/CONTRIBUTING.md`](https://github.com/suiramdev/freenary/blob/main/.github/CONTRIBUTING.md) | Branch names, the pre-pull-request checks, the pull request rules, the sign-off and the license of a contribution |
 | [`CONTEXT.md`](https://github.com/suiramdev/freenary/blob/main/CONTEXT.md) | The product vision and the glossary of each domain term |
 | [`AGENTS.md`](https://github.com/suiramdev/freenary/blob/main/AGENTS.md) | The repository-wide working rules, and the documentation duty |
 | [`LICENSE`](https://github.com/suiramdev/freenary/blob/main/LICENSE) | The GNU Affero General Public License, version 3, under which Freenary is distributed |

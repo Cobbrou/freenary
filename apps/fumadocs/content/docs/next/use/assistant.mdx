@@ -1,66 +1,68 @@
 ---
 title: Assistant
-description: Ask questions about your money in plain words, see how each answer was found, and turn the assistant on as an operator.
+description: Ask questions about your money in plain words, pick the model that answers, and know what data goes where.
 icon: Sparkles
 ---
 
-The assistant is the question box on Home. Ask it about your accounts, spending or budget, and it answers from the data your banks sent to Freenary.
-
-Connect a bank first, or the assistant has little to read. See [Bank connections](/docs/use/bank-connections).
+The assistant is the question box on Home. Ask it about your accounts, spending or budget, and it answers from the data your banks sent to Freenary. Connect a [bank](/docs/use/bank-connections) first, or it has little to read.
 
 ## Ask a question
 
-Type your question on Home and send it. For example:
+Type your question on Home and send it, for example:
 
 - How much did I spend on eating out this year?
 - Where did my money go last month?
 - Which subscriptions am I paying for?
 
-On a new conversation, Freenary suggests a few questions. Pick one to fill the box, edit it if you like, then send.
+An empty conversation offers these as suggestions. Pick one to fill the box, edit it, then send.
 
-## Read an answer
+Above each answer, Freenary lists the lookups it made, such as `Searching your transactions`. Open `How the assistant answered` to see where a figure came from. Some answers include a chart. Use `Copy` to copy an answer and `Retry` to ask again.
 
-Above each answer, Freenary lists the steps it took, such as `Searching your transactions` or `Comparing your plan with what you spent`. Press the header to open them and check where a figure came from.
-
-Some answers include a chart. Use `Copy` to copy an answer and `Retry` to ask again.
-
-Press `New conversation` to start over. You have one conversation at a time; the previous one isn't kept in a list.
-
-## What it can't do
-
-The assistant only reads. It doesn't change categories or budget lines, doesn't start a sync, and never moves money.
+The assistant only reads. It doesn't change a category or a budget line, doesn't start a sync, and never moves money.
 
 ## Pick a model
 
-The model button in the question box shows which model answers.
+The model button in the question box shows which model answers. It lists two kinds:
 
-- **A model on your instance** — set up by your operator. It works straight away.
-- **A model on this device** — if your browser supports WebGPU (a current Chrome, Edge or Safari), you can pick a model that runs on your own graphics card. It downloads once, and your questions stay in that browser. Answers are simpler than with a large hosted model.
+- **`On your instance`**: a model your operator set up. Nothing to download.
+- **`On this device`**: a model that runs in your browser, on your graphics card. It downloads once from Hugging Face, and needs WebGPU, which a current Chrome, Edge or Safari has. Answers are simpler than a large hosted model's.
 
-If the button says `Choose a model` and the box is greyed out, your instance has no model. Pick one for your device, or ask your operator to turn the assistant on.
+If the box says `Choose a model` and stays greyed out, your instance has no model. Pick one for your device, or ask your operator to turn the assistant on.
 
-## What leaves your instance
+## What data goes where
 
-To answer, the model receives your question and the data it looked up: account names, transactions, and spending by category. Freenary never sends your IBAN.
+To answer, the model receives your question, the earlier turns of the conversation, today's date, your interface language, the dates your transaction data covers, and what it looked up:
 
-- With a model on your instance, that data goes to the endpoint your operator chose.
-- With a model on your device, everything stays in your browser.
+- your account names and their banks;
+- up to 20 transactions per lookup: date, amount, currency, the bank's label, the other party and the category;
+- spending and cash-flow totals, your plan against what you spent, and the recurring payments Freenary found.
 
-## Turn on the assistant (operator)
+It never receives your IBAN, your account balances, your name or your email address.
 
-Freenary ships without a model. To give everyone a model on the instance, point Freenary at any OpenAI-compatible endpoint: a hosted gateway such as OpenRouter, or a runtime on your own hardware such as Ollama.
+Where that goes depends on the model:
 
-Set `AI_BASE_URL` and `AI_MODEL`, plus `AI_API_KEY` if the endpoint needs a key, in your instance's environment and redeploy. They aren't in the setup screen. [Configuration](/docs/reference/configuration#assistant) has examples, and on Coolify you first add them to the compose file, see [Add a variable on Coolify](/docs/reference/configuration#add-a-variable-on-coolify).
+- **A model on your instance** sends it to the model service your operator chose. That can be a company outside your instance, under its own terms.
+- **A model on this device** keeps it in your browser. Nothing goes to an outside model provider.
 
-<Callout type="warn">
+<Callout type="info">
 
-**Pick a model that supports tool calling.** The assistant reads your data through tool calls. A model without them still answers, but invents every figure, and no error tells you. After setup, ask a question that needs a number and check the answer.
+Your conversation is saved on your instance with either kind of model, so it's there after a reload and in your other browsers.
 
 </Callout>
 
-With a hosted gateway, the data in each question goes to that provider under its terms. A runtime on your own hardware keeps it on your server.
+## Too many questions
 
-Each account can ask about 30 questions per 5 minutes.
+You can ask about 30 questions every 5 minutes, whatever the model. Past that, the assistant says `Too many questions in a row. Wait a moment and try again.`
+
+With a model on this device, the answer still appears, but Freenary doesn't save it to your conversation.
+
+## Start a new conversation
+
+Press `New conversation` to start over. You have one conversation at a time: the previous one stays on your instance, but no screen shows it again.
+
+A long conversation can outgrow a model on this device. When that happens, the assistant asks you to start a new conversation.
+
+Operators turn on a model for the whole instance in [Configuration](/docs/reference/configuration#assistant).
 
 <Cards>
   <Card
@@ -69,8 +71,8 @@ Each account can ask about 30 questions per 5 minutes.
     description="The charts and transactions behind every figure an answer quotes."
   />
   <Card
-    title="Configuration"
-    href="/docs/reference/configuration"
-    description="Every environment variable, and where to set it."
+    title="Your account"
+    href="/docs/use/account"
+    description="Sign-in, account protection, language and theme."
   />
 </Cards>
