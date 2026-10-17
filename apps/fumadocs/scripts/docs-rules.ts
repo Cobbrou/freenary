@@ -57,6 +57,16 @@ export const ROADMAP_PHRASES: readonly RegExp[] = [
   /\bwill be (?:added|supported|available)\b/gi,
 ];
 
+export const FILLER_PHRASES: readonly RegExp[] = [
+  /\bit(?:'s| is) (?:important|worth) (?:to note|noting)\b/gi,
+  /\bnote that\b/gi,
+  /\blet's dive in\b/gi,
+  /\bthis (?:page|section|guide) (?:will )?(?:explores?|covers?|walks? you through)\b/gi,
+  /\bin (?:summary|conclusion)\b/gi,
+  /\b(?:seamless(?:ly)?|robust|powerful|revolutionary|cutting-edge|effortless(?:ly)?|comprehensive)\b/gi,
+  /\bsimply (?=(?:run|click|press|open|add|type)\b)/gi,
+];
+
 export const ENV_VAR_OR_ENUM_NAME = /\b[A-Z][A-Z\d]*(?:_[A-Z\d]+)+\b/g;
 
 export const LONG_SENTENCE_WORD_LIMIT = 35;

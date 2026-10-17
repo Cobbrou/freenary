@@ -2,7 +2,7 @@
 
 [summary]: #summary
 
-Describe the change in one paragraph.
+At most four sentences: what changed, and what a reviewer should look at first.
 
 # Motivation
 
@@ -24,4 +24,6 @@ How have similar problems been solved elsewhere — what worked, what didn't?
 
 # Notes
 
-Flag anything reviewers should know: migration steps, risks, or follow-up work.
+[notes]: #notes
+
+One line per fact: `Closes #n`; the visual change, or "no visual change"; the tests added; the `apps/fumadocs` pages updated, or "none" and why; any migration, breaking change or merge-order constraint.

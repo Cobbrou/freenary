@@ -7,7 +7,7 @@ Single-database data layer backed by Prisma ORM.
 
 ## Migrations (strict)
 
-Schema changes ship as **versioned migration files** and are applied with `db:migrate`. That is the only supported mechanism: dev bootstrap and runtime provisioning both migrate, so every database carries a recorded history. `db:push` is opt-in dev tooling (see below), never the way schema reaches a shared database.
+Schema changes ship as **versioned migration files** and are applied with `db:migrate`. That is the only supported mechanism: dev bootstrap and runtime provisioning both migrate, so every database carries a recorded history. `db:push` is dev tooling for a scratch database (see below), never the way schema reaches a shared database.
 
 **Every schema edit follows this loop:**
 
@@ -27,12 +27,12 @@ Schema changes ship as **versioned migration files** and are applied with `db:mi
 - **Never edit or delete a migration once it has shipped** (merged, or applied anywhere). Fix forward with a new named migration.
 - **A schema edit and its migration land in the same commit/PR** — never one without the other.
 
-## `db:push` is opt-in
+## `db:push` is for scratch databases
 
-`db:push` diffs the schema straight onto a database with no version history and would drift a migrated database. It is not the setup mechanism, and its CLI is gated behind an explicit opt-in:
+`db:push` diffs the schema straight onto a database with no version history and would drift a migrated database. It is not the setup mechanism, and nothing stops it from running against a migrated database:
 
 ```bash
-FREENARY_DB_PUSH=1 bun run db:push   # scratch/local database only
+bun run db:push   # scratch/local database only
 ```
 
 Use it only for fast iteration on a throwaway local database; before committing, capture the change as a named migration per the loop above.

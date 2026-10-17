@@ -1,10 +1,10 @@
 ---
 title: Troubleshooting
-description: Fix the most common problems with a Freenary instance, and read its logs.
+description: Match what you see on your Freenary instance to its cause and its fix, and read the logs.
 icon: CircleAlert
 ---
 
-Find your symptom below. Most fixes start with two commands, run from the folder that holds your `docker-compose.yml`:
+Find what you see below. Most fixes start with two commands, run from the folder that holds your `docker-compose.yml`:
 
 ```bash
 docker compose ps -a
@@ -13,9 +13,32 @@ docker compose logs --tail 100 server
 
 With a hosting panel, the same information is in the app's container list and its logs view.
 
+## Freenary won't start
+
+Compose refuses before any container starts, or a container keeps restarting: `docker compose ps -a` shows `Restarting (1)`, or `docker compose up` ends with `dependency failed to start: container … is unhealthy`. Find the message in the output of `docker compose up -d` or in `docker compose logs server`.
+
+| What you see | Why | Fix |
+| --- | --- | --- |
+| `required variable POSTGRES_PASSWORD is missing a value: Set POSTGRES_PASSWORD in .env`, or the same for `BETTER_AUTH_SECRET` | The value is missing or empty | Set it. Generate `BETTER_AUTH_SECRET` with `openssl rand -hex 32` and `POSTGRES_PASSWORD` with `openssl rand -hex 16` |
+| `Set FREENARY_URL to the public URL of the web app, such as https://freenary.example.com` | `deploy/docker-compose.yml`, used by the Dokploy template, needs your instance's address | Set `FREENARY_URL` to it, with `https://` |
+| `env file …/.env not found` | The root `docker-compose.yml` reads a `.env` file next to it, and there is none. Exporting the variables in your shell isn't enough | Create the `.env` file, as in [Install](/docs/get-started/install) |
+| `Error: P1000: Authentication failed against database server`, then `service "migrate" didn't complete successfully: exit 1` | `POSTGRES_PASSWORD` changed after the first start. The database keeps the password it was created with | Put the original `POSTGRES_PASSWORD` back, then run `docker compose up -d` |
+| `Please make sure your database server is running at` in `docker compose logs migrate` | `migrate` can't reach the database | Check that `postgres` shows `healthy` in `docker compose ps -a`, and read `docker compose logs postgres` |
+| `❌ Invalid environment variables:`, then `error: Invalid environment variables` | A value fails its check. The `path` line names the variable, and `message` says what's wrong, such as `Too small: expected string to have >=32 characters`. A `TRUSTED_PROXIES` path with `write an IPv4-mapped address in its IPv4 form` means an entry like `::ffff:10.0.0.1`: write `10.0.0.1` | Fix that variable, then run `docker compose up -d` or redeploy. With `deploy/docker-compose.yml`, a `BETTER_AUTH_URL` or `CORS_ORIGIN` path means `FREENARY_URL` is wrong: it must be a full URL, such as `https://freenary.example.com` |
+| `error: EMAIL_PROVIDER=resend requires RESEND_API_KEY to be set.`, or another `EMAIL_PROVIDER=… requires …` line | An email variable is half set in the environment | Set the variable it names, or remove `EMAIL_PROVIDER` and use the [setup screen](/docs/run/email) |
+| `error: The instance configuration could not be read: …` | The server couldn't read the values saved on the setup screen, usually because the database can't be reached or isn't migrated | Check `docker compose logs migrate` and `docker compose logs postgres`, then run `docker compose up -d` |
+
+Every message, with the variable it comes from, is in [What stops a start](/docs/reference/configuration#what-stops-a-start).
+
+<Callout type="warn">
+
+Never set `SKIP_ENV_VALIDATION` to get past a startup error. The server then runs with a broken configuration.
+
+</Callout>
+
 ## You can't sign in
 
-**What you see.** Signing in fails, or you're signed in and land straight back on the sign-in screen. The passkey button may be missing.
+**What you see.** After you type your email, the form doesn't go on and shows `We could not check this address`, or `Could not load the other ways to sign in`. Or you're signed in and land straight back on the sign-in screen. The setup screen may show `The setup screen did not load`. The passkey button may be missing. The server log shows nothing for the browser's own calls: the browser refuses the answer, not the server.
 
 **Why.** The address Freenary is configured with doesn't exactly match the one in your browser. Scheme, host and port must all match.
 
@@ -27,30 +50,31 @@ FREENARY_URL=https://freenary.example.com
 
 - **Dokploy:** the template starts with `http://`. Change it to `https://` once HTTPS is on for your domain.
 - **Coolify:** there's no `FREENARY_URL`. Set the `web` service's domain with `https://` and redeploy.
-- **Root `docker-compose.yml`:** it has no `FREENARY_URL`. Set `BETTER_AUTH_URL` and `CORS_ORIGIN` to the same address instead. If they're unset, the browser tries to reach `http://localhost:3000` and every request fails.
+- **Root `docker-compose.yml`:** it has no `FREENARY_URL`. Set `BETTER_AUTH_URL` and `CORS_ORIGIN` instead: both to the same address with one hostname, or to the API's and the web app's addresses with two. If they're unset, they default to `http://localhost:3000` and `http://localhost:3001`. That works in a browser on the server itself, and fails from every other machine.
 
 Then redeploy, or run `docker compose up -d`. A `restart` isn't enough: it keeps the old values.
 
-Changing the hostname makes existing passkeys stop working; users add new ones.
+A new hostname also breaks existing passkeys: see [Passkeys and your hostname](/docs/run/sign-in#passkeys-and-your-hostname).
 
-## The bank list is empty
+## The page shows 502 Bad Gateway
 
-**`Bank linking is unavailable`.** No bank provider is set up. As the operator, open `https://freenary.example.com/setup` and complete the `Bank` step. See [Connect a bank](/docs/get-started/connect-a-bank).
+**Freenary is still starting.** On the first start, the database, `migrate`, `server` and `web` start in turn. Wait a minute and reload.
 
-**The bank section shows `No banks available`.** Freenary reached your provider, which returned no bank. Either:
+**Your proxy or panel points at the wrong place.** Your proxy shows its own 502 page and the sign-in screen never loads. With one address, your domain goes to the `web` service on port `3001`; the web app forwards the rest to the server. With two addresses, the web app's goes to `web` on `3001` and the API's to `server` on `3000`. See [Reverse proxy](/docs/reference/reverse-proxy#two-subdomains).
 
-- your Powens domain has no active connectors: activate them in the [Powens console](https://console.powens.com), then reload; or
-- no country in your tax residency is covered by the provider.
+**The server is down.** The page loads, but signing in or loading data fails, and those requests answer `502` with the body `Bad Gateway`. The web app got no answer from the server within its [forwarding limit](/docs/reference/api#base-url). `docker compose logs web` shows the reason:
 
-**`Freenary could not load banks for` a country.** The provider refused the request or couldn't be reached: check the Powens domain and credentials (or the Enable Banking ones) in the setup screen.
+```text
+The API server at <address> did not answer: <reason>
+```
 
-**Connecting a bank ends on an error page.** The redirect URI registered at the provider doesn't match. For Powens, it must be exactly `https://freenary.example.com/callback/powens`. On `localhost`, bank linking can't work: Powens needs an HTTPS address.
+Check `docker compose ps -a` and `docker compose logs server`. If the server keeps restarting, see [Freenary won't start](#freenary-wont-start).
 
 ## The server does not restart after setup
 
-**What you see.** After `Finish setup`, the setup screen waits for a minute, then shows `The server did not restart`.
+**What you see.** After `Finish setup`, the setup screen waits, then shows `The server did not restart` and `It did not answer within one minute.`
 
-**Why.** `Finish setup` stops the server so it picks up the new settings at its next start. Something has to start it again. The compose files tell Docker to, and Coolify does it by default; a server started by hand stays down, and one that crashes on startup keeps restarting.
+**Why.** `Finish setup` stops the server so it picks up the new settings at its next start. Something has to start it again. Both compose files tell Docker to, and Coolify does it by default. A server started by hand stays down, and one that fails on startup keeps restarting.
 
 **Fix.** Read the server log:
 
@@ -58,7 +82,7 @@ Changing the hostname makes existing passkeys stop working; users add new ones.
 docker compose logs server
 ```
 
-Fix the error it names, then start the server:
+Fix the error it names (see [Freenary won't start](#freenary-wont-start)), then start the server:
 
 ```bash
 docker compose up -d server
@@ -66,49 +90,93 @@ docker compose up -d server
 
 With a hosting panel, read the `server` logs there and redeploy. Then press `Try again` on the setup screen.
 
-## The page shows 502 Bad Gateway
+## Bank and email stopped working after a restore
 
-- **Freenary is still starting.** On first start, the database, `migrate`, `server` and `web` start in turn. Wait a minute and reload.
-- **Your proxy or panel points at the wrong place.** Your domain must go to the `web` service on port `3001`. The web app forwards the rest to the server.
-- **The server is down.** The web app answers `502` for sign-in and data when it can't reach the server. Check `docker compose ps -a` and the server log.
+**What you see.** After restoring a dump or changing `BETTER_AUTH_SECRET`, everyone is signed out, and the bank and email credentials saved on the setup screen are gone. The server still starts, and its log shows one warning per saved value:
 
-## Freenary won't start
+```text
+The stored value of EMAIL_PROVIDER does not open with the current BETTER_AUTH_SECRET.
+```
 
-| What you see | Fix |
-| --- | --- |
-| `Set FREENARY_URL…`, `Set POSTGRES_PASSWORD…` or `Set BETTER_AUTH_SECRET…`, and nothing starts | Set the value named. For a secret, generate one with `openssl rand -hex 32` |
-| The server log shows `Invalid environment variables` | The `path` line names the wrong variable. Fix it and redeploy |
-| `service "migrate" didn't complete successfully` | Read `docker compose logs migrate`. A failed connection means `POSTGRES_PASSWORD` changed since the first start: put the original back |
-| A line such as `EMAIL_PROVIDER=smtp requires …` | An email variable is half set in the environment. Complete it or remove it. See [Email](/docs/run/email) |
+**Why.** The setup screen's values are encrypted with `BETTER_AUTH_SECRET`. The server can't read them under another secret, so it skips them and runs on the environment's values alone.
 
-Never use `SKIP_ENV_VALIDATION` to get past a startup error. The server then runs with a broken configuration.
+**Fix.** Put back the secret that was in use when the dump was taken, then run `docker compose up -d`, or redeploy with a panel. If that secret is lost, open the setup screen, enter the bank and email credentials again, and press `Finish setup`. What else a new secret costs, two-factor included, is in [What a rotation costs](/docs/reference/security#what-a-rotation-costs).
+
+## The setup screen shows a configuration problem
+
+**What you see.** The setup screen shows `Configuration problem` and `The stored configuration did not load:`, followed by the reason.
+
+**Why.** The values saved on the setup screen, combined with your environment, don't pass the startup checks. The server ignores every saved value and runs on the environment alone.
+
+**Fix.** Correct the value the reason names, on the setup screen or in the environment, then press `Finish setup` or run `docker compose up -d`.
+
+## The bank list is empty
+
+**`Bank linking is unavailable`, in Settings, `Connections`, under `Bank accounts`.** No bank provider is set up, or one of its fields is missing. Onboarding skips its bank step for the same reason. As the operator, open `https://freenary.example.com/setup` and complete the `Bank` step. See [Connect a bank](/docs/get-started/connect-a-bank).
+
+**`No banks available`.** Freenary reached your provider, which returned no bank. Either your Powens domain has no active connectors, which you activate in the [Powens console](https://console.powens.com), or the provider covers no country of your tax residency.
+
+**`Freenary could not load banks for` a country.** The provider refused the request or couldn't be reached. Check the Powens domain and credentials, or the Enable Banking ones, in the setup screen. The other countries still show.
+
+**Connecting a bank ends on an error page at the provider.** The redirect URI registered there doesn't match. It's your instance's address followed by `/callback/powens` or `/callback/enable-banking`. See [Bank providers](/docs/reference/bank-providers#the-redirect-uri-must-be-https).
+
+## New passwords don't save
+
+**What you see.** Signing up or resetting a password shows `Something went wrong. Try again.` The server log shows `Failed to check password. Please try again later.` or `Failed to check password. Status:` followed by a code.
+
+**Why.** Freenary couldn't reach Have I Been Pwned to check the password against known leaks, for example because the server has no internet access.
+
+**Fix.** Let the server reach `api.pwnedpasswords.com`, or turn the check off. See [Leaked-password check](/docs/run/sign-in#leaked-password-check).
+
+## Google, Apple or single sign-on refuses a user
+
+**What you see.** After the provider's screen, the sign-in screen shows `This address already has an account that has not been confirmed yet. Confirm it first, then the provider can be used with it.`
+
+**Why.** The user already has a password account with that address, and its address isn't confirmed. On an instance without email, no address is ever confirmed.
+
+**Fix.** See [Provider sign-in on an instance without email](/docs/run/sign-in#provider-sign-in-on-an-instance-without-email).
+
+## Everyone gets "Too many attempts"
+
+**What you see.** Users get `Too many attempts. Wait a moment and try again.` when signing in, after only a few tries of their own.
+
+**Why.** Sign-in attempts are limited per caller address. When requests pass through more than one proxy and `TRUSTED_PROXIES` doesn't list them, every visitor counts as one caller and shares one limit.
+
+**Fix.** List your proxies in `TRUSTED_PROXIES`, then run `docker compose up -d` or redeploy. See [Trusted proxies](/docs/reference/reverse-proxy#trusted-proxies).
+
+## Settings asks you to sign in again
+
+**What you see.** In Settings, `Security`, connecting or disconnecting a provider, or adding or removing a passkey, shows `Sign in again before changing how your account is accessed: this needs a session less than 15 minutes old.`
+
+**Why.** These changes need a sign-in less than 15 minutes old.
+
+**Fix.** Sign out, sign in again, and make the change right away.
 
 ## The assistant has no model
 
-Users see `Choose a model`, or `This instance has no model configured`. Set `AI_BASE_URL` and `AI_MODEL`, then redeploy (on Coolify, [add them to the compose file](/docs/reference/configuration#add-a-variable-on-coolify) first). See [Turn on the assistant](/docs/use/assistant#turn-on-the-assistant-operator).
+Users see `Choose a model`, or `This instance has no model configured`. Set `AI_BASE_URL` and `AI_MODEL`, then redeploy. On Coolify, [add them to the compose file](/docs/reference/configuration#add-a-variable-on-coolify) first. See [Assistant](/docs/reference/configuration#assistant).
 
 ## The wrong account became the operator
 
 The first account to sign in becomes the operator. If you created both accounts, move the role to yours. Replace `you@example.com`, and check the address first: a typo leaves the instance with no operator.
 
 ```bash
-docker compose exec -T postgres psql -U postgres -d freenary -c "UPDATE \"user\" SET role = CASE WHEN email = 'you@example.com' THEN 'OPERATOR'::\"UserRole\" ELSE 'MEMBER'::\"UserRole\" END;"
+docker compose exec -T postgres psql -U postgres -d freenary -c "UPDATE \"user\" SET role = CASE WHEN lower(email) = lower('you@example.com') THEN 'OPERATOR'::\"UserRole\" ELSE 'MEMBER'::\"UserRole\" END;"
 ```
 
 If a stranger signed in first, treat the instance as compromised: remove it together with its database volume, and install again.
 
 ## Read the logs
 
-```bash
-docker compose logs -f server
-```
+| Command | Shows |
+| --- | --- |
+| `docker compose logs -f` | Every container, live |
+| `docker compose logs --tail 200 server` | The last 200 server lines |
+| `docker compose logs --since 15m server` | The last 15 minutes |
+| `docker compose logs migrate` | What the database update did |
+| `docker compose logs web` | Requests the web app couldn't forward to the server |
 
-| Command                                  | Shows                        |
-| ---------------------------------------- | ---------------------------- |
-| `docker compose logs -f`                 | Every container, live        |
-| `docker compose logs --tail 200 server`  | The last 200 server lines    |
-| `docker compose logs --since 15m server` | The last 15 minutes          |
-| `docker compose logs migrate`            | What the database update did |
+A healthy server logs `Server is running on` followed by its address.
 
 Docker keeps logs without limit by default. To cap them, add this under each service in `docker-compose.yml`:
 

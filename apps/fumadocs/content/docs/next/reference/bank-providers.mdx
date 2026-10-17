@@ -1,12 +1,12 @@
 ---
 title: Bank providers
-description: Powens and Enable Banking compared, how to set each one up, what happens to a bank connection over time, and the merchant dictionary.
+description: Powens and Enable Banking compared, the credentials and callback each one needs, what a sync reads, and what switching costs.
 icon: Landmark
 ---
 
-Freenary never talks to a bank directly. A bank provider holds that link, and this page covers the two Freenary supports. For your first connection, follow [Connect a bank](/docs/get-started/connect-a-bank).
+Freenary never talks to a bank directly. A bank provider holds that link, and Freenary supports two: Powens and Enable Banking. For your first connection, follow [Connect a bank](/docs/get-started/connect-a-bank).
 
-**Use Powens unless you have a reason not to.** It's the default, its sandbox is free, and it's the only provider that imports accounts and balances as well as transactions.
+**Use Powens unless you have a reason not to.** It's the default, and it's the only provider that imports account types, balances and accounts opened after linking.
 
 ## Compare the two
 
@@ -14,38 +14,38 @@ Freenary never talks to a bank directly. A bank provider holds that link, and th
 | --- | --- | --- |
 | Provider id (`BANKING_PROVIDER`) | `powens` (default) | `enable-banking` |
 | Credentials | `POWENS_DOMAIN`, `POWENS_CLIENT_ID`, `POWENS_CLIENT_SECRET` | `ENABLE_BANKING_APP_ID`, `ENABLE_BANKING_PRIVATE_KEY` |
-| Redirect URI to register | `https://<your hostname>/callback/powens` | `https://<your hostname>/callback/enable-banking` |
-| Transactions | Yes | Yes |
-| Accounts, account type and balances | Yes | No |
-| Investment holdings | Yes | No |
+| Redirect URI to register | `https://<your domain>/callback/powens` | `https://<your domain>/callback/enable-banking` |
+| Accounts at linking | Yes | Yes |
+| Accounts opened after linking | Yes, refreshed on every sync | No |
+| Account type and balances | Yes | No: every account stays `UNKNOWN`, with no balance |
+| Investment holdings | Yes, for investment accounts | No |
 | Bank logo and BIC in the bank list | No | Yes |
-| Consent length Freenary asks for | Set by Powens and the bank | 90 days |
+| Consent length Freenary asks for | None; Powens and the bank decide | 90 days |
+| Sync window sent | Start date only | Start and end date |
 
-On Enable Banking, every account keeps the type `UNKNOWN`, balances stay empty, no holdings are stored, and an account you open at the bank after linking never appears. No screen shows balances or holdings yet, so this changes what's stored rather than what you see today.
+Both providers list banks per country. A country where the provider has no bank shows an empty list, so check the provider's bank catalogue before you choose.
 
-Both providers list banks per country. A country with no bank at that provider shows an empty list, so check the provider's bank catalogue before you choose.
+## The redirect URI must be HTTPS
 
-The redirect URI uses `CORS_ORIGIN`, which is your public URL (`FREENARY_URL` on the hosting-panel files). It must be HTTPS: Powens refuses `http://localhost`, which is why a bank can't be linked from an instance on your own computer.
+Freenary builds the redirect URI from `CORS_ORIGIN`, the public URL of the web app. `FREENARY_URL` fills it on `deploy/docker-compose.yml`, and Coolify fills it from the `web` domain. Register that URL at the provider character for character, with `https://`. An instance on `http://localhost` can't complete a bank link.
 
 ## Powens
 
 The console walkthrough (account, sandbox domain, client application, redirect URI, connectors) is in [Connect a bank](/docs/get-started/connect-a-bank). Enter the three values on the setup screen. Details that matter later:
 
-- **Powens domain.** Use the full short name, such as `acme-sandbox`. Freenary also accepts `acme-sandbox.biapi.pro`, but not a value starting with `https://`.
-- **Connectors.** A new domain has none active. A domain with no active connector returns an empty bank list, which looks like a configuration error even when the credentials are right.
-- **Which banks appear.** Freenary hides connectors marked hidden or restricted, and keeps those that offer the Bank or Wealth products. Without Wealth, investment connectors drop out.
-- **Test bank.** Every domain has `Connecteur de test`. Any user name works, and the password is `1234`. It appears only while your domain leaves it visible.
-- **Sandbox limit.** A sandbox domain holds 50 connections. A production domain needs a contract with Powens.
-- **Webhooks.** Not needed. Freenary has no webhook receiver, so skip that step in the console.
+- **Powens domain.** Use the short name, such as `acme-sandbox`. `acme-sandbox.biapi.pro` also works. A value that starts with `https://` doesn't: Freenary adds the scheme itself, so every call fails.
+- **Connectors.** A new domain has none active, and a domain with no active connector returns an empty bank list. That looks like a configuration error even when the credentials are right.
+- **Which banks appear.** Freenary hides connectors marked hidden or restricted, and keeps those that offer the Bank or Wealth product.
+- **Webhooks.** Not needed. Freenary has no webhook receiver.
 
 ## Enable Banking
 
 1. In the [Enable Banking control panel](https://enablebanking.com/sign-in/), register an application and note its application ID.
-2. Download the application's private key. Enable Banking gives it to you only once.
-3. Register the redirect URL `https://<your hostname>/callback/enable-banking`, character for character.
-4. On the setup screen, pick **Enable Banking** and fill in **Application ID** and **Private key (PEM)**.
+2. Download the application's private key.
+3. Register the redirect URI `https://<your domain>/callback/enable-banking`.
+4. On the setup screen, pick Enable Banking and fill in the application ID and the private key.
 
-In an environment file, the key fits on one line with literal `\n` sequences, which Freenary turns back into newlines. A multi-line PEM also works. Passphrase-protected keys aren't supported.
+In an environment file, the key fits on one line with literal `\n` sequences, which Freenary turns back into newlines. A multi-line PEM also works. A key protected by a passphrase doesn't.
 
 ```dotenv
 BANKING_PROVIDER=enable-banking
@@ -55,47 +55,29 @@ ENABLE_BANKING_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n<key body>\n-----END PR
 
 Freenary asks for 90 days of consent. A bank can grant less, and Freenary doesn't track a shorter consent, so such a connection stops importing earlier.
 
+## What a sync reads
+
+Powens receives only the start of the [sync window](/docs/use/bank-connections#sync) and returns everything since. Enable Banking receives both ends.
+
 ## Switching providers
 
-`BANKING_PROVIDER` decides which provider starts the **next** bank connection. An existing connection remembers its provider and keeps using it for every sync and for disconnecting.
+`BANKING_PROVIDER` decides which provider starts the **next** bank connection. An existing connection remembers its provider, and uses it for every sync and for disconnecting.
 
 <Callout type="warn">
 
-Saving a provider on the setup screen erases the stored credentials of the other one, and connections made with it can then no longer sync or disconnect. To move to another provider and keep old connections working, set the old provider's credentials in the environment before you switch. Users then reconnect their banks when they're ready.
+Saving a provider on the setup screen erases the stored credentials of the other one. Values set in the environment stay. Connections made with the erased provider can no longer sync. Disconnecting one removes it from Freenary without asking the provider to revoke access, and the user sees a warning to revoke it at their bank.
 
 </Callout>
+
+To switch and keep old connections working, set the old provider's credentials in the environment before you save the new one on the setup screen. Users then disconnect and reconnect each bank when they're ready.
 
 ## With no provider
 
-Nothing fails at startup. The bank step disappears from the first-run flow, and Settings shows `Bank linking is unavailable` in place of the bank section. An incomplete set of credentials counts as no provider, without any message, so check that every field is filled.
+Nothing fails at startup. Onboarding skips the connect step, and Settings shows `Bank linking is unavailable` in place of the bank section. An incomplete set of credentials counts as no provider; the setup screen marks it incomplete.
 
-If a provider call fails, the bank list names each country it couldn't load and still shows the others. An empty list without that message means the provider has no bank there.
+If a provider call fails, the bank list names each country it couldn't load and still shows the others.
 
-## A bank connection over time
-
-| Event | What happens |
-| --- | --- |
-| Link | Freenary stores the connection and one row per account the bank returned |
-| First sync | Reads 90 days of history per account |
-| Later sync | Resumes from the date of the last sync. A sync where some accounts failed still moves that date, so a forced sync is the way to fill a gap |
-| Forced sync | Reads the 90-day window again |
-| Disconnect | Asks the provider to revoke access, then deletes the connection, its accounts, transactions and holdings |
-
-Freenary has no scheduler and no webhook receiver: data only arrives when a user syncs. A failed sync doesn't change the connection's status, and there's no reconnect action. When consent ends, the user disconnects the bank and connects it again, which creates a new connection with a fresh 90-day import. See [Bank connections](/docs/use/bank-connections).
-
-<Callout type="warn">
-
-Provider tokens are stored in the database in plain text: the per-user Powens token and the session id of each connection. Anyone who can read the database can pull bank data through the provider. Protect the database and its dumps.
-
-</Callout>
-
-## The merchant dictionary
-
-Freenary names merchants from a prebuilt dictionary before falling back to card codes and keyword rules. It's built into the server image, so no transaction leaves your instance for it.
-
-A GitHub workflow rebuilds it every Monday and publishes `merchant-data.tar.gz` on a release tagged `data-<date>`. The server image downloads the newest one at build time. If the file is missing, Freenary logs `Dictionary file not found` and categorises without it.
-
-`DICTIONARY_PUBLIC_KEY` must stay unset with the published dictionary. See [Configuration](/docs/reference/configuration#categorisation).
+The provider tokens live in the database. See [Data](/docs/reference/security#data) for what someone who can read it can do with them.
 
 <Cards>
 
@@ -107,7 +89,7 @@ A GitHub workflow rebuilds it every Monday and publishes `merchant-data.tar.gz` 
 
 <Card
   title="Configuration"
-  href="/docs/reference/configuration"
+  href="/docs/reference/configuration#bank-providers"
   description="Every bank variable, and how the setup screen stores them."
 />
 

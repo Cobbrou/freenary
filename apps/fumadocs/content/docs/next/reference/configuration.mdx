@@ -1,95 +1,45 @@
 ---
 title: Configuration
-description: Every environment variable Freenary reads, which values belong to the setup screen, where those values are stored, and what stops a start.
+description: Every environment variable Freenary reads, where to set it, which values the setup screen owns, and what stops a start.
 icon: Cog
 ---
 
-Look up any variable here: its default, what it does, and what happens when it's missing or wrong. Bank and email credentials normally go in the setup screen, not in a file.
+Each variable, its default, what it does, and what happens when it's missing or wrong.
 
 ## Where a value goes
 
 | You run | Put variables in | Required |
 | --- | --- | --- |
-| `deploy/docker-compose.yml` (Dokploy, Portainer, a proxy on a Docker network) | The panel's environment, or a `.env` next to the file | `FREENARY_URL`, `POSTGRES_PASSWORD`, `BETTER_AUTH_SECRET` |
-| `deploy/coolify.yml` | The `server` service's `environment:` list, then the resource's **Environment Variables** tab ([below](#add-a-variable-on-coolify)) | Nothing. Coolify generates the secrets and the URL |
-| `docker-compose.yml` at the repository root (ports published on the host) | `.env` next to the file | `POSTGRES_PASSWORD`, `BETTER_AUTH_SECRET`, and in practice `BETTER_AUTH_URL` and `CORS_ORIGIN` |
-| Bank and email credentials, on any of the above | [The setup screen](#setup-screen-or-environment) at `/setup` | — |
+| `deploy/docker-compose.yml` (Dokploy) | The panel's environment, or a `.env` next to the file | `FREENARY_URL`, `POSTGRES_PASSWORD`, `BETTER_AUTH_SECRET` |
+| `deploy/coolify.yml` | The `server` service's `environment:` list ([below](#add-a-variable-on-coolify)) | Nothing: Coolify generates them |
+| Root `docker-compose.yml` | A `.env` next to the file, which must exist | `POSTGRES_PASSWORD`, `BETTER_AUTH_SECRET`, and in practice `BETTER_AUTH_URL` and `CORS_ORIGIN` |
 
-**`deploy/docker-compose.yml`.** `FREENARY_URL` is the one public URL of the instance, for example `https://freenary.example.com`. It fills `BETTER_AUTH_URL`, `CORS_ORIGIN` and `PUBLIC_SERVER_URL`, so the browser, the web app and the API server all use one address. The value must match the browser address bar exactly, scheme included, or every sign-in fails.
+`FREENARY_URL`, or the domain of Coolify's `web` service, fills `BETTER_AUTH_URL`, `CORS_ORIGIN` and `PUBLIC_SERVER_URL` with one address.
 
-**`deploy/coolify.yml`.** Coolify fills those same three variables from the domain you give the `web` service, and generates the database password and `BETTER_AUTH_SECRET`.
+The `server` service reads every line of `.env`, but five keys the Compose file sets win: `DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `CORS_ORIGIN` and `NODE_ENV`. The `web` service reads no `.env` line.
 
-**Root `docker-compose.yml`.** Compose reads the `.env` next to the file. The `server` service loads every line of it, but five keys in the compose file win over `.env`:
+After an edit, run `docker compose up -d` or redeploy. A `restart` keeps the old values.
 
-| Key on `server` | Value |
-| --- | --- |
-| `DATABASE_URL` | Built from `POSTGRES_PASSWORD`. A `DATABASE_URL` line of your own does nothing |
-| `BETTER_AUTH_SECRET` | Your `.env` value |
-| `BETTER_AUTH_URL` | Your `.env` value, default `http://localhost:3000` |
-| `CORS_ORIGIN` | Your `.env` value, default `http://localhost:3001` |
-| `NODE_ENV` | Always `production` |
+## Add a variable on Coolify
 
-For one hostname, set `BETTER_AUTH_URL` and `CORS_ORIGIN` to the same URL. See [Reverse proxy](/docs/reference/reverse-proxy).
-
-<Callout type="warn">
-
-The `web` service reads no `.env` line. It gets `SERVER_URL` (`http://server:3000`) and `PUBLIC_SERVER_URL`, which Compose copies from `BETTER_AUTH_URL`. To change the address the browser calls, change `BETTER_AUTH_URL`.
-
-</Callout>
-
-`migrate` gets `DATABASE_URL` alone. `postgres` gets `POSTGRES_DB`, `POSTGRES_USER` and `POSTGRES_PASSWORD`, and the first two are fixed in the compose file.
-
-After editing `.env`, apply it with `docker compose up -d`. Compose recreates the changed containers; no image rebuild is needed.
-
-### Add a variable on Coolify
-
-Coolify passes a container only the variables its compose file names. `deploy/coolify.yml` names none of the optional ones, so a variable you only add under **Environment Variables**, such as `AI_BASE_URL` or `OIDC_DISCOVERY_URL`, never reaches the server. Open **Edit Compose File** and add one line per variable to the `environment:` list of the `server` service:
+Coolify passes a container only the variables its Compose file names, and `deploy/coolify.yml` names none of the optional ones. Edit that file and add one line per variable to the `environment:` list of the `server` service:
 
 ```yaml
 - AI_BASE_URL=${AI_BASE_URL}
 - AI_MODEL=${AI_MODEL}
 ```
 
-Save. Coolify then lists each one under **Environment Variables**: fill in the values and redeploy.
+Save, set each value in the resource's environment-variable settings, and redeploy.
 
-## Setup screen or environment
+## A value in the environment wins
 
-The setup screen (`/setup`) is where the operator enters bank and email credentials. It owns these variables:
+The setup screen (`/setup`) can store 14 variables: `BANKING_PROVIDER`, `POWENS_DOMAIN`, `POWENS_CLIENT_ID`, `POWENS_CLIENT_SECRET`, `ENABLE_BANKING_APP_ID`, `ENABLE_BANKING_PRIVATE_KEY`, `EMAIL_PROVIDER`, `EMAIL_FROM`, `RESEND_API_KEY`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER` and `SMTP_PASSWORD`. Every other variable comes from the environment alone.
 
-| Integration | Variables |
-| --- | --- |
-| Bank provider | `BANKING_PROVIDER`, `POWENS_DOMAIN`, `POWENS_CLIENT_ID`, `POWENS_CLIENT_SECRET`, `ENABLE_BANKING_APP_ID`, `ENABLE_BANKING_PRIVATE_KEY` |
-| Email delivery | `EMAIL_PROVIDER`, `EMAIL_FROM`, `RESEND_API_KEY`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASSWORD` |
+For each of the 14, a non-empty value in the environment wins over the stored one. The screen shows that field read-only, tagged `Set by your server`, never shows a secret, and masks a text or URL value to its first and last four characters. To hand a field to the screen, delete it from the environment and run `docker compose up -d`.
 
-Every other variable comes from the environment alone. A few must stay there, because Freenary needs them before it can serve the screen: `POSTGRES_PASSWORD`, `BETTER_AUTH_SECRET`, the public URL (`FREENARY_URL`, or `BETTER_AUTH_URL` and `CORS_ORIGIN`) and `FREENARY_VERSION`.
+The server reads stored values at startup only; `Finish setup` restarts it when one isn't in use yet. If the stored values fail validation together with the environment, the server ignores them and runs on the environment alone.
 
-### A value in the environment wins
-
-The server reads each variable from the environment first, and falls back to what the setup screen saved. An empty value counts as unset.
-
-- A variable set in the environment shows on the screen as read-only, tagged `Set by your server`.
-- The screen shows the first four and last four characters of such a value, or `…` for a value of eight characters or fewer. It never shows a secret. `SMTP_PORT` and `SMTP_SECURE` show in full.
-- `Save and continue` tests the environment values together with what you typed, and stores only the fields the environment doesn't set.
-- When the environment alone configures a provider completely, the step shows a ready card with a `Test connection` button instead of the form.
-
-This lets you keep secrets in a `.env`, Kubernetes or Vault; the screen never fights it. To hand a value to the screen instead, delete its line from the environment and run `docker compose up -d`.
-
-<Callout type="warn">
-
-Saving one bank provider on the setup screen clears the stored credentials of the other one. Connections made with the old provider then can't sync or disconnect. To switch providers and keep old connections working, put the old provider's credentials in the environment first.
-
-</Callout>
-
-### Where setup values are stored
-
-Each value is one row of the `instance_setting` table, sealed with AES-256-GCM under a key derived from `BETTER_AUTH_SECRET`. The row name is bound to the sealed value, so a row copied to another name won't open. The screen never sends a stored secret back to the browser; an empty secret field keeps the current value.
-
-What follows from that:
-
-- A database dump contains the credentials. Protect it like the `.env` file.
-- A new `BETTER_AUTH_SECRET` makes every stored value unreadable. The server logs one warning per row and turns that integration off until the operator enters it again.
-- The server reads the stored values once, at startup. `Finish setup` restarts the server when a saved value isn't in use yet. That relies on the container restart policy: both Compose files set `restart: unless-stopped`, and `deploy/coolify.yml` relies on Coolify's own. If the server doesn't come back, see [Troubleshooting](/docs/run/troubleshooting#the-server-does-not-restart-after-setup).
-- If the stored values fail validation at startup, the server ignores all of them, runs on the environment alone, and the setup screen shows `Configuration problem` with the reason.
+Stored values are encrypted with `BETTER_AUTH_SECRET`. [Security](/docs/reference/security) says what a new secret breaks.
 
 ## Startup checks
 
@@ -99,48 +49,26 @@ The API server checks its environment once, at startup. The schema is [`packages
 
 {/* env-sync:end */}
 
-- An empty string counts as unset. `PORT=` is the same as no `PORT`, so the default applies.
-- A bad value stops the process before it opens a port, and the server prints the variable that failed:
-
-```bash
-❌ Invalid environment variables: [
-  {
-    origin: "string",
-    code: "invalid_format",
-    format: "regex",
-    pattern: "/^\\d+$/u",
-    path: [ "PORT" ],
-    message: "PORT must be a decimal number between 1 and 65535",
-  }
-]
-error: Invalid environment variables
-```
+An empty value counts as unset. A bad value stops the server before it opens a port, printing `❌ Invalid environment variables:` and the variable's `path` and `message`.
 
 <Callout type="error">
 
-Never set `SKIP_ENV_VALIDATION` at runtime. It turns the whole schema off, so the server starts with a broken configuration. `apps/server/Dockerfile` sets it in the `builder` stage only, because a build has no database and no secret.
+Never set `SKIP_ENV_VALIDATION` at runtime. Any non-empty value turns the whole schema off, and the server starts with a broken configuration.
 
 </Callout>
 
-### What stops a start
+## What stops a start
 
-| Mistake | Who refuses | Message |
+| Variable | Refused by | Message |
 | --- | --- | --- |
-| `POSTGRES_PASSWORD` or `BETTER_AUTH_SECRET` unset or empty | Compose, before any container | `Set POSTGRES_PASSWORD in .env`, `Set BETTER_AUTH_SECRET in .env` (`deploy/docker-compose.yml` words them slightly differently) |
-| `FREENARY_URL` unset or empty | `deploy/docker-compose.yml` | `Set FREENARY_URL to the public URL of the web app, such as https://freenary.example.com` |
-| No `.env` next to the root `docker-compose.yml` | Compose, on the `env_file` of `server` | Compose names the missing file |
-| `FREENARY_VERSION` names a tag that doesn't exist | The image pull | `not found` |
-| `BETTER_AUTH_SECRET` under 32 characters | The schema | The invalid-environment report, then exit |
-| A value outside its enum, URL format or number range | The schema | The invalid-environment report, then exit |
-| `NODE_ENV=production` with no `BETTER_AUTH_SECRET`, `DATABASE_URL`, `BETTER_AUTH_URL` or `CORS_ORIGIN` | The schema | The invalid-environment report. Those defaults apply outside production only |
-| `TRUSTED_PROXIES` with an IPv4-mapped entry | The schema | `write an IPv4-mapped address in its IPv4 form, e.g. 10.0.0.0/24` |
-| `EMAIL_PROVIDER=resend` with no key | The email registry | `EMAIL_PROVIDER=resend requires RESEND_API_KEY to be set.` |
-| `EMAIL_PROVIDER=smtp` with no sender | The email registry | `EMAIL_PROVIDER=smtp requires EMAIL_FROM to be set.` |
-| `AUTH_COOKIE_DOMAIN` with a trailing dot, a single label, or not a parent of both hostnames | The cookie policy | A message that names the value and the fix |
-| Two hostnames, no `AUTH_COOKIE_DOMAIN`, and `BETTER_AUTH_URL` on plain HTTP | The cookie policy | `The API (<api origin>) and the web app (<web origin>) are on different hosts, so the session cookie needs SameSite=None — which browsers reject over plain HTTP. …` |
-| The `instance_setting` table can't be read, for example the database is unreachable | The setup values loader, in production | The error, then exit |
-
-Outside production, the two-hostname cookie check is only a warning. The self-hosting Compose files set `production`, so a deployed instance always gets the refusal. `EMAIL_PROVIDER=resend` checks the key before the sender, and `smtp` checks the sender before the host, so a setup missing both reports the first.
+| `POSTGRES_PASSWORD` or `BETTER_AUTH_SECRET` unset | Compose | `Set POSTGRES_PASSWORD in .env`, or similar |
+| `FREENARY_URL` unset | `deploy/docker-compose.yml` | `Set FREENARY_URL to the public URL of the web app, …` |
+| Any value outside its format, enum or range, such as a `BETTER_AUTH_SECRET` under 32 characters | The schema | The invalid-environment report |
+| `BETTER_AUTH_SECRET`, `DATABASE_URL`, `BETTER_AUTH_URL` or `CORS_ORIGIN` unset in production | The schema | The invalid-environment report |
+| `EMAIL_PROVIDER` without its other values | The email registry | `EMAIL_PROVIDER=resend requires RESEND_API_KEY to be set.` |
+| `TRANSACTION_CLASSIFIER` without its URL or model | The classifier registry | `TRANSACTION_CLASSIFIER=<protocol> requires TRANSACTION_CLASSIFIER_MODEL to be set.` |
+| `AUTH_COOKIE_DOMAIN` wrong, or two hostnames over plain HTTP without it | The cookie policy | See [Two subdomains](/docs/reference/reverse-proxy#two-subdomains) |
+| `DATABASE_URL` unreachable, in production | The setup values loader | `The instance configuration could not be read: …` |
 
 ## Core and secrets
 
@@ -154,9 +82,7 @@ Outside production, the two-hostname cookie check is only a warning. The self-ho
 
 {/* env-sync:end */}
 
-To change the host port, use `SERVER_PORT`, never `PORT`.
-
-A new `BETTER_AUTH_SECRET` signs everyone out, resets every two-factor enrolment and makes the setup values unreadable. See [Security](/docs/reference/security).
+To change the host port, set `SERVER_PORT`, never `PORT`.
 
 ## Public URLs and cookies
 
@@ -171,7 +97,7 @@ A new `BETTER_AUTH_SECRET` signs everyone out, resets every two-factor enrolment
 
 {/* env-sync:end */}
 
-With one hostname, `AUTH_COOKIE_DOMAIN` stays unset. See [Reverse proxy](/docs/reference/reverse-proxy) for two subdomains and trusted proxies.
+[Reverse proxy](/docs/reference/reverse-proxy) shows the values for one hostname and for two.
 
 ## Database
 
@@ -179,15 +105,13 @@ With one hostname, `AUTH_COOKIE_DOMAIN` stays unset. See [Reverse proxy](/docs/r
 
 | Variable | Default | What it does | Absent or wrong |
 | --- | --- | --- | --- |
-| `DATABASE_URL` | `postgresql://postgres:password@localhost:5432/freenary` outside production, required in production | The PostgreSQL connection string the Prisma driver adapter opens. | An empty value stops the start. An unreachable host fails at the first query, not at boot, because the driver connects late. In the Docker stack Compose builds this value from `POSTGRES_PASSWORD`. |
+| `DATABASE_URL` | `postgresql://postgres:password@localhost:5432/freenary` outside production, required in production | The PostgreSQL connection string the Prisma driver adapter opens. | An empty value stops the start. An unreachable host stops it too, because the server reads the database at startup. In the Docker stack Compose builds this value from `POSTGRES_PASSWORD`. |
 
 {/* env-sync:end */}
 
-No variable sets a pool size. See [Scaling](/docs/reference/scaling).
-
 ## Email
 
-Normally set on the setup screen. See [Email](/docs/run/email).
+Usually set on the setup screen: see [Email](/docs/run/email).
 
 {/* env-sync:start email */}
 
@@ -206,7 +130,7 @@ Normally set on the setup screen. See [Email](/docs/run/email).
 
 ## Sign-in
 
-Each provider stays off until both of its values are set. See [Sign-in](/docs/run/sign-in) for redirect URLs.
+See [Sign-in](/docs/run/sign-in) for redirect URLs.
 
 {/* env-sync:start sign-in */}
 
@@ -228,7 +152,7 @@ Each provider stays off until both of its values are set. See [Sign-in](/docs/ru
 
 ## Bank providers
 
-Normally set on the setup screen. See [Bank providers](/docs/reference/bank-providers).
+Usually set on the setup screen: see [Bank providers](/docs/reference/bank-providers).
 
 {/* env-sync:start bank */}
 
@@ -243,9 +167,11 @@ Normally set on the setup screen. See [Bank providers](/docs/reference/bank-prov
 
 {/* env-sync:end */}
 
-An incomplete set isn't a startup error: Freenary reports no bank provider, and the bank step disappears.
+An incomplete set doesn't stop the start: Freenary reports no bank provider.
 
 ## Assistant
+
+Freenary ships without a model. To give every user one, point the instance at an OpenAI-compatible chat-completions endpoint. Only the environment configures it, not the setup screen.
 
 {/* env-sync:start assistant */}
 
@@ -257,22 +183,17 @@ An incomplete set isn't a startup error: Freenary reports no bank provider, and 
 
 {/* env-sync:end */}
 
-Any OpenAI-compatible chat-completions endpoint works. Freenary posts to `<AI_BASE_URL>/chat/completions`, and the model must support tool calling, or it invents figures without reporting an error.
-
 ```dotenv
-# A hosted gateway
 AI_BASE_URL=https://openrouter.ai/api/v1
 AI_API_KEY=<your key>
 AI_MODEL=<model id>
 ```
 
-```dotenv
-# A runtime on your own server, as a service on the same Docker network
-AI_BASE_URL=http://ollama:11434/v1
-AI_MODEL=<model id>
-```
+On the same Docker network, use the model server's service name, such as `http://ollama:11434/v1`: `localhost` is the `server` container itself.
 
-`http://localhost:11434/v1` would point at the API server container itself. See [Assistant](/docs/use/assistant) for what each question sends.
+Freenary posts to `<AI_BASE_URL>/chat/completions`. The model must support tool calling, because it's told to state only figures a tool returned.
+
+Each question sends that endpoint the data listed in [What data goes where](/docs/use/assistant#what-data-goes-where).
 
 ## Categorisation
 
@@ -295,21 +216,15 @@ AI_MODEL=<model id>
 
 {/* env-sync:end */}
 
-A classifier request carries `normalisedDescriptor`, `merchantKey`, `counterpartyName`, `merchantCategoryCode`, `direction`, `amountBucket`, `currency`, `country`, `channel` and `path`. It carries no exact amount, date, IBAN, account or user. For a transfer or direct debit, `merchantKey` is left out, because there it is the creditor account number. Answers are cached per merchant across the whole instance, so each merchant is asked about once.
-
 <Callout type="warn">
 
-Leave `DICTIONARY_PUBLIC_KEY` unset. The published merchant dictionary carries no signature, so a set key makes the server refuse it, log `[categorisation] Dictionary signature missing: <path> — refusing to load`, and stop matching merchants. The schema doesn't check the key's format, so nothing catches this at startup. Set it only when you sign a dictionary yourself (`cd packages/api && bun run generate:key`).
+Leave `DICTIONARY_PUBLIC_KEY` unset unless you sign a dictionary yourself. The published merchant dictionary has no signature, so a set key makes the server refuse it and stop matching merchants, with no startup error.
 
 </Callout>
 
-## Logging
+## Read outside the schema
 
-No variable configures logs. In production, container output is the only destination. See [Troubleshooting](/docs/run/troubleshooting).
-
-## Not in the schema
-
-The code reads these straight from `process.env`, so a typo produces no startup error.
+The code reads these from `process.env` directly, so a typo raises no startup error.
 
 {/* env-sync:start raw */}
 
@@ -326,9 +241,7 @@ The code reads these straight from `process.env`, so a typo produces no startup 
 
 {/* env-sync:end */}
 
-`VERCEL_ENV`, `VERCEL_URL` and `VERCEL_PROJECT_PRODUCTION_URL` are read by the web app only when `VITE_SERVER_URL` is a relative path, which never happens in Docker.
-
-These two belong to the web app's client schema. Vite builds them into the bundle, so the image build decides their values:
+The web app's client schema holds two more. The image build fixes their values:
 
 {/* env-sync:start client */}
 
@@ -339,9 +252,9 @@ These two belong to the web app's client schema. Vite builds them into the bundl
 
 {/* env-sync:end */}
 
-## Compose-only variables
+## Compose variables
 
-No application code reads these; they configure the containers.
+Only Compose reads these.
 
 {/* env-sync:start compose */}
 
@@ -356,7 +269,7 @@ No application code reads these; they configure the containers.
 
 {/* env-sync:end */}
 
-The development stack reads a few more. The production files ignore them, and [the local stack guide](https://github.com/suiramdev/freenary/blob/main/docs/engineering/local-stack.md) covers them:
+The development stack reads a few more, which the production files ignore:
 
 {/* env-sync:start compose-dev */}
 
@@ -382,43 +295,18 @@ These appear in templates but do nothing in production:
 
 {/* env-sync:end */}
 
-## Minimal files
-
-`deploy/docker-compose.yml`, in the panel's environment or a `.env` next to it:
-
-```dotenv
-FREENARY_URL=https://freenary.example.com
-FREENARY_VERSION=latest
-POSTGRES_PASSWORD=<output of: openssl rand -hex 16>
-BETTER_AUTH_SECRET=<output of: openssl rand -hex 32>
-```
-
-Root `docker-compose.yml`, behind your own proxy on one hostname:
-
-```dotenv
-FREENARY_VERSION=latest
-POSTGRES_PASSWORD=<output of: openssl rand -hex 16>
-BETTER_AUTH_SECRET=<output of: openssl rand -hex 32>
-BETTER_AUTH_URL=https://freenary.example.com
-CORS_ORIGIN=https://freenary.example.com
-SERVER_PORT=127.0.0.1:3000
-WEB_PORT=127.0.0.1:3001
-```
-
-Add bank and email credentials on the setup screen after the first sign-in.
-
 <Cards>
 
 <Card
   title="Reverse proxy"
   href="/docs/reference/reverse-proxy"
-  description="One hostname, two subdomains, trusted proxies and CDNs."
+  description="One hostname or two, and trusted proxies."
 />
 
 <Card
   title="Security"
   href="/docs/reference/security"
-  description="Ports, secrets, the operator account and the checklist."
+  description="Secrets and what leaves the instance."
 />
 
 </Cards>

@@ -5,30 +5,9 @@ Thanks for contributing to Freenary.
 ## Before You Start
 
 - Read [`CONTEXT.md`](../CONTEXT.md) — Freenary is an open-source personal finance and wealth-management platform. Keep changes aligned with that vision.
-- Read [Contribute](../apps/fumadocs/content/docs/next/contribute.mdx) in the documentation for the full workflow, and [`docs/engineering`](../docs/engineering) for how the internals work.
+- Set up from [Contribute](../apps/fumadocs/content/docs/next/contribute.mdx) in the documentation: it holds the first-run steps and both ways to run the code. This file holds the rules a pull request follows. [`docs/engineering`](../docs/engineering) covers how the internals work.
 - Keep changes scoped to a clear user-facing improvement, bug fix, or refactor.
 - Follow the code standards in [`AGENTS.md`](../AGENTS.md) — the repo uses Ultracite (Oxlint + Oxfmt) with strict, auto-fixable rules.
-
-## Local Setup
-
-Containerised stack (needs Docker and a free port 80, applies the migrations for you):
-
-```bash
-bun install
-bun run dev:up            # PostgreSQL, migrations, API server, web app, docs site
-```
-
-Local stack, with the applications on your host:
-
-```bash
-bun install
-cp .env.example .env      # the Postgres container reads the root .env
-bun run db:start          # starts the Postgres container
-bun run db:push           # applies the Prisma schema
-bun run dev               # web on 3001, server on 3000, docs on 4000
-```
-
-There is no seed script. Create an account through the sign-in screen. `bun run dev:up` configures no email provider, so sign-up returns a session at once and asks for no code — and so does the `bun run dev` path above. To work on the one-time-code flows, start the stack with `bun run dev:mail` instead: it adds a Mailpit inbox and points the API server at it, so the sign-up code, the verification code and the password reset all land in that inbox. See [Contribute](../apps/fumadocs/content/docs/next/contribute.mdx) for the details, and [Configuration](../apps/fumadocs/content/docs/next/reference/configuration.mdx) for every environment variable.
 
 ## Branch Naming
 
@@ -44,19 +23,21 @@ Avoid vague names like `test`, `misc`, or `changes`.
 
 ## Before Opening a PR
 
-Run the same checks that CI runs, in this order:
+Run the same commands as CI's `ci` job, in this order:
 
 ```bash
+bun install --frozen-lockfile
 bun run check         # Oxlint + Oxfmt
 bun run check-types   # TypeScript
 bun run check:fsd     # Feature-Sliced Design layers and public APIs
 bun run docs:check    # documentation gate
+bun run env:check     # .env.example and the configuration reference match packages/env
 bun run build         # every app
 ```
 
 Most lint/format issues are auto-fixable with `bun run fix`.
 
-CI runs one more job that no root script covers: it parses every Compose file with `docker compose config --quiet`, and it asserts that `docker-compose.yml` still refuses an empty `POSTGRES_PASSWORD` and `BETTER_AUTH_SECRET`. Reproduce it before you change either file.
+CI's `compose` job has no root script. It parses `docker-compose.dev.yml` (alone and with `docker-compose.mail.yml`), `docker-compose.proxy.yml`, `docker-compose.yml`, `deploy/docker-compose.yml` and `deploy/coolify.yml` with `docker compose config --quiet`. It also asserts that `docker-compose.yml` refuses an empty `POSTGRES_PASSWORD` and `BETTER_AUTH_SECRET`, and that `deploy/docker-compose.yml` refuses an empty `FREENARY_URL`, `POSTGRES_PASSWORD` and `BETTER_AUTH_SECRET`. Reproduce it from [`.github/workflows/ci.yml`](workflows/ci.yml) before you change any of these files.
 
 CI runs no tests, and there is no root `test` script. Run the test files your change touches by hand with `bun test <path>`.
 
@@ -70,7 +51,7 @@ If your change alters documented behavior — a screen, an API route, an environ
 
 Follow the [pull request template](pull_request_template.md). Each pull request should:
 
-- open against `dev` — `main` holds released code, and `dev` is the branch a release is cut from
+- open against `dev`; `main` holds released code, and a release is cut from `main` after `dev` merges into it
 - explain the user-visible change
 - stay focused on a single topic when possible
 - include screenshots or screen recordings for new UI or behavior changes
@@ -94,4 +75,4 @@ Do not paste code from a source whose license forbids it, and do not add a depen
 
 ## Release Process
 
-Releases are maintainer-managed: a maintainer merges `dev` into `main` and runs the `Release` workflow, which creates the tag, the images and the GitHub release. Do not tag, and do not include a version bump in a normal contribution unless a maintainer asks for one. See [Contribute](../apps/fumadocs/content/docs/next/contribute.mdx).
+Releases are maintainer-managed: a maintainer merges a docs snapshot (`cd apps/fumadocs && bun run docs:snapshot X.Y.Z`) into `dev`, merges `dev` into `main`, and runs the `Release` workflow, which creates the tag, the images and the GitHub release. Do not tag, and do not include a version bump in a normal contribution unless a maintainer asks for one. See [`docs/engineering/releasing.md`](../docs/engineering/releasing.md).

@@ -1,94 +1,56 @@
 ---
 title: Scaling
-description: What holds state, what a second API replica shares, the limits the Compose files set, and what to measure as an instance grows.
-icon: Gauge
+description: Shared state, sync ownership, database connections, storage growth, and replication boundaries.
+icon: Scaling
 ---
 
-One instance goes a long way: all state is in PostgreSQL, and the API server keeps nothing on disk. This page is for planning a bigger instance or a second API replica.
+Use these limits to size one instance or add web and API replicas. PostgreSQL is the only durable runtime dependency and the first resource to watch.
 
-## What holds state
+## Shared state
 
-| Container | State |
-| --- | --- |
-| `postgres` | Everything, in one named volume mounted at `/var/lib/postgresql` |
-| `server` | Nothing on disk. In memory: the merchant dictionary, loaded from the image, and the setup values, read once at startup |
-| `web` | Nothing |
-| `migrate` | Nothing. It applies migrations and exits |
+The web service is stateless. API replicas share users, sessions, passkey challenges, rate-limit counters, bank data, assistant conversations and setup state through PostgreSQL. Sticky sessions aren't required.
 
-The volume key is `freenary_postgres_data` in both Compose files. The root file sets the project name `freenary`, so Docker names the volume `freenary_freenary_postgres_data`. Coolify uses `freenary-postgres-data` with its own prefix. This is the one volume to size and back up.
+Instance settings are read once when each API process starts. Restart every replica after changing the environment or setup-screen values. `Finish setup` exits only the API process that handled the request.
 
-## A second API replica
+Production writes no application data to container disks. It schedules no background jobs, sync timers or cleanup timers. The only timer waits 250 milliseconds before that setup exit; a supervisor must start the process again.
 
-Nothing in the code prevents one. No Compose file sets up replicas or a load balancer, so the setup is yours. What they share:
+Outside production, the event logger writes local files. Container engines and hosting panels also keep their own logs, so configure log rotation separately.
 
-- **Sessions** are read from the `session` table on every request. There's no cookie cache and no external store.
-- **Rate limits** are counted in the `rate_limit` table, so replicas count into the same rows.
-- **No background jobs.** There's no queue, scheduler, cron or Redis. A bank sync runs inside the request that started it, so two replicas can't run the same job twice.
-- **No local files.** In production the server writes nothing to disk.
+## One sync per user
 
-Each replica loads its own copy of the merchant dictionary from the same image, so they can't disagree.
+A sync runs inside the API request that started it. Freenary claims one `sync_run` row for the user, so another tab or replica reads progress instead of starting duplicate work.
 
-<Callout type="warn">
+A process refreshes progress at most once a second. Another request can take over after five minutes without a write. The claim's start time prevents a displaced process from overwriting the new run's progress.
 
-Each replica reads the setup values once, at startup. `Finish setup` restarts only the replica that answered it. Restart every other replica afterwards, or they keep the old values. If the setup screen shows `The server did not restart`, restart all replicas and press `Try again`.
+Users can sync concurrently with each other. Within one user's sync, bank connections, accounts and transaction writes run in sequence. Freenary has no worker queue or scheduled import.
 
-</Callout>
+## Connections per replica
 
-## Database connections
+Each API process creates two Prisma clients: one for the application and one for Better Auth. Each uses `PrismaPg` without a configured pool size, so the `pg` default applies.
 
-Each API replica opens two connection pools (two Prisma clients), each at the `pg` library's default size. PostgreSQL runs with the default `max_connections` of the `postgres:18` image. Each pool holds up to 10 connections, so plan on about 20 per replica against PostgreSQL's default limit of 100. No variable or URL parameter changes the pool size. Watch the connection count as you add replicas.
+The default is up to 10 connections per pool, or 20 per API replica. Leave room for migrations, backups and administration when setting PostgreSQL's connection limit or choosing a replica count.
 
-## Limits in the Compose files
-
-| Setting | Value |
-| --- | --- |
-| CPU and memory limits | None |
-| Log rotation | None: Docker's default driver, unbounded |
-| Restart policy | `unless-stopped` on `postgres`, `server` and `web` in both Compose files. `deploy/coolify.yml` sets none and relies on Coolify |
-| Health checks | `postgres`, `server` and `web`: every 10 s, 5 s timeout, 5 retries, plus a 10 s start period for the apps |
-| Signals | `init: true` on `server` and `web` |
-
-To cap a service, add limits in your copy of the Compose file:
-
-```yaml
-services:
-  server:
-    deploy:
-      resources:
-        limits:
-          cpus: "1.0"
-          memory: 1g
-```
+Web replicas don't open database connections. The one-shot migration service opens its own client while a deployment starts.
 
 ## What grows
 
-- **The database volume**, with every account's transaction history. It only grows.
-- **Calls to the model endpoint**, one or more per assistant question, capped at 30 questions per 300 seconds per user.
+PostgreSQL grows with accounts, transactions, holdings, users, sessions and rate-limit keys. It also retains assistant conversations after a user starts a new one, and caches classifier results by input signature.
 
-The merchant dictionary isn't state: each image update replaces it.
+A forced sync upserts the same provider transactions instead of appending another copy. Removing a bank connection cascades through its accounts, transactions and holdings.
 
-## What to measure
+The merchant dictionary lives inside the server image. It consumes image and per-process memory, not database or volume space.
 
-There's no metrics endpoint. Three numbers cover most needs:
+## Volumes
 
-| Number                 | Where                                             |
-| ---------------------- | ------------------------------------------------- |
-| PostgreSQL connections | `pg_stat_activity`                                |
-| Volume size            | `docker system df -v`                             |
-| API response codes     | The `server` container logs, one line per request |
+Each compose file has one PostgreSQL volume and no application volume:
 
-<Cards>
+| Compose file                | Logical volume           |
+| --------------------------- | ------------------------ |
+| `docker-compose.yml`        | `freenary_postgres_data` |
+| `deploy/docker-compose.yml` | `freenary_postgres_data` |
+| `deploy/coolify.yml`        | `freenary-postgres-data` |
+| `docker-compose.dev.yml`    | `pgdata`                 |
 
-<Card
-  title="Updates and backups"
-  href="/docs/run/updates-and-backups"
-  description="Back up the one volume that holds state."
-/>
+Docker or the hosting panel prefixes the actual volume name with its project name. Back up the volume mounted at `/var/lib/postgresql`, not a guessed host name.
 
-<Card
-  title="Configuration"
-  href="/docs/reference/configuration"
-  description="Every variable, including DATABASE_URL."
-/>
-
-</Cards>
+Scale only after monitoring database connections, query latency, sync duration, memory and disk growth. [API](/docs/reference/api) describes the request limits; [Updates and backups](/docs/run/updates-and-backups) protects the shared state.

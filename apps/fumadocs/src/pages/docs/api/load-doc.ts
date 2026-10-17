@@ -14,6 +14,8 @@ export type NewestReleaseLink = {
 
 export interface LoadedDoc {
   path: string;
+  title: string;
+  description: string;
   markdownUrl: string;
   pageTree: SerializedPageTree;
   version: string;
@@ -56,6 +58,8 @@ export const loadDoc = createServerFn({
 
     return {
       path: page.path,
+      title: page.data.title,
+      description: page.data.description,
       markdownUrl: encodeMarkdownUrl(page.slugs, page.locale),
       pageTree: await source.serializePageTree(source.getPageTree()),
       version,

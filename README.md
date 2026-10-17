@@ -18,7 +18,7 @@ The full documentation lives at [freenary.dev](https://freenary.dev) (source in 
 - [Use Freenary](https://freenary.dev/docs/use/budget): budget, bank connections, assistant, account
 - [Run your instance](https://freenary.dev/docs/run/email): email, sign-in, updates, backups, troubleshooting
 - [Reference](https://freenary.dev/docs/reference/configuration): configuration, bank providers, reverse proxy, API
-- [Contribute](https://freenary.dev/docs/contribute): run the code, run the checks, open a pull request
+- [Contribute](apps/fumadocs/content/docs/next/contribute.mdx): run the code, run the checks, open a pull request
 
 ## Development
 
@@ -29,22 +29,7 @@ bun install
 bun run dev:up
 ```
 
-`dev:up` runs everything in Docker at `http://web.<slug>.freenary.localhost`. Without Docker for the apps:
-
-```bash
-cp .env.example .env
-bun run db:start
-bun run db:push
-bun run dev          # web 3001, server 3000, docs 4000
-```
-
-Run the checks before opening a pull request:
-
-```bash
-bun run check        # lint and format
-bun run check-types  # TypeScript
-bun run build        # every app
-```
+`dev:up` runs everything in Docker at `http://web.<slug>.freenary.localhost`. [Contribute](apps/fumadocs/content/docs/next/contribute.mdx) covers the local setup without Docker and the checks to run before a pull request.
 
 ## Contributing
 

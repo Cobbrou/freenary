@@ -4,16 +4,16 @@ description: Deploy Freenary with Dokploy, Coolify or Docker Compose, then creat
 icon: Rocket
 ---
 
-Pick the tab that matches your server. Each one ends with Freenary running at `https://freenary.example.com`. Replace that hostname with your own everywhere on this page.
+Pick the tab that matches your server. Each one ends with Freenary running at `https://freenary.example.com`, so replace that hostname with your own everywhere on this page. Check [Before you install](/docs/get-started/before-you-install) first.
 
 <Tabs items={["Dokploy", "Coolify", "Docker Compose"]}>
 
 <Tab value="Dokploy">
 
-1. In a Dokploy project, create a **Compose** service and keep the type **Docker Compose**.
+1. In a Dokploy project, create a **Compose** service of type **Docker Compose**.
 2. In **General**, set the provider to **Git**:
    - Repository URL: `https://github.com/suiramdev/freenary.git`
-   - Branch: `main`
+   - Branch: `dev`
    - Compose Path: `./deploy/docker-compose.yml`
 3. Generate two secrets on any machine with OpenSSL:
 
@@ -22,7 +22,7 @@ Pick the tab that matches your server. Each one ends with Freenary running at `h
    echo "BETTER_AUTH_SECRET=$(openssl rand -hex 32)"
    ```
 
-4. Open **Environment** and add these four lines, with your hostname and the two lines the commands printed:
+4. In **Environment**, add these lines, with your hostname and the two printed lines:
 
    ```dotenv
    FREENARY_URL=https://freenary.example.com
@@ -31,24 +31,30 @@ Pick the tab that matches your server. Each one ends with Freenary running at `h
    BETTER_AUTH_SECRET=<printed value>
    ```
 
-5. Open **Domains** and add one domain: service `web`, host `freenary.example.com`, container port `3001`, HTTPS on.
+5. In **Domains**, add one domain: service `web`, host `freenary.example.com`, container port `3001`, HTTPS on.
 6. Press **Deploy**.
 
-Prefer one paste? Run `bun run deploy:dokploy` in a clone of the repository and import the string under **Advanced** → **Import**. The template generates the secrets and a free `http://` test hostname. To use your own domain, change the host under **Domains** (HTTPS on), set `FREENARY_URL` to the same `https://` address, and deploy again.
+**Prefer one paste?** In a clone of the repository, run:
+
+```bash
+bun run deploy:dokploy
+```
+
+It prints a template. Create a Compose service, open **Advanced** → **Base64 import**, and paste it. The template generates both secrets and a test hostname on `http://`. That hostname can't link a bank, so change the host under **Domains** to yours with HTTPS on, set `FREENARY_URL` to the same `https://` address, and deploy again.
 
 </Tab>
 
 <Tab value="Coolify">
 
 1. In a Coolify project, select **New** → **Docker Compose Empty**.
-2. Paste the contents of [`deploy/coolify.yml`](https://raw.githubusercontent.com/suiramdev/freenary/main/deploy/coolify.yml). Coolify generates the database password and the auth secret for you.
-3. Open the `web` service and set its domain to your hostname followed by the container port:
+2. Paste the contents of [`deploy/coolify.yml`](https://raw.githubusercontent.com/suiramdev/freenary/dev/deploy/coolify.yml). Coolify generates the database password and the auth secret.
+3. Set the domain of the `web` service to your hostname followed by the container port:
 
    ```text
    https://freenary.example.com:3001
    ```
 
-   The `:3001` only tells Coolify which container port to use. Visitors still reach the normal HTTPS address.
+   The `:3001` tells Coolify which container port to route to. Visitors still use the plain HTTPS address.
 
 4. Press **Deploy**.
 
@@ -56,13 +62,13 @@ Prefer one paste? Run `bun run deploy:dokploy` in a clone of the repository and 
 
 <Tab value="Docker Compose">
 
-Use this tab if you run your own reverse proxy on the server, such as Caddy or nginx. Freenary listens on the loopback interface only, and your proxy sends `https://freenary.example.com` to `127.0.0.1:3001`. See [Reverse proxy](/docs/reference/reverse-proxy) for proxy examples, and for proxies that run in Docker.
+Use this tab when you run your own reverse proxy on the server, such as Caddy or nginx. Freenary listens on the loopback interface only, and your proxy sends `https://freenary.example.com` to `127.0.0.1:3001`. [Reverse proxy](/docs/reference/reverse-proxy) has proxy examples.
 
 1. Download the Compose file:
 
    ```bash
    mkdir freenary && cd freenary
-   curl -O https://raw.githubusercontent.com/suiramdev/freenary/main/docker-compose.yml
+   curl -O https://raw.githubusercontent.com/suiramdev/freenary/dev/docker-compose.yml
    ```
 
 2. Create the `.env` file. Replace the hostname on both URL lines first:
@@ -79,7 +85,7 @@ Use this tab if you run your own reverse proxy on the server, such as Caddy or n
    EOF
    ```
 
-   Both URLs are the same on purpose: the web app forwards API calls to the server, so one hostname serves everything.
+   Both URLs are the same address: the web app forwards API calls to the server, so one hostname serves everything.
 
 3. Start Freenary:
 
@@ -95,31 +101,44 @@ Use this tab if you run your own reverse proxy on the server, such as Caddy or n
 
 `FREENARY_VERSION=latest` follows each new release. To stay on one version, see [Updates and backups](/docs/run/updates-and-backups).
 
-<Callout type="warn">
-
-Keep `BETTER_AUTH_SECRET` once the instance is running. Freenary uses it to encrypt the bank and email credentials you enter later. A new secret makes them unreadable.
-
-</Callout>
-
 ## Check that it works
 
-Open `https://freenary.example.com` in a browser. The first start takes a minute while the database is prepared. You should see the **Welcome to Freenary** sign-in screen.
+Freenary starts in order:
 
-Something else? See [Troubleshooting](/docs/run/troubleshooting).
+1. The database starts and reports healthy.
+2. `migrate` prepares the database, then exits. It runs again on every start.
+3. The server starts once the migrations succeed.
+4. The web app starts once the server reports healthy.
+
+Then open `https://freenary.example.com`. You should see the **Welcome to Freenary** sign-in screen. Something else, or a stopped container? See [Freenary won't start](/docs/run/troubleshooting#freenary-wont-start).
 
 ## Create your account now
 
-**The first account to sign in becomes the operator.** It's the only account that can change the instance's settings. Until you create it, anyone who finds your address can claim that role, so do it right away.
+<Callout type="warn" title="The first account to get a session becomes the operator">
+
+The operator is the only account that can change the instance's settings. Until someone claims it, anyone who reaches your address can, so create your account right away. When email is configured, the role goes to the first account that enters its emailed code.
+
+</Callout>
 
 1. Type your email address. Freenary shows a **Name** and a **Password** field.
 2. Fill them in and press **Create account**.
 
+If someone else got there first, see [The wrong account became the operator](/docs/run/troubleshooting#the-wrong-account-became-the-operator).
+
 ## The setup screen
 
-You land on the setup screen, where the operator enters the bank and email credentials. You have two options:
+You land on the setup screen, where the operator enters the bank and email credentials. Until you finish it, every account that signs in is sent there. It has three steps: **Bank**, **Email** and **Done**.
 
-- **Connect a bank now.** Keep this tab open and continue to the next page.
-- **Skip it for now.** Choose **Skip for now** and press **Continue** on each step, then press **Finish setup**. You can come back any time at `https://freenary.example.com/setup`.
+- **Connect a bank now.** Keep this tab open and continue to [Connect a bank](/docs/get-started/connect-a-bank).
+- **Skip it for now.** On **Bank** and **Email**, choose **Skip for now** and press **Continue**. On **Done**, press **Finish setup**.
+
+You can come back later at `https://freenary.example.com/setup`.
+
+<Callout type="warn">
+
+Keep `BETTER_AUTH_SECRET` once the instance runs. Freenary encrypts the bank and email credentials you enter on the setup screen with it, so a new secret makes them unreadable. See [What a rotation costs](/docs/reference/security#what-a-rotation-costs).
+
+</Callout>
 
 <Cards>
   <Card

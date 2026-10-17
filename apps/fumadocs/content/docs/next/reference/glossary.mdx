@@ -1,56 +1,52 @@
 ---
 title: Glossary
-description: The words Freenary and this documentation use, one line each.
+description: The words the Freenary app shows, one line each.
 icon: BookA
 ---
 
-Each term means the same thing on every page and in the app.
+Each word means the same thing on every page and in the app.
 
-## Your instance
+## Instance and people
 
-- **Instance**: your installed copy of Freenary, with its own users and database.
-- **Operator**: the person who installs and runs the instance; the first account to sign in.
-- **Setup screen**: `/setup`, where the operator enters bank and email credentials.
-- **Your hostname**: the address of your instance, such as `freenary.example.com`. `FREENARY_URL` is its full `https://` URL.
-- **Hosting panel**: a tool such as Dokploy or Coolify that runs Freenary's containers and adds HTTPS.
-- **Bank provider**: the service that links Freenary to banks: Powens or Enable Banking.
-- **Powens sandbox**: the free Powens test domain, with a test bank.
-
-## Your account
-
-- **Account**: your way into an instance: your name, email address and sign-in methods.
-- **One-time code**: a 6-digit code Freenary emails you to confirm an address or reset a password. It's valid for 10 minutes.
+- **Instance**: your installed copy of Freenary, with its own accounts and data.
+- **Operator**: the first account on the instance, and the only one that can open the setup screen.
+- **Setup**: the screen at `/setup` where the operator picks a **Bank provider** and an email service.
+- **Tax residency**: the countries you pay tax in, picked once when you first sign in. They decide which banks you can connect.
+- **Limited support**: a tax residency country Freenary supports only in part. See [Your account](/docs/use/account#first-steps).
+- **Planned**: a sidebar item for a screen that doesn't exist yet.
+- **First steps**: the checklist at the bottom of the sidebar until you've connected a bank, set a plan and protected your account.
+- **One-time code**: a code Freenary emails you to confirm your address or reset your password.
 - **Passkey**: a key stored on your device, so you sign in with your device unlock instead of a password.
-- **Two-factor authentication**: a code from your authenticator app on top of your password. Recovery codes replace a lost app.
-- **Single sign-on**: signing in through an identity provider the operator connected.
+- **Two-factor authentication**: a code from your authenticator app on top of your password. A **Recovery code** replaces a lost app.
 
-## Your banks
+## Banks
 
-- **Bank connection**: one link between Freenary and one of your banks, holding the accounts that bank shared.
-- **Bank account**: one account in a bank connection, such as a current account, savings account or card.
-- **Sync**: fetching new transactions from your bank into Freenary.
-- **Transaction**: one entry your bank booked, with a date, an amount and the bank's description.
-- **Company**: the other party of a transaction, as Freenary reads it from that description.
-- **Internal transfer**: a pair of transactions moving money between two of your own accounts. Freenary matches and marks both.
+- **Bank provider**: the service that links Freenary to banks, Powens or Enable Banking.
+- **Bank accounts**: the card under Settings, `Connections`, that lists your connected banks and their accounts.
+- **Connect**: start linking a bank. You sign in at your bank, then come back to Freenary.
+- **Sync transactions**: fetch new transactions from your banks. Opening Budget does it too.
+- **Disconnect**: remove a bank, its accounts and their transactions from Freenary.
 
-## Your budget
+## Budget
 
-- **Category**: the label a transaction carries, such as `Groceries`.
-- **Category group**: one of the three fixed sections of the flow: `Income`, `Savings & investment` and `Spending`.
-- **Custom category**: a category you create for budget lines, with your own name and icon.
-- **Subcategory**: a custom category under another of your top-level custom categories. Only one level is allowed.
-- **Budget line**: one monthly amount you plan for one category.
-- **Budgeting profile**: all your budget lines together.
-- **Period**: the date range the Budget screen shows: one month, three months or one year.
-- **Aggregation**: how a multi-month period reports a figure: `Total`, `Monthly avg.` or `Monthly median`.
-- **Fixed and variable spending**: spending that repeats, and the rest.
-- **Other**: the category a transaction keeps until a rule, the merchant dictionary, a classifier or you decide one.
+- **Transactions**: what came in (**Incoming**) and went out (**Outgoing**) over a period, by category.
+- **Company**: the other party of a transaction, read from the bank's description.
+- **Category**: the label a transaction carries, such as `Groceries`. **Other** is the one it gets when nothing fits.
+- **Income, Savings & investment, Spending**: the three fixed groups every category sits in.
+- **Custom category**: a category you create, with your own name and icon.
+- **Budgeting profile**: your monthly plan, one amount per category. Each amount is a **budget line**.
+- **Budget vs. actual**: your plan beside what you spent.
+- **1M, 3M, 1Y**: the period Budget shows. On `3M` and `1Y`, **Total**, **Monthly avg.** and **Monthly median** change how figures are counted.
+- **Fixed, Variable**: spending at companies Freenary sees as recurring, and the rest.
+- **Recurring**: the page that lists payments that repeat over your last 12 months.
+- **Commitments**: payments to one company on a regular schedule for a steady amount, such as rent.
+- **Spending patterns**: purchases you repeat at one company without a regular schedule or amount.
+- **Confidence**: how sure Freenary is of a recurring payment: **Confirmed**, **Likely** or **Pattern**.
 
-## The assistant
+## Assistant
 
-- **Assistant**: the question box on Home that answers questions about your money from your own data, using the model the operator configured.
-- **Conversation**: one thread of questions and answers. `New conversation` files the current one away.
-
-## Money
-
-A transaction keeps the currency its bank booked it in. Totals and figures for a period are shown in euros, without currency conversion.
+- **Assistant**: the question box on Home that answers from your own data.
+- **On your instance**: a model the operator set up for everyone.
+- **On this device**: a model that runs in your browser on your graphics card.
+- **New conversation**: start over. The previous conversation isn't shown again.
+- **How the assistant answered**: the steps it took to find an answer.

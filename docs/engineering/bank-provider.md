@@ -278,12 +278,12 @@ For anything above a mapper, replace `globalThis.fetch` with a stub that answers
 3. **Idempotence.** Run the sync twice against the same stub. The row counts must not change. This test catches an unstable transaction id.
 
 ```bash
-bun run db:start
-cd packages/db && bun run db:migrate:deploy
+docker compose up -d --wait postgres
+(cd packages/db && bun run db:migrate:deploy)
 bun test packages/api/src/providers
 ```
 
-[Local development stack](./local-stack.md) covers both database paths. CI runs no tests, so run each file by hand.
+The migration reads `DATABASE_URL` from `apps/server/.env`; [Local development stack](./local-stack.md) shows how to write it, and covers both database paths. CI runs no tests, so run each file by hand.
 
 ### What a stub cannot prove
 

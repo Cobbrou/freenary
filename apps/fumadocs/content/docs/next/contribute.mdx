@@ -1,35 +1,48 @@
 ---
 title: Contribute
-description: Clone Freenary, run it locally, run the checks CI runs, and open a pull request against dev.
+description: Run Freenary from source, pass the same checks as CI, and open a pull request.
 icon: GitPullRequest
 ---
 
-Freenary is open source under the AGPL-3.0-or-later, and contributions are welcome. This page gets you from a clone to a pull request. How the code works lives in the repository, under [`docs/engineering/`](https://github.com/suiramdev/freenary/tree/main/docs/engineering).
+Run the code on your machine, pass the checks CI runs, and open a pull request against `dev`.
 
-## Set up
+## Prerequisites
 
-You need [Bun](https://bun.sh) `1.3.14` (pinned in `package.json`) and Docker.
+- **Bun.** The repository pins `bun@1.3.14` in `package.json`, and CI installs the latest Bun.
+- **Node.js 20.19+, 22.12+ or 24+.** `bun install` runs Prisma's install script, which refuses other Node versions.
+- **Docker with Compose v2.**
+
+Then clone the repository and install:
 
 ```bash
 git clone https://github.com/suiramdev/freenary.git
 cd freenary
 bun install
-bun run build:data
 ```
 
-`bun install` also generates the Prisma client. `bun run build:data` downloads the merchant dictionary once; without it, merchant names aren't matched and fewer transactions get a category.
-
-## Run it
-
-**With Docker (recommended).** Needs port `80` free:
+## Run it in Docker
 
 ```bash
 bun run dev:up
 ```
 
-This builds the images, applies migrations and starts PostgreSQL, the API server, the web app and these docs, each on its own hostname. The banner prints them, for example `http://web.<branch>.freenary.localhost`. Use Chrome or Firefox. Each git worktree gets its own containers, database and hostnames. `bun run dev:mail` adds a Mailpit inbox for testing sign-up codes, and `bun run dev:reset` wipes the database.
+It starts PostgreSQL, applies the migrations, and runs the API server, the web app and the documentation site with live reload. It prints the addresses it serves:
 
-**Without Docker for the apps.** PostgreSQL still runs in a container:
+- `http://web.<slug>.freenary.localhost`
+- `http://server.<slug>.freenary.localhost`
+- `http://docs.<slug>.freenary.localhost`
+
+The slug comes from your git branch, so two worktrees run side by side. A shared Traefik container on port 80 routes these hostnames. Use Chrome or Firefox, which resolve `*.localhost` on their own.
+
+`bun run dev:logs` follows the logs, `bun run dev:down` stops everything, and `bun run dev:reset` deletes the database and starts over.
+
+There's no seed data. Create an account on the sign-in screen: with no email provider, sign-up signs you in at once.
+
+To work on emailed codes, start with `bun run dev:mail` instead. It adds a Mailpit inbox at `http://mail.<slug>.freenary.localhost`, and the server sends every email there.
+
+## Run it without Docker for the apps
+
+Only PostgreSQL runs in Docker:
 
 ```bash
 cp .env.example .env
@@ -39,50 +52,47 @@ docker compose up -d --wait postgres
 bun run dev
 ```
 
-`.env.example` holds development values for `POSTGRES_PASSWORD` and `BETTER_AUTH_SECRET`, which Compose needs to read `docker-compose.yml`. The Prisma commands read `DATABASE_URL` from `apps/server/.env`. The API server runs on port `3000`, the web app on `3001`, and the docs on `4000`.
+The server listens on port 3000, the web app on 3001 and the documentation site on 4000.
 
-There's no seed data: create an account on the sign-in screen. Without an email provider, sign-up signs you in straight away.
+## Checks
 
-## Check your change
-
-Run what CI runs before you push:
+CI runs `bun install --frozen-lockfile`, then these steps in order. Run them before you push:
 
 ```bash
-bun install --frozen-lockfile
-bun run check
-bun run check-types
-bun run check:fsd
-bun run docs:check
-bun run env:check
-bun run build
+bun run check         # Lint & format
+bun run check-types   # Type check
+bun run check:fsd     # Architecture
+bun run docs:check    # Documentation
+bun run env:check     # Environment
+bun run build         # Build
 ```
 
-`bun run fix` fixes most lint and format issues. CI runs no tests, so run the test files your change touches with `bun test <path>`. If you change a Compose file, reproduce CI's `compose` job as [`docs/engineering/local-stack.md`](https://github.com/suiramdev/freenary/blob/main/docs/engineering/local-stack.md) shows. Check interface changes in the browser, in light and dark mode.
+`bun run fix` repairs most lint and format errors. A second CI job parses every Compose file.
 
-## Open a pull request
+On each commit, lefthook runs three jobs on the staged files:
 
-1. Branch with a descriptive name, such as `fix/login-redirect-loop`.
-2. Sign off each commit with `git commit -s`, which certifies the [Developer Certificate of Origin](https://developercertificate.org).
-3. Open the pull request against **`dev`**, not `main`, and fill in the template briefly.
-4. If you changed behaviour that's documented, such as a screen, an API route, an environment variable or a script, update `apps/fumadocs/content/docs/next` in the same pull request.
+- `oxlint --fix`, then stages the fixes.
+- `oxfmt --write`, then stages the fixes.
+- `bun run env:sync`, when the commit touches `packages/env/src/schema*.ts`, a `docker-compose*.yml` file or `scripts/env-sync.ts`.
 
-Maintainers handle tags, version bumps and releases.
+## Tests
 
-## Where the rules live
+CI runs no tests, and there's no root `test` script. Run the files your change touches:
 
-- [`.github/CONTRIBUTING.md`](https://github.com/suiramdev/freenary/blob/main/.github/CONTRIBUTING.md): the full contribution rules, licensing and dependency licences.
-- [`CONTEXT.md`](https://github.com/suiramdev/freenary/blob/main/CONTEXT.md): the product vision and domain terms.
-- [`AGENTS.md`](https://github.com/suiramdev/freenary/blob/main/AGENTS.md): code standards, and the `AGENTS.md` next to each workspace.
+```bash
+bun test packages/api/src/categorisation/dictionary.test.ts
+```
 
-Engineering notes in [`docs/engineering/`](https://github.com/suiramdev/freenary/tree/main/docs/engineering):
+## Pull requests
 
-- [Local stack](https://github.com/suiramdev/freenary/blob/main/docs/engineering/local-stack.md): both ways to run, hostnames, database commands, checks and common failures.
-- [Platform](https://github.com/suiramdev/freenary/blob/main/docs/engineering/platform.md): workspaces, the path of a request, the build graph, auth and the instance configuration.
-- [Web app](https://github.com/suiramdev/freenary/blob/main/docs/engineering/web-app.md) and [web UI](https://github.com/suiramdev/freenary/blob/main/docs/engineering/web-ui.md): Feature-Sliced Design layers, routing, components.
-- [API](https://github.com/suiramdev/freenary/blob/main/docs/engineering/api.md): routers, budget aggregation, the taxonomy.
-- [Data model](https://github.com/suiramdev/freenary/blob/main/docs/engineering/data-model.md): every Prisma model, enum and migration.
-- [Categorisation](https://github.com/suiramdev/freenary/blob/main/docs/engineering/categorisation.md): how transactions get categories.
-- [Data pipeline](https://github.com/suiramdev/freenary/blob/main/docs/engineering/data-pipeline.md): how the merchant dictionary is built.
-- [Bank provider](https://github.com/suiramdev/freenary/blob/main/docs/engineering/bank-provider.md): the adapter interface for adding a provider.
-- [Writing docs](https://github.com/suiramdev/freenary/blob/main/docs/engineering/writing-docs.md): how to write and check these pages.
-- [Dependencies](https://github.com/suiramdev/freenary/blob/main/docs/engineering/dependencies.md) and [releasing](https://github.com/suiramdev/freenary/blob/main/docs/engineering/releasing.md): Renovate, and how a version ships.
+Open your pull request against `dev`. `main` holds released code. [`CONTRIBUTING.md`](https://github.com/suiramdev/freenary/blob/dev/.github/CONTRIBUTING.md) has the rules: branch names, the pull request template, signed-off commits, documentation in the same change.
+
+Maintainers cut releases from `main` with the `Release` workflow. Don't tag, and don't bump a version.
+
+<Cards>
+  <Card
+    title="Configuration"
+    href="/docs/reference/configuration"
+    description="Every environment variable the server reads."
+  />
+</Cards>

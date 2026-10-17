@@ -2,7 +2,7 @@
   "id": "freenary",
   "name": "Freenary",
   "version": "latest",
-  "description": "Self-hosted personal finance: budgets, goals and bank sync on your own server.",
+  "description": "Self-hosted personal finance: bank sync, categories and budgets on your own server.",
   "logo": "freenary.svg",
   "links": {
     "github": "https://github.com/suiramdev/freenary",

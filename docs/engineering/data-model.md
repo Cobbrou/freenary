@@ -352,7 +352,7 @@ The schema edit and its migration land in one commit. Never edit a migration tha
 
 A new model, column or enum value belongs in the tables above. Other docs quote these names verbatim, so a rename with no documentation edit makes them silently wrong.
 
-`bun run db:push` is opt-in development tooling for a scratch database, and its CLI is gated behind `FREENARY_DB_PUSH=1`. It writes no history and it would drift a migrated database.
+`bun run db:push` is development tooling for a scratch database. It writes no history and it would drift a migrated database.
 
 The operator side of a migration is [Update an instance](../../apps/fumadocs/content/docs/next/run/updates-and-backups.mdx).
 
