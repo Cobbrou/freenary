@@ -66,7 +66,7 @@ These headings must keep their slug: `reference/bank-providers#powens`, `#enable
 
 | Fact | Owner |
 | --- | --- |
-| Install time, prerequisites, domain, HTTPS options | `before-you-install` |
+| Prerequisites, domain, HTTPS options | `before-you-install` |
 | Powens redirect URI must be HTTPS | `bank-providers` |
 | Powens sandbox walkthrough: test bank, password | `connect-a-bank` |
 | What a new `BETTER_AUTH_SECRET` breaks, sealing | `security` |
@@ -90,7 +90,7 @@ These headings must keep their slug: `reference/bank-providers#powens`, `#enable
 
 ## Questions for a maintainer
 
-1. Dokploy labels (Advanced → Import, HTTPS toggle) and the Coolify domain syntax: not checkable from the repo.
+1. Dokploy labels (Advanced → Base64 import, HTTPS toggle) and the Coolify domain syntax: not checkable from the repo.
 2. Vendor facts: Powens refuses `http://localhost`, the test connector password, sandbox limits, Enable Banking showing the key once.
 3. Internal transfers count in totals today. Intended?
 4. Assistant tool totals are always labelled `EUR` (`assistant/tools.ts`).
@@ -99,5 +99,5 @@ These headings must keep their slug: `reference/bank-providers#powens`, `#enable
 7. `instance.check` can't return `NOT_IMPLEMENTED`; the code path is dead.
 8. `bun install` needs Node 20.19+, 22.12+ or 24+ for Prisma's preinstall; nothing declares it.
 9. Two unit tests fail at HEAD (`deriveMerchantKey` card markers, `categoriseTransaction` direction invariant).
-10. Resolved: `next` now links the `dev` branch (`gitConfig.branch` in `apps/fumadocs/src/shared/config/site.ts`), and the snapshot pins it to the release tag. The Dokploy tab still tells operators to deploy branch `main`, where `deploy/` arrives only with the next release.
+10. Resolved: `next` now links the `dev` branch (`gitConfig.branch` in `apps/fumadocs/src/shared/config/site.ts`), and the snapshot pins it to the release tag. The Dokploy tab names branch `dev`; the snapshot pins it to `gitConfig.releaseBranch` (`main`).
 11. Untranslated strings reach French readers: `Other Income` in the Cash Flow chart, raw server errors in three toasts.

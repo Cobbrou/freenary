@@ -120,7 +120,7 @@ The snapshot lands through a pull request into `dev`. The `tag` job refuses a st
 
 The folder therefore freezes when that pull request merges, and the release comes later. A documentation change merged in between reaches `next` and never reaches the frozen folder, and no gate reports it. Snapshot last, and the window stays empty.
 
-The copy pins every moving reference. A repository link names `dev`, and the frozen page names the release tag. A download URL names `dev`, and the frozen page names the tag. A `FREENARY_VERSION=dev` line names the branch, and the frozen page names `X.Y`. Two rules follow:
+The copy pins every moving reference. A repository link names `dev`, and the frozen page names the release tag. A download URL names `dev`, and the frozen page names the tag. A ``Branch: `dev` `` deploy step names `dev`, and the frozen page names `main`. A `FREENARY_VERSION=dev` line names the branch, and the frozen page names `X.Y`. Two rules follow:
 
 - A patch release finds `content/docs/X.Y` in place, and copies nothing. A documentation fix for a released version therefore edits that folder directly.
 - A pre-release copies nothing. Its readers stay on `next`.

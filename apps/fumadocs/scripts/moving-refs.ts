@@ -28,6 +28,13 @@ export const MOVING_REFS: readonly MovingRef[] = [
     rule: "link",
   },
   {
+    message: () =>
+      `a deploy step names the branch \`${gitConfig.branch}\`, which holds unreleased files. A released page deploys \`${gitConfig.releaseBranch}\`.`,
+    moving: `Branch: \`${gitConfig.branch}\``,
+    pinned: () => `Branch: \`${gitConfig.releaseBranch}\``,
+    rule: "link",
+  },
+  {
     message: (folder) =>
       `\`FREENARY_VERSION=${gitConfig.branch}\` names the moving branch. A released page pins it: \`FREENARY_VERSION=${folder}\`.`,
     moving: `\nFREENARY_VERSION=${gitConfig.branch}\n`,

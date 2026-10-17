@@ -54,7 +54,7 @@ FREENARY_URL=https://freenary.example.com
 
 Then redeploy, or run `docker compose up -d`. A `restart` isn't enough: it keeps the old values.
 
-Changing the hostname makes existing passkeys stop working; users add new ones.
+A new hostname also breaks existing passkeys: see [Passkeys and your hostname](/docs/run/sign-in#passkeys-and-your-hostname).
 
 ## The page shows 502 Bad Gateway
 
@@ -62,7 +62,7 @@ Changing the hostname makes existing passkeys stop working; users add new ones.
 
 **Your proxy or panel points at the wrong place.** Your proxy shows its own 502 page and the sign-in screen never loads. With one address, your domain goes to the `web` service on port `3001`; the web app forwards the rest to the server. With two addresses, the web app's goes to `web` on `3001` and the API's to `server` on `3000`. See [Reverse proxy](/docs/reference/reverse-proxy#two-subdomains).
 
-**The server is down.** The page loads, but signing in or loading data fails, and those requests answer `502` with the body `Bad Gateway`. The web app waited 9 seconds for the server and got no answer. `docker compose logs web` shows the reason:
+**The server is down.** The page loads, but signing in or loading data fails, and those requests answer `502` with the body `Bad Gateway`. The web app got no answer from the server within its [forwarding limit](/docs/reference/api#base-url). `docker compose logs web` shows the reason:
 
 ```text
 The API server at <address> did not answer: <reason>
@@ -112,7 +112,7 @@ The stored value of EMAIL_PROVIDER does not open with the current BETTER_AUTH_SE
 
 ## The bank list is empty
 
-**`Bank linking is unavailable`, in Settings under `Bank accounts`.** No bank provider is set up, or one of its fields is missing. Onboarding skips its bank step for the same reason. As the operator, open `https://freenary.example.com/setup` and complete the `Bank` step. See [Connect a bank](/docs/get-started/connect-a-bank).
+**`Bank linking is unavailable`, in Settings, `Connections`, under `Bank accounts`.** No bank provider is set up, or one of its fields is missing. Onboarding skips its bank step for the same reason. As the operator, open `https://freenary.example.com/setup` and complete the `Bank` step. See [Connect a bank](/docs/get-started/connect-a-bank).
 
 **`No banks available`.** Freenary reached your provider, which returned no bank. Either your Powens domain has no active connectors, which you activate in the [Powens console](https://console.powens.com), or the provider covers no country of your tax residency.
 
@@ -122,7 +122,7 @@ The stored value of EMAIL_PROVIDER does not open with the current BETTER_AUTH_SE
 
 ## New passwords don't save
 
-**What you see.** Signing up, changing or resetting a password shows `Something went wrong. Try again.` The server log shows `Failed to check password. Please try again later.` or `Failed to check password. Status:` followed by a code.
+**What you see.** Signing up or resetting a password shows `Something went wrong. Try again.` The server log shows `Failed to check password. Please try again later.` or `Failed to check password. Status:` followed by a code.
 
 **Why.** Freenary couldn't reach Have I Been Pwned to check the password against known leaks, for example because the server has no internet access.
 

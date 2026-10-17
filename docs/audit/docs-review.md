@@ -38,7 +38,9 @@ Two interface strings made false claims and were corrected in `en.json` and `fr.
 
 ## Independent review
 
-A reviewer on a different model (GPT-5.6) audited all 22 pages against the code with no access to the writers' reports. It returned 10 findings, all fixed:
+Three review rounds checked all 22 pages against the code, with no access to the writers' reports. Round 1 ran on a different model (GPT-5.6); its re-check stalled twice, so rounds 2 and 3 ran on the repository's read-only review agent.
+
+Round 1 returned 10 findings, all fixed:
 
 1. `index` named two places data leaves the instance; it now names all six and links Security.
 2. The Coolify template URL on `main` returned `404`. `next` now links the `dev` branch, through `gitConfig.branch` in `apps/fumadocs/src/shared/config/site.ts`, and the snapshot pins it to the release tag. The rule documents changed with it.
@@ -51,8 +53,17 @@ A reviewer on a different model (GPT-5.6) audited all 22 pages against the code 
 9. `bank-providers` repeated sync facts owned by `use/bank-connections`.
 10. `from-source` said the server image runs migrations.
 
-The reviewer's verdict on the fixed state is in `docs-validation.md`.
+Round 2 confirmed those 10 fixes and returned 15 more, all fixed. The most important:
+
+- `run/email` promised a code on address change; the code configures no address change.
+- `glossary` defined `Reconnect to resume importing`; nothing ever sets the status that shows it.
+- `run/sign-in` repeated the rate-limit table owned by `api`, with one wrong row.
+- The Dokploy step deployed branch `main`, which has no `deploy/` yet. It now names `dev`, and the snapshot pins it to `main`.
+- Five facts sat on two pages; each now lives on its owner and is linked from the others.
+- `security` ended with a checklist that repeated the page.
+
+Round 3 returned six findings, five in this audit trail and one link anchor, all fixed. The final verdict is in `docs-validation.md`.
 
 ## Needs maintainer review
 
-The plan's "Questions for a maintainer" holds the detail: panel labels, vendor facts, internal transfers in totals, `EUR` on assistant totals, `BETTER_AUTH_SECRETS`, the dead `NOT_IMPLEMENTED` path, the undeclared Node requirement, two failing unit tests, untranslated strings, and the Dokploy tab naming branch `main` before `deploy/` reaches it.
+The plan's "Questions for a maintainer" holds the detail: panel labels, vendor facts, internal transfers in totals, `EUR` on assistant totals, `BETTER_AUTH_SECRETS`, the dead `NOT_IMPLEMENTED` path, the undeclared Node requirement, two failing unit tests, and untranslated strings.

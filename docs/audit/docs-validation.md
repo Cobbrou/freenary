@@ -39,6 +39,17 @@ A separate agent used only the built `next` pages, Docker, and `FREENARY_VERSION
 
 An AI agent followed the steps; that shows they run as written, not that a person understands them. A human Getting Started run from a clean machine is still required before release.
 
+## Independent review (ran)
+
+| Round | Reviewer                  | Findings | Result    |
+| ----- | ------------------------- | -------- | --------- |
+| 1     | GPT-5.6, separate session | 10       | All fixed |
+| 2     | Repository review agent   | 15       | All fixed |
+| 3     | Same agent, re-check      | 6        | All fixed |
+| 4     | Same agent, re-check      | 0        | Approved  |
+
+Round 1's re-check stalled twice on the GPT-5.6 provider, so later rounds used the repository's read-only review agent.
+
 ## Not validated
 
 - Dokploy and Coolify tabs. The labels come from vendor documentation, not a panel.

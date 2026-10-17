@@ -6,6 +6,7 @@ export const gitConfig = {
   user: "suiramdev",
   repo: "freenary",
   branch: "dev",
+  releaseBranch: "main",
 };
 
 export const repoBlobUrl = (ref: string) =>

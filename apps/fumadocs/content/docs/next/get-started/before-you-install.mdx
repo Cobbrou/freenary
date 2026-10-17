@@ -24,7 +24,7 @@ You need HTTPS to link a bank: the bank provider only sends you back to an `http
 
 ## Try it on your own computer
 
-You can run Freenary on `localhost` to look around. Follow the **Docker Compose** tab of [Install Freenary](/docs/get-started/install), with two changes to `.env`:
+You can run Freenary on `localhost` to look around. Follow the **Docker Compose** tab of [Install Freenary](/docs/get-started/install), with these changes to `.env`:
 
 - Leave out the `BETTER_AUTH_URL` and `CORS_ORIGIN` lines. Their defaults, `http://localhost:3000` and `http://localhost:3001`, match the default ports.
 - Keep `SERVER_PORT=127.0.0.1:3000` and `WEB_PORT=127.0.0.1:3001`, so only your computer reaches the instance.

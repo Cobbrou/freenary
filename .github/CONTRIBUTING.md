@@ -51,7 +51,7 @@ If your change alters documented behavior — a screen, an API route, an environ
 
 Follow the [pull request template](pull_request_template.md). Each pull request should:
 
-- open against `dev` — `main` holds released code, and `dev` is the branch a release is cut from
+- open against `dev`; `main` holds released code, and a release is cut from `main` after `dev` merges into it
 - explain the user-visible change
 - stay focused on a single topic when possible
 - include screenshots or screen recordings for new UI or behavior changes

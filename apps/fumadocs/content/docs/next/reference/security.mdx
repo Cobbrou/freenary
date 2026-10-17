@@ -48,13 +48,7 @@ Restore the old secret when possible. Otherwise, a user with a passkey or linked
 
 With no alternate sign-in, the operator must clear that user's two-factor flag and row in PostgreSQL. The user then signs in by password and enrols again.
 
-Every setup value sealed under the old secret is skipped. The server logs one warning per value, including this exact form:
-
-```text
-The stored value of EMAIL_PROVIDER does not open with the current BETTER_AUTH_SECRET.
-```
-
-Environment values keep working. Re-enter skipped values on the setup screen, or restore the old secret. [Troubleshooting](/docs/run/troubleshooting#the-server-does-not-restart-after-setup) explains the restart.
+Every setup value sealed under the old secret is skipped, with one warning per value in the server log. Environment values keep working. [Troubleshooting](/docs/run/troubleshooting#bank-and-email-stopped-working-after-a-restore) shows the warning and how to recover.
 
 ## Operator boundary
 
@@ -68,7 +62,7 @@ If the wrong account won, follow [The wrong account became the operator](/docs/r
 
 Freenary supports password checks, database-backed rate limits, two-factor authentication, trusted devices, passkeys and recent-session checks.
 
-The leaked-password check sends the first five hexadecimal characters of a password's SHA-1 hash to Have I Been Pwned. It blocks changes when that service can't answer.
+The [leaked-password check](/docs/run/sign-in#leaked-password-check) contacts Have I Been Pwned and fails closed.
 
 [Sign-in](/docs/run/sign-in) gives the password limits, session lifetime, lockout figures, verification-code limits and provider behaviour.
 
@@ -89,14 +83,6 @@ A device model downloads into the user's browser. Finance data stays there, whil
 The server-image build downloads its merchant dictionary from this repository's GitHub releases. Its fallback contacts GeoNames, Wikidata and npm. It sends no user data, and the running image reads the file locally.
 
 `/api-reference` is a live OpenAPI endpoint. It and `/rpc` reach the same handlers with the same session and role checks. See [API](/docs/reference/api) before automating either path.
-
-## Checklist
-
-- Put the public edge behind HTTPS and set `BETTER_AUTH_URL` to the exact HTTPS address.
-- Expose only the required web or proxy ports, and keep PostgreSQL private.
-- Restrict container privileges and access to `.env` files, provider keys and backups.
-- Store `BETTER_AUTH_SECRET` with each database backup and test restoring both together.
-- Configure trusted proxies, review enabled integrations, and keep Freenary and PostgreSQL updated.
 
 <Cards>
 

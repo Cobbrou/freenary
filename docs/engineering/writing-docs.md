@@ -44,7 +44,7 @@ A maintainer freezes `next` before a release, in a pull request to `dev`:
 cd apps/fumadocs && bun run docs:snapshot 1.2.0
 ```
 
-The script takes the release version and writes the `1.2` folder. It refuses a pre-release, and it leaves the pages alone when the folder already exists. It labels the copy, adds it to the root `meta.json`, and pins every moving reference in the copy: a repository link and a `raw.githubusercontent.com` download URL take the release tag, and a `FREENARY_VERSION=dev` line takes `1.2`. `docs:check` fails a frozen page that still holds one of these. The `Release` workflow refuses a stable version without its folder. See [Releasing](./releasing.md).
+The script takes the release version and writes the `1.2` folder. It refuses a pre-release, and it leaves the pages alone when the folder already exists. It labels the copy, adds it to the root `meta.json`, and pins every moving reference in the copy: a repository link and a `raw.githubusercontent.com` download URL take the release tag, a ``Branch: `dev` `` deploy step takes `main`, and a `FREENARY_VERSION=dev` line takes `1.2`. `docs:check` fails a frozen page that still holds one of these. The `Release` workflow refuses a stable version without its folder. See [Releasing](./releasing.md).
 
 ## Where a page goes
 
@@ -219,7 +219,7 @@ Add every new page to `pages`. `docs:check` fails a page the array omits, and an
 | A page missing from `meta.json`, or an entry with no page | Passes | Fails |
 | A moved page with no pair in `moved-pages.ts` | Passes | Fails |
 | A version folder without `"root": true`, or with a stale title | Passes, drops out of the dropdown | Fails |
-| A moving reference (`blob/dev`, a `dev` download URL, `FREENARY_VERSION=dev`) in a frozen version | Passes | Fails |
+| A moving reference (`blob/dev`, a `dev` download URL, ``Branch: `dev` ``, `FREENARY_VERSION=dev`) in a frozen version | Passes | Fails |
 | An operator code fence in `use/` | Passes | Fails |
 | An environment variable in `use/`, roadmap language, filler or a sales word (`no-filler`), a sentence over 35 words | Passes | Warns (`next` only) |
 

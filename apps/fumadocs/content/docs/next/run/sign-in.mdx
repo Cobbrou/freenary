@@ -24,7 +24,7 @@ Don't change `BETTER_AUTH_SECRET` to shorten sessions. Rotation has wider effect
 
 ## One-time codes
 
-[Email delivery](/docs/run/email) adds codes for address confirmation and password resets. Each code has 6 digits, expires after 10 minutes and stops working after 3 wrong attempts. Freenary sends at most 3 codes a minute.
+[Email delivery](/docs/run/email) adds codes for address confirmation and password resets. Each code has 6 digits, expires after 10 minutes and stops working after 3 wrong attempts. Each caller address can request at most 3 codes a minute.
 
 ## Passkeys and your hostname
 
@@ -98,18 +98,7 @@ AUTH_PASSWORD_BREACH_CHECK=false
 
 ## Rate limits
 
-Limits are counted by caller address:
-
-| Request                       | Limit            |
-| ----------------------------- | ---------------- |
-| Password or provider sign-in  | 10 per minute    |
-| Sign-up                       | 5 per 5 minutes  |
-| Passkey sign-in               | 20 per minute    |
-| Two-factor code               | 10 per 5 minutes |
-| Two-factor backup code        | 5 per 5 minutes  |
-| Other authentication requests | 100 per minute   |
-
-A blocked request shows `Too many attempts. Wait a moment and try again.` When more than one proxy forwards requests, add them to `TRUSTED_PROXIES`. Otherwise visitors can share a caller address and exhaust one limit. See [Trusted proxies](/docs/reference/reverse-proxy#trusted-proxies).
+Sign-in, sign-up and code requests are limited per caller address; [API](/docs/reference/api#rate-limits) lists each limit. When more than one proxy forwards requests, add them to `TRUSTED_PROXIES`, or visitors share one caller address and one limit. See [Trusted proxies](/docs/reference/reverse-proxy#trusted-proxies).
 
 <Cards>
   <Card
