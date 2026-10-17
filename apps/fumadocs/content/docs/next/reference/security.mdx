@@ -1,0 +1,124 @@
+---
+title: Security
+description: What the instance exposes, the secrets it depends on, the operator account, the sign-in protections, and a checklist before real users arrive.
+icon: ShieldCheck
+---
+
+Freenary holds every user's bank data. Your part is the network edge and the secrets. Work through [the checklist](#checklist) before you invite anyone.
+
+## Ports
+
+| File | `server` (3000) | `web` (3001) | `postgres` (5432) |
+| --- | --- | --- | --- |
+| `deploy/docker-compose.yml`, `deploy/coolify.yml` | Not published | Not published | Not published |
+| Root `docker-compose.yml` | Every interface | Every interface | `127.0.0.1` only |
+
+With the root file, prefix both app ports with `127.0.0.1` (`SERVER_PORT=127.0.0.1:3000`, `WEB_PORT=127.0.0.1:3001`) and point your proxy at the loopback interface. The database port is there for host tools like `pg_dump`; delete the `ports:` block of `postgres` if you don't need it.
+
+Neither app handles TLS. Your proxy must serve HTTPS, and `BETTER_AUTH_URL` must start with `https://`, because the session cookie takes its `Secure` flag from it. See [Reverse proxy](/docs/reference/reverse-proxy).
+
+No Dockerfile sets a `USER` and no Compose file sets `user:`, so each container runs as its base image's default user.
+
+## Secrets
+
+| Secret | Rule | Protects |
+| --- | --- | --- |
+| `BETTER_AUTH_SECRET` | 32 characters or more | Session cookies, two-factor data, the bank connection state, and the setup values |
+| `POSTGRES_PASSWORD` | No default | The database |
+| Bank and email credentials | Entered on the setup screen, or in the environment | Every user's bank connections, sign-in codes and password resets |
+| `AI_API_KEY` | Optional | Your account at the model endpoint |
+
+Generate the two required values with `openssl rand -hex 32` and `openssl rand -hex 16`. Compose refuses to start with either one empty. Coolify and the Dokploy template generate them for you.
+
+<Callout type="warn">
+
+Outside production mode, `BETTER_AUTH_SECRET` falls back to a public development value, and anyone can forge a session against it. The self-hosting Compose files always set `NODE_ENV=production`, which removes that fallback. If you run Freenary without Docker, set `NODE_ENV=production` too.
+
+</Callout>
+
+### What a rotation costs
+
+| Rotate | Cost |
+| --- | --- |
+| `BETTER_AUTH_SECRET` | Everyone is signed out, every two-factor enrolment stops, bank connections in progress fail, and the setup values become unreadable, so the operator enters them again |
+| `POSTGRES_PASSWORD` | The database volume keeps its first password. Change it inside the database first, then update the variable and run `docker compose up -d` |
+| A bank or email credential | Rotate it at the provider, then enter it on the setup screen and press `Finish setup`. If it's in the environment, update it there and run `docker compose up -d` |
+
+To change the database password inside the running container:
+
+```bash
+docker compose exec postgres psql -U postgres -c "ALTER USER postgres PASSWORD '<new password>'"
+```
+
+## The operator account
+
+The first account to sign in becomes the operator. One database transaction grants the role, so two sign-ins at the same moment can't both get it. On an instance upgraded from an older release, the oldest account with a confirmed email gets the role, or the oldest account if none is confirmed.
+
+There's one operator, and no screen gives the role to anyone else. It opens the setup screen and nothing more: the operator can't see other users' financial data.
+
+<Callout type="warn">
+
+A new instance on a public address is open to whoever finds it first. Create your account right after the first start.
+
+</Callout>
+
+## Sign-in protections
+
+On by default, no setting needed:
+
+- Passwords are 12 to 128 characters, hashed with scrypt.
+- New passwords are checked against Have I Been Pwned. This fails closed: without a route to `api.pwnedpasswords.com`, sign-up and password reset fail. Set `AUTH_PASSWORD_BREACH_CHECK=false` on an offline server.
+- Ten wrong second-factor codes in a row lock the account for 15 minutes.
+- Sensitive account changes, such as removing a passkey, need a session under 15 minutes old.
+- Rate-limit counters live in the database, so a restart doesn't clear a lockout.
+- Passkeys work, bound to `CORS_ORIGIN`.
+
+Turned on by your configuration:
+
+| Protection | Needs |
+| --- | --- |
+| Email confirmation and password reset | An email provider. See [Email](/docs/run/email) |
+| Google, Apple or single sign-on | Both variables of that provider. See [Sign-in](/docs/run/sign-in) |
+| One rate-limit bucket per visitor | A single proxy, or `TRUSTED_PROXIES` for a chain. See [Trusted proxies](/docs/reference/reverse-proxy#trusted-proxies) |
+
+## Data
+
+The database holds every user's accounts, transactions and bank provider tokens. The tokens are stored as the provider sent them, so anyone who can read the database can call the provider as that user. The setup values are encrypted with AES-256-GCM under a key derived from `BETTER_AUTH_SECRET`.
+
+<Callout type="warn">
+
+Treat the database and every dump as the financial data itself. Encrypt dumps, limit who can read them, and keep them apart from the server.
+
+</Callout>
+
+- **Account deletion.** No screen or endpoint deletes a user. To erase one person, the operator does it in the database. Disconnecting a bank deletes its accounts, transactions and holdings.
+- **The assistant.** With a model endpoint configured, each question sends that user's financial data to it. See [Assistant](/docs/use/assistant).
+- **The API reference.** `/api-reference` is a live API: anyone with a session can call every procedure there. Block the prefix at your proxy if you don't want it public. See [API](/docs/reference/api).
+
+## Checklist
+
+- [ ] `BETTER_AUTH_SECRET` and `POSTGRES_PASSWORD` are your own values.
+- [ ] The public URL is `https://` and matches the browser address exactly.
+- [ ] No app port faces the internet, and `postgres` is published on `127.0.0.1` at most.
+- [ ] `TRUSTED_PROXIES` lists every proxy in a multi-hop chain.
+- [ ] Two subdomains only: `AUTH_COOKIE_DOMAIN` names the shared parent domain.
+- [ ] Your own account is the operator.
+- [ ] Email is set up, so password reset works.
+- [ ] You know which endpoint `AI_BASE_URL` names, or it's unset.
+- [ ] Backups run on a schedule, and you've restored one. See [Updates and backups](/docs/run/updates-and-backups).
+
+<Cards>
+
+<Card
+  title="Reverse proxy"
+  href="/docs/reference/reverse-proxy"
+  description="HTTPS, one hostname, and trusted proxies."
+/>
+
+<Card
+  title="Sign-in"
+  href="/docs/run/sign-in"
+  description="Sign-up policy, passkeys, single sign-on and two-factor."
+/>
+
+</Cards>

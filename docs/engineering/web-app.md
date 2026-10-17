@@ -1,8 +1,50 @@
 # Web application
 
+How `apps/web` and `apps/fumadocs` are layered first, then the durable facts per module.
+
+## Feature-Sliced Design
+
+`apps/web/src` and `apps/fumadocs/src` are each a Feature-Sliced Design root. The method orders an application, never a library, so no package under `packages/` is a root.
+
+Five layers stack in one order. A module imports from a layer strictly under its own, never sideways and never up. Nothing imports from `app/`, because `app/` is the application itself.
+
+| Layer | `apps/web` | `apps/fumadocs` |
+| --- | --- | --- |
+| `app/` | The file routes, the router, the signed-in shell, the root server function, the stylesheet | The file routes, the router, the assistant handler, the middlewares, the stylesheet |
+| `pages/` | One slice per screen: `analysis`, `brand-avatar`, `budget`, `callback`, `goals`, `home`, `login`, `onboarding`, `portfolio`, `settings` | `home` and `docs` |
+| `features/` | `auth-gate` and `bank-connection` | none |
+| `entities/` | `category`, the spending taxonomy | none |
+| `shared/` | `api`, `auth`, `config`, `i18n`, `lib`, `ui` | `config`, `content`, `lib`, `ui` |
+
+Three import forms cover every case:
+
+| Form | Example | Rule |
+| --- | --- | --- |
+| A slice | `import { RecurringPage } from "@/pages/budget";` | The slice `index.ts` alone, never a deeper path |
+| A shared segment | `import { isServer } from "@/shared/lib/is-server";` | `@/shared/api`, `@/shared/auth`, `@/shared/config` and `@/shared/i18n` per segment. `@/shared/ui` and `@/shared/lib` per module or folder |
+| Inside one slice | `import { getViewer } from "../api/get-viewer";` | Relative. The same rule holds inside `app/` and inside `shared/` |
+
+A segment name states a purpose, so `components`, `hooks`, `utils`, `types`, `helpers`, `providers`, `schemas` and `assets` all fail. A slice carries at least one segment folder and exactly one `index.ts`. `shared` carries no `index.ts` of its own, and `app/` carries no `ui/` segment.
+
+Extraction is earned. Code starts in the page that uses it. It moves down a layer when three conditions hold: a second consumer, one responsibility, and an independent reason to change. That is why `features/` holds two slices and `entities/` holds one.
+
+Four paths sit outside every layer, because a framework or a generator owns them: `apps/web/src/server.ts`, `apps/web/src/routeTree.gen.ts`, `apps/web/src/paraglide/` and `apps/fumadocs/src/routeTree.gen.ts`.
+
+### The gate
+
+```bash
+bun run check:fsd
+```
+
+That root script is `turbo run lint:fsd`, and each of the two apps declares `lint:fsd` as `steiger src --fail-on-warnings`. CI runs it as the `Architecture` step, before the documentation step and the build step.
+
+> [!WARNING] Steiger reads `steiger.config.ts` only when the app directory is the working directory. A run from the repository root reads no config and falls back to the steiger defaults. So use the root script, which Turborepo runs inside each app, or enter the app directory first.
+
+## Module notes
+
 Durable facts that the code cannot carry in a name. Each bullet names the module it belongs to. Source: comments deleted when the `no-comments` rule was adopted.
 
-## Budget and sankey
+### Budget and sankey
 
 - `apps/web/src/pages/budget/model/recurring.ts` (module) — the server detects the patterns and measures the months; every figure the Recurring view adds on top of that (monthly equivalent, annual cost, next occurrences, forecast, insights) is derived in the browser, so one payload serves the whole view and the arithmetic is testable without a database.
 - `apps/web/src/pages/budget/model/recurring.ts › RECURRENCE_KINDS` — `fixed` is a commitment: same company, regular cadence, an amount that holds. `behavioral` is a repeated purchase: the company recurs, the amount does not.
@@ -21,7 +63,7 @@ Durable facts that the code cannot carry in a name. Each bullet names the module
 - `apps/web/src/shared/lib/sankey/side-label.ts › fitSideLabel` — the amount is never sliced: `€2,500.00` cut to `€2…` reads as a different and entirely plausible figure, so when both will not fit the label survives whole and the amount is dropped. The ribbon's thickness already carries magnitude. `side-label.test.ts › amountWholeOrAbsent` states that as "carries the amount in full or carries no digits at all", because `formatCurrency` may lead or trail the symbol by locale and a symbol-shaped regex would miss a digit-side cut.
 - `apps/web/src/pages/settings/model/budget-profile-sankey.ts › toBudgetProfileSankey` — grouping by category _group_ rather than by category is what makes this chart read the same as the cash-flow one. Its middle column is the three flow sections, so the diagram reads as the revenue, savings and spending split rather than as a list of topics. Investments are ordered ahead of outgoings so the allocation side follows the order the profile is entered, and each group's lines are emitted immediately after their group so the ribbons do not cross.
 
-## Browser assistant
+### Browser assistant
 
 - `apps/web/src/pages/home/model/browser/tool-protocol.ts` (module) — tool calling is prompted as plain text in the `<tool_call>` dialect Qwen, Hermes and SmolLM were trained on. WebLLM's own `tools` field is unusable here: it accepts five 8B Hermes builds only, forbids a system prompt beside the tools, and forces every answer through a JSON grammar, so a model could call a tool but never write the prose that follows. Prompting the protocol keeps one loop for every model.
 - `apps/web/src/pages/home/model/browser/tool-protocol.ts › toChatMessages` — tool calls must be folded into the assistant's own text turn and tool results into a _user_ turn. That is the shape the models saw in training and the only one WebLLM's chat templates can render, since most of them have no `tool` role.
@@ -39,7 +81,7 @@ Durable facts that the code cannot carry in a name. Each bullet names the module
 - `apps/web/src/pages/home/model/answer-segments.ts › splitAnswer` — the answer text is re-split on every streamed chunk, so a fence still open at the end is a chart in progress, and a last line that could still grow into the `openui-lang` opener is held back rather than flashed as a code block. Line endings may be CRLF, since nothing between the provider and here normalises them, and `openui` is accepted as the shorter opener the model may drop to.
 - `apps/web/src/pages/home/model/tool-details.ts › formatDay` — an ISO-shape check is not sufficient for a model-authored day: `2026-13-01` matches the pattern and `Intl.DateTimeFormat` throws on the resulting Invalid Date, so a stored bad day would throw on every reload. The `Number.isNaN(getTime())` guard beside the pattern test is what prevents that.
 
-## Routing and SSR
+### Routing and SSR
 
 - `apps/web/src/` (the Feature-Sliced Design root) — a route file under `app/routes/` declares routing and nothing else, so the screen it shows is a page slice that renders anywhere. `app/routes/_auth/budget/route.tsx › Route.validateSearch` therefore holds the search vocabulary both budget pages read, and `app/routes/login.tsx › loginSearchSchema` and `app/routes/_auth/settings.tsx › settingsSearchSchema` each own the `?error=<code>` a provider hands back: a failure after the redirect leg arrives as a search parameter, not as a refused request. A page reads that parameter by path (`useSearch({ from: "/login" })`) because `Route` lives in the other file.
 - `apps/web/src/shared/api/budget-cache.ts › TRANSACTIONS_QUERY_KEY` — hand-built rather than taken from `orpc.budget.getTransactions.key()`, because the list is an infinite query and the key has to stay matchable by prefix. It sits in `shared` because invalidating it is what every writer of transaction data does, and a key owned by one page would be an upward import from the others.
@@ -61,7 +103,7 @@ Durable facts that the code cannot carry in a name. Each bullet names the module
 - `apps/web/src/pages/budget/ui/recurring-page.tsx › RecurringPage` — `asOf` comes from the server's `data.asOf`, when detection ran, and never from a render-time clock, which would move every projection between two renders. The view also reads a fixed trailing year on the server rather than the period the Transactions view carries, and `m.budget_recurring_scope()` is the string that says so.
 - `apps/web/src/pages/brand-avatar/ui/brand-avatar-page.tsx` — the whole route is a temporary dev-only state board: not linked from the app, not in the message catalogs, and meant to be deleted.
 
-## Client data
+### Client data
 
 - `apps/web/src/shared/api/orpc.ts › createQueryClient` — the cache reports only failures a mounted component observes, so a prefetch nobody is watching raises no toast. `budget-queries.ts › warmWithoutRaising` depends on that: it settles rather than awaits, so a failed warm-up rejects nothing either.
 - `apps/web/src/pages/budget/api/budget-queries.ts › TRANSACTIONS_QUERY_KEY` — hand-built rather than taken from `orpc.budget.getTransactions.key()`, because the list is an infinite query and the key has to stay matchable by prefix. `shared/api/budget-cache.ts › invalidateBudgetData` and `pages/budget/model/use-transaction-category.ts` both match it by prefix, and `orpc.budget.key()` cannot — which is why `invalidateBudgetData` issues a second invalidation.
@@ -73,7 +115,7 @@ Durable facts that the code cannot carry in a name. Each bullet names the module
 - `apps/web/src/shared/api/budget-cache.ts › invalidateBudgetData` — the sync status is excluded from the budget invalidation. It is a poll with its own cadence, and invalidating it from the refresh it just triggered adds a request per hundred transactions and tells nobody anything new.
 - `apps/web/src/pages/budget/model/sync-progress.ts › syncProgressShape` — importing has no percentage on purpose. The account count is known only after each provider answers and says nothing about the transactions behind it, so a bar built on it would sit at zero through the whole of a one-account import. Categorisation knows its total before it starts, so that phase is determinate.
 
-## Auth client and settings
+### Auth client and settings
 
 - `apps/web/src/shared/auth/auth-client.ts › AUTH_MOUNT_PATH` — better-auth derives its route matching from the _path_ of `baseURL`, so the public auth path must equal the server-side mount. Both are `/api/auth`.
 - `apps/web/src/shared/auth/auth-client.ts › authClient.plugins` — `emailOTPClient` is present for address confirmation and password reset only; the server refuses `/sign-in/email-otp`, because every account signs in with a password. Google, Apple and the generic OIDC provider all go through `signIn.social`: the generic-oauth plugin registers itself as a social provider, so it needs no client counterpart.

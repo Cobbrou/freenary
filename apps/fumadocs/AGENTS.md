@@ -21,7 +21,7 @@ src/                # a Feature-Sliced Design root
     routes/         # TanStack Router file routes, plus the api and llms endpoints
     router/router.tsx
     api/chat.ts     # the Ask AI handler
-    start.ts        # versionMiddleware, then llmMiddleware
+    start.ts        # unversionedDocsRedirect, then markdownRepresentationRedirect
     styles/app.css
   pages/
     home/           # the landing page
@@ -29,8 +29,8 @@ src/                # a Feature-Sliced Design root
   shared/
     ui/             # mdx.tsx (the MDX component map), markdown.tsx, ai-search.tsx, button.tsx, not-found.tsx
     lib/            # versions.ts (version ids, ordering, link resolver), markdown-url.ts (.md URL codec), cn.ts
-    config/         # site.ts (app name, docs base route, repo coordinates), layout-options.ts (nav and GitHub options)
-    content/        # source.ts (content dir, page tree, LLM text, version list)
+    config/         # site.ts (app name, docs base route, repo coordinates), layout-options.ts (nav and GitHub options), moved-pages.ts (old slug → new slug)
+    content/        # source.ts (content dir, page tree, LLM text, version list, findMovedPage)
   routeTree.gen.ts  # generated, outside every layer
 scripts/
   check-docs.ts     # the gate
@@ -41,88 +41,73 @@ scripts/
 
 ## Versions
 
-Every page is served under a version segment: `/docs/next/quickstart`, `/docs/1.2/quickstart`. The rules that follow from that:
+Every page is served under a version segment: `/docs/next/get-started/install`, `/docs/1.2/get-started/install`. The rules that follow from that:
 
 - **Author in `content/docs/next`.** A change edits that folder alone. `content/docs/<X.Y>` is frozen: only a correction to that release touches it.
 - **A folder under `content/docs` is a version.** Its `meta.json` carries `"root": true` and a `title` equal to the folder name. `root: true` is what scopes the sidebar to one version and makes Fumadocs render the version dropdown (`getLayoutTabs`, `TreeContextProvider`). `docs:check` fails a folder that breaks either rule.
-- **A docs link never names a version.** Pages write `/docs/guides/budget`; the `a` and `Card` wrappers in `src/shared/ui/mdx.tsx` prepend the version of the page being read, and `getLLMText` does the same for the `.md` output. `docs:check` fails an authored link that names a version.
+- **A docs link never names a version.** Pages write `/docs/use/budget`; the `a` and `Card` wrappers in `src/shared/ui/mdx.tsx` prepend the version of the page being read, and `getLLMText` does the same for the `.md` output. `docs:check` fails an authored link that names a version.
 - **A repository link names the branch, and the snapshot pins it.** Pages write `https://github.com/suiramdev/freenary/blob/main/…`; the snapshot rewrites each one to `blob/v<X.Y.Z>/` in the copy, because that link cannot resolve at render time. `docs:check` fails a `blob/main` link inside a frozen version.
-- **`/docs/*` with no version redirects** (307) to the newest release. `versionMiddleware` in `src/app/start.ts` owns it, and it runs before `llmMiddleware`. The newest release is `stableVersion()` in `src/shared/content/source.ts`: the highest `X.Y` folder, or `next` while no release exists.
-- **The language rules apply to `next` alone**; the structure rules apply to every version. `check-docs.ts` skips `checkHeadings`, `checkPhrases` and `checkSentences` outside `next`.
+- **`/docs/*` with no version redirects** (307) to the newest release. `unversionedDocsRedirect` in `src/app/start.ts` owns it. The newest release is `newestRelease()` in `src/shared/content/source.ts`: the highest `X.Y` folder, or `next` while no release exists.
+- **A moved page keeps its old URL.** `src/shared/config/moved-pages.ts` lists `[before, after]` slug pairs. When a version has no page at the requested slug, `findMovedPage` looks up the pair in both directions and redirects to the counterpart that exists in that same version: `/docs/next/quickstart` lands on `get-started/install`, and `/docs/0.1/get-started/install` lands on `quickstart`. `loadDoc` and the `.md` route both use it. When you move or delete a page, add a pair. `docs:check` fails a pair whose `after` is missing from `next`, and a page of the newest release that is gone from `next` with no pair.
+- **The language rules apply to `next` alone**; the structure rules apply to every version. `check-docs.ts` skips `checkAuthoredLanguage` outside `next`.
 - **A release needs its snapshot first, and it snapshots last.** A maintainer runs `bun run docs:snapshot X.Y.Z` in a pull request to `dev`; the `tag` job of `.github/workflows/release.yml` refuses a stable version whose `content/docs/X.Y` folder is missing (the `main and dev` ruleset admits no workflow push). The folder freezes at that merge, so a documentation change merged between it and the release reaches `next` alone and no gate reports it. The script derives the `X.Y` folder from the release version and pins the three moving forms `scripts/moving-refs.ts` holds: a repository link and a `raw.githubusercontent.com` download URL take `v<X.Y.Z>`, and a `FREENARY_VERSION=main` line takes `X.Y`. `docs:check` reads the same table, so it fails a frozen page that still carries any of them. It stages the copy outside `content/docs` and rewrites the root `meta.json` on every run, so a repeat run finishes an interrupted one; a pre-release snapshots nothing.
 - **Search, the AI panel and the LLM endpoints are scoped.** `/api/search` tags each record with its version and the default dialog passes `defaultTag` — the version of the pathname, or the newest release off the docs tree, from the root loader in `src/app/routes/__root.tsx`. `/api/chat` builds one index per version and honours the request body's version only when `listVersions()` holds it. `/llms.txt` and `/llms-full.txt` serve the newest release alone.
 
 ## Content structure
 
-The site serves two audiences, in this order: the **person who runs Freenary and uses it**, and the **contributor who changes it**. The first three pages carry a reader from nothing to a working instance; every folder after them goes deeper on one job. Every path below is inside a version folder, and each version folder's own `meta.json` holds the order and the separators:
+The site serves first-time readers who want a working instance, then the people who run and use it, then contributors. Every path below is inside a version folder; each folder's `meta.json` holds the order.
 
 ```
-index → quickstart → concepts
-  → ---Run Freenary--- → self-hosting
-  → ---Use Freenary--- → guides
-  → ---Build on Freenary--- → integrations
-  → ---Contribute--- → contributing
+index.mdx             what Freenary is, who it is for, two buttons
+get-started/          before-you-install → install → connect-a-bank
+use/                  budget, bank-connections, assistant, account
+run/                  email, sign-in, updates-and-backups, troubleshooting
+reference/            configuration, bank-providers, reverse-proxy, security, scaling,
+                      from-source, api, procedures, glossary
+contribute.mdx        clone, run, checks, pull request
 ```
 
-| Path | Audience | Contains |
-| --- | --- | --- |
-| `index.mdx` | Everyone | What Freenary is, and the three routes into the site. A hub: one line and one link per destination. |
-| `quickstart.mdx` | A reader with Docker and no instance | The shortest path to a running instance on one machine, and the first sign-in. It owns the short install. |
-| `concepts.mdx` | Users | A plain glossary of the words a user meets in the interface. |
-| `self-hosting/` | Operators | The served install (the folder's index page), configuration, reverse proxy, email, sign-in methods, bank providers, assistant, scaling, updates, backup and restore, maintenance, security, logs, troubleshooting, build from source. |
-| `guides/` | Users of a running instance | Signing in, first steps, bank connections, budget, categories, assistant, settings, language and appearance. |
-| `integrations/` | Developers calling the API | The HTTP surface, and the procedure reference. |
-| `contributing/` | Contributors and engineers | Workflow, architecture, local stack, data model, categorisation, bank-provider interface, writing docs, releasing. |
+- **Get started** takes a reader from nothing to a synced bank: a server, one domain, a hosting panel or Docker Compose, then the setup screen. No reverse proxy walkthrough here; HTTPS comes from the reader's platform.
+- **Use** is for anyone signed in. No terminal: `docs:check` fails a `bash`, `dotenv`, `yaml` or other operator fence in `use/`, and warns on an environment variable name.
+- **Run** is for the operator after install. **Reference** holds every variable, provider detail and alternative setup. Internals (database tables, encryption, pipeline stages) go to the repository's `docs/engineering/`, not to the site.
+- **A fact lives in one page**; everywhere else links to it.
 
-`quickstart.mdx` and `self-hosting/index.mdx` split on one line: the quickstart runs an instance for the reader on `localhost`, and `self-hosting/index.mdx` serves an instance to other people. The public origins, the secrets, the reverse proxy and the verification steps belong to the second. Neither repeats the other.
+## Writing rules
 
-These rules keep the split that way:
+- Second person, present tense, active voice, natural tone. Contractions and `-ing` forms are fine.
+- Short sentences and paragraphs. Start with what the reader wants to do, then how. Explain why a step exists in one clause.
+- One term per concept: **instance**, **operator** (the first account), **setup screen** (`/setup`), **your domain** and **`FREENARY_URL`**, **hosting panel**, **bank provider**, **bank connection**, **sync**, **assistant**. Avoid "the stack" and "origin" on beginner pages.
+- Quote a UI label only when the reader has to find or press it. Never list every label, button or option.
+- Code blocks are copy-paste correct and use `freenary.example.com` as the placeholder. Check every command and variable against the code.
+- Callouts only for real traps: data loss, security, a bank link that fails.
+- Every page has `title`, `description` and `icon`, states its purpose in the first two lines, and ends with at most three "Next" cards.
+- Target length: Get started pages about 120 lines, `use/` and `run/` pages about 150.
 
-- **No terminal in `guides/`.** Env vars, file paths, Docker, package names, and database or enum names belong in the other sections. If a reader needs a shell, the page is in the wrong folder. `docs:check` fails a guide that holds a shell fence or a `SCREAMING_SNAKE` token.
-- **No page titled `Overview`, and no section heading called Overview.** A folder's index page is named after its subject and puts the reader straight on the task — `self-hosting/index.mdx` _is_ the served install.
-- **No roadmap anywhere.** Never write that a feature is planned, is coming soon, or is not built yet; never write a "what Freenary does today" list or a Built-against-Planned table. State only what a reader can do, and leave the rest out.
-- **How it works belongs to `contributing/`.** Architecture, request flow, and internals go there — not in `guides/`, which tells a user what to do, and not in `self-hosting/`, which tells an operator how to run it.
-- **A fact lives in exactly one section**; everywhere else links to it. Duplicated prose is the failure mode this structure exists to prevent.
-- **`concepts.mdx` is a user glossary**, in the reader's own words. The technical vocabulary — Prisma model names, enum values, columns — lives in `contributing/data-model.mdx`.
-- **Every page is ASD-STE100 Simplified Technical English.** Short active sentences, one idea each, no `-ing` verb forms, no contractions, `must`/`can`/`do` rather than `shall`/`should`/`may`, and one approved term per concept (the user-facing terms are defined in `next/concepts.mdx`). The rules cover prose, never code blocks, and `docs:check` applies them to `next` alone.
+## Checks
 
-`contributing/writing-docs.mdx` is the reader-facing version of this section — update both together.
+```bash
+bun run docs:check          # from apps/fumadocs, or at the root
+bun run docs:check --strict # warnings fail too
+bun run build               # frontmatter schema, MDX compile, fence languages, prerender
+```
 
-## The workflow: how a page gets written
-
-An agent that writes or rewrites documentation runs these five steps in order. Steps 2 and 3 fan out; the rest do not.
-
-1. **Read the rules.** This file, and the page you are about to replace. A rewrite keeps every true fact the old page carried.
-2. **Gather the code truth first, and write nothing yet.** One read-only scout per subsystem — the compose files and `packages/env` for configuration, `packages/auth` for sign-in, `packages/api` for the bank providers and the procedures, `apps/web` for the screens, `packages/db` for the vocabulary. Each returns a fact sheet with `file:line` evidence. A page that describes a screen, a flag or an endpoint that no scout found is wrong: cut the claim.
-3. **Write in parallel, one owner per folder.** Two agents never hold the same file. `meta.json` and `index.mdx` belong to whoever owns the folder.
-4. **Run the gate until it is silent.**
-   ```bash
-   bun run docs:check          # from apps/fumadocs, or `bun run docs:check` at the root
-   bun run docs:check --strict # warnings fail too
-   bun run build               # frontmatter schema, MDX compile, fence languages, prerender
-   ```
-5. **Load the pages.** `bun run dev`, then open every page you changed. A green gate proves the page compiles and obeys the rules. It does not prove the page is right, and it never proves a screenshot-free walkthrough matches the screen.
-
-### What each check catches
+Then `bun run dev` and open every page you changed. A green gate proves the page compiles and its links resolve, not that it is right.
 
 | Mistake | `bun run build` | `bun run docs:check` |
 | --- | --- | --- |
-| No frontmatter `title`, `description` or `icon` | Fails | Fails |
-| A frontmatter field outside title/description/icon/full | Passes | Fails |
-| An unknown code-fence language | Fails | Fails |
+| No frontmatter `title`, `description` or `icon`, or an extra field | Fails (missing) | Fails |
+| An unknown or missing code-fence language | Fails | Fails |
 | An `icon` that is not in lucide's `icons` record | Passes, renders nothing | Fails |
 | A component `src/shared/ui/mdx.tsx` does not register | Passes, renders nothing | Fails |
-| An internal link or `#anchor` that resolves to nothing | Passes | Fails |
-| A page missing from its folder's `meta.json` | Passes | Fails |
-| A link that names a version | Passes | Fails |
+| An internal link or `#anchor` that resolves to nothing, or names a version | Passes | Fails |
+| A page missing from its folder's `meta.json`, or a `meta.json` entry with no page | Passes | Fails |
 | A version folder without `"root": true`, or with a stale title | Passes, drops out of the dropdown | Fails |
+| A moved page with no pair in `moved-pages.ts`, or a pair pointing nowhere | Passes | Fails |
 | A `blob/main` repository link in a frozen version | Passes | Fails (releases only) |
-| A shell command or an env var in `guides/` | Passes | Fails |
-| A contraction, a banned word, roadmap language | Passes | Fails (`next` only) |
-| A sentence over 25 words | Passes | Fails (`next` only) |
-| A sentence over 20 words, a paragraph over 6 sentences | Passes | Warns (`next` only) |
+| An operator code block in `use/` | Passes | Fails |
+| An environment variable in `use/`, roadmap language, a sentence over 35 words | Passes | Warns (`next` only) |
 
-`scripts/check-docs.ts` reads the component list from `getMDXComponents()` and the icon list from lucide's own record, so neither can drift from the site. `scripts/docs-rules.ts` holds the word lists. A page that has to name a banned word — the authoring page — writes `{/* docs-check disable: ste-word, no-roadmap */}`.
+`scripts/check-docs.ts` reads the component list from `getMDXComponents()` and the icon list from lucide's own record, so neither can drift from the site. `scripts/docs-rules.ts` holds the fence languages and the phrase lists. A page switches a rule off for itself with `{/* docs-check disable: no-roadmap */}`.
 
 ## Conventions
 
@@ -134,7 +119,7 @@ An agent that writes or rewrites documentation runs these five steps in order. S
   ```
 - MDX may use only what `src/shared/ui/mdx.tsx` registers: Fumadocs' defaults (`Card`, `Cards`, `Callout`, `CalloutContainer`, `CalloutTitle`, `CalloutDescription`, the `CodeBlockTabs*` family, and the `pre`/`a`/`img`/`h1`-`h6`/`table` overrides) plus the components that file adds explicitly — `Accordion`, `Accordions`, `File`, `Files`, `Folder`, `Step`, `Steps`, `Tab`, `Tabs`, `TypeTable`. Anything else fails to render, the build stays green, and `docs:check` fails.
 - Code fences always name a **Shiki** language. `env` is not one — use `dotenv`. An unknown language fails the build, not just the page. The ids this site uses are the list in `scripts/docs-rules.ts`.
-- Internal links are absolute site paths with no extension and no version (`/docs/guides/budget`). A folder's index page is the folder path itself (`/docs/self-hosting`). The rendered link carries the version of the page it sits on.
+- Internal links are absolute site paths with no extension and no version (`/docs/use/budget`). A folder's index page is the folder path itself. The rendered link carries the version of the page it sits on.
 - Routes derive from the docs base route in `src/shared/config/site.ts`. Change it there, not inline, so the `.md` and `llms.txt` endpoints stay consistent.
 - Filenames are `kebab-case`; components are arrow functions assigned to a `const`, declared **before** the `Route` that references them (see the root `AGENTS.md`).
 - `types:check` is this app's TypeScript script. The root `bun run check-types` runs `turbo run check-types` and therefore skips it — run `bun run types:check` here after a change to `src/`. Run `bun run lint:fsd` here too: it is the Feature-Sliced Design gate, and CI runs it as the `Architecture` step.

@@ -1,5 +1,6 @@
 export {
   docs,
+  findMovedPage,
   getLLMText,
   listVersions,
   newestRelease,

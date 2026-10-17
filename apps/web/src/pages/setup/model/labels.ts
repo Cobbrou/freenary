@@ -49,10 +49,10 @@ const VARIANT_LABELS = {
 } satisfies Record<string, Label>;
 
 const VARIANT_GUIDE_PATHS: Record<string, string> = {
-  "enable-banking": "/self-hosting/bank-providers#enable-banking",
-  powens: "/self-hosting/bank-providers#powens",
-  resend: "/self-hosting/email#resend",
-  smtp: "/self-hosting/email#smtp",
+  "enable-banking": "/reference/bank-providers#enable-banking",
+  powens: "/reference/bank-providers#powens",
+  resend: "/run/email#resend",
+  smtp: "/run/email#smtp",
 };
 
 const read = (table: Record<string, Label>, key: string): string =>
@@ -73,10 +73,10 @@ export const stateLabel = (id: string): string => read(STATE_LABELS, id);
 export const stepLabel = (id: string): string => read(STEP_LABELS, id);
 
 const ENVIRONMENT_DOCS_PATH =
-  "/self-hosting/setup#a-value-in-the-environment-wins";
+  "/reference/configuration#a-value-in-the-environment-wins";
 
 const RESTART_DOCS_PATH =
-  "/self-hosting/troubleshooting#the-server-does-not-restart-after-setup";
+  "/run/troubleshooting#the-server-does-not-restart-after-setup";
 
 export const environmentDocsUrl = (): string =>
   `${docsUrl()}${ENVIRONMENT_DOCS_PATH}`;

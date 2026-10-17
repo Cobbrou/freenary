@@ -1,0 +1,56 @@
+---
+title: Glossary
+description: The words Freenary and this documentation use, one line each.
+icon: BookA
+---
+
+Each term means the same thing on every page and in the app.
+
+## Your instance
+
+- **Instance**: your installed copy of Freenary, with its own users and database.
+- **Operator**: the person who installs and runs the instance; the first account to sign in.
+- **Setup screen**: `/setup`, where the operator enters bank and email credentials.
+- **Your hostname**: the address of your instance, such as `freenary.example.com`. `FREENARY_URL` is its full `https://` URL.
+- **Hosting panel**: a tool such as Dokploy or Coolify that runs Freenary's containers and adds HTTPS.
+- **Bank provider**: the service that links Freenary to banks: Powens or Enable Banking.
+- **Powens sandbox**: the free Powens test domain, with a test bank.
+
+## Your account
+
+- **Account**: your way into an instance: your name, email address and sign-in methods.
+- **One-time code**: a 6-digit code Freenary emails you to confirm an address or reset a password. It's valid for 10 minutes.
+- **Passkey**: a key stored on your device, so you sign in with your device unlock instead of a password.
+- **Two-factor authentication**: a code from your authenticator app on top of your password. Recovery codes replace a lost app.
+- **Single sign-on**: signing in through an identity provider the operator connected.
+
+## Your banks
+
+- **Bank connection**: one link between Freenary and one of your banks, holding the accounts that bank shared.
+- **Bank account**: one account in a bank connection, such as a current account, savings account or card.
+- **Sync**: fetching new transactions from your bank into Freenary.
+- **Transaction**: one entry your bank booked, with a date, an amount and the bank's description.
+- **Company**: the other party of a transaction, as Freenary reads it from that description.
+- **Internal transfer**: a pair of transactions moving money between two of your own accounts. Freenary matches and marks both.
+
+## Your budget
+
+- **Category**: the label a transaction carries, such as `Groceries`.
+- **Category group**: one of the three fixed sections of the flow: `Income`, `Savings & investment` and `Spending`.
+- **Custom category**: a category you create for budget lines, with your own name and icon.
+- **Subcategory**: a custom category under another of your top-level custom categories. Only one level is allowed.
+- **Budget line**: one monthly amount you plan for one category.
+- **Budgeting profile**: all your budget lines together.
+- **Period**: the date range the Budget screen shows: one month, three months or one year.
+- **Aggregation**: how a multi-month period reports a figure: `Total`, `Monthly avg.` or `Monthly median`.
+- **Fixed and variable spending**: spending that repeats, and the rest.
+- **Other**: the category a transaction keeps until a rule, the merchant dictionary, a classifier or you decide one.
+
+## The assistant
+
+- **Assistant**: the question box on Home that answers questions about your money from your own data, using the model the operator configured.
+- **Conversation**: one thread of questions and answers. `New conversation` files the current one away.
+
+## Money
+
+A transaction keeps the currency its bank booked it in. Totals and figures for a period are shown in euros, without currency conversion.

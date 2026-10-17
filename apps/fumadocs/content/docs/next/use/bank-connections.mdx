@@ -1,0 +1,133 @@
+---
+title: Bank connections
+description: Connect a bank, keep it in sync, disconnect it, and fix a connection whose consent has expired.
+icon: Landmark
+---
+
+A bank connection links Freenary to one bank. Your accounts and transactions arrive through it; you never type them in by hand.
+
+You manage connections in Settings, under `Connections`. The same list appears during the first-sign-in steps.
+
+<Callout type="warn">
+
+If the list says `Bank linking is unavailable`, your instance has no bank provider yet. The operator sets one up in the setup screen: see [Connect a bank](/docs/get-started/connect-a-bank).
+
+</Callout>
+
+## Connect a bank
+
+<Steps>
+
+<Step>
+
+### Find your bank
+
+Open Settings, then `Connections`. Search for your bank and press `Connect` on its row.
+
+The list shows banks for the countries you chose as your tax residency.
+
+</Step>
+
+<Step>
+
+### Approve access at your bank
+
+Your browser goes to your bank, or to the service that links it. Sign in there, confirm with your bank's usual security check, and choose which accounts to share.
+
+</Step>
+
+<Step>
+
+### Come back to Freenary
+
+Your bank sends you back. Freenary shows `Bank connected` and starts importing.
+
+</Step>
+
+</Steps>
+
+Freenary imports your accounts, their balances, and your transactions, each sorted into a category. Some bank providers also return investment holdings.
+
+If you cancel at the bank, nothing is linked. Press `Connect` again to retry.
+
+## Sync
+
+A sync fetches new transactions from your banks. There's no nightly sync: Freenary syncs when you ask.
+
+| When | What happens |
+| --- | --- |
+| You open Budget | A quiet sync, once per visit |
+| You press `Sync transactions` on Budget | Every connection is read again |
+| You press the re-sync button on a bank's row in Settings | That one connection is read again |
+
+Each sync reads at most the last **90 days**. The first sync brings in those 90 days; older transactions never arrive, and nothing widens the window.
+
+While a sync runs, Budget shows its progress and fills in as transactions arrive. Only one sync runs at a time.
+
+## Disconnect a bank
+
+1. In Settings, `Connections`, press `Disconnect` on the bank's row.
+2. Confirm with `Disconnect bank`.
+
+Freenary asks your bank to revoke its access, then deletes that connection's accounts and transactions. Your plan, custom categories and category fixes stay.
+
+If Freenary couldn't reach your bank to revoke access, it tells you so. Revoke it from your bank's own app or website to be sure.
+
+## Fix an expired connection
+
+Bank consents don't last forever. When yours runs out, or your bank wants you to confirm again, syncing that bank fails with `Failed to sync transactions` and its "Synced" date stops moving.
+
+There's no reconnect button. Instead:
+
+<Steps>
+
+<Step>
+
+### Try a re-sync
+
+Press the re-sync button on the bank's row. A temporary failure often clears here.
+
+</Step>
+
+<Step>
+
+### Disconnect the bank
+
+If it still fails, disconnect it. Its accounts and transactions are removed with it.
+
+</Step>
+
+<Step>
+
+### Connect it again
+
+Press `Connect` on the same bank and approve access again. This is a new connection, so the last 90 days are imported again.
+
+</Step>
+
+</Steps>
+
+## When something goes wrong
+
+| You see | What to do |
+| --- | --- |
+| `Bank linking is unavailable` | Ask your operator to set up a bank provider |
+| `Could not check bank linking` or `Could not load banks` | Reload the page |
+| `No banks match your search` | Search for a shorter part of the name |
+| `Bank connection failed. You can try again.` | Press `Connect` again |
+| `Failed to sync transactions` | Press `Retry`. If it keeps failing, [fix the connection](#fix-an-expired-connection) |
+
+Operators: see [Troubleshooting](/docs/run/troubleshooting#the-bank-list-is-empty) for an empty bank list.
+
+<Cards>
+  <Card
+    title="Budget"
+    href="/docs/use/budget"
+    description="Read and sort the transactions your connections bring in."
+  />
+  <Card
+    title="Account and settings"
+    href="/docs/use/account"
+    description="Your first steps, sign-in and the Settings panes."
+  />
+</Cards>

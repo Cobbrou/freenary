@@ -1,7 +1,10 @@
 import { createFileRoute, notFound } from "@tanstack/react-router";
 
-import { getLLMText, source } from "@/shared/content";
-import { decodeMarkdownUrl } from "@/shared/lib/markdown-url";
+import { findMovedPage, getLLMText, source } from "@/shared/content";
+import {
+  decodeMarkdownUrl,
+  encodeMarkdownUrl,
+} from "@/shared/lib/markdown-url";
 
 export const Route = createFileRoute("/docs/{$}.md")({
   server: {
@@ -10,7 +13,18 @@ export const Route = createFileRoute("/docs/{$}.md")({
         const slugs = decodeMarkdownUrl(params._splat?.split("/") ?? []);
         const page = source.getPage(slugs);
 
-        if (!page) throw notFound();
+        if (!page) {
+          const moved = findMovedPage(slugs);
+
+          if (!moved) throw notFound();
+
+          return new Response(null, {
+            headers: {
+              Location: encodeMarkdownUrl(moved.slugs, moved.locale),
+            },
+            status: 307,
+          });
+        }
 
         return new Response(await getLLMText(page), {
           headers: {

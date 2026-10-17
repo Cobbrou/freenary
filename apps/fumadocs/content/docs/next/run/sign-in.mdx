@@ -1,0 +1,103 @@
+---
+title: Sign-in
+description: Who can create an account on your instance, the sign-in methods it offers, and how to add Google, Apple or single sign-on.
+icon: KeyRound
+---
+
+This page is for operators. It explains who can join your instance and which ways in you can offer. What users see is in [Your account](/docs/use/account#sign-in).
+
+The variables on this page go in your instance's environment, then you redeploy. On Coolify, first [add each one to the compose file](/docs/reference/configuration#add-a-variable-on-coolify).
+
+## Who can create an account
+
+Anyone who can reach your instance's address can create an account. There's no setting to close sign-up or require an invitation.
+
+- **The first account to sign in becomes the operator.** Only the operator can open the setup screen. Create your account right after you install, before you share the address.
+- Every account sees only its own banks, transactions and plan. The operator can't see other users' data.
+- To keep strangers out, put the instance behind something that limits who can reach it, such as a VPN, a tunnel with access rules, or your proxy's authentication.
+
+<Callout type="warn">
+
+If someone else became the operator on a fresh instance, treat it as compromised: remove it with its database volume and install again. See [Troubleshooting](/docs/run/troubleshooting#the-wrong-account-became-the-operator).
+
+</Callout>
+
+## What every instance offers
+
+These work with no configuration:
+
+| Method | Notes |
+| --- | --- |
+| Email and password | Passwords need 12 to 128 characters |
+| Passkeys | Sign in with a device's fingerprint, face or PIN. Needs HTTPS |
+| Two-factor authentication | An authenticator-app code on top of the password. Each user turns it on in Settings |
+
+[Email delivery](/docs/run/email) adds address confirmation and password reset. Without it, a user who forgets their password can't reset it.
+
+## Passkeys depend on your hostname
+
+A passkey is tied to the hostname of your instance: the one in `FREENARY_URL`, or in `CORS_ORIGIN` with the root `docker-compose.yml`.
+
+If you change the hostname, every passkey stops working and users must add a new one. Choose your final domain before people start using passkeys.
+
+## Add Google, Apple or single sign-on
+
+Each provider appears as a `Continue with …` button once both of its variables are set. They aren't in the setup screen.
+
+| Provider | Variables, both required |
+| --- | --- |
+| Google | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` |
+| Apple | `APPLE_CLIENT_ID`, `APPLE_CLIENT_SECRET` |
+| Single sign-on (OpenID Connect: Authentik, Keycloak, Zitadel, Entra…) | `OIDC_DISCOVERY_URL`, `OIDC_CLIENT_ID` |
+
+Setting only one half of a pair does nothing.
+
+At the provider, register this redirect URI, with `google`, `apple` or `oidc` at the end:
+
+```text
+https://freenary.example.com/api/auth/callback/google
+```
+
+For single sign-on, a typical setup looks like this:
+
+```dotenv
+OIDC_DISCOVERY_URL=https://idp.example.com/.well-known/openid-configuration
+OIDC_CLIENT_ID=freenary
+OIDC_CLIENT_SECRET=xxxxxxxxxxxxxxxxxxxxxxxx
+OIDC_PROVIDER_NAME=Example SSO
+```
+
+`OIDC_PROVIDER_NAME` sets the button text (`Continue with Example SSO`). Leave `OIDC_CLIENT_SECRET` out for a public client. Use `OIDC_SCOPES` to request extra scopes, comma-separated; `openid`, `email` and `profile` are always included.
+
+A provider sign-in joins an existing account only when both use the same, confirmed email address.
+
+## Leaked-password check
+
+When someone picks a password, Freenary checks it against the public [Have I Been Pwned](https://haveibeenpwned.com/Passwords) list and refuses known leaked passwords. Only the first 5 characters of the password's hash leave your server.
+
+If your server can't reach the internet, new passwords fail to save. Turn the check off:
+
+```dotenv
+AUTH_PASSWORD_BREACH_CHECK=false
+```
+
+## Sessions and limits
+
+- Users stay signed in until they're inactive for 7 days on that browser. They see and sign out their sessions in Settings.
+- Changing `BETTER_AUTH_SECRET` signs everyone out, breaks two-factor for every user, and makes the bank and email credentials saved on the setup screen unreadable. Keep it with your backups.
+- Sign-in attempts are rate-limited per caller address. If requests pass through more than one proxy, for example a CDN in front of your proxy, list those proxies in `TRUSTED_PROXIES` so users don't share one limit. See [Reverse proxy](/docs/reference/reverse-proxy#trusted-proxies).
+
+Every variable, with its default: [Configuration](/docs/reference/configuration).
+
+<Cards>
+  <Card
+    title="Email"
+    href="/docs/run/email"
+    description="Turn on address confirmation and password reset."
+  />
+  <Card
+    title="Security"
+    href="/docs/reference/security"
+    description="Secrets, exposed ports and the operator role."
+  />
+</Cards>

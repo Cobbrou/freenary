@@ -1,0 +1,38 @@
+---
+title: Before you install
+description: What you need before you install Freenary - a server with Docker, a domain, and HTTPS.
+icon: Compass
+---
+
+Freenary runs on a server you control and is reached through your own domain over HTTPS. Check this list first, so the install takes one pass.
+
+## What you need
+
+- **A server with Docker.** A VPS or a home server with Docker Engine and Docker Compose v2. A hosting panel such as [Dokploy](https://dokploy.com) or [Coolify](https://coolify.io) works too, and does most of the work for you.
+- **A domain that points at the server.** One hostname is enough, for example `freenary.example.com`. Freenary serves the whole instance from it.
+- **HTTPS from your platform.** Freenary doesn't ship its own proxy or certificates. Dokploy and Coolify handle HTTPS for you. On a plain Docker host, your own reverse proxy does.
+- **About 15 minutes.**
+
+On the last page, [Connect a bank](/docs/get-started/connect-a-bank), you'll also create a free Powens sandbox account, so you can connect a test bank. You don't need it to install.
+
+<Callout title="Getting a domain">
+
+Pick whichever fits your setup:
+
+- **Buy one.** Any registrar sells a domain for around 10 EUR a year. Add a DNS record that points a hostname, such as `freenary.example.com`, at your server's public IP address.
+- **Free dynamic DNS, for a home server.** A service such as [DuckDNS](https://www.duckdns.org) gives you a free hostname that follows your home IP address. Your router must forward ports 80 and 443 to the server.
+- **A tunnel, when you can't open ports.** [Cloudflare Tunnel](https://developers.cloudflare.com/tunnel/get-started/) publishes a hostname on a domain you've added to Cloudflare. [Tailscale Funnel](https://tailscale.com/docs/features/tailscale-funnel) publishes a `*.ts.net` hostname over HTTPS. Both reach your server from the outside without any open port.
+
+</Callout>
+
+## Trying it on your own computer
+
+You can run Freenary on `localhost` to look around: follow the **Docker Compose** tab of the install page, keep only the `FREENARY_VERSION`, `POSTGRES_PASSWORD` and `BETTER_AUTH_SECRET` lines in `.env`, and open `http://localhost:3001`. You can't connect a bank there, though: Powens only accepts an HTTPS address to send you back to after the bank sign-in. Use a server and a domain for a real instance.
+
+<Cards>
+  <Card
+    title="Install Freenary"
+    href="/docs/get-started/install"
+    description="Deploy with Dokploy, Coolify or Docker Compose, then create your account."
+  />
+</Cards>

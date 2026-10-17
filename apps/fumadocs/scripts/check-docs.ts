@@ -4,7 +4,12 @@ import { join, relative } from "node:path";
 
 import { icons } from "lucide-react";
 
-import { isVersionId, NEXT_VERSION } from "../src/shared/lib/versions";
+import { MOVED_PAGES } from "../src/shared/config/moved-pages";
+import {
+  compareVersionIds,
+  isVersionId,
+  NEXT_VERSION,
+} from "../src/shared/lib/versions";
 import { getMDXComponents } from "../src/shared/ui/mdx";
 import {
   type DocPage,
@@ -15,17 +20,12 @@ import {
   slugify,
 } from "./docs-model";
 import {
-  CONTRACTION,
   ENV_VAR_OR_ENUM_NAME,
   isAllowedCodeLanguage,
   isAllowedFrontmatterKey,
   isOperatorOnlyCodeLanguage,
+  LONG_SENTENCE_WORD_LIMIT,
   ROADMAP_PHRASES,
-  STE_BANNED_MODALS,
-  STE_DESCRIPTION_WORD_LIMIT,
-  STE_INSTRUCTION_WORD_LIMIT,
-  STE_PARAGRAPH_SENTENCE_LIMIT,
-  STE_WORD_SUBSTITUTIONS,
 } from "./docs-rules";
 import { indexOfMatchedText, MOVING_REFS } from "./moving-refs";
 
@@ -49,7 +49,8 @@ type Report = (
 
 const CONTENT_DIR = "content/docs";
 const BASE_ROUTE = "/docs";
-const GUIDES_FOLDER = "guides";
+const USER_FOLDERS: ReadonlySet<string> = new Set(["use", "guides"]);
+const MOVED_PAGES_FILE = "src/shared/config/moved-pages.ts";
 const VERSION_LIST_FILE = "meta.json";
 const REQUIRED_FRONTMATTER_FIELDS = ["title", "description", "icon"];
 const PAGE_OR_META_FILE = /\.(?:mdx|json)$/;
@@ -72,12 +73,16 @@ const MARKDOWN_TABLE_ROW = /^[ \t]*\|/;
 const LIST_ITEM = /^[ \t]*(?:[-*+]|\d+\.)\s/;
 const WORD = /[\w'’-]+/g;
 const ANCHOR_LINK = /^([^#]*)(?:#(.+))?$/;
+const LEADING_SLASH = /^\//;
 const RULE_DISABLE_DIRECTIVE = /docs-check disable:\s*([\w\s,-]+)/g;
 const NO_DISABLED_RULES: ReadonlySet<string> = new Set();
 
 const findings: Finding[] = [];
 
 const versionOf = (relativePath: string) => relativePath.split("/")[0];
+
+const isUserPage = (relativePath: string) =>
+  USER_FOLDERS.has(relativePath.split("/")[1]);
 
 const reporterFor =
   (disabledRules: ReadonlySet<string>): Report =>
@@ -156,7 +161,7 @@ const checkFrontmatter = (page: DocPage, report: Report) => {
 };
 
 const checkFences = (page: DocPage, report: Report) => {
-  const isGuide = page.relativePath.split("/")[1] === GUIDES_FOLDER;
+  const isUserFacing = isUserPage(page.relativePath);
 
   for (const fence of page.fences) {
     const line = lineAt(page.raw, fence.index);
@@ -190,13 +195,13 @@ const checkFences = (page: DocPage, report: Report) => {
       continue;
     }
 
-    if (isGuide && isOperatorOnlyCodeLanguage(fence.language)) {
+    if (isUserFacing && isOperatorOnlyCodeLanguage(fence.language)) {
       report(
         "error",
         page.relativePath,
         line,
-        "guides-audience",
-        `a \`${fence.language}\` block belongs in self-hosting/ or contributing/. A guide names no command, file or variable.`
+        "user-audience",
+        `a \`${fence.language}\` block belongs in run/ or reference/. A page in use/ shows no command, file or config.`
       );
     }
   }
@@ -335,13 +340,9 @@ const checkMeta = (
       .slice(prefix.length)
       .replace(PAGE_EXTENSION, "");
 
-    const [head, ...rest] = tail.split("/");
+    const [head] = tail.split("/");
 
-    if (rest.length === 0) {
-      owned.add(head);
-    } else if (rest.length === 1 && rest[0] === "index") {
-      owned.add(head);
-    }
+    owned.add(head);
   }
 
   const listed = new Set<string>();
@@ -402,7 +403,7 @@ const checkPhrases = (page: DocPage, report: Report) => {
 
     while (match) {
       report(
-        "error",
+        "warning",
         relativePath,
         lineAt(maskedProse, match.index),
         rule,
@@ -417,34 +418,17 @@ const checkPhrases = (page: DocPage, report: Report) => {
     flag(
       phrase,
       "no-roadmap",
-      (hit) => `\`${hit}\` is roadmap language. State what the code does now.`
+      (hit) =>
+        `\`${hit}\` is roadmap language, and it goes stale. State what the code does now.`
     );
   }
 
-  flag(
-    CONTRACTION,
-    "ste-contraction",
-    (hit) => `\`${hit}\` is a contraction. ASD-STE100 allows none.`
-  );
-
-  for (const [pattern, approvedTerm] of STE_WORD_SUBSTITUTIONS) {
-    flag(pattern, "ste-word", (hit) => `\`${hit}\` — write "${approvedTerm}".`);
-  }
-
-  for (const [pattern, approvedTerm] of STE_BANNED_MODALS) {
-    flag(
-      pattern,
-      "ste-modal",
-      (hit) => `\`${hit}\` — write "${approvedTerm}".`
-    );
-  }
-
-  if (relativePath.split("/")[1] === GUIDES_FOLDER) {
+  if (isUserPage(relativePath)) {
     flag(
       ENV_VAR_OR_ENUM_NAME,
-      "guides-audience",
+      "user-audience",
       (hit) =>
-        `\`${hit}\` is an environment variable or an enum value. It belongs in self-hosting/ or contributing/.`
+        `\`${hit}\` is an environment variable or an enum value. Keep it short here and link to reference/configuration.`
     );
   }
 };
@@ -493,20 +477,18 @@ const checkSentenceLength = (
   for (const sentence of sentences) {
     const words = sentence.match(WORD)?.length ?? 0;
 
-    if (words <= STE_INSTRUCTION_WORD_LIMIT) {
+    if (words <= LONG_SENTENCE_WORD_LIMIT) {
       continue;
     }
 
     report(
-      words > STE_DESCRIPTION_WORD_LIMIT ? "error" : "warning",
+      "warning",
       page.relativePath,
       lineAt(page.maskedProse, page.maskedProse.indexOf(sentence, start)),
-      "ste-sentence",
-      `${words} words in one sentence. The limit is ${STE_INSTRUCTION_WORD_LIMIT} for an instruction and ${STE_DESCRIPTION_WORD_LIMIT} for a description.`
+      "long-sentence",
+      `${words} words in one sentence. Split it: a reader loses the thread past ${LONG_SENTENCE_WORD_LIMIT}.`
     );
   }
-
-  return sentences.length;
 };
 
 const checkSentences = (page: DocPage, report: Report) => {
@@ -515,30 +497,16 @@ const checkSentences = (page: DocPage, report: Report) => {
   for (const paragraph of page.maskedProse.split(PARAGRAPH_SPLIT)) {
     const paragraphStart = page.maskedProse.indexOf(paragraph, cursor);
     cursor = paragraphStart + paragraph.length;
-    const units = listItemsOrWholeParagraph(paragraph);
-    let sentenceCount = 0;
 
-    for (const unit of units) {
-      if (!isMeasurableProse(unit)) {
-        continue;
+    for (const unit of listItemsOrWholeParagraph(paragraph)) {
+      if (isMeasurableProse(unit)) {
+        checkSentenceLength(
+          page,
+          unit,
+          page.maskedProse.indexOf(unit, paragraphStart),
+          report
+        );
       }
-
-      sentenceCount += checkSentenceLength(
-        page,
-        unit,
-        page.maskedProse.indexOf(unit, paragraphStart),
-        report
-      );
-    }
-
-    if (units.length === 1 && sentenceCount > STE_PARAGRAPH_SENTENCE_LIMIT) {
-      report(
-        "warning",
-        page.relativePath,
-        lineAt(page.maskedProse, paragraphStart),
-        "ste-paragraph",
-        `${sentenceCount} sentences in one paragraph. ASD-STE100 allows ${STE_PARAGRAPH_SENTENCE_LIMIT}.`
-      );
     }
   }
 };
@@ -661,6 +629,72 @@ const checkVersions = async (
   }
 };
 
+const nextUrl = (path: string) =>
+  [BASE_ROUTE, NEXT_VERSION, path].filter(Boolean).join("/");
+
+const newestReleaseOf = (pages: readonly DocPage[]) =>
+  [...new Set(pages.map((page) => versionOf(page.relativePath)))]
+    .filter((id) => id !== NEXT_VERSION && isVersionId(id))
+    .sort(compareVersionIds)[0];
+
+const checkMovedPages = (
+  pages: readonly DocPage[],
+  pageByUrl: ReadonlyMap<string, DocPage>,
+  report: Report
+) => {
+  const movedFrom = new Set<string>();
+
+  for (const [before, after] of MOVED_PAGES) {
+    movedFrom.add(before);
+
+    if (!pageByUrl.has(nextUrl(after))) {
+      report(
+        "error",
+        MOVED_PAGES_FILE,
+        1,
+        "moved",
+        `\`${before}\` moves to \`${after}\`, which is no page in ${NEXT_VERSION}/.`
+      );
+    }
+
+    if (pageByUrl.has(nextUrl(before))) {
+      report(
+        "error",
+        MOVED_PAGES_FILE,
+        1,
+        "moved",
+        `\`${before}\` is a page in ${NEXT_VERSION}/, so its redirect to \`${after}\` never fires. Drop the entry.`
+      );
+    }
+  }
+
+  const newest = newestReleaseOf(pages);
+
+  if (newest === undefined) {
+    return;
+  }
+
+  const releaseRoute = `${BASE_ROUTE}/${newest}`;
+
+  for (const page of pages) {
+    if (versionOf(page.relativePath) !== newest) {
+      continue;
+    }
+
+    const path = page.url.slice(releaseRoute.length).replace(LEADING_SLASH, "");
+
+    if (!pageByUrl.has(nextUrl(path)) && !movedFrom.has(path)) {
+      report(
+        "error",
+        page.relativePath,
+        1,
+        "moved",
+        `\`${BASE_ROUTE}/${path}\` is gone from ${NEXT_VERSION}/ and ${MOVED_PAGES_FILE} does not redirect it, so its links break at the next release.`
+      );
+    }
+  }
+};
+
 const strict = process.argv.includes("--strict");
 const pages = await readPages(CONTENT_DIR, BASE_ROUTE);
 const metas = await readMetaFiles(CONTENT_DIR);
@@ -701,6 +735,8 @@ for (const meta of metas) {
 }
 
 await checkVersions(pages, metas, reportStructure);
+
+checkMovedPages(pages, pageByUrl, reportStructure);
 
 for (const page of pages) {
   checkDuplicateAnchors(page, reportStructure);

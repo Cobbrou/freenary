@@ -1,0 +1,6 @@
+{
+  "title": "Use Freenary",
+  "description": "Your budget, your bank connections, the assistant and your account.",
+  "icon": "Compass",
+  "pages": ["budget", "bank-connections", "assistant", "account"]
+}
