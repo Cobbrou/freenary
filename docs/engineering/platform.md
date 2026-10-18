@@ -234,6 +234,11 @@ Durable facts that the code cannot carry in a name. Each bullet names the module
 - `apps/fumadocs/scripts/docs-model.ts › maskNonProse` — every mask replaces characters one for one and keeps the newlines, so a byte offset in the masked text still maps to the line it came from; `lineAt` over `maskedProse` depends on that invariant. `maskAsCapitalisedWord` masks inline code to a run of `X` rather than spaces because inline code is one word to a reader and can open a sentence: the sentence splitter needs the capital and the word counter needs the token.
 - `apps/fumadocs/scripts/docs-rules.ts › module` — every table here restates a rule `apps/fumadocs/AGENTS.md` already states in prose and the build does not catch. The two have to be kept in step.
 
+### Triage
+
+- `.github/workflows/triage.yml › on` — `pull_request_target` runs the workflow file and scripts of the base branch with secrets, so a fork pull request is labelled too; the job checks out the base and reads the head only through the API, never as code. GitHub runs `issues` events from the default branch alone, so issue triage starts once the workflow reaches `main`; pull request triage runs from `dev` at once.
+- `scripts/triage/plan.ts › MIN_CONFIDENCE` — SubQ Snap returns a bare probability for a noul and a `confidence` for a choice or score. The 0.6 confidence cut follows the routing example in the SubQ Decisions API documentation. `MIN_SIGNAL_PROBABILITY` (0.8) and `MIN_DUPLICATE_CONFIDENCE` (0.85) are project choices, not measured on Freenary items yet.
+
 ### Lint and tooling
 
 - `eslint(max-classes-per-file)` allows 1 — `ultracite/oxlint/core` sets it with no option, so the eslint default stands. A module therefore carries at most one tagged error, and a boundary with several failure modes gives that error a `reason` union instead of a class each: see `packages/email/src/registry.ts › EmailProviderUnavailableReason`.

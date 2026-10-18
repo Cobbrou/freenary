@@ -410,13 +410,7 @@ Check an interface change in the browser, in light mode and in dark mode. A tag 
 
 ### Issues
 
-`.github/ISSUE_TEMPLATE/config.yml` sets `blank_issues_enabled: false`, so every issue starts from one of three forms.
-
-| Form            | Title prefix  |
-| --------------- | ------------- |
-| Bug report      | `[Bug]: `     |
-| Feature request | `[Feature]: ` |
-| Other           | `[Other]: `   |
+`.github/ISSUE_TEMPLATE/config.yml` sets `blank_issues_enabled: false`, so every issue starts from one of three forms: Bug report, Feature request and Other. None adds a title prefix or a label; the `Triage` workflow labels the issue, as [Contribute](../../apps/fumadocs/content/docs/next/contribute.mdx#labels) describes.
 
 ## Where the rules live
 

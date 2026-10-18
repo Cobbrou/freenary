@@ -1,6 +1,5 @@
 name: Other
-description: Report another issue type
-title: "[Other]: "
+description: Ask a question, report a documentation gap, or anything else
 body:
   - type: textarea
     id: details
