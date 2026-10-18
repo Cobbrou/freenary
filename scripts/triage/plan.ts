@@ -4,15 +4,16 @@ import {
   AREA_LABELS,
   GROUP_PREFIXES,
   IMPACT_LEVELS,
-  PRIORITY_LEVELS,
+  PRIORITY_LABELS,
   SIGNAL_LABELS,
   STATUS_LABELS,
   TYPE_LABELS,
 } from "./taxonomy";
-import type { AreaKey } from "./taxonomy";
+import type { AreaKey, PriorityLabel } from "./taxonomy";
 
 export const MIN_CONFIDENCE = 0.6;
 export const MIN_SIGNAL_PROBABILITY = 0.8;
+export const MIN_GOOD_FIRST_ISSUE_PROBABILITY = 0.95;
 export const MIN_DUPLICATE_CONFIDENCE = 0.85;
 
 export interface PlanInput {
@@ -27,14 +28,18 @@ export interface Plan {
   readonly notes: string[];
 }
 
-const SIGNAL_BY_QUESTION: Readonly<Record<string, string>> = {
+const SIGNAL_BY_QUESTION = {
   breaking_change: SIGNAL_LABELS.breakingChange,
   good_first_issue: SIGNAL_LABELS.goodFirstIssue,
   needs_reproduction: SIGNAL_LABELS.needsReproduction,
   performance: SIGNAL_LABELS.performance,
   regression: SIGNAL_LABELS.regression,
   security: SIGNAL_LABELS.security,
-};
+} as const satisfies Record<string, string>;
+
+const MIN_PROBABILITY_BY_QUESTION: Readonly<Record<string, number>> = {
+  good_first_issue: MIN_GOOD_FIRST_ISSUE_PROBABILITY,
+} satisfies Partial<Record<keyof typeof SIGNAL_BY_QUESTION, number>>;
 
 const isKnownKey = <T extends object>(
   table: T,
@@ -94,7 +99,9 @@ const isYes = (answers: Answers, key: string, notes: string[]): boolean => {
 
   notes.push(`${key}: ${answer.noul.toFixed(2)}`);
 
-  return answer.noul >= MIN_SIGNAL_PROBABILITY;
+  return (
+    answer.noul >= (MIN_PROBABILITY_BY_QUESTION[key] ?? MIN_SIGNAL_PROBABILITY)
+  );
 };
 
 const hasGroup = (labels: readonly string[], prefix: string): boolean =>
@@ -154,6 +161,36 @@ const planStatus = (
     : STATUS_LABELS.needsTriage;
 };
 
+const PRIORITY_BY_IMPACT = {
+  "impact:critical": PRIORITY_LABELS.p0,
+  "impact:high": PRIORITY_LABELS.p1,
+  "impact:low": PRIORITY_LABELS.p3,
+  "impact:medium": PRIORITY_LABELS.p2,
+} as const satisfies Record<(typeof IMPACT_LEVELS)[number], PriorityLabel>;
+
+export const derivePriority = (
+  impact: string | undefined,
+  signals: readonly string[]
+): PriorityLabel | undefined => {
+  if (signals.includes(SIGNAL_LABELS.security)) {
+    return PRIORITY_LABELS.p0;
+  }
+
+  const fromImpact =
+    impact && isKnownKey(PRIORITY_BY_IMPACT, impact)
+      ? PRIORITY_BY_IMPACT[impact]
+      : undefined;
+
+  if (
+    signals.includes(SIGNAL_LABELS.regression) &&
+    fromImpact !== PRIORITY_LABELS.p0
+  ) {
+    return PRIORITY_LABELS.p1;
+  }
+
+  return fromImpact;
+};
+
 export const planLabels = (input: PlanInput): Plan => {
   const notes: string[] = [];
   const existing = input.existingLabels;
@@ -161,14 +198,32 @@ export const planLabels = (input: PlanInput): Plan => {
 
   const type = planType(input, notes);
   const areas = planAreas(input, notes);
-  const priority = confidentLevel(
-    input.answers,
-    "priority",
-    PRIORITY_LEVELS,
-    notes
+  const impact = confidentLevel(input.answers, "impact", IMPACT_LEVELS, notes);
+
+  const isBug =
+    existing.includes(TYPE_LABELS.bug) ||
+    (!hasGroup(existing, GROUP_PREFIXES.type) && type === TYPE_LABELS.bug);
+
+  const signals = Object.entries(SIGNAL_BY_QUESTION).flatMap(
+    ([question, label]) => {
+      const appliesToType = label !== SIGNAL_LABELS.needsReproduction || isBug;
+
+      return appliesToType && isYes(input.answers, question, notes)
+        ? [label]
+        : [];
+    }
   );
 
-  const impact = confidentLevel(input.answers, "impact", IMPACT_LEVELS, notes);
+  const settledImpact =
+    existing.find((label) => label.startsWith(GROUP_PREFIXES.impact)) ?? impact;
+
+  const priority = derivePriority(settledImpact, [...existing, ...signals]);
+
+  notes.push(
+    hasGroup(existing, GROUP_PREFIXES.priority)
+      ? "priority: kept the existing label"
+      : `priority: ${priority ?? "none"} (from impact and signals)`
+  );
 
   const grouped: readonly (readonly [string, readonly string[]])[] = [
     [GROUP_PREFIXES.type, type ? [type] : []],
@@ -192,17 +247,7 @@ export const planLabels = (input: PlanInput): Plan => {
     labels.push(planStatus(input.answers, everyGroupConfident, notes));
   }
 
-  const isBug =
-    existing.includes(TYPE_LABELS.bug) ||
-    (!hasGroup(existing, GROUP_PREFIXES.type) && type === TYPE_LABELS.bug);
-
-  for (const [question, label] of Object.entries(SIGNAL_BY_QUESTION)) {
-    const appliesToType = label !== SIGNAL_LABELS.needsReproduction || isBug;
-
-    if (appliesToType && isYes(input.answers, question, notes)) {
-      labels.push(label);
-    }
-  }
+  labels.push(...signals);
 
   const duplicateOf = planDuplicate(input.answers, notes);
 

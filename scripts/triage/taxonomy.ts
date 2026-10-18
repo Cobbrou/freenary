@@ -41,12 +41,15 @@ export const SIGNAL_LABELS = {
   security: "security",
 } as const;
 
-export const PRIORITY_LEVELS = [
-  "priority:p3",
-  "priority:p2",
-  "priority:p1",
-  "priority:p0",
-] as const;
+export const PRIORITY_LABELS = {
+  p0: "priority:p0",
+  p1: "priority:p1",
+  p2: "priority:p2",
+  p3: "priority:p3",
+} as const;
+
+export type PriorityLabel =
+  (typeof PRIORITY_LABELS)[keyof typeof PRIORITY_LABELS];
 
 export const IMPACT_LEVELS = [
   "impact:low",
@@ -139,22 +142,22 @@ export const LABELS: readonly LabelDefinition[] = [
   {
     color: "b60205",
     description: "Urgent: drop everything",
-    name: "priority:p0",
+    name: PRIORITY_LABELS.p0,
   },
   {
     color: "d93f0b",
     description: "Important: the next release",
-    name: "priority:p1",
+    name: PRIORITY_LABELS.p1,
   },
   {
     color: "fbca04",
     description: "Normal: an upcoming release",
-    name: "priority:p2",
+    name: PRIORITY_LABELS.p2,
   },
   {
     color: "c2e0c6",
     description: "Nice to have: no deadline",
-    name: "priority:p3",
+    name: PRIORITY_LABELS.p3,
   },
   {
     color: "5319e7",

@@ -84,17 +84,6 @@ const AREA_QUESTION: Question = {
   type: "choice",
 };
 
-const PRIORITY_QUESTION: Question = {
-  criteria: [
-    "Nice to have, no deadline",
-    "Normal: worth doing in an upcoming release",
-    "Important: belongs in the next release",
-    "Urgent: an outage, data loss, a security hole or every user blocked",
-  ],
-  instructions: "How soon should maintainers act on this?",
-  type: "score",
-};
-
 const IMPACT_QUESTION: Question = {
   criteria: [
     "Cosmetic, or very few users affected",
@@ -242,7 +231,6 @@ export const buildQuestions = (
     impact: IMPACT_QUESTION,
     needs_info: needsInfoQuestion(kind),
     performance: PERFORMANCE_QUESTION,
-    priority: PRIORITY_QUESTION,
     ready: readyQuestion(kind),
     regression: REGRESSION_QUESTION,
     security: SECURITY_QUESTION,
