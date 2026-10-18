@@ -301,19 +301,19 @@ const EXTERNAL: ExternalVariable[] = [
   },
   {
     description:
-      "Which repository the merchant data release comes from. The default is `suiramdev/freenary`.",
+      "Which repository the merchant data release comes from; the server image build defaults it to `suiramdev/freenary`. GitHub Actions sets it in the `Triage` and `Labels` workflows, and the triage scripts exit without it.",
     envFile: "none",
     kind: "raw",
     name: "GITHUB_REPOSITORY",
-    readBy: "the server image build",
+    readBy: "the server image build and the triage scripts",
   },
   {
     description:
-      "It lifts the GitHub API rate limit of that download. The build reads it as a BuildKit secret, so the value never enters a layer.",
+      "It lifts the GitHub API rate limit of that download. The build reads it as a BuildKit secret, so the value never enters a layer. The triage scripts call the GitHub API with it to read items and add labels.",
     envFile: "none",
     kind: "raw",
     name: "GITHUB_TOKEN",
-    readBy: "the server image build",
+    readBy: "the server image build and the triage scripts",
   },
   {
     description:
@@ -330,6 +330,22 @@ const EXTERNAL: ExternalVariable[] = [
     kind: "raw",
     name: "OPENROUTER_MODEL",
     readBy: "the documentation site",
+  },
+  {
+    description:
+      "The SubQ Decisions API key the `Triage` workflow labels issues and pull requests with. It is a repository secret; with none, the workflow labels nothing.",
+    envFile: "none",
+    kind: "raw",
+    name: "SUBQ_API_KEY",
+    readBy: "the `Triage` workflow",
+  },
+  {
+    description:
+      "The file GitHub Actions renders as the run summary. The `Triage` workflow writes the labels it added and the answers behind them there.",
+    envFile: "none",
+    kind: "raw",
+    name: "GITHUB_STEP_SUMMARY",
+    readBy: "the `Triage` workflow",
   },
   {
     description:

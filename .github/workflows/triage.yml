@@ -1,0 +1,68 @@
+name: Triage
+
+on:
+  issues:
+    types: [opened, reopened]
+  # pull_request_target runs the base branch's code with secrets, so a pull
+  # request from a fork is labelled too. The job never checks out the head.
+  pull_request_target:
+    types: [opened, reopened, ready_for_review]
+  workflow_dispatch:
+    inputs:
+      kind:
+        description: What to triage
+        type: choice
+        options: [issue, pull-request]
+        required: true
+      number:
+        description: Issue or pull request number
+        type: number
+        required: true
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+concurrency:
+  group: triage-${{ github.event.issue.number || github.event.pull_request.number || inputs.number }}
+  cancel-in-progress: true
+
+jobs:
+  triage:
+    if: ${{ !endsWith(github.actor, '[bot]') && !github.event.pull_request.draft }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Look for a SubQ key
+        id: key
+        env:
+          SUBQ_API_KEY: ${{ secrets.SUBQ_API_KEY }}
+        run: |
+          if [ -n "$SUBQ_API_KEY" ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::SUBQ_API_KEY is not set; nothing was labelled."
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.key.outputs.present == 'true'
+        with:
+          persist-credentials: false
+
+      - uses: oven-sh/setup-bun@v2
+        if: steps.key.outputs.present == 'true'
+        with:
+          bun-version: latest
+
+      - if: steps.key.outputs.present == 'true'
+        run: bun install --frozen-lockfile --ignore-scripts
+
+      - name: Label
+        if: steps.key.outputs.present == 'true'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          SUBQ_API_KEY: ${{ secrets.SUBQ_API_KEY }}
+          KIND: ${{ inputs.kind || (github.event.pull_request && 'pull-request') || 'issue' }}
+          NUMBER: ${{ inputs.number || github.event.issue.number || github.event.pull_request.number }}
+        run: bun scripts/triage/main.ts "$KIND" "$NUMBER"

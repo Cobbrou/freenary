@@ -1,8 +1,5 @@
 name: Feature request
 description: Suggest an improvement for Freenary
-title: "[Feature]: "
-labels:
-  - enhancement
 body:
   - type: markdown
     attributes:

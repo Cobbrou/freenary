@@ -1,0 +1,33 @@
+name: Labels
+
+on:
+  push:
+    branches: [main, dev]
+    paths:
+      - scripts/triage/taxonomy.ts
+      - scripts/triage/sync-labels.ts
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - run: bun install --frozen-lockfile --ignore-scripts
+
+      - name: Create, update and rename the labels
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: bun scripts/triage/sync-labels.ts
