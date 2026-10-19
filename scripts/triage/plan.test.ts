@@ -28,6 +28,7 @@ describe("planLabels", () => {
       answers: confidentBug,
       areasFromPaths: [],
       existingLabels: [],
+      workflowStatus: undefined,
     });
 
     expect(plan.labels.toSorted()).toEqual(
@@ -50,6 +51,7 @@ describe("planLabels", () => {
       },
       areasFromPaths: [],
       existingLabels: [],
+      workflowStatus: undefined,
     });
 
     expect(plan.labels).not.toContain("type:bug");
@@ -61,6 +63,7 @@ describe("planLabels", () => {
       answers: confidentBug,
       areasFromPaths: [],
       existingLabels: ["type:feature", "status:blocked"],
+      workflowStatus: undefined,
     });
 
     expect(plan.labels).not.toContain("type:bug");
@@ -74,6 +77,7 @@ describe("planLabels", () => {
       answers: confidentBug,
       areasFromPaths: ["database", "docs"],
       existingLabels: [],
+      workflowStatus: undefined,
     });
 
     expect(plan.labels).toContain("area:database");
@@ -89,6 +93,7 @@ describe("planLabels", () => {
       },
       areasFromPaths: [],
       existingLabels: [],
+      workflowStatus: undefined,
     });
 
     expect(plan.duplicateOf).toBe(14);
@@ -102,7 +107,12 @@ describe("planLabels", () => {
     };
 
     expect(
-      planLabels({ answers, areasFromPaths: [], existingLabels: [] }).labels
+      planLabels({
+        answers,
+        areasFromPaths: [],
+        existingLabels: [],
+        workflowStatus: undefined,
+      }).labels
     ).toContain("needs-reproduction");
 
     expect(
@@ -113,6 +123,7 @@ describe("planLabels", () => {
         },
         areasFromPaths: [],
         existingLabels: [],
+        workflowStatus: undefined,
       }).labels
     ).not.toContain("needs-reproduction");
   });
@@ -125,6 +136,7 @@ describe("planLabels", () => {
       },
       areasFromPaths: [],
       existingLabels: ["type:feature"],
+      workflowStatus: undefined,
     });
 
     expect(plan.labels).toContain("status:ready");
@@ -175,6 +187,7 @@ const goodFirstIssueLabelsAt = (noul: number) =>
     answers: { ...confidentBug, good_first_issue: { noul, type: "noul" } },
     areasFromPaths: [],
     existingLabels: [],
+    workflowStatus: undefined,
   }).labels;
 
 describe("good-first-issue", () => {
@@ -227,6 +240,7 @@ describe("planLabels priority", () => {
       answers: lowConfidenceImpact,
       areasFromPaths: [],
       existingLabels: ["impact:critical"],
+      workflowStatus: undefined,
     });
 
     expect(plan.labels).toContain("priority:p0");
@@ -237,6 +251,7 @@ describe("planLabels priority", () => {
       answers: lowConfidenceImpact,
       areasFromPaths: [],
       existingLabels: ["security"],
+      workflowStatus: undefined,
     });
 
     expect(plan.labels).toContain("priority:p0");
@@ -247,6 +262,7 @@ describe("planLabels priority", () => {
       answers: confidentBug,
       areasFromPaths: [],
       existingLabels: ["priority:p3"],
+      workflowStatus: undefined,
     });
 
     expect(plan.labels.some((label) => label.startsWith("priority:"))).toBe(
@@ -259,6 +275,7 @@ describe("planLabels priority", () => {
       answers: { ...confidentBug, regression: { noul: 0.1, type: "noul" } },
       areasFromPaths: [],
       existingLabels: ["impact:low"],
+      workflowStatus: undefined,
     });
 
     expect(plan.labels).toContain("priority:p3");
@@ -269,8 +286,78 @@ describe("planLabels priority", () => {
       answers: lowConfidenceImpact,
       areasFromPaths: [],
       existingLabels: ["regression"],
+      workflowStatus: undefined,
     });
 
     expect(plan.labels).toContain("priority:p1");
+  });
+});
+
+describe("workflow status", () => {
+  it("replaces a status the workflow set when the answer changes", () => {
+    const plan = planLabels({
+      answers: confidentBug,
+      areasFromPaths: [],
+      existingLabels: ["status:needs-triage"],
+      workflowStatus: "status:needs-triage",
+    });
+
+    expect(plan.labels).toContain("status:ready");
+    expect(plan.removed).toEqual(["status:needs-triage"]);
+  });
+
+  it("keeps a status the workflow set when the answer is the same", () => {
+    const plan = planLabels({
+      answers: confidentBug,
+      areasFromPaths: [],
+      existingLabels: ["status:ready"],
+      workflowStatus: "status:ready",
+    });
+
+    expect(plan.labels).not.toContain("status:ready");
+    expect(plan.removed).toEqual([]);
+  });
+
+  it("never replaces a status a maintainer set", () => {
+    const plan = planLabels({
+      answers: confidentBug,
+      areasFromPaths: [],
+      existingLabels: ["status:blocked"],
+      workflowStatus: undefined,
+    });
+
+    expect(plan.removed).toEqual([]);
+    expect(plan.labels.some((label) => label.startsWith("status:"))).toBe(
+      false
+    );
+  });
+
+  it("keeps a maintainer status beside a workflow status", () => {
+    const plan = planLabels({
+      answers: confidentBug,
+      areasFromPaths: [],
+      existingLabels: ["status:needs-triage", "status:blocked"],
+      workflowStatus: "status:needs-triage",
+    });
+
+    expect(plan.removed).toEqual([]);
+    expect(plan.labels.some((label) => label.startsWith("status:"))).toBe(
+      false
+    );
+  });
+
+  it("downgrades a workflow ready status on a low-confidence answer", () => {
+    const plan = planLabels({
+      answers: {
+        ...confidentBug,
+        type: { choice: "bug", confidence: 0.3, type: "choice" },
+      },
+      areasFromPaths: [],
+      existingLabels: ["status:ready"],
+      workflowStatus: "status:ready",
+    });
+
+    expect(plan.labels).toContain("status:needs-triage");
+    expect(plan.removed).toEqual(["status:ready"]);
   });
 });

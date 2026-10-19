@@ -19,11 +19,13 @@ export const MIN_DUPLICATE_CONFIDENCE = 0.85;
 export interface PlanInput {
   readonly answers: Answers;
   readonly existingLabels: readonly string[];
+  readonly workflowStatus: string | undefined;
   readonly areasFromPaths: readonly AreaKey[];
 }
 
 export interface Plan {
   readonly labels: string[];
+  readonly removed: string[];
   readonly duplicateOf: number | undefined;
   readonly notes: string[];
 }
@@ -193,7 +195,10 @@ export const derivePriority = (
 
 export const planLabels = (input: PlanInput): Plan => {
   const notes: string[] = [];
-  const existing = input.existingLabels;
+  const existing = input.existingLabels.filter(
+    (label) => label !== input.workflowStatus
+  );
+
   const labels: string[] = [];
 
   const type = planType(input, notes);
@@ -243,9 +248,18 @@ export const planLabels = (input: PlanInput): Plan => {
       candidates.length > 0 || hasGroup(existing, prefix)
   );
 
-  if (!hasGroup(existing, GROUP_PREFIXES.status)) {
-    labels.push(planStatus(input.answers, everyGroupConfident, notes));
+  const status = hasGroup(existing, GROUP_PREFIXES.status)
+    ? undefined
+    : planStatus(input.answers, everyGroupConfident, notes);
+
+  if (status) {
+    labels.push(status);
   }
+
+  const removed =
+    input.workflowStatus && status && status !== input.workflowStatus
+      ? [input.workflowStatus]
+      : [];
 
   labels.push(...signals);
 
@@ -256,8 +270,8 @@ export const planLabels = (input: PlanInput): Plan => {
   }
 
   const added = [...new Set(labels)].filter(
-    (label) => !existing.includes(label)
+    (label) => !input.existingLabels.includes(label)
   );
 
-  return { duplicateOf, labels: added, notes };
+  return { duplicateOf, labels: added, notes, removed };
 };

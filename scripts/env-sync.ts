@@ -309,7 +309,7 @@ const EXTERNAL: ExternalVariable[] = [
   },
   {
     description:
-      "It lifts the GitHub API rate limit of that download. The build reads it as a BuildKit secret, so the value never enters a layer. The triage scripts call the GitHub API with it to read items and add labels.",
+      "It lifts the GitHub API rate limit of that download. The build reads it as a BuildKit secret, so the value never enters a layer. The triage scripts call the GitHub API with it to read items and their label history, and to add and remove labels.",
     envFile: "none",
     kind: "raw",
     name: "GITHUB_TOKEN",
@@ -341,7 +341,7 @@ const EXTERNAL: ExternalVariable[] = [
   },
   {
     description:
-      "The file GitHub Actions renders as the run summary. The `Triage` workflow writes the labels it added and the answers behind them there.",
+      "The file GitHub Actions renders as the run summary. The `Triage` workflow writes the labels it added and removed, and the answers behind them, there.",
     envFile: "none",
     kind: "raw",
     name: "GITHUB_STEP_SUMMARY",
