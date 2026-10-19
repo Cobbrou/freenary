@@ -8,8 +8,10 @@ import {
   addLabels,
   getIssue,
   isDraftPullRequest,
+  lastLabelledBy,
   listOpenIssues,
   listPullRequestFiles,
+  removeLabel,
 } from "./github";
 import type { GitHubClient } from "./github";
 import { planLabels } from "./plan";
@@ -17,10 +19,12 @@ import { buildQuestions } from "./questions";
 import type { SubjectKind } from "./questions";
 import { decide } from "./subq";
 import type { DecisionState } from "./subq";
+import { GROUP_PREFIXES } from "./taxonomy";
 
 const MAX_BODY_CHARACTERS = 8000;
 const MAX_LISTED_FILES = 200;
 const MAX_DUPLICATE_CANDIDATES = 40;
+const WORKFLOW_ACTOR = "github-actions[bot]";
 const SUBJECT_KINDS: readonly SubjectKind[] = ["issue", "pull-request"];
 
 class TriageMisconfigured extends Data.TaggedError("TriageMisconfigured")<{
@@ -96,6 +100,16 @@ const triage = Effect.fnUntraced(function* triage() {
       : [];
 
   const existingLabels = subject.labels.map((label) => label.name);
+  const currentStatus = existingLabels.find((label) =>
+    label.startsWith(GROUP_PREFIXES.status)
+  );
+
+  const statusSetter = currentStatus
+    ? yield* lastLabelledBy(client, number, currentStatus)
+    : undefined;
+
+  const workflowStatus =
+    statusSetter === WORKFLOW_ACTOR ? currentStatus : undefined;
 
   const state: DecisionState = {
     body: (subject.body ?? "").slice(0, MAX_BODY_CHARACTERS),
@@ -116,7 +130,12 @@ const triage = Effect.fnUntraced(function* triage() {
     answers,
     areasFromPaths: areasForPaths(files),
     existingLabels,
+    workflowStatus,
   });
+
+  for (const label of plan.removed) {
+    yield* removeLabel(client, number, label);
+  }
 
   if (plan.labels.length > 0) {
     yield* addLabels(client, number, plan.labels);
@@ -126,6 +145,7 @@ const triage = Effect.fnUntraced(function* triage() {
     `### Triage of ${kind} #${number}`,
     "",
     `Added: ${plan.labels.join(", ") || "nothing"}`,
+    `Removed: ${plan.removed.join(", ") || "nothing"}`,
     ...(plan.duplicateOf === undefined
       ? []
       : [`Possible duplicate of #${plan.duplicateOf}`]),

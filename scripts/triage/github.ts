@@ -3,6 +3,7 @@ import { Data, Effect, Schema } from "effect";
 const API_ROOT = "https://api.github.com";
 const PAGE_SIZE = 100;
 const MAX_FILE_PAGES = 30;
+const NOT_FOUND = 404;
 
 type GitHubFailure =
   | { readonly kind: "unreachable"; readonly detail: string }
@@ -193,6 +194,71 @@ export const addLabels = (
     repoPath(client, `/issues/${number}/labels`),
     Schema.Array(LabelSchema),
     { body: { labels }, method: "POST" }
+  );
+
+const LabelEventSchema = Schema.Struct({
+  actor: Schema.optional(
+    Schema.NullOr(Schema.Struct({ login: Schema.String }))
+  ),
+  event: Schema.String,
+  label: Schema.optional(Schema.Struct({ name: Schema.String })),
+});
+
+const MAX_EVENT_PAGES = 10;
+
+export const lastLabelledBy = Effect.fnUntraced(function* lastLabelledBy(
+  client: GitHubClient,
+  number: number,
+  labelName: string
+) {
+  let login: string | undefined;
+
+  for (let page = 1; page <= MAX_EVENT_PAGES; page += 1) {
+    const batch = yield* request(
+      client,
+      "list issue events",
+      repoPath(
+        client,
+        `/issues/${number}/events?per_page=${PAGE_SIZE}&page=${page}`
+      ),
+      Schema.Array(LabelEventSchema),
+      {}
+    );
+
+    for (const event of batch) {
+      if (event.event === "labeled" && event.label?.name === labelName) {
+        login = event.actor?.login;
+      }
+    }
+
+    if (batch.length < PAGE_SIZE) {
+      return login;
+    }
+  }
+});
+
+export const removeLabel = (
+  client: GitHubClient,
+  number: number,
+  labelName: string
+) =>
+  request(
+    client,
+    "remove label",
+    repoPath(
+      client,
+      `/issues/${number}/labels/${encodeURIComponent(labelName)}`
+    ),
+    Schema.Array(LabelSchema),
+    { method: "DELETE" }
+  ).pipe(
+    Effect.catchTag("GitHubRequestFailed", (failure) =>
+      failure.reason.kind === "rejected" && failure.reason.status === NOT_FOUND
+        ? Effect.logWarning(
+            `label ${labelName} was already gone from #${number}`
+          )
+        : Effect.fail(failure)
+    )
   );
 
 const MAX_LABEL_PAGES = 10;

@@ -97,7 +97,7 @@ The `Triage` workflow labels an issue or pull request with SubQ Snap (`subq-snap
 
 The workflow does not ask the model for a priority. It derives one from the impact and the signals: `security` gives `priority:p0`; `regression` gives at least `priority:p1`; otherwise `impact:critical`, `impact:high`, `impact:medium` and `impact:low` give `priority:p0` to `priority:p3`. An `impact:` label already on the item replaces the model's impact, and a `security` or `regression` label already on the item counts the same as one the model found. With no impact and no such signal, the item gets no priority.
 
-An answer below 0.6 confidence adds no label for its group. `status:blocked` and `status:needs-info` come first; `status:ready` needs every group settled and a confident ready answer; every other item gets `status:needs-triage`, so a maintainer decides. The workflow never replaces a group a maintainer already labelled, and it labels nothing when the repository has no `SUBQ_API_KEY` secret. A maintainer reruns it from the Actions tab with an item number.
+An answer below 0.6 confidence adds no label for its group. `status:blocked` and `status:needs-info` come first; `status:ready` needs every group settled and a confident ready answer; every other item gets `status:needs-triage`, so a maintainer decides. The workflow never replaces a group a maintainer already labelled; it replaces a `status:` label it set itself when its answer changes. It labels nothing when the repository has no `SUBQ_API_KEY` secret. A maintainer reruns it from the Actions tab with an item number.
 
 `scripts/triage/taxonomy.ts` defines every label. The `Labels` workflow creates and updates them when that file changes on `dev` or `main`.
 
