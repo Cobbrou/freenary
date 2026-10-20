@@ -52,6 +52,7 @@ export const SankeyNodeLabel = ({
   const maxSideLabelChars = Math.floor(
     node.labelBudget / SIDE_LABEL_CHAR_WIDTH
   );
+
   const fitted = fitSideLabel(
     node.label,
     formatValue(node.value),

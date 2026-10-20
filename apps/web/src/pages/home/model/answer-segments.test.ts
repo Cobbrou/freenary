@@ -39,6 +39,7 @@ describe("splitAnswer", () => {
     expect(splitAnswer("Here it is:\n```openui-la")).toEqual([
       { kind: "markdown", text: "Here it is:" },
     ]);
+
     expect(splitAnswer("Here it is:\n``")).toEqual([
       { kind: "markdown", text: "Here it is:" },
     ]);

@@ -40,6 +40,7 @@ describe("resolveNsiCountries", () => {
     expect(
       resolveNsiCountries([AMBIGUOUS_NSI_CODE_MEANING_JAPAN_OR_JAMAICA])
     ).toEqual([]);
+
     expect(resolveNsiCountries(NON_ISO_NSI_COUNTRY_CODES)).toEqual([]);
   });
 

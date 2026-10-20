@@ -7,6 +7,7 @@ describe("callerBucket", () => {
     const spoofed = callerBucket(
       new Headers({ "x-forwarded-for": "203.0.113.7, 10.0.0.1" })
     );
+
     const otherSpoof = callerBucket(
       new Headers({ "x-forwarded-for": "198.51.100.9, 10.0.0.1" })
     );
@@ -24,6 +25,7 @@ describe("callerBucket", () => {
     const first = callerBucket(
       new Headers({ "x-forwarded-for": "203.0.113.7" })
     );
+
     const second = callerBucket(
       new Headers({ "x-forwarded-for": "198.51.100.9" })
     );

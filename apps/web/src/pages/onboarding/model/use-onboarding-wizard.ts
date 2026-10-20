@@ -26,6 +26,7 @@ export const useOnboardingWizard = ({
   const [taxCountries, setTaxCountries] = useState<string[]>(
     () => loadOnboardingState()?.taxCountries ?? []
   );
+
   const [isCompleting, setIsCompleting] = useState(false);
 
   const completeOnboarding = async () => {
@@ -43,6 +44,7 @@ export const useOnboardingWizard = ({
       await queryClient.invalidateQueries({
         queryKey: orpc.onboarding.getStatus.queryOptions().queryKey,
       });
+
       toast.success(m.onboarding_completed_toast());
       navigate({ to: "/" });
     } else {

@@ -13,21 +13,23 @@ bun install
 bun run dev:up     # PostgreSQL, migrations, API server, web app, docs site
 ```
 
-`dev:up` runs `docker-compose.dev.yml` under a per-worktree Compose project and prints the URLs it serves. No dev service publishes a host port: the stack reaches you through OrbStack hostnames (`web.<slug>.freenary.orb.local`, `server.<slug>.freenary.orb.local`, `docs.<slug>.freenary.orb.local`), and the slug comes from the git branch. Without OrbStack, use the local path instead:
+`dev:up` runs `docker-compose.dev.yml` under a per-worktree Compose project and prints the URLs it serves. No dev service publishes a host port: one shared Traefik on port 80 routes plain-HTTP hostnames (`web.<slug>.freenary.localhost`, `server.<slug>.freenary.localhost`, `docs.<slug>.freenary.localhost`) to the containers, and the slug comes from the git branch. `scripts/dev.ts` reuses a Traefik already on the `devproxy` network, or starts `docker-compose.proxy.yml`; the self-hosting `docker-compose.yml` never involves it. Use Chrome or Firefox, which treat `*.localhost` as a secure context. Without Docker for the apps, use the local path instead:
 
 ```bash
-bun run db:start   # PostgreSQL container from docker-compose.yml (needs the root .env: cp .env.example .env)
-bun run db:push    # apply the Prisma schema
-bun run dev        # web 3001, server 3000, docs 4000
+cp .env.example .env                    # POSTGRES_PASSWORD and BETTER_AUTH_SECRET for docker-compose.yml
+echo 'DATABASE_URL=postgresql://postgres:password@localhost:5432/freenary' > apps/server/.env
+docker compose up -d --wait postgres
+(cd packages/db && bun run db:migrate:deploy)   # the Prisma CLI reads DATABASE_URL from apps/server/.env
+bun run dev                             # web 3001, server 3000, docs 4000
 ```
 
-The dev stack needs no `.env`: the `server` service declares `env_file` with `required: false`, so an optional root `.env` reaches the container line by line, and `environment` carries only the six values the stack derives from the worktree — `DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `CORS_ORIGIN`, `AUTH_COOKIE_DOMAIN` and `NODE_ENV` (Compose gives `environment` precedence over `env_file`). It configures no email provider, so the one-time-code flows are off. `bun run dev:mail` layers `docker-compose.mail.yml` over it: that file starts `axllent/mailpit:v1.28` and points the server at it with `EMAIL_PROVIDER=smtp`, `SMTP_HOST=mailpit`, `SMTP_PORT=1025` and `EMAIL_FROM=Freenary <no-reply@freenary.test>`, and the inbox is a web page at `https://mail.<slug>.freenary.orb.local`. `bun run dev:reset` destroys the volumes and starts over. The `bootstrap` service runs `prisma migrate deploy` before the API server starts.
+The dev stack needs no `.env`: the `server` service declares `env_file` with `required: false`, so an optional root `.env` reaches the container line by line, and `environment` carries only the six values the stack derives from the worktree — `DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `CORS_ORIGIN`, `AUTH_COOKIE_DOMAIN` and `NODE_ENV` (Compose gives `environment` precedence over `env_file`). It configures no email provider, so the one-time-code flows are off. `bun run dev:mail` layers `docker-compose.mail.yml` over it: that file starts `axllent/mailpit:v1.28` and points the server at it with `EMAIL_PROVIDER=smtp`, `SMTP_HOST=freenary-mailpit`, `SMTP_PORT=1025` and `EMAIL_FROM=Freenary <no-reply@freenary.test>`, and the inbox is a web page at `http://mail.<slug>.freenary.localhost`. `bun run dev:reset` destroys the volumes and starts over. The `bootstrap` service runs `prisma migrate deploy` before the API server starts.
 
 **There is no seed script.** Create an account through the sign-in screen. Neither `bun run dev:up` nor `bun run dev` configures an email provider, so `requireEmailVerification` stays off, sign-up returns a session at once, and the interface shows no **Forgot password?** link. To work on the one-time-code flows, start the stack with `bun run dev:mail` and read the code in the Mailpit inbox. Bank data needs real bank-provider credentials (`BANKING_PROVIDER`, `POWENS_*` or `ENABLE_BANKING_*`); with none, the bank list reports that bank linking is unavailable and onboarding skips the connect step.
 
 The production stack is `docker-compose.yml` (`bun run docker:up`, which is `docker compose up -d`). It runs the published `ghcr.io/suiramdev/freenary-server` and `ghcr.io/suiramdev/freenary-web` images, and applies the migrations itself through its one-shot `migrate` service. Its root `.env` carries `POSTGRES_PASSWORD`, `BETTER_AUTH_SECRET` and `FREENARY_VERSION`. The compose default is `latest`, the newest release; the other published tags are `X.Y.Z`, `X.Y`, `X`, `main`, `dev` and `sha-<7 characters>`.
 
-Full walkthrough: [Local development stack](apps/fumadocs/content/docs/next/contributing/local-stack.mdx) and [Self-hosting](apps/fumadocs/content/docs/next/self-hosting/index.mdx).
+Full walkthrough: [Contribute](apps/fumadocs/content/docs/next/contribute.mdx) and [Install Freenary](apps/fumadocs/content/docs/next/get-started/install.mdx).
 
 ## Frontend Architecture: Feature-Sliced Design
 
@@ -73,30 +75,18 @@ Run it from the app directory or through the script: steiger finds `steiger.conf
 
 Pure refactors, internal helpers, and dependency bumps that change no documented behavior need no docs change. Say so in the PR rather than leaving it ambiguous.
 
-**The docs are versioned.** `content/docs` holds one folder per version of Freenary: `next` for the unreleased code, and one frozen `X.Y` folder per release. **A change edits `next` and nothing else** — the `Release` workflow copies `next` to `content/docs/X.Y` before it tags, and a released folder only ever takes a correction to that release. Every page is served under its version (`/docs/next/guides/budget`), a path with no version redirects to the newest release, and **an authored link never names a version**: write `/docs/guides/budget` and the site resolves it inside the version being read.
+**The docs are versioned.** `content/docs` holds one folder per version of Freenary: `next` for the unreleased code, and one frozen `X.Y` folder per release. **A change edits `next` and nothing else** — the `Release` workflow copies `next` to `content/docs/X.Y` before it tags, and a released folder only ever takes a correction to that release. Every page is served under its version (`/docs/next/use/budget`), a path with no version redirects to the newest release, and **an authored link never names a version**: write `/docs/use/budget` and the site resolves it inside the version being read. A moved or deleted page gets a pair in `apps/fumadocs/src/shared/config/moved-pages.ts` so its old URL still lands somewhere.
 
-**Put it in the right section.** `content/docs/next/` is split by audience, and the split is what makes the site navigable:
+**Put it in the right section.** `content/docs/next/` holds `index.mdx`, then `get-started/` (install and first bank), `use/` (anyone signed in, no terminal), `run/` (the operator after install), `reference/` (every variable and alternative setup) and `contribute.mdx`. Each folder's `meta.json` holds the order. Internals go to `docs/engineering/`, not to the site. A fact lives in **exactly one** page; everywhere else links to it.
 
-| Section | Audience | Never contains |
-| --- | --- | --- |
-| `index.mdx` | Everyone | Instructions |
-| `quickstart.mdx` | A reader with Docker and no instance | The served install: public origins, reverse proxy, hardening |
-| `concepts.mdx` | Users | Prisma model names, enum values, columns — those live in `contributing/data-model.mdx` |
-| `self-hosting/` | Operators | Product walkthroughs |
-| `guides/` | Users of a running instance | Env vars, Docker, file paths, package names, database or enum names |
-| `integrations/` | Developers calling the API | Internal design rationale |
-| `contributing/` | Contributors and engineers | Anything an end user needs |
+**Document what is true, and only what is true.** Read the code before writing the page, quote real names, and never describe a screen, flag, or endpoint that does not exist. Write plain, short, second-person prose; the full writing rules are in [`apps/fumadocs/AGENTS.md`](apps/fumadocs/AGENTS.md).
 
-The sidebar order is each version folder's own `meta.json`, and its four separators name the audiences: `index`, `quickstart`, `concepts`, `---Run Freenary---`, `self-hosting`, `---Use Freenary---`, `guides`, `---Build on Freenary---`, `integrations`, `---Contribute---`, `contributing`. The root `content/docs/meta.json` lists the versions instead, and orders the dropdown. `quickstart.mdx` owns the shortest install on one machine; `self-hosting/index.mdx` owns the install that serves other people. A folder's index page carries the name of its subject, and no page is titled `Overview`.
-
-A fact lives in **exactly one** section; everywhere else links to it. Duplicated prose is the failure mode this structure exists to prevent. How the system works — architecture, request flow, internals — belongs to `contributing/`; a user wants to run the app and use it.
-
-**Document what is true, and only what is true.** Read the code before writing the page, quote real names, and never describe a screen, flag, or endpoint that does not exist. No page carries a roadmap: never write that a feature is planned, is coming soon, or is not built yet, and never write a "what Freenary does today" list or a Built-against-Planned table. State what a reader can do, link them to it, and leave the rest out. (The repository `README.md` is not a docs page and does carry the state of the project.)
+**A page is not evidence.** Existing documentation, including this file, can be stale or machine-written, so verify every technical claim against code, tests, schemas, command output or an approved specification before you repeat it. Never grow an existing page by paraphrasing it: update only the pages the change affects, keep accurate human-written text as it is, and delete what is obsolete or redundant. Never state a reason behind a design choice that the code does not show; ask a maintainer instead.
 
 **Verify it.** Two gates, and neither one alone is enough:
 
 ```bash
-bun run docs:check   # icons, components, links, navigation, audience split, language
+bun run docs:check   # frontmatter, icons, components, links, anchors, navigation, moved pages
 cd apps/fumadocs && bun run build
 ```
 
@@ -108,15 +98,15 @@ cd apps/fumadocs && bun run build
 | MDX component not registered in `src/shared/ui/mdx.tsx` | **Passes** — renders nothing | Fails |
 | Dead internal link or `#anchor` | **Passes** | Fails |
 | Page missing from its folder's `meta.json` | **Passes** | Fails |
-| A shell command or an env var inside `guides/` | **Passes** | Fails |
 | A link that names a version, or a version folder without `"root": true` | **Passes** | Fails |
-| A contraction, a banned word, roadmap language, a 26-word sentence | **Passes** | Fails (in `next`; a frozen version keeps the structure rules only) |
+| An operator code block in `use/` | **Passes** | Fails |
+| A moved page with no pair in `moved-pages.ts` | **Passes** | Fails |
 
-A green gate therefore is not proof the page is right. Load the page you changed and look at it. The authoring rules and the five-step writing workflow live in [`apps/fumadocs/AGENTS.md`](apps/fumadocs/AGENTS.md), and the reader-facing version is [`content/docs/next/contributing/writing-docs.mdx`](apps/fumadocs/content/docs/next/contributing/writing-docs.mdx) — update both together when the conventions change. Every page is written in ASD-STE100 Simplified Technical English; that rule is part of the authoring standard, not a style preference.
+A green gate therefore is not proof the page is right. Load the page you changed and look at it.
 
 ## Environment Variables: One Schema, Two Generated Files
 
-Every server variable is declared once, in [`packages/env/src/schema.ts`](packages/env/src/schema.ts), with a `.describe()` sentence and a `.meta({ section, example, onError })` block; `packages/env/src/server.ts` only hands that object to `createEnv`, and the client variables live in `schema-web.ts`. `bun run env:sync` writes the two artifacts from it: the root `.env.example`, and the tables of `apps/fumadocs/content/docs/next/self-hosting/configuration.mdx`, between the `{/* env-sync:start … */}` and `{/* env-sync:end */}` markers. **Neither artifact is edited by hand** — the next sync overwrites the edit.
+Every server variable is declared once, in [`packages/env/src/schema.ts`](packages/env/src/schema.ts), with a `.describe()` sentence and a `.meta({ section, example, onError })` block; `packages/env/src/server.ts` only hands that object to `createEnv`, and the client variables live in `schema-web.ts`. `bun run env:sync` writes the two artifacts from it: the root `.env.example`, and the tables of `apps/fumadocs/content/docs/next/reference/configuration.mdx`, between the `{/* env-sync:start … */}` and `{/* env-sync:end */}` markers. **Neither artifact is edited by hand** — the next sync overwrites the edit.
 
 `bun run env:check` is the same script with `--check`, and CI runs it as the **Environment** step; a `lefthook` pre-commit job runs `env:sync` and stages what it writes. The generator also refuses a schema key that carries no `.describe()`, `example` or `onError`, a `process.env.X` read that no schema and no allow-list declares, a `${VAR}` in a compose file that nothing declares, and an allow-list entry that no file uses. Adding a variable is therefore a schema edit plus `bun run env:sync`: the compose files no longer list pass-through variables, so no compose edit is part of it.
 
@@ -124,18 +114,18 @@ Every server variable is declared once, in [`packages/env/src/schema.ts`](packag
 
 `apps/web` ships in English and French. Every user-facing string it renders is a key in `apps/web/messages/en.json` and `messages/fr.json`, and **a change that adds or edits UI adds or edits both catalogs in the same commit**. A key present in `en.json` and missing from `fr.json` compiles with no error and no warning — the French branch aliases to the English one, so English reaches French readers and no build step catches it.
 
-The rules live next to the code they govern: [`apps/web/AGENTS.md`](apps/web/AGENTS.md#internationalization) for catalogs, message discipline and locale-aware formatting; [`packages/ui/AGENTS.md`](packages/ui/AGENTS.md) for primitives' accessible names; [`packages/api/AGENTS.md`](packages/api/AGENTS.md) for why responses carry slugs rather than labels. The mechanism is Paraglide: `apps/web/src/paraglide/` is generated, and every component imports the message functions as `m`. What readers see is documented at [`content/docs/next/guides/interface.mdx`](apps/fumadocs/content/docs/next/guides/interface.mdx).
+The rules live next to the code they govern: [`apps/web/AGENTS.md`](apps/web/AGENTS.md#internationalization) for catalogs, message discipline and locale-aware formatting; [`packages/ui/AGENTS.md`](packages/ui/AGENTS.md) for primitives' accessible names; [`packages/api/AGENTS.md`](packages/api/AGENTS.md) for why responses carry slugs rather than labels. The mechanism is Paraglide: `apps/web/src/paraglide/` is generated, and every component imports the message functions as `m`. What readers see is documented at [`content/docs/next/use/account.mdx`](apps/fumadocs/content/docs/next/use/account.mdx).
 
 ## Branches and Releases
 
-Pull requests target `dev`, the integration branch; `main` holds released code, and a push to either branch publishes the `ghcr.io/suiramdev/freenary-server` and `ghcr.io/suiramdev/freenary-web` images under that branch name. A maintainer releases by merging a docs snapshot (`bun run docs:snapshot X.Y.Z`) into `dev`, merging `dev` into `main`, and running the `Release` workflow, which refuses a stable version without its snapshot, then creates the `vX.Y.Z` tag, the versioned images and the GitHub release. The web image carries its version from the build argument `FREENARY_VERSION`, which is what its account-menu documentation link points at. Contributors never tag and never bump a version — see [Release a version](apps/fumadocs/content/docs/next/contributing/releasing.mdx).
+Pull requests target `dev`, the integration branch; `main` holds released code, and a push to either branch publishes the `ghcr.io/suiramdev/freenary-server` and `ghcr.io/suiramdev/freenary-web` images under that branch name. A maintainer releases by merging a docs snapshot (`cd apps/fumadocs && bun run docs:snapshot X.Y.Z`) into `dev`, merging `dev` into `main`, and running the `Release` workflow, which refuses a stable version without its snapshot, then creates the `vX.Y.Z` tag, the versioned images and the GitHub release. The web image carries its version from the build argument `FREENARY_VERSION`, which is what its account-menu documentation link points at. Contributors never tag and never bump a version — see [Contribute](apps/fumadocs/content/docs/next/contribute.mdx).
 
 ## Pull Request Descriptions: Complete, Then Brief
 
 - **Reviewers skim.** A description they have to scroll does not get read, so keep the whole body under ~400 words. Fill every section; pad none.
 - **Summary:** at most four sentences — what changed, and what to look at first.
 - **Motivation, Drawbacks, Prior art:** at most four short bullets each. Drawbacks and Prior art carry the honest costs and the rejected alternatives, not a sales pitch.
-- **Notes:** one line per fact — `Closes #n`, the visual change (or explicitly none), the tests added, the `apps/fumadocs` pages updated (or explicitly none, and why), the short review summary `CONTRIBUTING.md` asks for, and any migration, breaking change, or merge-order constraint.
+- **Notes:** one line per fact — `Closes #n`, the visual change (or explicitly none), the tests added, the `apps/fumadocs` pages updated (or explicitly none, and why), and any migration, breaking change, or merge-order constraint.
 - Don't restate the issue, list changed files, narrate the implementation, or paste command output — reviewers open the diff and the linked issue for that.
 - Evidence a reviewer may want but need not read (verification logs, benchmark runs) belongs in a PR comment, not the description.
 - A section that needs a table or a code block is a smell: that detail belongs in the issue, the code, or a comment.
@@ -146,9 +136,9 @@ Once an integration is implemented and smoke-tested, the owning agent runs the `
 
 ---
 
-# Code Standards: Ultracite and begone-slop
+# Code Standards: Ultracite and oxslop
 
-This project runs **Ultracite** (Oxlint + Oxfmt) for the general standard, and the **`@jliocsar/begone-slop`** preset on top of it. `oxlint.config.ts` extends the Ultracite `core`, `react` and `tanstack` presets and the begone-slop `preset.json`, and loads the plugin through `jsPlugins`. All 37 begone-slop rules are `error`. `apps/fumadocs` is a standalone app with its own `.oxlintrc.json`, which extends the same preset.
+This project runs **Ultracite** (Oxlint + Oxfmt) for the general standard, and the **`oxslop`** plugin on top of it. `oxlint.config.ts` extends the Ultracite `core`, `react` and `tanstack` presets and the fragment that `oxslop({ strict: true })` returns from `oxslop/config`, which carries the plugin, the rules and the test-file overrides. All 39 oxslop rules are `error`, across its four groups — `core`, `effect`, `style` and `testing`. `apps/fumadocs` is a standalone app with its own `.oxlintrc.json`, which extends `presets/all.json` instead, because Oxlint resolves `extends` against the config file and JSON takes no function call.
 
 ## Quick Reference
 
@@ -157,7 +147,7 @@ This project runs **Ultracite** (Oxlint + Oxfmt) for the general standard, and t
 - **Lint under Bun** (a TypeScript config needs Bun or Node 22.18+): `bunx --bun oxlint`
 - **Diagnose setup**: `bun x ultracite doctor`
 
-Most formatting issues fix themselves. The begone-slop rules mostly do not: `no-comments`, `statement-order`, `no-try-catch` and `no-switch` are hand work.
+Most formatting issues fix themselves, and so do `require-readable-spacing`, `expect-padding` and `prefer-option-from-nullable`, the three oxslop rules that carry a fix. The rest do not: `no-comments`, `no-vague-identifiers`, `no-array-filter-map`, `no-try-catch` and `no-switch` are hand work.
 
 ---
 
@@ -207,9 +197,9 @@ Write code that is **accessible, performant, type-safe, and maintainable**. Focu
 ### Error Handling & Debugging
 
 - Remove `console.log`, `debugger`, and `alert` statements from production code
-- `begone-slop/no-try-catch` bans `try`/`catch` and `try`/`finally`. Model the failure instead — see the Effect section below
+- `oxslop/no-try-catch` bans `try`/`catch` and `try`/`finally`. Model the failure instead — see the Effect section below
 - Prefer early returns over nested conditionals for error cases
-- `begone-slop/no-silent-error-swallow` bans a handler that discards the error; carry it in the error channel or log it with its cause
+- `oxslop/no-silent-error-swallow` bans a catch handler that ignores the error and returns `Effect.void` or an empty success; carry it in the error channel, or log it with `Effect.logWarning` and name the error parameter
 
 ### Code Organization
 
@@ -221,11 +211,11 @@ Write code that is **accessible, performant, type-safe, and maintainable**. Focu
 
 ### Code Comments: There Are Almost None
 
-`begone-slop/no-comments` rejects every comment except a `SAFETY:` justification, a tooling directive (`@ts-expect-error`, `oxlint-disable`, `eslint-disable`, `c8`, `istanbul`), a `/// <reference …>` and a shebang. JSDoc is not exempt.
+`oxslop/no-comments` rejects every comment except a `SAFETY:` justification, a tooling directive (`@ts-`, `oxlint-`, `eslint-`, `biome-`, `prettier-`, `c8 `, `v8 `, `istanbul `, `#region`, `#endregion`), a `/// <reference …>`, a `/*! … */` licence banner, a `/* @__PURE__ */` annotation and a shebang. JSDoc is exempt in oxslop by default; `oxlint.config.ts` passes `allowJsdoc: false`, so it is not exempt here.
 
 - **The code carries the meaning.** A name that needs a sentence beside it is the wrong name. Rename the symbol, name the intermediate value, extract a named function, tighten the type, or turn the literal into a named constant.
 - **Durable knowledge goes in a document.** A vendor's documented quirk, a protocol constraint, a measured number's provenance: [`docs/engineering/`](docs/engineering) holds one file per area (`web-ui`, `web-app`, `api`, `categorisation`, `data-pipeline`, `platform`), keyed by `path › symbol`; a package's `AGENTS.md` holds a rule contributors need; `apps/fumadocs` holds anything a reader needs. `docs/engineering/platform.md` also records the oxlint rule interactions that bite when writing Effect here.
-- **`SAFETY:` is only for an assertion.** It states the invariant that makes one `as` sound, immediately before the assertion or its statement. Never write one to smuggle prose past the rule, and never add an `oxlint-disable` for `no-comments`.
+- **`SAFETY:` is only for an assertion.** It states the invariant that makes one `as` sound. `oxslop/require-safety-comment-for-type-assertion` reads it only on a line the assertion itself spans, or directly above the whole statement the assertion sits in — not above an object property or a JSX attribute in the middle of one. Where that reads badly, bind the assertion to a named `const` and put the justification above it. Never write one to smuggle prose past the rule, and never add an `oxlint-disable` for `no-comments`.
 
 ### Security
 

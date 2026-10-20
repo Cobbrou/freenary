@@ -28,6 +28,7 @@ export const createResendEmailProvider = (
 
     if (!response.ok) {
       const body = await response.text();
+
       throw new Error(
         `Resend rejected the message (${response.status}): ${body}`
       );

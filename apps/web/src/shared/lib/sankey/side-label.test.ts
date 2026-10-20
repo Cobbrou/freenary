@@ -14,19 +14,23 @@ const LEADING_SYMBOL_AMOUNTS = [
   "€1.00",
   "€1,234,567.89",
 ];
+
 const TRAILING_SYMBOL_AMOUNTS = ["2\u202F500,00\u00A0€", "216,40\u00A0€"];
+
 const DIGIT_FREE_LABELS = [
   "Salary",
   "Public transport",
   "Culture & events",
   "Rent",
 ];
+
 const PRE_FIX_RENDERS_THAT_SLICED_THE_AMOUNT = [
   ["Salary: €2…", "€2,500.00"],
   ["Culture & events: €95.…", "€95.00"],
   ["Public transport: €216…", "€216.40"],
   ["Salary: 216,4…", "216,40\u00A0€"],
 ] as const;
+
 const WIDEST_TESTED_LABEL_CHARS = 40;
 
 describe("fitSideLabel", () => {

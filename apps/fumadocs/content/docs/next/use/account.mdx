@@ -1,0 +1,99 @@
+---
+title: Your account
+description: Your first steps, how you sign in, how to protect your account, and your language and theme.
+icon: UserRound
+---
+
+Set up your account the first time you sign in, protect it, and choose how Freenary looks. Everything here happens in the app, from the sign-in screen or Settings.
+
+## First steps
+
+The first time you sign in, Freenary asks two questions:
+
+1. **Your tax residency.** Pick every country you pay tax in. It sets the banks you can connect. Countries other than France carry a `Limited support` badge.
+2. **Your bank.** Connect one now, or press `Skip for now` and do it later from Settings. If your instance can't link banks yet, Freenary skips this question.
+
+<Callout type="warn">
+
+No screen changes your tax residency later, so pick every country before you go on.
+
+</Callout>
+
+A **First steps** checklist then sits at the bottom of the sidebar. Each item opens the right Settings pane:
+
+| Item | Done when |
+| --- | --- |
+| `Connect your bank` | You have a [bank connection](/docs/use/bank-connections) |
+| `Set up your budget` | Your [plan](/docs/use/budget#plan-a-budget) has a line |
+| `Protect your account` | You turn on two-factor authentication or add a passkey |
+
+The checklist goes away once all three are done, and comes back if one stops being true, for example when you remove your only passkey.
+
+## Sign in
+
+Type your email address on the sign-in screen. Freenary then asks for your password, or for a name and a password if you're new. Password and code rules are in [Sign-in](/docs/run/sign-in).
+
+Your operator decides what else the screen offers:
+
+- **A confirmation code** by email for a new account, on an instance that sends email. No code? Press `Send a new code` and check your spam folder.
+- **`Sign in with a passkey`**: your device's fingerprint, face or PIN instead of a password.
+- **`Continue with Google`**, **`Continue with Apple`**, **`Continue with single sign-on`**, or `Continue with` followed by another provider's name.
+
+### Change your password
+
+Freenary has no screen to change your password. Use `Forgot password?` on the sign-in screen: it emails you a code, and you choose a new password with it.
+
+That link only appears on an instance that sends email. Without it, ask your operator.
+
+Freenary also has no screen to change your name or email address, or to delete your account.
+
+## Protect your account
+
+Do at least one of these in Settings, `Security`.
+
+### Turn on two-factor authentication
+
+With two-factor on, signing in with your password also asks for a code from an authenticator app.
+
+1. In `Two-factor authentication`, turn the switch on and confirm your password.
+2. Scan the QR code with your authenticator app, and type the 6-digit code it shows.
+3. Copy the recovery codes and keep them somewhere safe. Freenary shows them only once.
+
+Each recovery code signs you in once without your phone: at sign-in, choose `Use a recovery code`. To get a new set, press `Generate new recovery codes`; the old set stops working.
+
+At sign-in, `Remember this device for 30 days` skips the code on that browser.
+
+Two-factor protects password sign-in only. An account created with Google, Apple or single sign-on has no password, so add a passkey instead.
+
+### Add a passkey
+
+In `Passkeys`, press `Add a passkey`, name it, and follow your browser's prompt. Passkeys need a recent browser on a secure (HTTPS) connection.
+
+### The recent sign-in rule
+
+Adding or removing a passkey, and linking or unlinking Google, Apple or single sign-on, need a sign-in from the last 15 minutes. Otherwise Freenary says `Sign in again before changing how your account is accessed: this needs a session less than 15 minutes old.` Sign out, sign back in, and try again.
+
+## Sessions
+
+`Active sessions`, in Settings, `Security`, lists every browser signed in to your account. Press `Revoke` to sign one out, or `Sign out other sessions` to sign out every browser but this one. How long a session lasts is in [Sign-in](/docs/run/sign-in#sessions).
+
+## Language and theme
+
+Freenary speaks English and French, and has a light theme, a dark theme, and one that follows your system.
+
+Change them in Settings, `Appearance`, from the menu under your name at the bottom of the sidebar, or on the sign-in screen. Changing the language reloads the page, so save an unsaved plan first.
+
+Both choices belong to the browser, not to your account: another browser keeps its own.
+
+<Cards>
+  <Card
+    title="Bank connections"
+    href="/docs/use/bank-connections"
+    description="Connect your first bank."
+  />
+  <Card
+    title="Budget"
+    href="/docs/use/budget"
+    description="Read your spending and plan a budget."
+  />
+</Cards>

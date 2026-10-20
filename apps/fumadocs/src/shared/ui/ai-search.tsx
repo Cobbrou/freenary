@@ -1,4 +1,5 @@
 "use client";
+
 import { useChat, type UseChatHelpers } from "@ai-sdk/react";
 import {
   DefaultChatTransport,
@@ -144,6 +145,7 @@ export function AISearchInput(props: ComponentProps<"form">) {
   const [input, setInput] = useState(
     () => localStorage.getItem(INPUT_STORAGE_KEY) ?? ""
   );
+
   const isLoading = status === "streaming" || status === "submitted";
 
   const onStart = (event: SyntheticEvent) => {
@@ -167,6 +169,7 @@ export function AISearchInput(props: ComponentProps<"form">) {
         },
       ],
     });
+
     setInput("");
     localStorage.removeItem(INPUT_STORAGE_KEY);
   };
@@ -307,6 +310,7 @@ function Message({
   for (const part of message.parts ?? []) {
     if (part.type === "text") {
       markdown += part.text;
+
       continue;
     }
 

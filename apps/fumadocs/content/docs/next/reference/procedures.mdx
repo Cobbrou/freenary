@@ -1,0 +1,470 @@
+---
+title: Procedure reference
+description: Every procedure of the Freenary API, with who can call it, the input rules its schema can't express, its output and its errors.
+icon: ListTree
+---
+
+All 42 procedures, grouped by router. [API](/docs/reference/api) covers the base URL, the cookie, the request shapes and the rate limits.
+
+- **Path.** `budget.getTransactions` is `POST /rpc/budget/getTransactions` or `POST /api-reference/budget/getTransactions`.
+- **Input.** `/api-reference/spec.json` on your instance holds every input schema: types, required fields, enums, bounds and defaults. This page adds only the rules a schema can't express.
+- **Access.** **Public** needs no session. **Protected** needs the session cookie, or returns `UNAUTHORIZED` (401). **Operator** also returns `FORBIDDEN` (403) to any account that isn't the operator.
+- **Errors.** A procedure with no **Errors** line has no failure of its own. The 401, the 403, a failed schema and an unhandled `INTERNAL_SERVER_ERROR` can still happen.
+- **Dates** are ISO 8601 strings. **Money** is an integer in minor units: 12.34 EUR is `1234`. Sums add stored amounts with no currency conversion, so a total over two currencies mixes them.
+
+## All procedures
+
+| Procedure | Access | Purpose |
+| --- | --- | --- |
+| [`healthCheck`](#healthcheck) | Public | Returns `"OK"` from the router |
+| [`privateData`](#privatedata) | Protected | Returns the session user, to test a cookie |
+| [`assistant.getConversation`](#assistantgetconversation) | Protected | The active conversation and the instance's model |
+| [`assistant.saveTurn`](#assistantsaveturn) | Protected | Stores one finished turn the caller answered itself |
+| [`assistant.startNewConversation`](#assistantstartnewconversation) | Protected | Archives the active conversation |
+| [`auth.accountExists`](#authaccountexists) | Public | Whether an email address holds an account |
+| [`auth.capabilities`](#authcapabilities) | Public | The sign-in methods and password rules of the instance |
+| [`auth.viewer`](#authviewer) | Public | Whether the caller is signed in and onboarded |
+| [`bankConnection.disconnect`](#bankconnectiondisconnect) | Protected | Deletes one bank connection and everything under it |
+| [`bankConnection.exchangeCode`](#bankconnectionexchangecode) | Protected | Turns the bank provider callback into a bank connection |
+| [`bankConnection.getProviderAvailability`](#bankconnectiongetprovideravailability) | Protected | Whether a bank provider is configured |
+| [`bankConnection.listConnections`](#bankconnectionlistconnections) | Protected | The caller's bank connections and their accounts |
+| [`bankConnection.listInstitutions`](#bankconnectionlistinstitutions) | Protected | The banks the provider can link in some countries |
+| [`bankConnection.startConnection`](#bankconnectionstartconnection) | Protected | Opens a bank consent session |
+| [`budget.getAccounts`](#budgetgetaccounts) | Protected | The caller's bank accounts and transaction date bounds |
+| [`budget.getBudgetVsActual`](#budgetgetbudgetvsactual) | Protected | Planned against real spend per category |
+| [`budget.getCashFlow`](#budgetgetcashflow) | Protected | Money in and out per day, week or month |
+| [`budget.getFixedVsVariable`](#budgetgetfixedvsvariable) | Protected | Money out split into recurring and the rest |
+| [`budget.getMerchants`](#budgetgetmerchants) | Protected | The companies of a date range, most frequent first |
+| [`budget.getRecurring`](#budgetgetrecurring) | Protected | Everything the Recurring page reads |
+| [`budget.getRecurringExpenses`](#budgetgetrecurringexpenses) | Protected | The merchants detected as regular |
+| [`budget.getSankeyData`](#budgetgetsankeydata) | Protected | The income-to-category flow |
+| [`budget.getSpendingBreakdown`](#budgetgetspendingbreakdown) | Protected | Money out per category |
+| [`budget.getSyncStatus`](#budgetgetsyncstatus) | Protected | The sync or recategorisation in flight |
+| [`budget.getTransactions`](#budgetgettransactions) | Protected | One page of transactions, with the range totals |
+| [`budget.recategorise`](#budgetrecategorise) | Protected | Reruns the categorisation pipeline |
+| [`budget.syncAccounts`](#budgetsyncaccounts) | Protected | Pulls fresh data from the bank provider |
+| [`budget.updateTransactionCategory`](#budgetupdatetransactioncategory) | Protected | Sets one transaction's category and remembers the merchant |
+| [`instance.status`](#instancestatus) | Public | The setup state |
+| [`instance.describe`](#instancedescribe) | Operator | Each integration and where its values come from |
+| [`instance.check`](#instancecheck) | Operator | Tests credentials without saving them |
+| [`instance.save`](#instancesave) | Operator | Stores setup values |
+| [`instance.complete`](#instancecomplete) | Operator | Finishes setup |
+| [`onboarding.completeOnboarding`](#onboardingcompleteonboarding) | Protected | Stores the tax countries and ends the first-run flow |
+| [`onboarding.getStatus`](#onboardinggetstatus) | Protected | Whether the first-run flow is done |
+| [`settings.createCustomCategory`](#settingscreatecustomcategory) | Protected | Creates a custom category |
+| [`settings.deleteCustomCategory`](#settingsdeletecustomcategory) | Protected | Deletes a custom category and rehomes its budget lines |
+| [`settings.getBudgetProfile`](#settingsgetbudgetprofile) | Protected | The caller's budget lines |
+| [`settings.listCategories`](#settingslistcategories) | Protected | The category tree, in display order |
+| [`settings.moveCustomCategory`](#settingsmovecustomcategory) | Protected | Swaps a custom category with its neighbour |
+| [`settings.saveBudgetProfile`](#settingssavebudgetprofile) | Protected | Replaces every budget line |
+| [`settings.updateCustomCategory`](#settingsupdatecustomcategory) | Protected | Rewrites a custom category |
+
+## Date ranges and aggregation
+
+`from` and `to` are both included. Nothing checks that `from` comes before `to`.
+
+Four procedures take `aggregation`: `getBudgetVsActual`, `getFixedVsVariable`, `getSankeyData` and `getSpendingBreakdown`. `total` sums the range. `average` and `median` work on monthly sums, over the months that hold at least one transaction the procedure reads, so an empty month doesn't count as zero.
+
+## Root procedures
+
+### healthCheck
+
+**Output**: the string `"OK"`.
+
+### privateData
+
+**Output**: `{ message: "This is private", user }`, where `user` is the raw Better Auth user record.
+
+## `assistant`
+
+### assistant.getConversation
+
+**Output**: `{ conversationId, messages, serverModel }`.
+
+- `conversationId` names the active conversation. The read creates one when the caller has none.
+- `messages` is the stored transcript, oldest first, as `{ id, parts, role }`. `role` is `user` or `assistant`, `parts` is the AI SDK `UIMessage.parts` array, and `id` is what you pass as `messageId` to redo that turn. Archived conversations never appear.
+- `serverModel` is the model id of the instance, or `null` when it has none.
+
+### assistant.saveTurn
+
+**Input**: `conversationId` must name the caller's active conversation. `answer.id` becomes the id of the answer row. `regeneratedMessageId` names the stored answer this turn replaces.
+
+**Output**: `{ ok: true }`.
+
+**Errors**, in the order they're checked:
+
+- `TOO_MANY_REQUESTS` (429): over the [rate limit](/docs/reference/api#rate-limits).
+- `BAD_REQUEST` (400) `Turn too large`: the question exceeds 8000 characters, or the answer parts exceed 200000 characters as JSON.
+- `NOT_FOUND` (404) `Conversation is not the active one`.
+- `BAD_REQUEST` (400) `Empty answer`: no text part and no resolved tool part survived the filter.
+
+### assistant.startNewConversation
+
+**Output**: `{ ok: true }`. Nothing is deleted.
+
+## `auth`
+
+### auth.accountExists
+
+**Output**: `{ exists }`. The lookup folds the address to lower case first.
+
+**Errors**: `TOO_MANY_REQUESTS` (429), over the [rate limit](/docs/reference/api#rate-limits).
+
+### auth.capabilities
+
+**Output**
+
+| Field | Note |
+| --- | --- |
+| `emailDelivery` | `true` only when an email provider is set |
+| `minPasswordLength`, `maxPasswordLength` | The password bounds |
+| `oauth` | One `{ id, name }` per configured sign-in provider |
+| `otpLength` | Digits in a one-time code |
+| `passkey` | Always `true` |
+| `sessionCookieShared` | `true` when the API server and the web app share the session cookie |
+| `trustedDeviceDays` | The trusted-device window, in days |
+
+### auth.viewer
+
+A caller with no session gets a `guest` answer, not a 401.
+
+**Output**: `{ kind, onboarded, sessionCookieShared }`. `kind` is `guest` or `member`. `onboarded` appears on a `member` answer only. `sessionCookieShared` is the value `auth.capabilities` reports.
+
+## `bankConnection`
+
+### bankConnection.disconnect
+
+**Input**: `connectionId` must belong to the caller.
+
+**Output**: `{ accountsRemoved, institutionName, revocationRequested }`. `revocationRequested` is `false` when the provider refused the revoke call or has no credentials; the connection is deleted either way.
+
+**Errors**: `NOT_FOUND` (404) `Bank connection not found`.
+
+### bankConnection.exchangeCode
+
+**Input**: `params` is the raw callback query and must hold a `state` key. `providerId` is `powens` or `enable-banking`.
+
+**Output**: `{ accounts, connectionId, institutionName, returnTo, sessionId }`. `accounts` lists `{ iban?, name?, uid }` as the provider returned them. `returnTo` is `onboarding` or `settings`, as signed into the state. `sessionId` is the provider's session id.
+
+**Errors**
+
+- `NOT_FOUND` (404) `Unknown banking provider`.
+- `BAD_REQUEST` (400) `Missing bank connection state`, `Invalid bank connection state`, `Invalid banking provider in connection state`, `Bank connection state does not belong to this session`, `Bank institution is no longer available`, or `No provider session for this user`.
+- `SERVICE_UNAVAILABLE` (503) `Could not load banks for this country`.
+
+### bankConnection.getProviderAvailability
+
+**Output**: `{ available }`, `false` when the provider credentials are absent.
+
+### bankConnection.listConnections
+
+**Output**: `{ connections }`, oldest first. Each connection is:
+
+| Field | Note |
+| --- | --- |
+| `accounts` | `{ iban, id, name }`, oldest first |
+| `id` | Pass it as `connectionId` to `disconnect` or `budget.syncAccounts` |
+| `institutionCountry` | The bank's country code, or `null` |
+| `institutionId`, `institutionName` | The bank, as the provider names it |
+| `lastSyncedAt` | `null` before the first sync |
+| `status` | `ACTIVE`, `EXPIRED` or `ERROR`. Only `ACTIVE` connections sync |
+
+### bankConnection.listInstitutions
+
+**Input**: leave `countries` out, or send `[]`, to use the caller's tax countries.
+
+**Output**: `{ banks, unavailableCountries }`. A bank is `{ bic, country, id, logo, name }`; `bic` and `logo` can be `null`. Pass `id` as `institutionId` to `startConnection`.
+
+The provider answers one country at a time and the result is the union. A bank is the pair of `id` and `country`, and a duplicate pair is dropped. `unavailableCountries` lists the countries whose provider call failed. A country with no bank isn't listed there.
+
+**Errors**: `BAD_REQUEST` (400) `No country to list banks for`, when the input and the account both hold no country.
+
+### bankConnection.startConnection
+
+**Input**: `institutionId` is an `id` from `listInstitutions`, and `bankCountry` must match its country. `state` is your own value, returned in the callback state.
+
+**Output**: `{ url }`. Send the user's browser there. The provider redirects back to `CORS_ORIGIN` plus `/callback/powens` or `/callback/enable-banking`, a page of the web app.
+
+**Errors**: `BAD_REQUEST` (400) `Unknown bank institution`; `SERVICE_UNAVAILABLE` (503) `Could not load banks for this country`.
+
+## `budget`
+
+### budget.getAccounts
+
+**Output**: `{ accounts, firstTransactionDate, hasAccounts, lastTransactionDate }`. `accounts` holds `{ iban, id, institutionName, name }` in no set order. The two dates bound the caller's transactions, and are `null` when there are none.
+
+### budget.getBudgetVsActual
+
+**Output**: `{ categories, hasPlan }`. `categories` holds `{ actual, category, planned }` for each category whose plan or spend isn't zero, largest planned first, then largest actual. `hasPlan` is `false` with no outgoing budget line.
+
+With `average` or `median`, `planned` is the monthly plan. With `total`, it's the monthly plan times the months from `from` to `to` or today, whichever comes first: average-length months, rounded, at least 1.
+
+### budget.getCashFlow
+
+**Output**: `{ periods }` of `{ incoming, label, outgoing }`, oldest first. `label` is a day (`YYYY-MM-DD`) for ranges up to 31 days, the Monday of a week up to 93 days, and a month (`YYYY-MM`) beyond.
+
+### budget.getFixedVsVariable
+
+**Output**: `{ fixed, variable }`. The two sum to the money out, aggregated as asked.
+
+### budget.getMerchants
+
+**Input**: `search` is matched with SQL `ILIKE`, so `%` and `_` in it act as wildcards.
+
+**Output**: `{ merchants }` of `{ count, name, totalMinor }`, highest count first, then by name. `totalMinor` sums absolute amounts.
+
+### budget.getRecurring
+
+The rules behind `confidence` and `kind` are in [`docs/engineering/categorisation.md`](https://github.com/suiramdev/freenary/blob/dev/docs/engineering/categorisation.md#recurrence-detection).
+
+**Output**
+
+| Field | Note |
+| --- | --- |
+| `asOf` | When the detection ran. Every projection counts from here |
+| `availableBalanceMinor` | The sum of account balances, or `null` when no account reports one |
+| `currency` | The most common account currency, else `EUR` |
+| `items` | One detected pattern per entry |
+| `monthly` | The trailing 12 calendar months, oldest first, zero-filled: `{ month, fixedMinor, behavioralMinor, discretionaryMinor }`, `month` as `YYYY-MM` |
+| `monthlyIncomeMinor` | Money in over the window, divided by the months since the first incoming transaction, or `null` |
+| `plannedOutgoingMinor` | The monthly sum of outgoing budget lines, or `null` with no plan |
+
+| Field of one item | Note |
+| --- | --- |
+| `amountSpread` | Relative spread of the amounts. `0` when all are equal |
+| `category` | A spending category slug |
+| `confidence` | `confirmed`, `likely` or `pattern` |
+| `currency` | ISO 4217 code of the latest occurrence |
+| `frequency` | `weekly`, `monthly`, `quarterly`, `annual` or `irregular` |
+| `intervalDays` | Median gap between occurrences, in days |
+| `kind` | `fixed` or `behavioral` |
+| `lastSeen`, `nextExpected` | ISO 8601 date-times |
+| `merchantKey`, `merchantName` | The merchant lookup key, and the latest counterparty name or `null` |
+| `occurrences` | Transactions in the year before `asOf` |
+| `typicalAmountMinor` | Positive |
+
+### budget.getRecurringExpenses
+
+**Output**: `{ expenses }`, largest typical amount first. Each entry has the fields of a `getRecurring` item except `amountSpread`, `confidence` and `kind`. `occurrences` counts inside a 365-day window.
+
+### budget.getSankeyData
+
+**Output**: `{ groups, incomeNodes, moneyLeft, totalExpenses, totalIncome }`.
+
+- `groups` holds `{ categories, group, value }`, with `{ category, value }` rows in `categories`.
+- `incomeNodes` holds `{ name, value }`: the 10 largest sources by counterparty name, then `Other Income`. Money in with no counterparty name joins `Other Income` before the top 10 are picked, so `Other Income` can rank among them.
+- `moneyLeft` is `totalIncome` minus `totalExpenses`, never below 0.
+
+Internal transfers count as income and as spending.
+
+### budget.getSpendingBreakdown
+
+**Output**: `{ categories }` of `{ amount, category }`, largest first.
+
+### budget.getSyncStatus
+
+**Output**: `null` when nothing runs, or `{ accountsDone, accountsTotal, categorised, categorisedTotal, phase, startedAt, transactionsImported }`. `phase` is `importing` or `categorising`. `categorisedTotal` is `0` until categorising starts. `transactionsImported` counts new and updated rows alike.
+
+Poll it during a sync: it reads one row and calls no provider. Counters update at most once a second. A run silent for 5 minutes reads as `null`.
+
+### budget.getTransactions
+
+The one paged procedure: pass `nextCursor` back as `cursor`.
+
+**Input**
+
+- `limit`: send a whole number. The schema also accepts a fraction.
+- `amountMin` and `amountMax` compare the absolute amount. Setting either excludes zero-amount transactions.
+- `groups`: each group adds every category in it to `categories`.
+- `merchants` takes names as `getMerchants` returns them, matched without case.
+- `search` matches the description or the counterparty name as a plain substring, without case. Unlike `getMerchants`, `%` and `_` are literal.
+- `sort: "amount"` puts the largest first: descending for `direction: "incoming"`, most negative first otherwise.
+
+**Output**: `{ nextCursor, totals, transactions }`. `nextCursor` is `null` on the last page. `totals` is `{ incoming, outgoing }` over the whole filter, not the page, both positive.
+
+| Field of one transaction | Note |
+| --- | --- |
+| `amount` | Negative for money out |
+| `category` | The effective category: the user's override wins |
+| `derivedCategory` | What the pipeline resolved, before any override |
+| `counterpartyName` | As the bank sends it, or `null` |
+| `currency`, `date`, `description`, `id` | As stored |
+
+### budget.recategorise
+
+Drops the pipeline's verdicts and runs it again over every transaction. It claims the caller's sync run first, so it refuses while a sync runs, and `getSyncStatus` shows it in the `categorising` phase.
+
+**Output**: `{ categorised, started }`. `started: false` and `categorised: 0` mean another run already holds the user.
+
+### budget.syncAccounts
+
+**Input**: send `{}` to sync every `ACTIVE` connection of the caller. `connectionId` narrows it to one; an id that isn't the caller's or isn't `ACTIVE` syncs nothing and still answers `success: true`. `force: true` reads the whole 90-day provider window again.
+
+**Output**: `{ categorised, error, started, success, warning }`. `success` is `false` when at least one connection failed, and `error` joins the provider failures. `warning` carries a categorisation failure. `started: false` means another run holds the user and nothing ran.
+
+<Callout type="warn">
+
+It answers HTTP 200 even when every connection failed: read `success`, not the status. One sync runs per user, so a second call answers `started: false`; follow `budget.getSyncStatus` instead.
+
+</Callout>
+
+### budget.updateTransactionCategory
+
+**Input**: `transactionId` must belong to the caller. `category: null` clears the override.
+
+**Output**: `{ additionalUpdated, category, derivedCategory }`: how many other transactions of the merchant moved, the effective category, and what the pipeline resolves without the override.
+
+The category is remembered for the merchant and copied to its other transactions that have no override of their own; `null` forgets it and clears theirs. A transaction with no merchant key changes alone and `additionalUpdated` is `0`.
+
+**Errors**: `NOT_FOUND` (404) `Transaction not found`.
+
+## `instance`
+
+The setup screen's procedures. Integrations are `banking` (variants `disabled`, `powens`, `enable-banking`) and `email` (variants `disabled`, `resend`, `smtp`).
+
+### instance.status
+
+**Output**: `{ claimed, completed, isOperator }`. `claimed` is `true` once an operator exists, `completed` once the operator pressed `Finish setup`.
+
+### instance.describe
+
+**Output**: `{ fault, integrations, restartRequired }`. `fault` says why the stored values were rejected at startup, or is `null`. `restartRequired` is `true` when a saved value isn't in use yet.
+
+| Field of one integration | Note |
+| --- | --- |
+| `id`, `selectedVariantId` | The integration and the variant in use |
+| `state` | `disabled`, `incomplete` or `configured` |
+| `configuredBy` | `environment`, `instance` or `null` |
+| `discriminantKey`, `discriminantSource` | The variable that picks the variant, such as `BANKING_PROVIDER`, and whether it comes from `environment`, `instance` or is `unset` |
+| `variants` | `{ id, fields }`. A field is `{ key, kind, present, required, source, value }`; `value` is `null` for a secret and masked when the environment owns a text or URL value |
+
+### instance.check
+
+**Input**: `integrationId` and `variantId` name one integration and variant. `values` maps a variable name to its value; the server fills in what the environment owns.
+
+**Output**, by `outcome`:
+
+| `outcome` | Other fields | Meaning |
+| --- | --- | --- |
+| `verified` | — | The provider accepted the credentials. A `disabled` variant, with nothing to check, also answers `verified` |
+| `probe-failed` | `detail`, `reason`, `status` | The provider refused, timed out after 10 s, or couldn't be reached. `status` is the HTTP status of a refusal, else `null` |
+| `missing-fields` | `keys` | Required fields are empty |
+| `invalid` | `detail` | A value fails validation |
+| `environment-owned` | `keys` | The environment picks another variant; `keys` names the variable |
+
+**Errors**: `NOT_FOUND` (404) `Unknown integration` or `Unknown variant`.
+
+### instance.save
+
+Same input as `instance.check`. It stores only the values the environment doesn't set, and clears the stored values of the integration's other variants. Saving `disabled` answers `saved` and clears every stored value of that integration.
+
+**Output**: `{ outcome: "saved", restartRequired: true }`, with `restartRequired` always `true`; `{ outcome: "nothing-to-save" }` when the environment owns the whole variant; or the `missing-fields`, `invalid` or `environment-owned` refusal of `instance.check`. Nothing restarts until `instance.complete`, which decides whether a restart is needed. To skip setup, save `disabled` for each integration, then call `instance.complete`.
+
+**Errors**: `NOT_FOUND` (404) `Unknown integration` or `Unknown variant`.
+
+### instance.complete
+
+**Output**: `{ completed: true, restarting }`. `restarting` is `true` when a saved value isn't in use yet; the server then exits 250 ms later, and its restart policy starts it with the new values.
+
+## `onboarding`
+
+### onboarding.completeOnboarding
+
+**Output**: `{ success: true }`.
+
+### onboarding.getStatus
+
+**Output**: `{ completed, taxCountries }`. `taxCountries` is empty until the caller picks countries.
+
+## `settings`
+
+A category key is a spending category slug, or `custom:<id>` for a custom category. The spec lists the slugs as the enum of `budget.getTransactions` `categories`.
+
+### settings.createCustomCategory
+
+**Input**: `parentKey` is a category group slug, the `custom:<id>` of a top-level category the caller owns, or `null` for a top-level category.
+
+**Output**: `{ key }`, the `custom:<id>` of the new category.
+
+**Errors**
+
+- `BAD_REQUEST` (400) `Unknown parent category` or `A subcategory cannot hold subcategories`.
+- `NOT_FOUND` (404) `Parent category not found`.
+- `CONFLICT` (409) `A category with that name already exists`, compared without case.
+
+### settings.deleteCustomCategory
+
+**Input**: `id` is the row id, not the `custom:` key, and must belong to the caller.
+
+Deletes the category and its subcategories, and moves their budget lines to one fallback slug. Under a group, that's the group's catch-all: `other-income`, `savings` or `uncategorised`. A top-level category, or a subcategory under a custom parent, falls back to `uncategorised`, not to the parent.
+
+**Output**: `{ deletedSubcategories, fallbackSlug, reassignedLines }`.
+
+**Errors**: `NOT_FOUND` (404) `Category not found`.
+
+### settings.getBudgetProfile
+
+**Output**: `{ lines }` in saved order, each `{ amount, categoryKey, id, label }`. `amount` is minor units per month. `label` is `null` when the line has no name.
+
+### settings.listCategories
+
+**Output**: `{ categories }`, a flat array in display order: each of the 3 groups, its built-in categories, then the caller's custom categories under it; then each top-level custom category in stored order, followed by its subcategories.
+
+| Field | Note |
+| --- | --- |
+| `key`, `parentKey` | The entry's key, and its group slug, `custom:<id>` parent, or `null` at top level |
+| `label` | An English display name |
+| `icon` | An icon name |
+| `color` | What the entry shows. Under a parent, the parent's colour |
+| `pickedColor` | Custom categories only: the stored colour. Send it back as `color` to `updateCustomCategory` to keep it |
+| `isGroup` | `true` for a group header or a top-level custom category |
+| `isAssignable` | `false` for a built-in group header |
+| `isCustom` | `true` for the caller's own category |
+| `usageCount` | Budget lines on a custom category. `0` for a built-in one |
+
+### settings.moveCustomCategory
+
+**Input**: `id` must belong to the caller. The category swaps with its neighbour under the same parent.
+
+**Output**: `{ moved }`, `false` when the row is already first or last.
+
+**Errors**: `NOT_FOUND` (404) `Category not found`.
+
+### settings.saveBudgetProfile
+
+**Input**: each `categoryKey` is a spending category slug or a `custom:<id>` the caller owns; a group slug fails. Array order becomes sort order. `label` has no default: send `""` for a line with no name.
+
+**Output**: `{ lineCount }`.
+
+**Errors**: `BAD_REQUEST` (400) `Unknown category: <categoryKey>`.
+
+<Callout type="warn">
+
+The write replaces every line: a line missing from the array is deleted.
+
+</Callout>
+
+### settings.updateCustomCategory
+
+**Input**: `id` must belong to the caller. `parentKey` follows the rules of `createCustomCategory`.
+
+**Output**: `{ success: true }`.
+
+**Errors**
+
+- `BAD_REQUEST` (400) `Unknown parent category`, `A subcategory cannot hold subcategories`, `A category with subcategories cannot be nested`, or `A category cannot be its own parent`.
+- `NOT_FOUND` (404) `Category not found` or `Parent category not found`.
+- `CONFLICT` (409) `A category with that name already exists`.
+
+<Cards>
+  <Card
+    title="API"
+    href="/docs/reference/api"
+    description="Base URL, the session cookie, errors and limits."
+  />
+  <Card
+    title="Glossary"
+    href="/docs/reference/glossary"
+    description="What each term means in the app."
+  />
+</Cards>

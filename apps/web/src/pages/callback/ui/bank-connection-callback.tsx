@@ -35,10 +35,12 @@ export const BankConnectionCallback = () => {
         count > 0
           ? m.bank_callback_success_accounts({ count })
           : m.bank_callback_success();
+
       toast.success(message);
       void queryClient.invalidateQueries({
         queryKey: orpc.bankConnection.listConnections.queryOptions().queryKey,
       });
+
       void invalidateBudgetData(queryClient);
     } else if (exchangeResult.reason === "declined") {
       toast.error(m.bank_callback_declined());

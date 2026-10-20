@@ -1,13 +1,11 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "extends": ["../../node_modules/@jliocsar/begone-slop/preset.json"],
-  "jsPlugins": ["@jliocsar/begone-slop", "@shadcn/lint"],
+  "extends": ["../../node_modules/oxslop/presets/all.json"],
+  "jsPlugins": ["@shadcn/lint"],
   "plugins": ["typescript", "react", "import"],
   "rules": {
-    "begone-slop/no-reexport-only-modules": [
-      "error",
-      { "allowedFilenames": ["index.ts"], "routeDirectoryNames": ["src"] }
-    ]
+    "oxslop/no-comments": ["error", { "allowJsdoc": false }],
+    "oxslop/no-reexport-only-modules": ["error", { "allowFiles": ["index.ts"] }]
   },
   "categories": {},
   "env": {

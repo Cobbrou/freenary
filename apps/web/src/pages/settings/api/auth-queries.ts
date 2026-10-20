@@ -29,13 +29,13 @@ export const AUTH_ACCOUNTS_QUERY_KEY = ["auth", "accounts"];
 export const authSessionsQueryOptions = () =>
   queryOptions<UserSession[]>({
     queryFn: async () => {
-      const { data, error } = await authClient.listSessions();
+      const { data: sessions, error } = await authClient.listSessions();
 
       if (error) {
         throw new Error(error.message ?? m.settings_sessions_load_error());
       }
 
-      return data;
+      return sessions;
     },
     queryKey: AUTH_SESSIONS_QUERY_KEY,
   });
@@ -43,13 +43,13 @@ export const authSessionsQueryOptions = () =>
 export const authAccountsQueryOptions = () =>
   queryOptions<LinkedAccount[]>({
     queryFn: async () => {
-      const { data, error } = await authClient.listAccounts();
+      const { data: accounts, error } = await authClient.listAccounts();
 
       if (error) {
         throw new Error(error.message ?? m.settings_accounts_load_error());
       }
 
-      return data;
+      return accounts;
     },
     queryKey: AUTH_ACCOUNTS_QUERY_KEY,
   });

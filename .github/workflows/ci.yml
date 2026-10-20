@@ -59,12 +59,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Both files must still parse, and the production one must still refuse
-      # to start without its two secrets.
+      # Every file must still parse, and each production stack must still refuse
+      # to start without its required values. `deploy/coolify.yml` carries the
+      # Coolify-only key `exclude_from_hc`, which plain Compose rejects.
       - name: Validate the compose files
         run: |
           docker compose -f docker-compose.dev.yml config --quiet
           docker compose -f docker-compose.dev.yml -f docker-compose.mail.yml config --quiet
+          docker compose -f docker-compose.proxy.yml config --quiet
           printf 'POSTGRES_PASSWORD=x\nBETTER_AUTH_SECRET=y\n' > .env
           docker compose -f docker-compose.yml config --quiet
           : > .env
@@ -72,3 +74,13 @@ jobs:
             echo "docker-compose.yml accepted an empty POSTGRES_PASSWORD and BETTER_AUTH_SECRET" >&2
             exit 1
           fi
+          printf 'FREENARY_URL=https://freenary.example.com\nPOSTGRES_PASSWORD=x\nBETTER_AUTH_SECRET=y\n' > deploy/.env
+          docker compose -f deploy/docker-compose.yml config --quiet
+          : > deploy/.env
+          if docker compose -f deploy/docker-compose.yml config --quiet 2>/dev/null; then
+            echo "deploy/docker-compose.yml accepted an empty FREENARY_URL, POSTGRES_PASSWORD and BETTER_AUTH_SECRET" >&2
+            exit 1
+          fi
+          grep -v 'exclude_from_hc' deploy/coolify.yml > "$RUNNER_TEMP/coolify.yml"
+          SERVICE_PASSWORD_POSTGRES=x SERVICE_HEX_64_AUTHSECRET=y SERVICE_URL_WEB=https://freenary.example.com \
+            docker compose -f "$RUNNER_TEMP/coolify.yml" config --quiet

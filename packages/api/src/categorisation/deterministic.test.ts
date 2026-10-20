@@ -22,7 +22,7 @@ describe("deterministicCategory", () => {
   });
 
   it("prefers the merchant category code over the bank code table", () => {
-    const result = deterministicCategory(
+    const assigned = deterministicCategory(
       input({
         bankTransactionCode: "PRLV LOYER",
         country: "FR",
@@ -30,7 +30,7 @@ describe("deterministicCategory", () => {
       })
     );
 
-    expect(result).toEqual({
+    expect(assigned).toEqual({
       category: "groceries",
       confidence: 0.8,
       stage: "mcc",
@@ -38,12 +38,12 @@ describe("deterministicCategory", () => {
   });
 
   it("applies the country layer for a supported country", () => {
-    const result = deterministicCategory(
+    const assigned = deterministicCategory(
       input({ bankTransactionCode: "PRLV LOYER", country: "FR" })
     );
 
-    expect(result?.category).toBe("rent-mortgage");
-    expect(result?.stage).toBe("rules");
+    expect(assigned?.category).toBe("rent-mortgage");
+    expect(assigned?.stage).toBe("rules");
   });
 
   it("reads no semantics out of the descriptor or the counterparty", () => {
@@ -96,6 +96,7 @@ describe("deterministicCategory", () => {
       expect(
         deterministicCategory(input({ bankTransactionCode, country: "FR" }))
       ).toBeNull();
+
       expect(
         deterministicCategory(
           input({ amountMinor: 250_000, bankTransactionCode, country: "FR" })
@@ -125,7 +126,7 @@ describe("deterministicCategory", () => {
   });
 
   it("falls through to the bank code when the merchant category code reads as a refund", () => {
-    const result = deterministicCategory(
+    const assigned = deterministicCategory(
       input({
         amountMinor: 250_000,
         bankTransactionCode: "VIREMENT SALAIRE",
@@ -134,11 +135,11 @@ describe("deterministicCategory", () => {
       })
     );
 
-    expect(result?.category).toBe("salary");
+    expect(assigned?.category).toBe("salary");
   });
 
   it("accepts an income keyword on a credit", () => {
-    const result = deterministicCategory(
+    const assigned = deterministicCategory(
       input({
         amountMinor: 250_000,
         bankTransactionCode: "VIREMENT SALAIRE",
@@ -146,7 +147,7 @@ describe("deterministicCategory", () => {
       })
     );
 
-    expect(result?.category).toBe("salary");
+    expect(assigned?.category).toBe("salary");
   });
 });
 

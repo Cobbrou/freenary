@@ -103,6 +103,7 @@ export const RecurringForecastChart = ({
       label: m.budget_recurring_forecast_balance(),
     },
   };
+
   const today = m.budget_recurring_forecast_today();
   const rows: ForecastRow[] = points.map((point, index) => ({
     balanceMinor: point.balanceMinor,
@@ -112,10 +113,13 @@ export const RecurringForecastChart = ({
     label:
       index === 0 ? today : point.date.toLocaleDateString(locale, DAY_TICK),
   }));
+
   const runsOut = rows.some((row) => row.balanceMinor < 0);
-  const ticks = rows
-    .map((row) => row.day)
-    .filter((day) => day % DAYS_BETWEEN_TICKS === 0 || day === rows.length - 1);
+  const ticks = rows.flatMap((row) =>
+    row.day % DAYS_BETWEEN_TICKS === 0 || row.day === rows.length - 1
+      ? [row.day]
+      : []
+  );
 
   return (
     <figure className="h-full">

@@ -1,0 +1,109 @@
+---
+title: Reverse proxy
+description: Put your own Caddy or nginx in front of Freenary on one hostname or two subdomains, keep the real caller address, and check the result.
+icon: Network
+---
+
+Freenary serves plain HTTP; your proxy adds HTTPS and the hostname. Use one hostname unless you need the API on its own. Dokploy and Coolify set this up for you.
+
+## One hostname
+
+Send your hostname to the web app on port `3001`. The web app forwards four path prefixes to the API server over the Docker network: `/api/auth`, `/rpc`, `/ai/chat` and `/api-reference`. It forwards only when `SERVER_URL` is set, which both Compose files do.
+
+The forwarded request keeps its method, body and headers, `X-Forwarded-For` included, minus `Host` and the hop-by-hop headers. Redirects come back unchanged. The API server must start answering within the [9-second limit](/docs/reference/api#base-url).
+
+With the root `docker-compose.yml`, set both URLs to your address, and bind both ports to the loopback interface so only the proxy reaches them:
+
+```dotenv
+BETTER_AUTH_URL=https://freenary.example.com
+CORS_ORIGIN=https://freenary.example.com
+SERVER_PORT=127.0.0.1:3000
+WEB_PORT=127.0.0.1:3001
+```
+
+Without `127.0.0.1`, both ports listen on every interface, and a direct caller can send any `X-Forwarded-For` to dodge the rate limits.
+
+Caddy gets its certificate itself:
+
+```text
+freenary.example.com {
+	reverse_proxy 127.0.0.1:3001
+}
+```
+
+nginx, with a Certbot certificate:
+
+```text
+server {
+    listen 443 ssl;
+    server_name freenary.example.com;
+
+    ssl_certificate     /etc/letsencrypt/live/freenary.example.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/freenary.example.com/privkey.pem;
+
+    location / {
+        proxy_pass http://127.0.0.1:3001;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $remote_addr;
+    }
+}
+```
+
+A proxy container on a Docker network can run `deploy/docker-compose.yml` instead, which publishes no port. Set `FREENARY_URL`, attach the `web` service to the proxy's network, and route your hostname to `web` on port `3001`. Add no route to `server`.
+
+## Two subdomains
+
+Send each hostname to its port, for example `app.example.com` to `3001` and `api.example.com` to `3000`:
+
+```dotenv
+BETTER_AUTH_URL=https://api.example.com
+CORS_ORIGIN=https://app.example.com
+AUTH_COOKIE_DOMAIN=.example.com
+SERVER_PORT=127.0.0.1:3000
+WEB_PORT=127.0.0.1:3001
+```
+
+`CORS_ORIGIN` must match the web app's address exactly. `AUTH_COOKIE_DOMAIN` keeps the session cookie at `SameSite=Lax` on both hostnames. Without it the cookie falls back to `SameSite=None`, which browsers that block third-party cookies drop.
+
+The `server` container refuses to start when:
+
+- `AUTH_COOKIE_DOMAIN` ends with a dot, has a single label, or isn't a parent of both hostnames;
+- the hostnames differ, `AUTH_COOKIE_DOMAIN` is unset, and `BETTER_AUTH_URL` uses `http://`.
+
+A public suffix such as `.co.uk` isn't detected: name a domain you own.
+
+## Trusted proxies
+
+Rate limits count per caller address, read from `X-Forwarded-For`.
+
+- **One address in the header:** Freenary uses it. A single proxy that replaces the header, such as nginx with `$remote_addr`, needs no setting.
+- **Several addresses:** Freenary ignores the header unless you list your proxies. Every such caller then shares one bucket, so one visitor can use up everyone's sign-in attempts.
+
+List each proxy as an address or CIDR range, comma-separated:
+
+```dotenv
+TRUSTED_PROXIES=10.0.0.0/24,192.0.2.10
+```
+
+Freenary reads the chain from the right and takes the first address that isn't listed. Write IPv4 in IPv4 form: `::ffff:10.0.0.1` stops the start. Behind a CDN, list its published ranges, and make your proxy keep the CDN's `X-Forwarded-For` instead of replacing it.
+
+## Check it
+
+```bash
+curl -L -o /dev/null -w '%{http_code} %{url_effective}\n' https://freenary.example.com/
+curl https://freenary.example.com/api/auth/ok
+```
+
+The first prints `200 https://freenary.example.com/login`, the second `{"ok":true}`. With two subdomains, `curl https://api.example.com/` prints `OK`.
+
+A `502` with the body `Bad Gateway` means the web app didn't reach the API server: read `docker compose logs server`.
+
+<Cards>
+
+<Card
+  title="Configuration"
+  href="/docs/reference/configuration"
+  description="Every variable, its default and what stops a start."
+/>
+
+</Cards>

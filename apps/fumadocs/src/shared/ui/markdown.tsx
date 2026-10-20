@@ -136,8 +136,8 @@ export function Markdown({ text }: { text: string }) {
 }
 
 function Renderer({ text }: { text: string }) {
-  const result = renderedByText.get(text) ?? processor.process(text);
-  renderedByText.set(text, result);
+  const rendered = renderedByText.get(text) ?? processor.process(text);
+  renderedByText.set(text, rendered);
 
-  return use(result);
+  return use(rendered);
 }

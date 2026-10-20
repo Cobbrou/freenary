@@ -24,6 +24,7 @@ export const useSessionRevocation = () => {
       await queryClient.invalidateQueries({
         queryKey: AUTH_SESSIONS_QUERY_KEY,
       });
+
       toast.success(m.settings_sessions_revoked_toast());
     },
   });
@@ -45,6 +46,7 @@ export const useSessionRevocation = () => {
       await queryClient.invalidateQueries({
         queryKey: AUTH_SESSIONS_QUERY_KEY,
       });
+
       toast.success(m.settings_sessions_revoke_others_toast());
     },
   });

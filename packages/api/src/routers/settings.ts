@@ -122,6 +122,7 @@ const parentKeyOf = (custom: {
   return custom.parentSlug ? resolveCategoryGroup(custom.parentSlug) : null;
 };
 
+// SAFETY: icon is only ever written through the zod-validated mutations in this file
 const toCategoryEntry = (custom: {
   _count: { budgetLines: number };
   color: string;
@@ -137,7 +138,6 @@ const toCategoryEntry = (custom: {
     parentChosenColor: custom.parent?.color ?? null,
     parentSlug: custom.parentSlug,
   }),
-  // SAFETY: icon is only ever written through the zod-validated mutations in this file
   icon: custom.icon as CategoryIconName,
   isAssignable: true,
   isCustom: true,
@@ -389,9 +389,10 @@ export const settingsRouter = {
         select: { id: true },
         where: { userId },
       });
+
       const ownedIds = new Set(owned.map((category) => category.id));
 
-      const data = input.lines.map((line, index) => {
+      const budgetLines = input.lines.map((line, index) => {
         const parsed = parseCategoryKey(line.categoryKey);
 
         if (!parsed || (parsed.customId && !ownedIds.has(parsed.customId))) {
@@ -412,10 +413,10 @@ export const settingsRouter = {
 
       await prisma.$transaction([
         prisma.budgetLine.deleteMany({ where: { userId } }),
-        prisma.budgetLine.createMany({ data }),
+        prisma.budgetLine.createMany({ data: budgetLines }),
       ]);
 
-      return { lineCount: data.length };
+      return { lineCount: budgetLines.length };
     }),
 
   updateCustomCategory: protectedProcedure

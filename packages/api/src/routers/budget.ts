@@ -192,11 +192,11 @@ const aggregateMonthly = <K>(
   months: string[],
   mode: "average" | "median"
 ): Map<K, number> => {
-  const result = new Map<K, number>();
+  const aggregated = new Map<K, number>();
 
   for (const [key, monthValues] of monthly) {
     const zeroFilledSeries = months.map((month) => monthValues.get(month) ?? 0);
-    result.set(
+    aggregated.set(
       key,
       mode === "average"
         ? Math.round(
@@ -207,7 +207,7 @@ const aggregateMonthly = <K>(
     );
   }
 
-  return result;
+  return aggregated;
 };
 
 const aggregateOutgoing = <T extends { amount: number; date: Date }, K>(
@@ -326,13 +326,15 @@ const userOutgoingByCategory = async (
   );
 
 const outgoingBudgetLines = (lines: BudgetLineRow[]): PlannedLine[] =>
-  lines
-    .map((line) => ({
+  lines.flatMap((line) => {
+    const planned: PlannedLine = {
       amount: line.amount,
       categorySlug: line.categorySlug,
       parentSlug: line.category?.parentSlug ?? null,
-    }))
-    .filter((line) => budgetLineKindOf(line) === "OUTGOING");
+    };
+
+    return budgetLineKindOf(planned) === "OUTGOING" ? [planned] : [];
+  });
 
 const clearResolutions = ({
   connectionId,
@@ -383,9 +385,12 @@ const writeResolutions = (
 ): Effect.Effect<number> =>
   Effect.forEach(
     resolutions,
-    ({ data, transactionId }) =>
+    ({ data: fields, transactionId }) =>
       Effect.tryPromise(() =>
-        prisma.transaction.update({ data, where: { id: transactionId } })
+        prisma.transaction.update({
+          data: fields,
+          where: { id: transactionId },
+        })
       ).pipe(
         Effect.match({ onFailure: () => 0, onSuccess: () => 1 }),
         Effect.tap(() => Effect.promise(() => reporter.categorised(1)))
@@ -443,11 +448,17 @@ const categoriseUncategorised = async (
     const isIban =
       tx.creditorAccountIban && merchantKey === tx.creditorAccountIban;
 
+    // SAFETY: channel column stores validated TransactionChannel values or null
+    const channel = (tx.channel ?? "unknown") as TransactionChannel;
+
+    // SAFETY: transactionPath column stores validated TransactionPath values or null
+    const path = (tx.transactionPath ??
+      (isIban ? "iban" : "card")) as TransactionPath;
+
     inputs.push({
       amountMinor: tx.amount,
       bankTransactionCode: tx.bankTransactionCode,
-      // SAFETY: channel column stores validated TransactionChannel values or null
-      channel: (tx.channel ?? "unknown") as TransactionChannel,
+      channel,
       counterpartyName: tx.counterpartyName,
       country: tx.account.connection.institutionCountry,
       creditorIban: tx.creditorAccountIban,
@@ -455,9 +466,7 @@ const categoriseUncategorised = async (
       merchantCategoryCode: tx.merchantCategoryCode,
       merchantKey,
       normalisedDescriptor: tx.normalisedDescriptor ?? "",
-      // SAFETY: transactionPath column stores validated TransactionPath values or null
-      path: (tx.transactionPath ??
-        (isIban ? "iban" : "card")) as TransactionPath,
+      path,
       rawDescriptor: tx.remittanceLines.join(" "),
       txId: tx.id,
       userId,
@@ -470,9 +479,11 @@ const categoriseUncategorised = async (
 
   const dictionaryCountries = [
     ...new Set(
-      uncategorised
-        .map((tx) => tx.account.connection.institutionCountry)
-        .filter((country): country is string => country !== null)
+      uncategorised.flatMap((tx) =>
+        tx.account.connection.institutionCountry === null
+          ? []
+          : [tx.account.connection.institutionCountry]
+      )
     ),
   ];
 
@@ -483,20 +494,21 @@ const categoriseUncategorised = async (
     onSignatureSettled: reporter.heartbeat,
     store: prismaClassificationStore,
   });
-  const resolutions = inputs.flatMap<TransactionResolution>((input, index) => {
-    const result = results[index];
 
-    if (!result?.category) {
+  const resolutions = inputs.flatMap<TransactionResolution>((input, index) => {
+    const categorised = results[index];
+
+    if (!categorised?.category) {
       return [];
     }
 
     return [
       {
         data: {
-          intermediaryName: result.intermediaryName,
-          resolutionConfidence: result.confidence,
-          resolutionStage: result.stage,
-          resolvedCategory: result.category,
+          intermediaryName: categorised.intermediaryName,
+          resolutionConfidence: categorised.confidence,
+          resolutionStage: categorised.stage,
+          resolvedCategory: categorised.category,
         },
         transactionId: input.txId,
       },
@@ -759,14 +771,17 @@ export const budgetRouter = {
       const outgoings = outgoingBudgetLines(lines);
       const planScaleMonths =
         aggregation === "total" ? periodMonthCount(from, to, new Date()) : 1;
+
       const planned = plannedByCategory(outgoings, planScaleMonths);
-      const categories = SPENDING_CATEGORIES.map((category) => ({
-        actual: actualByCategory.get(category) ?? 0,
-        category,
-        planned: planned.get(category) ?? 0,
-      }))
-        .filter((row) => row.planned > 0 || row.actual > 0)
-        .toSorted((a, b) => b.planned - a.planned || b.actual - a.actual);
+      const categories = SPENDING_CATEGORIES.flatMap((category) => {
+        const row = {
+          actual: actualByCategory.get(category) ?? 0,
+          category,
+          planned: planned.get(category) ?? 0,
+        };
+
+        return row.planned > 0 || row.actual > 0 ? [row] : [];
+      }).toSorted((a, b) => b.planned - a.planned || b.actual - a.actual);
 
       return {
         categories,
@@ -788,6 +803,7 @@ export const budgetRouter = {
       const spanDays = Math.ceil(
         (to.getTime() - from.getTime()) / MILLISECONDS_PER_DAY
       );
+
       const sql = cashFlowQuery(cashFlowGrainFor(spanDays));
 
       const periods = await prisma.$queryRawUnsafe<
@@ -921,6 +937,7 @@ export const budgetRouter = {
     const firstIncoming = incoming._min.date;
     const monthsCarryingIncome =
       firstIncoming === null ? null : monthSpan(firstIncoming, observed.to);
+
     const monthlyIncomeMinor =
       incomingTotal === null || monthsCarryingIncome === null
         ? null
@@ -1067,6 +1084,7 @@ export const budgetRouter = {
           activeMonths,
           aggregation
         );
+
         expenseCategories = aggregateMonthly(
           monthlyExpense,
           activeMonths,
@@ -1077,9 +1095,11 @@ export const budgetRouter = {
       const incomeByDescendingValue = [...incomeSources.entries()].toSorted(
         (a, b) => b[1] - a[1]
       );
+
       const incomeNodes = incomeByDescendingValue
         .slice(0, TOP_INCOME_SOURCES)
         .map(([name, value]) => ({ name, value }));
+
       const incomeBeyondTopSources = incomeByDescendingValue
         .slice(TOP_INCOME_SOURCES)
         .reduce((sum, [, value]) => sum + value, 0);
@@ -1118,19 +1138,23 @@ export const budgetRouter = {
         }
       }
 
-      const groups = CATEGORY_GROUPS.filter((group) => byGroup.has(group)).map(
-        (group) => {
-          const categories = (byGroup.get(group) ?? []).toSorted(
-            (a, b) => b.value - a.value
-          );
+      const groups = CATEGORY_GROUPS.flatMap((group) => {
+        const leaves = byGroup.get(group);
 
-          return {
+        if (!leaves) {
+          return [];
+        }
+
+        const categories = leaves.toSorted((a, b) => b.value - a.value);
+
+        return [
+          {
             categories,
             group,
             value: categories.reduce((sum, leaf) => sum + leaf.value, 0),
-          };
-        }
-      );
+          },
+        ];
+      });
 
       const totalIncome = incomeNodes.reduce((s, n) => s + n.value, 0);
       const totalExpenses = groups.reduce((s, g) => s + g.value, 0);

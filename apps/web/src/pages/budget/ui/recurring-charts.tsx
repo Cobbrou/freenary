@@ -43,10 +43,15 @@ import { RecurringSplitChart } from "./recurring-split-chart";
 import { RecurringTrendChart } from "./recurring-trend-chart";
 
 type TrendProps = ComponentProps<typeof RecurringTrendChart>;
+
 type ForecastProps = ComponentProps<typeof RecurringForecastChart>;
+
 type ScatterProps = ComponentProps<typeof FrequencyCostChart>;
+
 type CategoryProps = ComponentProps<typeof RecurringCategoryChart>;
+
 type FrequencyProps = ComponentProps<typeof PurchaseFrequencyChart>;
+
 type SplitProps = ComponentProps<typeof RecurringSplitChart>;
 
 interface RecurringChartsProps {
@@ -196,7 +201,7 @@ const RecurringCompanionBody = ({
 
 export const RecurringCharts = ({
   companion,
-  data,
+  data: recurring,
   isError,
   isPending,
   onCompanionChange,
@@ -205,49 +210,65 @@ export const RecurringCharts = ({
 }: RecurringChartsProps) => {
   const trend = useMemo(
     () =>
-      data ? { currency: data.currency, monthly: data.monthly } : undefined,
-    [data]
+      recurring
+        ? { currency: recurring.currency, monthly: recurring.monthly }
+        : undefined,
+    [recurring]
   );
+
   const forecast = useMemo(
     () =>
-      data
+      recurring
         ? {
-            currency: data.currency,
-            points: forecastSeries(data, new Date(data.asOf)),
+            currency: recurring.currency,
+            points: forecastSeries(recurring, new Date(recurring.asOf)),
           }
         : undefined,
-    [data]
+    [recurring]
   );
+
   const scatter = useMemo(
     () =>
-      data
-        ? { currency: data.currency, points: frequencyCostPoints(data.items) }
-        : undefined,
-    [data]
-  );
-  const categories = useMemo(
-    () =>
-      data
+      recurring
         ? {
-            currency: data.currency,
-            rows: recurringByCategory(data.items).slice(0, MAX_CATEGORY_ROWS),
+            currency: recurring.currency,
+            points: frequencyCostPoints(recurring.items),
           }
         : undefined,
-    [data]
+    [recurring]
   );
+
+  const categories = useMemo(
+    () =>
+      recurring
+        ? {
+            currency: recurring.currency,
+            rows: recurringByCategory(recurring.items).slice(
+              0,
+              MAX_CATEGORY_ROWS
+            ),
+          }
+        : undefined,
+    [recurring]
+  );
+
   const frequency = useMemo(
     () =>
-      data
-        ? { currency: data.currency, rows: purchaseFrequency(data.items) }
+      recurring
+        ? {
+            currency: recurring.currency,
+            rows: purchaseFrequency(recurring.items),
+          }
         : undefined,
-    [data]
+    [recurring]
   );
+
   const split = useMemo(
     () =>
-      data
-        ? { currency: data.currency, split: spendSplit(data.monthly) }
+      recurring
+        ? { currency: recurring.currency, split: spendSplit(recurring.monthly) }
         : undefined,
-    [data]
+    [recurring]
   );
 
   return (

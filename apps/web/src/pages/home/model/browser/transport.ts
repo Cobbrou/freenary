@@ -40,14 +40,14 @@ const CONTEXT_OVERFLOW_MESSAGE = /context window/iu;
 const asError = (cause: unknown): Error =>
   cause instanceof Error ? cause : new Error("browser_model_failed");
 
+/* SAFETY: every `assistantTools` schema is a zod v4 object; the SDK's
+   wider `FlexibleSchema` type is what hides that here. */
 const toolSignatureChars = (tools: Record<string, Tool>): number =>
   Object.entries(tools).reduce(
     (total, [name, tool]) =>
       total +
       name.length +
       (tool.description?.length ?? 0) +
-      /* SAFETY: every `assistantTools` schema is a zod v4 object; the SDK's
-         wider `FlexibleSchema` type is what hides that here. */
       JSON.stringify(z.toJSONSchema(tool.inputSchema as ZodType)).length,
     0
   );
@@ -115,14 +115,16 @@ export const createBrowserChatTransport = ({
       ...message,
       parts: answerableParts(message.parts),
     }));
+
     const history = fitHistory(
       replayable,
       instructions.length + toolSignatureChars(tools) + messageChars(question),
       promptBudgetChars(CONTEXT_WINDOW_SIZE)
     );
+
     const originalMessages = [...history, question];
 
-    const result = streamText({
+    const stream = streamText({
       abortSignal,
       instructions,
       messages: await convertToModelMessages(originalMessages),
@@ -134,7 +136,7 @@ export const createBrowserChatTransport = ({
 
     const answerId = crypto.randomUUID();
 
-    return result.toUIMessageStream({
+    return stream.toUIMessageStream({
       generateMessageId: () => answerId,
       onError: (thrown) => errorCode(asError(thrown)),
       onFinish: async ({ finishReason, isAborted, responseMessage }) => {

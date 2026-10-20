@@ -4,6 +4,18 @@ import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import viteReact from "@vitejs/plugin-react";
 import { nitro } from "nitro/vite";
 import { defineConfig } from "vite";
+import type { Plugin } from "vite";
+
+const printPublicUrl = (publicUrl: string | undefined): Plugin => ({
+  configureServer(server) {
+    if (publicUrl) {
+      server.printUrls = () => {
+        server.config.logger.info(`  ➜  Local:   ${publicUrl}/`);
+      };
+    }
+  },
+  name: "print-public-url",
+});
 
 export default defineConfig({
   plugins: [
@@ -24,6 +36,7 @@ export default defineConfig({
     }),
     nitro({ preset: "bun" }),
     viteReact(),
+    printPublicUrl(process.env.DEV_PUBLIC_URL),
   ],
   resolve: {
     tsconfigPaths: true,

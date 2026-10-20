@@ -19,6 +19,7 @@ describe("categoryPriority", () => {
       expect(categoryPriority(specific)).toBeGreaterThan(
         categoryPriority("car-fuel")
       );
+
       expect(categoryPriority(specific)).toBeGreaterThan(
         categoryPriority("shopping")
       );

@@ -23,6 +23,7 @@ interface NavItem extends NavChild {
 }
 
 export type NavEntry = (typeof NAV_ITEMS)[number];
+
 export type NavAreaEntry = Extract<NavEntry, { children: readonly unknown[] }>;
 
 export const NAV_ITEMS = [

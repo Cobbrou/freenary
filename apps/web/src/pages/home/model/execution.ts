@@ -81,6 +81,7 @@ export const traceOf = (
     if (part.type === "step-start") {
       current = newStep(steps.length);
       steps.push(current);
+
       continue;
     }
 

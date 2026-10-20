@@ -39,15 +39,16 @@ interface CategoryFilterMenuProps {
 const GROUP_PREFIX = "g:";
 const CATEGORY_PREFIX = "c:";
 const groupValue = (group: CategoryGroup) => `${GROUP_PREFIX}${group}`;
+
 const categoryValue = (category: SpendingCategory) =>
   `${CATEGORY_PREFIX}${category}`;
 
+// SAFETY: only `groupValue` mints a `g:` value, and only from the taxonomy.
 const groupOf = (value: string): CategoryGroup =>
-  // SAFETY: only `groupValue` mints a `g:` value, and only from the taxonomy.
   value.slice(GROUP_PREFIX.length) as CategoryGroup;
 
+// SAFETY: only `categoryValue` mints a `c:` value, and only from the taxonomy.
 const categoryOf = (value: string): SpendingCategory =>
-  // SAFETY: only `categoryValue` mints a `c:` value, and only from the taxonomy.
   value.slice(CATEGORY_PREFIX.length) as SpendingCategory;
 
 export const CategoryFilterMenu = ({

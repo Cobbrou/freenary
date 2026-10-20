@@ -9,8 +9,10 @@ export const Route = createFileRoute("/llms-full.txt")({
         const newest = newestRelease();
         const scan = source
           .getPages()
-          .filter((page) => page.slugs[0] === newest)
-          .map(getLLMText);
+          .flatMap((page) =>
+            page.slugs[0] === newest ? [getLLMText(page)] : []
+          );
+
         const scanned = await Promise.all(scan);
 
         return new Response(scanned.join("\n\n"));

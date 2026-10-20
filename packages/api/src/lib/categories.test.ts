@@ -12,8 +12,8 @@ import {
 } from "./taxonomy";
 
 const otherGroupColours = (group: (typeof CATEGORY_GROUPS)[number]) =>
-  CATEGORY_GROUPS.filter((other) => other !== group).map(
-    (other) => CATEGORY_GROUP_COLORS[other]
+  CATEGORY_GROUPS.flatMap((other) =>
+    other === group ? [] : [CATEGORY_GROUP_COLORS[other]]
   );
 
 describe("customCategoryColor", () => {
@@ -94,6 +94,7 @@ describe("customCategoryDisplayColor", () => {
         parentSlug: "spending",
       })
     ).toBe(CATEGORY_GROUP_COLORS.spending);
+
     expect(
       customCategoryDisplayColor({
         chosen: "pink",

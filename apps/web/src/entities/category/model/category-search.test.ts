@@ -16,7 +16,7 @@ const rows = CATEGORY_GROUPS.flatMap((group) =>
 );
 
 const matching = (query: string): SpendingCategory[] =>
-  rows.filter((row) => categoryRowMatches(row, query)).map((row) => row.value);
+  rows.flatMap((row) => (categoryRowMatches(row, query) ? [row.value] : []));
 
 describe("categoryRowMatches", () => {
   it("offers the whole taxonomy when nothing is typed", () => {

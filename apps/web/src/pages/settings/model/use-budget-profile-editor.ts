@@ -26,6 +26,7 @@ export interface ServerBudgetLine {
   id: string;
   label: string | null;
 }
+
 export interface BudgetProfileEditor {
   addLine: () => void;
   changeCount: number;
@@ -104,6 +105,7 @@ export const useBudgetProfileEditor = (
   const [lines, setLines] = useState<EditorLine[]>(() =>
     toEditorLines(serverLines ?? [])
   );
+
   const [hydratedSignature, setHydratedSignature] = useState(() =>
     signatureOf(serverLines)
   );
@@ -178,9 +180,9 @@ export const useBudgetProfileEditor = (
       toast.error(error.message || m.settings_budgeting_save_error());
     },
     onMutate: () => ({ draftEditCount: draftEditCount.current }),
-    onSuccess: async (_result, _submitted, saved) => {
+    onSuccess: async (_saved, _submitted, context) => {
       const wasDraftUntouchedWhileSaving =
-        draftEditCount.current === saved.draftEditCount;
+        draftEditCount.current === context.draftEditCount;
 
       if (wasDraftUntouchedWhileSaving) {
         setIsDirty(false);
@@ -194,6 +196,7 @@ export const useBudgetProfileEditor = (
           queryKey: orpc.settings.listCategories.queryOptions().queryKey,
         }),
       ]);
+
       toast.success(m.settings_budgeting_save_success());
     },
   });

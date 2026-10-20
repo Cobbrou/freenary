@@ -80,7 +80,7 @@ export const useBankConnections = ({
     onError: () => {
       toast.error(m.budget_sync_error());
     },
-    onSuccess: async (result, connection) => {
+    onSuccess: async (sync, connection) => {
       await Promise.all([
         queryClient.invalidateQueries({
           queryKey: orpc.bankConnection.listConnections.queryOptions().queryKey,
@@ -88,7 +88,7 @@ export const useBankConnections = ({
         invalidateBudgetData(queryClient),
       ]);
 
-      if (!result.success) {
+      if (!sync.success) {
         toast.error(m.budget_sync_error());
 
         return;

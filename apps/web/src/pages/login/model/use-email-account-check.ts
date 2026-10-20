@@ -48,13 +48,14 @@ export const useEmailAccountCheck = (initialEmail: string) => {
         email: value,
         reason: isRateLimited ? "rate-limited" : "unavailable",
       });
+
       toast.error(
         isRateLimited
           ? m.auth_error_rate_limited()
           : m.auth_email_check_failed()
       );
     },
-    onSuccess: (data, value) => {
+    onSuccess: (checked, value) => {
       const isSuperseded = value !== latestAskedEmail.current;
 
       if (isSuperseded) {
@@ -62,7 +63,10 @@ export const useEmailAccountCheck = (initialEmail: string) => {
       }
 
       setFailedCheck(null);
-      setEmailCheck({ email: value, mode: data.exists ? "signin" : "signup" });
+      setEmailCheck({
+        email: value,
+        mode: checked.exists ? "signin" : "signup",
+      });
     },
   });
 
@@ -87,12 +91,14 @@ export const useEmailAccountCheck = (initialEmail: string) => {
 
   const isCheckAboutCurrentEmail =
     emailCheck !== null && emailCheck.email === email;
+
   const mode: AccountMode = isCheckAboutCurrentEmail
     ? emailCheck.mode
     : "unknown";
 
   const isFailureAboutCurrentEmail =
     failedCheck !== null && failedCheck.email === email;
+
   const checkFailure: CheckFailure | null =
     isChecking || !isFailureAboutCurrentEmail ? null : failedCheck.reason;
 

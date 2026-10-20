@@ -86,6 +86,7 @@ const normalisedColumnMetrics = (columnCount: number) => {
   const fractionsSpanned =
     columnCount * COLUMN_WIDTH_FRACTION +
     Math.max(0, columnCount - 1) * COLUMN_GAP_FRACTION;
+
   const scaleToFillUsableWidth = 1 / fractionsSpanned;
 
   return {
@@ -109,6 +110,7 @@ const stackColumn = (
       MIN_NODE_H_PX,
       (node.value / tallestColumnValue) * MAX_COLUMN_H_PX
     );
+
     rects.push({ ...node, column, h, labelBudget: 0, w, x, y });
     y += h + NODE_GAP_PX;
   }
@@ -130,6 +132,7 @@ const assignLabelBudgets = (nodes: NodeRect[], columnGapW: number) => {
   const writingRightwards = nodes.filter(
     (rect) => rect.column === FIRST_COLUMN && labelsBesideItself(rect)
   );
+
   const writingLeftwards = nodes.filter(
     (rect) => rect.column === SECOND_COLUMN && labelsBesideItself(rect)
   );
@@ -147,6 +150,7 @@ const assignLabelBudgets = (nodes: NodeRect[], columnGapW: number) => {
     const shareOfGapW = gapIsContested
       ? columnGapW / CONTESTED_GAP_SHARES
       : columnGapW;
+
     const roomToChartEdge = CHART_WIDTH - PAD_PX.right - (rect.x + rect.w);
     const room = rect.column === FIRST_COLUMN ? roomToChartEdge : shareOfGapW;
 
@@ -230,6 +234,7 @@ export const computeSankeyLayout = ({
       columnW,
       tallestColumnValue
     );
+
     nodes.push(...stacked.rects);
     bottom = Math.max(bottom, stacked.bottom);
   }

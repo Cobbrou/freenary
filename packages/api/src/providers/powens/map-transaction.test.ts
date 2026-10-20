@@ -22,6 +22,7 @@ describe("mapPowensTransaction", () => {
     expect(
       mapPowensTransaction(transaction({ value: -1234 }), "JPY", 0)?.amountMinor
     ).toBe(-1234);
+
     expect(
       mapPowensTransaction(transaction({ value: -1.234 }), "BHD", 3)
         ?.amountMinor
@@ -33,6 +34,7 @@ describe("mapPowensTransaction", () => {
       mapPowensTransaction(transaction({ type: "order", value: -20 }), "EUR", 2)
         ?.bankTransactionFamilyCode
     ).toBe("IDDT");
+
     expect(
       mapPowensTransaction(transaction({ type: "order", value: 20 }), "EUR", 2)
         ?.bankTransactionFamilyCode
@@ -110,6 +112,7 @@ describe("mapPowensTransaction", () => {
         2
       )?.remittanceLines
     ).toEqual(["CB EDF 04/03", "EDF"]);
+
     expect(
       mapPowensTransaction(
         transaction({ original_wording: "EDF", wording: "EDF" }),
@@ -123,6 +126,7 @@ describe("mapPowensTransaction", () => {
     expect(
       mapPowensTransaction(transaction({ coming: true }), "EUR", 2)?.status
     ).toBe("PDNG");
+
     expect(mapPowensTransaction(transaction({}), "EUR", 2)?.status).toBe(
       "BOOK"
     );
@@ -136,9 +140,11 @@ describe("mapPowensTransaction", () => {
         2
       )
     ).toBeNull();
+
     expect(mapPowensTransaction(transaction({ value: null }), "EUR", 2)).toBe(
       null
     );
+
     expect(mapPowensTransaction(transaction({ date: null }), "EUR", 2)).toBe(
       null
     );

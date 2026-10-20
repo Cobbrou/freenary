@@ -10,6 +10,7 @@ model User {
   /// institutions of every one of them.
   taxCountries          String[]
   onboardingCompletedAt DateTime?
+  role                  UserRole           @default(MEMBER)
   createdAt             DateTime           @default(now())
   updatedAt             DateTime           @updatedAt
   sessions              Session[]

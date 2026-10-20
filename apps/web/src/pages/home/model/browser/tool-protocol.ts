@@ -124,10 +124,12 @@ const assistantText = (content: AssistantContent): string => {
 
 const toolResponsesText = (content: ToolContent): string =>
   content
-    .filter((part) => part.type === "tool-result")
-    .map(
-      (part) =>
-        `<tool_response>\n${JSON.stringify({ content: toolResultText(part.output), name: part.toolName })}\n</tool_response>`
+    .flatMap((part) =>
+      part.type === "tool-result"
+        ? [
+            `<tool_response>\n${JSON.stringify({ content: toolResultText(part.output), name: part.toolName })}\n</tool_response>`,
+          ]
+        : []
     )
     .join("\n");
 
@@ -176,6 +178,7 @@ const longestTagPrefix = (text: string): number => {
     for (let length = max; length > longest; length -= 1) {
       if (text.endsWith(tag.slice(0, length))) {
         longest = length;
+
         break;
       }
     }
@@ -235,8 +238,10 @@ export class ToolCallParser {
             onSome: (call) => ({ kind: "tool-call" as const, ...call }),
           })
         );
+
         this.buffer = this.buffer.slice(end + TOOL_CALL_CLOSE.length);
         this.mode = "text";
+
         continue;
       }
 

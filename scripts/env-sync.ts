@@ -30,14 +30,20 @@ interface Section {
 
 const ENV_EXAMPLE_FILE = ".env.example";
 const GENERATOR_FILE = "scripts/env-sync.ts";
+
 const CONFIGURATION_PAGE =
-  "apps/fumadocs/content/docs/next/self-hosting/configuration.mdx";
+  "apps/fumadocs/content/docs/next/reference/configuration.mdx";
+
 const REPOSITORY_BLOB = "https://github.com/suiramdev/freenary/blob/main";
+
 const COMPOSE_FILES = [
   "docker-compose.yml",
   "docker-compose.dev.yml",
   "docker-compose.mail.yml",
+  "docker-compose.proxy.yml",
+  "deploy/docker-compose.yml",
 ];
+
 const SOURCE_GLOBS = [
   "apps/*/src/**/*.{ts,tsx}",
   "apps/*/scripts/**/*.ts",
@@ -47,12 +53,17 @@ const SOURCE_GLOBS = [
   "packages/*/*.config.ts",
   "scripts/**/*.ts",
 ];
+
 const SOURCE_EXCLUDED = /\/(?:node_modules|dist|paraglide|routeTree\.gen)\//u;
+
 const ENV_READ =
   /(?:process|Bun)\.env(?:\.(?<dot>[A-Z][A-Z0-9_]*)|\[["'](?<bracket>[A-Z][A-Z0-9_]*)["']\])/gu;
+
 const COMPOSE_INTERPOLATION = /\$\{(?<name>[A-Z][A-Z0-9_]*)/gu;
+
 const MARKER =
   /\{\/\* env-sync:start (?<id>[a-z-]+) \*\/\}[\s\S]*?\{\/\* env-sync:end \*\/\}/gu;
+
 const TABLE_CELL_PIPE = /\|/gu;
 const BLANK_RUN = /\n{3,}/gu;
 const YAML_FILE = /\.ya?ml$/u;
@@ -166,6 +177,17 @@ const EXTERNAL: ExternalVariable[] = [
       "An unset value falls back to `latest`, the newest release. A value that names no tag fails the pull with `not found`. The tags are `X.Y.Z`, `X.Y`, `X`, `latest`, `main`, `dev` and `sha-<7 characters>`.",
   },
   {
+    default: "none",
+    description:
+      "The public URL of the web app in `deploy/docker-compose.yml`, the stack for a hosting panel. It fills `BETTER_AUTH_URL`, `CORS_ORIGIN` and `PUBLIC_SERVER_URL`, so the API server shares the web app origin.",
+    envFile: "none",
+    example: "https://freenary.example.com",
+    kind: "compose",
+    name: "FREENARY_URL",
+    onError:
+      "`deploy/docker-compose.yml` refuses an unset or empty value. A value that differs from the browser origin makes every sign-in fail.",
+  },
+  {
     default: "`3000`",
     description: "The host port of the API server.",
     envFile: "commented",
@@ -202,39 +224,39 @@ const EXTERNAL: ExternalVariable[] = [
     name: "FREENARY_SLUG",
   },
   {
-    default: "`server.<slug>.freenary.orb.local`",
+    default: "`server.<slug>.freenary.localhost`",
     description: "The API server hostname. It fills `BETTER_AUTH_URL`.",
     envFile: "commented",
     envFileSection: "development",
-    example: "server.freenary.orb.local",
+    example: "server.freenary.localhost",
     kind: "compose-dev",
     name: "SERVER_HOST",
   },
   {
-    default: "`web.<slug>.freenary.orb.local`",
+    default: "`web.<slug>.freenary.localhost`",
     description: "The web app hostname. It fills `CORS_ORIGIN`.",
     envFile: "commented",
     envFileSection: "development",
-    example: "web.freenary.orb.local",
+    example: "web.freenary.localhost",
     kind: "compose-dev",
     name: "WEB_HOST",
   },
   {
-    default: "`docs.<slug>.freenary.orb.local`",
-    description: "The documentation hostname, in the OrbStack label alone.",
+    default: "`docs.<slug>.freenary.localhost`",
+    description: "The documentation hostname, in the Traefik route alone.",
     envFile: "commented",
     envFileSection: "development",
-    example: "docs.freenary.orb.local",
+    example: "docs.freenary.localhost",
     kind: "compose-dev",
     name: "DOCS_HOST",
   },
   {
-    default: "`mail.<slug>.freenary.orb.local`",
+    default: "`mail.<slug>.freenary.localhost`",
     description:
-      "The Mailpit inbox hostname, in the OrbStack label alone. It applies to `bun run dev:mail`.",
+      "The Mailpit inbox hostname, in the Traefik route alone. It applies to `bun run dev:mail`.",
     envFile: "commented",
     envFileSection: "development",
-    example: "mail.freenary.orb.local",
+    example: "mail.freenary.localhost",
     kind: "compose-dev",
     name: "MAIL_HOST",
   },
@@ -247,6 +269,14 @@ const EXTERNAL: ExternalVariable[] = [
   },
   {
     description:
+      "The address the web and documentation dev servers print in place of their container address. Compose sets it from `WEB_HOST` and `DOCS_HOST`.",
+    envFile: "none",
+    kind: "raw",
+    name: "DEV_PUBLIC_URL",
+    readBy: "the web and documentation dev servers",
+  },
+  {
+    description:
       'The API origin the web app hands to the browser in the root document. Compose sets it from `BETTER_AUTH_URL`. A value that is not an absolute URL throws `PUBLIC_SERVER_URL must be an absolute URL such as https://api.example.com, got "…"`.',
     envFile: "none",
     kind: "raw",
@@ -255,7 +285,7 @@ const EXTERNAL: ExternalVariable[] = [
   },
   {
     description:
-      "The origin the web app itself calls while it renders a page. It wins over `PUBLIC_SERVER_URL` there. Compose sets `http://server:3000`.",
+      "The origin the web app itself calls while it renders a page. It wins over `PUBLIC_SERVER_URL` there. The web app also forwards the API paths it receives (`/api/auth`, `/rpc`, `/ai/chat` and `/api-reference`) to it, so one public origin can serve both apps. Compose sets `http://server:3000`.",
     envFile: "none",
     kind: "raw",
     name: "SERVER_URL",
@@ -271,19 +301,19 @@ const EXTERNAL: ExternalVariable[] = [
   },
   {
     description:
-      "Which repository the merchant data release comes from. The default is `suiramdev/freenary`.",
+      "Which repository the merchant data release comes from; the server image build defaults it to `suiramdev/freenary`. GitHub Actions sets it in the `Triage` and `Labels` workflows, and the triage scripts exit without it.",
     envFile: "none",
     kind: "raw",
     name: "GITHUB_REPOSITORY",
-    readBy: "the server image build",
+    readBy: "the server image build and the triage scripts",
   },
   {
     description:
-      "It lifts the GitHub API rate limit of that download. The build reads it as a BuildKit secret, so the value never enters a layer.",
+      "It lifts the GitHub API rate limit of that download. The build reads it as a BuildKit secret, so the value never enters a layer. The triage scripts call the GitHub API with it to read items, their label history, comments and check runs, to add and remove labels, and to post, edit and delete the triage comment. `scripts/triage/calibrate.ts` reads items and label history with it locally.",
     envFile: "none",
     kind: "raw",
     name: "GITHUB_TOKEN",
-    readBy: "the server image build",
+    readBy: "the server image build and the triage scripts",
   },
   {
     description:
@@ -300,6 +330,22 @@ const EXTERNAL: ExternalVariable[] = [
     kind: "raw",
     name: "OPENROUTER_MODEL",
     readBy: "the documentation site",
+  },
+  {
+    description:
+      "The SubQ Decisions API key the `Triage` workflow labels issues and pull requests with. It is a repository secret; with none, the workflow labels nothing.",
+    envFile: "none",
+    kind: "raw",
+    name: "SUBQ_API_KEY",
+    readBy: "the `Triage` workflow",
+  },
+  {
+    description:
+      "The file GitHub Actions renders as the run summary. The `Triage` workflow writes the labels it added and removed, and the answers behind them, there.",
+    envFile: "none",
+    kind: "raw",
+    name: "GITHUB_STEP_SUMMARY",
+    readBy: "the `Triage` workflow",
   },
   {
     description:
@@ -642,6 +688,7 @@ const main = async (): Promise<number> => {
       changed ? CONFIGURATION_PAGE : null
     ),
   ]);
+
   const written = outcomes.filter((file) => file !== null);
 
   for (const message of new Set(failures)) {

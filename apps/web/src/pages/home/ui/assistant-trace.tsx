@@ -170,6 +170,7 @@ export const AssistantTrace = ({
         {trace.steps.map((step, position) => {
           const previousHadTools =
             (trace.steps[step.index - 1]?.tools.length ?? 0) > 0;
+
           const notes = [
             ...(step.tools.length > 1
               ? [m.assistant_step_parallel({ count: step.tools.length })]
@@ -178,6 +179,7 @@ export const AssistantTrace = ({
               ? [m.assistant_step_after({ step: step.index })]
               : []),
           ];
+
           const streaming = step.thinking?.state === "streaming";
           const thinkingMs = step.thinking
             ? spanOf(timings, step.thinking.keys)

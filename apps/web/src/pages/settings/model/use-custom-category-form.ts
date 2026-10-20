@@ -73,6 +73,7 @@ export const useCustomCategoryForm = ({
       await queryClient.invalidateQueries({
         queryKey: orpc.settings.listCategories.queryOptions().queryKey,
       });
+
       toast.success(
         edited
           ? m.settings_category_update_success()

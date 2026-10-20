@@ -37,6 +37,7 @@ class SparqlQueryFailed extends Data.TaggedError("SparqlQueryFailed")<{
 }> {}
 
 const ENDPOINT = "https://query.wikidata.org/sparql";
+
 const OUTPUT_PATH = path.resolve(
   import.meta.dirname,
   "../data/wikidata-brands.json"
@@ -217,24 +218,24 @@ const fetchEntitiesByType = Effect.fnUntraced(function* fetchEntitiesByType(
   FILTER NOT EXISTS { ?item wdt:P31 wd:Q4167410 }
 } LIMIT ${ENTITY_ROW_LIMIT}`;
 
-  const data = yield* runQuery(query, `type ${typeQid} (${typeName})`);
-  const result = new Map<string, EntityEntry>();
+  const rows = yield* runQuery(query, `type ${typeQid} (${typeName})`);
+  const entries = new Map<string, EntityEntry>();
 
-  if (Option.isNone(data)) {
-    return result;
+  if (Option.isNone(rows)) {
+    return entries;
   }
 
-  for (const row of data.value.results.bindings) {
+  for (const row of rows.value.results.bindings) {
     const qid = row.item.value.split("/").pop() ?? row.item.value;
     const label = row.itemLabel.value;
     const domain = extractDomain(row.website.value);
     const countryCode = row.countryCode?.value.toUpperCase();
 
-    let entry = result.get(qid);
+    let entry = entries.get(qid);
 
     if (!entry) {
       entry = { countries: new Set(), domains: new Set(), label };
-      result.set(qid, entry);
+      entries.set(qid, entry);
     }
 
     if (Option.isSome(domain)) {
@@ -246,7 +247,7 @@ const fetchEntitiesByType = Effect.fnUntraced(function* fetchEntitiesByType(
     }
   }
 
-  return result;
+  return entries;
 });
 
 const mergeEntitiesByType = Effect.fnUntraced(function* mergeEntitiesByType(
@@ -278,6 +279,7 @@ const mergeEntitiesByType = Effect.fnUntraced(function* mergeEntitiesByType(
           domains: new Set(entry.domains),
           label: entry.label,
         });
+
         newCount += 1;
       }
     }
@@ -285,6 +287,7 @@ const mergeEntitiesByType = Effect.fnUntraced(function* mergeEntitiesByType(
     console.log(
       `  ${typeQid} (${typeName}): ${entities.size} entities, ${newCount} new (total: ${merged.size})`
     );
+
     yield* Effect.sleep(DELAY_MS);
   }
 
@@ -318,15 +321,15 @@ ORDER BY ?item ?website
 LIMIT ${batch.length * ROWS_PER_CURATED_NAME}`;
 
       const batchNum = index + 1;
-      const data = yield* runQuery(
+      const rows = yield* runQuery(
         query,
         `curated batch ${batchNum}/${batches.length}`
       );
 
-      if (Option.isSome(data)) {
+      if (Option.isSome(rows)) {
         let batchNew = 0;
 
-        for (const row of data.value.results.bindings) {
+        for (const row of rows.value.results.bindings) {
           const itemVal = row.item;
           const labelVal = row.itemLabel;
 
@@ -384,30 +387,31 @@ const fetchAliasesBatch = Effect.fnUntraced(function* fetchAliasesBatch(
   ?item skos:altLabel ?altLabel . FILTER(LANG(?altLabel) IN ${ALIAS_LANGUAGES})
 } GROUP BY ?item`;
 
-  const data = yield* runQuery(query, `aliases batch (${qids.length} items)`);
-  const result = new Map<string, string[]>();
+  const rows = yield* runQuery(query, `aliases batch (${qids.length} items)`);
+  const aliasesByQid = new Map<string, string[]>();
 
-  if (Option.isNone(data)) {
-    return result;
+  if (Option.isNone(rows)) {
+    return aliasesByQid;
   }
 
-  for (const row of data.value.results.bindings) {
+  for (const row of rows.value.results.bindings) {
     const qid = row.item.value.split("/").pop() ?? row.item.value;
     const aliasStr = row.aliases?.value ?? "";
 
     if (aliasStr.length > 0) {
-      const aliases = aliasStr
-        .split("|")
-        .map((alias) => alias.trim())
-        .filter((alias) => alias.length > 0);
+      const aliases = aliasStr.split("|").flatMap((alias) => {
+        const trimmed = alias.trim();
+
+        return trimmed.length > 0 ? [trimmed] : [];
+      });
 
       if (aliases.length > 0) {
-        result.set(qid, aliases);
+        aliasesByQid.set(qid, aliases);
       }
     }
   }
 
-  return result;
+  return aliasesByQid;
 });
 
 const collectAliases = Effect.fnUntraced(function* collectAliases(
@@ -487,6 +491,7 @@ const fetchWikidataBrands = Effect.fnUntraced(function* fetchWikidataBrands() {
   const frenchCount = sorted.filter((brand) =>
     brand.countries.includes("FR")
   ).length;
+
   console.log(`\nWrote ${sorted.length} brands to ${OUTPUT_PATH}`);
   console.log(`French-linked brands (P17 = FR): ${frenchCount}`);
 });

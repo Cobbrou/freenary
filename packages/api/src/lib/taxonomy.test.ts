@@ -58,6 +58,7 @@ describe("category hierarchy", () => {
     const order = SPENDING_CATEGORIES.map(
       (category) => CATEGORY_GROUP_OF[category]
     );
+
     const runs: CategoryGroup[] = [];
 
     for (const group of order) {

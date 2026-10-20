@@ -1,0 +1,13 @@
+{
+  "id": "freenary",
+  "name": "Freenary",
+  "version": "latest",
+  "description": "Self-hosted personal finance: bank sync, categories and budgets on your own server.",
+  "logo": "freenary.svg",
+  "links": {
+    "github": "https://github.com/suiramdev/freenary",
+    "website": "https://freenary.dev",
+    "docs": "https://freenary.dev/docs/get-started/install"
+  },
+  "tags": ["finance", "budget", "banking"]
+}

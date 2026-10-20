@@ -22,7 +22,8 @@ export interface DevIdentity {
 const DEFAULT_SLUG = "dev";
 const MAX_SLUG_LENGTH = 40;
 const PROJECT_PREFIX = "freenary";
-const ORBSTACK_SUFFIX = "freenary.orb.local";
+const HOST_SUFFIX = "freenary.localhost";
+const SCHEME = "http";
 
 const NON_LABEL_RUN = /[^a-z0-9]+/gu;
 const EDGE_DASHES = /^-+|-+$/gu;
@@ -48,24 +49,24 @@ export const deriveDevIdentity = (input: DevIdentityInput): DevIdentity => {
     toDnsLabel(input.dir) ||
     DEFAULT_SLUG;
 
-  const webHost = `web.${slug}.${ORBSTACK_SUFFIX}`;
-  const serverHost = `server.${slug}.${ORBSTACK_SUFFIX}`;
-  const docsHost = `docs.${slug}.${ORBSTACK_SUFFIX}`;
-  const mailHost = `mail.${slug}.${ORBSTACK_SUFFIX}`;
-  const parentDomainOfWebAndServerHosts = `.${slug}.${ORBSTACK_SUFFIX}`;
+  const webHost = `web.${slug}.${HOST_SUFFIX}`;
+  const serverHost = `server.${slug}.${HOST_SUFFIX}`;
+  const docsHost = `docs.${slug}.${HOST_SUFFIX}`;
+  const mailHost = `mail.${slug}.${HOST_SUFFIX}`;
+  const parentDomainOfWebAndServerHosts = `.${slug}.${HOST_SUFFIX}`;
 
   return {
-    betterAuthUrl: `https://${serverHost}`,
+    betterAuthUrl: `${SCHEME}://${serverHost}`,
     composeProjectName: `${PROJECT_PREFIX}-${slug}`,
     cookieDomain: parentDomainOfWebAndServerHosts,
-    corsOrigin: `https://${webHost}`,
+    corsOrigin: `${SCHEME}://${webHost}`,
     docsHost,
-    docsUrl: `https://${docsHost}`,
+    docsUrl: `${SCHEME}://${docsHost}`,
     mailHost,
-    mailUrl: `https://${mailHost}`,
+    mailUrl: `${SCHEME}://${mailHost}`,
     serverHost,
     slug,
-    viteServerUrl: `https://${serverHost}`,
+    viteServerUrl: `${SCHEME}://${serverHost}`,
     webHost,
   };
 };

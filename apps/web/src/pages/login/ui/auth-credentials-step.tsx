@@ -86,6 +86,7 @@ export const AuthCredentialsStep = ({
     isChecking,
     mode,
   } = useEmailAccountCheck(defaultEmail);
+
   const prefersReducedMotion = useReducedMotion();
 
   const schema = useMemo(

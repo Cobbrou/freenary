@@ -80,6 +80,7 @@ const LLM_SAMPLING_TEMPERATURE = 0;
 const COMPLETIONS_PATH = "/chat/completions";
 const TRAILING_SLASHES = /\/+$/u;
 const ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
 const ANSWER_RULE =
   "Answer with the letter of one option and nothing else. Write no punctuation, no category name and no explanation.";
 
@@ -288,6 +289,7 @@ const readPrediction = Effect.fnUntraced(function* readPrediction(
     table,
     settings.temperature
   );
+
   const category = table.categoryByLetter[letter];
 
   if (!category) {

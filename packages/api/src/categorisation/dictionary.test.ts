@@ -28,6 +28,7 @@ const DATA_PATH = path.resolve(
   import.meta.dirname,
   "../../data/merchants.jsonl.gz"
 );
+
 const BACKUP_PATH = `${DATA_PATH}.test-backup`;
 
 const merchantLine = ({ countries, id, name }: MerchantFixture): string =>
@@ -53,6 +54,7 @@ const writeFixtureAtTheArtifactPath = async (): Promise<void> => {
     merchantLine({ countries: ["ZZ"], id: "test/zz", name: "Testmart" }),
     merchantLine({ id: "test/global", name: "Worldmart" }),
   ];
+
   await writeFile(DATA_PATH, gzipSync(`${lines.join("\n")}\n`));
 };
 

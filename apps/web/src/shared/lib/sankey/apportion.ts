@@ -31,6 +31,7 @@ export const apportion = (
       if (!canContribute(source, remainingInSource)) {
         sourceIndex += 1;
         remainingInSource = sources[sourceIndex]?.value ?? 0;
+
         continue;
       }
 

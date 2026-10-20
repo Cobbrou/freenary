@@ -40,6 +40,7 @@ export const SecuritySessionsSection = ({
     revokeSession,
     revokingToken,
   } = useSessionRevocation();
+
   const listRef = useRef<HTMLUListElement>(null);
   const hover = useFluidHover(listRef, { axis: "y", gapClick: false });
 
@@ -69,6 +70,7 @@ export const SecuritySessionsSection = ({
       }),
     [currentToken, sessions]
   );
+
   const otherCount = ordered.filter(
     (item) => item.token !== currentToken
   ).length;

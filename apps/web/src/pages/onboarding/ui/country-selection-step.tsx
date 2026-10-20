@@ -20,8 +20,7 @@ import {
   isFullySupportedCountry,
 } from "@/shared/lib/countries";
 import { remixIcon } from "@/shared/lib/remix-icon";
-
-import { OnboardingStepHeader } from "./onboarding-step-header";
+import { WizardStepHeader } from "@/shared/ui/wizard-step-header";
 
 interface CountrySelectionStepProps {
   isCompleting: boolean;
@@ -58,7 +57,7 @@ export const CountrySelectionStep = ({
 
   return (
     <div className="flex flex-col gap-6">
-      <OnboardingStepHeader
+      <WizardStepHeader
         description={m.onboarding_country_description()}
         title={m.onboarding_country_title()}
       />

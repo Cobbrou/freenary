@@ -102,6 +102,7 @@ describe("createZeroShotClassifier", () => {
     expect(call?.url).toBe(
       "https://o7vf1.eu-west-1.aws.endpoints.huggingface.cloud"
     );
+
     expect(call?.authorization).toBe("Bearer hf_key");
     expect(call?.body.parameters.candidate_labels).toEqual([...debitRubrics]);
     expect(call?.body.parameters.multi_label).toBe(false);
@@ -125,6 +126,7 @@ describe("createZeroShotClassifier", () => {
     expect(calls[0]?.body.parameters.candidate_labels).toEqual([
       ...creditRubrics,
     ]);
+
     expect(calls[0]?.body.parameters.candidate_labels).not.toEqual([
       ...debitRubrics,
     ]);
@@ -193,6 +195,7 @@ describe("createZeroShotClassifier", () => {
       country: null,
       merchantCategoryCode: "5411",
     });
+
     await classifier.classify({
       ...payload,
       counterpartyName: "",
@@ -203,6 +206,7 @@ describe("createZeroShotClassifier", () => {
     expect(calls[0]?.body.inputs).toBe(
       "edf paiement | 5411 | card | small | EUR"
     );
+
     expect(calls[1]?.body.inputs).toBe(
       "edf paiement | 5411 | card | small | EUR"
     );
@@ -222,6 +226,7 @@ describe("createZeroShotClassifier", () => {
     expect(prediction?.answeredBy).toBe(
       "MoritzLaurer/ModernBERT-large-zeroshot-v2.0"
     );
+
     expect(prediction?.confidence).toBeGreaterThan(0.85);
   });
 
@@ -243,6 +248,7 @@ describe("createZeroShotClassifier", () => {
     const expected = offeredCategories("debit").filter(
       (category) => category !== "uncategorised"
     );
+
     const predictions = await Promise.all(
       expected.map((category) =>
         createZeroShotClassifier(
@@ -267,6 +273,7 @@ describe("createZeroShotClassifier", () => {
       CATEGORY_CRITERIA["bills-utilities"],
       PEAKED_TOP_SCORE
     );
+
     const asStruct = createZeroShotClassifier(settings, answering(peaked));
     const asArray = createZeroShotClassifier(
       settings,
@@ -394,10 +401,12 @@ describe("createZeroShotClassifier", () => {
       CATEGORY_CRITERIA["bills-utilities"],
       PEAKED_TOP_SCORE
     );
+
     const neutral = await createZeroShotClassifier(
       settings,
       answering(peaked)
     ).classify(payload);
+
     const warmed = await createZeroShotClassifier(
       { ...settings, temperature: 1.4 },
       answering(peaked)

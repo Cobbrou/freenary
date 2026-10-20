@@ -39,8 +39,9 @@ export const RecurringPage = () => {
     sort,
     view,
   } = useRecurringView();
+
   const recurringQuery = useQuery(orpc.budget.getRecurring.queryOptions());
-  const { data } = recurringQuery;
+  const { data: recurring } = recurringQuery;
   const { isError } = recurringQuery;
   const accountsQuery = useQuery(orpc.budget.getAccounts.queryOptions());
   const syncProgress = useSyncProgress();
@@ -48,24 +49,28 @@ export const RecurringPage = () => {
     syncProgress !== null &&
     accountsQuery.isSuccess &&
     accountsQuery.data.firstTransactionDate === null;
+
   const isPending = recurringQuery.isLoading || isAwaitingFirstData;
 
-  const asOf = useMemo(() => (data ? new Date(data.asOf) : new Date()), [data]);
+  const asOf = useMemo(
+    () => (recurring ? new Date(recurring.asOf) : new Date()),
+    [recurring]
+  );
 
   const derived = useMemo(
     () =>
-      data
+      recurring
         ? {
-            insights: recurringInsights(data, asOf),
-            summary: recurringSummary(data, asOf),
+            insights: recurringInsights(recurring, asOf),
+            summary: recurringSummary(recurring, asOf),
           }
         : null,
-    [asOf, data]
+    [asOf, recurring]
   );
 
   const groups = useMemo(
-    () => groupRecurringItems(data?.items ?? [], filter, sort),
-    [data, filter, sort]
+    () => groupRecurringItems(recurring?.items ?? [], filter, sort),
+    [recurring, filter, sort]
   );
 
   const handleCategoriesChange = useCallback(
@@ -102,9 +107,13 @@ export const RecurringPage = () => {
     [applyPatch]
   );
 
-  const currency = data?.currency ?? "EUR";
+  const currency = recurring?.currency ?? "EUR";
 
-  if (data !== undefined && data.items.length === 0 && !isAwaitingFirstData) {
+  if (
+    recurring !== undefined &&
+    recurring.items.length === 0 &&
+    !isAwaitingFirstData
+  ) {
     return (
       <div className="flex flex-1 flex-col gap-6">
         <p className="text-muted-foreground text-xs">
@@ -146,7 +155,7 @@ export const RecurringPage = () => {
 
       <RecurringCharts
         companion={companion}
-        data={data}
+        data={recurring}
         isError={isError}
         isPending={isPending}
         onCompanionChange={(next) => applyPatch({ rcomp: next })}

@@ -32,6 +32,7 @@ const unversionedDocsRedirect = createMiddleware().server(
     const rest = url.pathname
       .slice(docsRoute.length)
       .replace(LEADING_SLASH, "");
+
     const [firstSegment] = rest.split("/");
 
     if (isVersionId(firstSegment.replace(MARKDOWN_EXTENSION, ""))) {
@@ -57,6 +58,7 @@ const markdownRepresentationRedirect = createMiddleware().server(
         .slice(docsRoute.length)
         .split("/")
         .filter((v) => v.length > 0);
+
       url.pathname = encodeMarkdownUrl(slugs);
 
       throw redirect({ href: url.href, headers: { Vary: "Accept" } });

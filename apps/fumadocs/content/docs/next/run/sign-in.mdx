@@ -1,0 +1,114 @@
+---
+title: Sign-in
+description: The sign-in methods your instance offers, how long sessions last, and how to add Google, Apple or single sign-on.
+icon: KeyRound
+---
+
+Choose the sign-in methods available on your instance and configure external providers here. Users manage their own methods from [Your account](/docs/use/account#sign-in).
+
+Set provider variables in the deployment environment. Recreate the containers with `docker compose up -d`, or redeploy through your hosting panel.
+
+## Built-in methods
+
+Every instance supports these methods:
+
+- **Password:** between 12 and 128 characters.
+- **Passkey:** a device uses its fingerprint, face or PIN.
+- **Two-factor authentication:** an authenticator-app code after password sign-in.
+
+## Sessions
+
+A session expires after 7 days. Using it after one day renews that period, so inactivity signs a user out after about 6 to 7 days.
+
+Don't change `BETTER_AUTH_SECRET` to shorten sessions. Rotation has wider effects, described in [Security](/docs/reference/security).
+
+## One-time codes
+
+[Email delivery](/docs/run/email) adds codes for address confirmation and password resets. Each code has 6 digits, expires after 10 minutes and stops working after 3 wrong attempts. Each caller address can request at most 3 codes a minute.
+
+## Passkeys and your hostname
+
+Freenary takes the passkey hostname from `CORS_ORIGIN`. Browsers allow passkeys on HTTPS addresses and `localhost`.
+
+Changing that hostname makes existing passkeys unusable. Each affected user must add another one under the new hostname.
+
+## Add Google, Apple or single sign-on
+
+External sign-in buttons appear when their variables are complete. These settings aren't available in the setup screen.
+
+| Provider       | Required variables                         |
+| -------------- | ------------------------------------------ |
+| Google         | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` |
+| Apple          | `APPLE_CLIENT_ID`, `APPLE_CLIENT_SECRET`   |
+| OpenID Connect | `OIDC_DISCOVERY_URL`, `OIDC_CLIENT_ID`     |
+
+Register this callback pattern with the provider:
+
+```text
+<BETTER_AUTH_URL>/api/auth/callback/<id>
+```
+
+Use `google`, `apple` or `oidc` as `<id>`. For example:
+
+```text
+https://freenary.example.com/api/auth/callback/oidc
+```
+
+An OpenID Connect configuration can be:
+
+```dotenv
+OIDC_DISCOVERY_URL=https://idp.example.com/.well-known/openid-configuration
+OIDC_CLIENT_ID=freenary
+OIDC_CLIENT_SECRET=xxxxxxxxxxxxxxxxxxxxxxxx
+OIDC_PROVIDER_NAME=Example SSO
+```
+
+`OIDC_CLIENT_SECRET` is optional for a public client. `OIDC_PROVIDER_NAME` changes the button label. `OIDC_SCOPES` adds comma-separated scopes to the required `openid`, `email` and `profile` scopes.
+
+The discovery document must provide both `issuer` and `jwks_uri`, because Freenary verifies ID tokens. When it can't build that verification, the server records:
+
+```text
+Provider "oidc": requires verified ID tokens, but discovery did not provide a usable issuer and jwks_uri.
+```
+
+An external provider joins an existing account only when its address matches and the account's address is confirmed.
+
+## Provider sign-in on an instance without email
+
+An instance with no email service never confirms account addresses. A provider sign-in that matches an existing password account is therefore refused with:
+
+```text
+This address already has an account that has not been confirmed yet. Confirm it first, then the provider can be used with it.
+```
+
+Resolve it in either of these ways:
+
+- Configure [email delivery](/docs/run/email). The next password sign-in sends the user a confirmation code. They can use the provider after entering it.
+- Ask the user to sign in with their password. Within 15 minutes, they open Settings, `Security`, then press `Connect` for that provider under `Connected accounts`.
+
+## Leaked-password check
+
+By default, Freenary rejects a password found in the [Have I Been Pwned](https://haveibeenpwned.com/Passwords) corpus. The check runs on sign-up, change and reset. It sends only the first 5 characters of the password hash.
+
+When `api.pwnedpasswords.com` is unreachable, [new passwords fail to save](/docs/run/troubleshooting#new-passwords-dont-save). Disable this fail-closed check only when necessary:
+
+```dotenv
+AUTH_PASSWORD_BREACH_CHECK=false
+```
+
+## Rate limits
+
+Sign-in, sign-up and code requests are limited per caller address; [API](/docs/reference/api#rate-limits) lists each limit. When more than one proxy forwards requests, add them to `TRUSTED_PROXIES`, or visitors share one caller address and one limit. See [Trusted proxies](/docs/reference/reverse-proxy#trusted-proxies).
+
+<Cards>
+  <Card
+    title="Email"
+    href="/docs/run/email"
+    description="Enable confirmation and reset codes."
+  />
+  <Card
+    title="Security"
+    href="/docs/reference/security"
+    description="See what your instance secrets protect."
+  />
+</Cards>

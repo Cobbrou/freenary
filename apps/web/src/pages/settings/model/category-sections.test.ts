@@ -80,6 +80,7 @@ describe("toCategorySections", () => {
       listCategories([custom("a", "Garage rent", "spending")]),
       ""
     );
+
     const spending = sections.find((s) => s.heading?.key === "spending");
 
     expect(spending?.items.at(-1)?.key).toBe("custom:a");
@@ -93,6 +94,7 @@ describe("toCategorySections", () => {
       ]),
       ""
     );
+
     const headless = sections.filter((s) => s.heading === null);
 
     expect(headless).toHaveLength(2);
@@ -115,6 +117,7 @@ describe("toCategorySections", () => {
       "Income",
       "Spending",
     ]);
+
     expect(keysOf(sections)).toEqual(["rental-income", "rent-mortgage"]);
   });
 
@@ -140,6 +143,7 @@ describe("toCategorySections", () => {
       ]),
       ""
     );
+
     const hustle = sections.find((s) => s.key === "custom:a");
 
     expect(hustle?.items.map((item) => item.key)).toEqual([
@@ -168,11 +172,12 @@ describe("toCategorySections", () => {
       custom("b", "Hustle", null),
       custom("c", "Gym", "investments"),
     ];
+
     const all = listCategories(customs);
     const rendered = keysOf(toCategorySections(all, ""));
-    const assignable = all
-      .filter((entry) => entry.isAssignable)
-      .map((entry) => entry.key);
+    const assignable = all.flatMap((entry) =>
+      entry.isAssignable ? [entry.key] : []
+    );
 
     expect(rendered.toSorted()).toEqual(assignable.toSorted());
   });

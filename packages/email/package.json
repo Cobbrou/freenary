@@ -13,6 +13,7 @@
   "scripts": {},
   "dependencies": {
     "@freenary/env": "workspace:*",
+    "@freenary/instance-config": "workspace:*",
     "dotenv": "catalog:",
     "effect": "catalog:",
     "nodemailer": "^7.0.10",

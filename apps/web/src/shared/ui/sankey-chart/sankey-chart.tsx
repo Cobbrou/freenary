@@ -53,6 +53,7 @@ export const SankeyChart = ({
     () => computeSankeyLayout({ columns, links }),
     [columns, links]
   );
+
   const [hovered, setHovered] = useState<string | null>(null);
 
   const lit = useMemo(() => hoverLitIds(layout, hovered), [layout, hovered]);

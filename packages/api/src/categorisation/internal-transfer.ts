@@ -56,6 +56,7 @@ const pairedLegIds = (
       if (isOppositeLeg) {
         paired.add(incoming.id);
         paired.add(outgoing.id);
+
         break;
       }
     }

@@ -27,18 +27,20 @@ export const categoryParentOptions = ({
     label: categoryGroupLabel(group),
   }));
 
-  const own: CategoryParentOption[] = categories
-    .filter(
-      (entry) => entry.isGroup && entry.isCustom && entry.key !== editedKey
-    )
-    .map((entry) => ({
-      appearance: {
-        color: entry.pickedColor ?? entry.color,
-        icon: entry.icon,
-      },
-      key: entry.key,
-      label: categoryEntryLabel(entry),
-    }));
+  const own: CategoryParentOption[] = categories.flatMap((entry) =>
+    entry.isGroup && entry.isCustom && entry.key !== editedKey
+      ? [
+          {
+            appearance: {
+              color: entry.pickedColor ?? entry.color,
+              icon: entry.icon,
+            },
+            key: entry.key,
+            label: categoryEntryLabel(entry),
+          },
+        ]
+      : []
+  );
 
   return [...groups, ...own];
 };

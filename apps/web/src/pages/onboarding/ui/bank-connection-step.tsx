@@ -4,8 +4,7 @@ import { useIcon } from "@freenary/ui/lib/icon-context";
 import { BankConnectionPanel } from "@/features/bank-connection";
 import type { BankInstitution } from "@/features/bank-connection";
 import { m } from "@/paraglide/messages.js";
-
-import { OnboardingStepHeader } from "./onboarding-step-header";
+import { WizardStepHeader } from "@/shared/ui/wizard-step-header";
 
 interface BankConnectionStepProps {
   banks: BankInstitution[];
@@ -32,7 +31,7 @@ export const BankConnectionStep = ({
 
   return (
     <div className="flex flex-col gap-6">
-      <OnboardingStepHeader
+      <WizardStepHeader
         description={m.onboarding_bank_description()}
         title={m.onboarding_bank_title()}
       />

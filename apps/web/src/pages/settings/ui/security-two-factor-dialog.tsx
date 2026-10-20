@@ -88,6 +88,7 @@ export const SecurityTwoFactorDialog = ({
     stage,
     totpUri,
   } = useTwoFactorEnrollment({ onEnabled, purpose });
+
   const { gap, px } = useSize();
   const CopyIcon = useIcon("copy");
 

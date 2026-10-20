@@ -21,13 +21,18 @@ const sectors = frame.sectors
   .join("\n");
 
 const ink = frame.ink
-  .filter((draw) => draw.opacity > 0)
-  .map((draw) => {
+  .flatMap((draw) => {
+    if (draw.opacity <= 0) {
+      return [];
+    }
+
     const style = INK_STYLES[draw.slot];
     const rule = style.fillRule ? ` fill-rule="${style.fillRule}"` : "";
     const fill = style.fill === "currentColor" ? "var(--ink)" : style.fill;
 
-    return `  <path d="${draw.d}" fill="${fill}"${rule} opacity="${draw.opacity}"/>\n`;
+    return [
+      `  <path d="${draw.d}" fill="${fill}"${rule} opacity="${draw.opacity}"/>\n`,
+    ];
   })
   .join("");
 
@@ -57,6 +62,7 @@ const publicDir = path.join(import.meta.dirname, "..", "public");
 const svgPath = path.join(publicDir, "favicon.svg");
 
 writeFileSync(svgPath, svg);
+
 process.stdout.write(`wrote ${svgPath} (${svg.length} bytes)\n`);
 
 const pngPath = path.join(publicDir, "favicon.png");
@@ -70,9 +76,9 @@ const rasterizers = [
 ] as const;
 
 for (const [command, args] of rasterizers) {
-  const result = spawnSync(command, args, { stdio: "inherit" });
+  const rasterized = spawnSync(command, args, { stdio: "inherit" });
 
-  if (result.status === 0) {
+  if (rasterized.status === 0) {
     process.stdout.write(`wrote ${pngPath} at ${PNG_SIZE}px\n`);
     process.exit(0);
   }

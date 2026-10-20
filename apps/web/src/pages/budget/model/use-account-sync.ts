@@ -30,10 +30,10 @@ export const useAccountSync = (hasAccounts: boolean | undefined) => {
       queryClient.invalidateQueries({
         queryKey: orpc.budget.getSyncStatus.key(),
       }),
-    onSuccess: async (result, variables) => {
+    onSuccess: async (sync, variables) => {
       await invalidateBudgetData(queryClient);
 
-      if (!result.success) {
+      if (!sync.success) {
         toast.error(m.budget_sync_error(), {
           action: {
             label: m.budget_sync_retry(),
@@ -46,13 +46,13 @@ export const useAccountSync = (hasAccounts: boolean | undefined) => {
 
       const wasAskedForByUser = variables.force === true;
 
-      if (!(wasAskedForByUser && result.started)) {
+      if (!(wasAskedForByUser && sync.started)) {
         return;
       }
 
       toast.success(
-        result.categorised > 0
-          ? m.budget_sync_success_categorised({ count: result.categorised })
+        sync.categorised > 0
+          ? m.budget_sync_success_categorised({ count: sync.categorised })
           : m.budget_sync_success()
       );
     },
@@ -72,6 +72,7 @@ export const useAccountSync = (hasAccounts: boolean | undefined) => {
   const importedTick = Math.floor(
     (progress?.transactionsImported ?? 0) / TRANSACTIONS_PER_REFRESH
   );
+
   const refreshKey = phase === null ? null : `${phase}:${importedTick}`;
   const refreshedKey = useRef<string | null>(null);
 

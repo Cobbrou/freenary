@@ -60,6 +60,7 @@ export const useRecurringView = () => {
 
   const companion: RecurringCompanionView =
     search.rcomp ?? BUDGET_SEARCH_DEFAULTS.rcomp;
+
   const kind: RecurrenceKind = search.rkind ?? BUDGET_SEARCH_DEFAULTS.rkind;
   const sort: RecurringSortMode = search.rsort ?? BUDGET_SEARCH_DEFAULTS.rsort;
   const view: RecurringView = search.rview ?? BUDGET_SEARCH_DEFAULTS.rview;

@@ -2,17 +2,5 @@
   "title": "next",
   "root": true,
   "defaultOpen": true,
-  "pages": [
-    "index",
-    "quickstart",
-    "concepts",
-    "---Run Freenary---",
-    "self-hosting",
-    "---Use Freenary---",
-    "guides",
-    "---Build on Freenary---",
-    "integrations",
-    "---Contribute---",
-    "contributing"
-  ]
+  "pages": ["index", "get-started", "use", "run", "reference", "contribute"]
 }

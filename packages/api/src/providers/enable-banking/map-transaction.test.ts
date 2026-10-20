@@ -44,6 +44,7 @@ describe("mapEBTransactions", () => {
       [transaction("first"), transaction("second")],
       "2026-01-01"
     );
+
     const remapped = mapEBTransactions(
       [transaction("changed-first"), transaction("changed-second")],
       "2026-01-01"
@@ -54,6 +55,7 @@ describe("mapEBTransactions", () => {
     expect(mapped[0]?.providerTransactionId).not.toBe(
       mapped[1]?.providerTransactionId
     );
+
     expect(remapped.map((item) => item.providerTransactionId)).toEqual(
       mapped.map((item) => item.providerTransactionId)
     );

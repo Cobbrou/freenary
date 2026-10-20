@@ -103,6 +103,7 @@ export const useAuthAvatar = ({
 
   const hasOutcomeExpired =
     outcome?.kind === "error" && outcome.seq <= expiredErrorSeq;
+
   const reaction = outcome === null || hasOutcomeExpired ? null : outcome.kind;
 
   const handleFocus = (event: FocusEvent<HTMLElement>) => {

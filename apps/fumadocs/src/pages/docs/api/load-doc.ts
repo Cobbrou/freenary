@@ -1,9 +1,9 @@
-import { notFound } from "@tanstack/react-router";
+import { notFound, redirect } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import type { SerializedPageTree } from "fumadocs-core/source/client";
 
 import { docsRoute } from "@/shared/config";
-import { newestRelease, source } from "@/shared/content";
+import { findMovedPage, newestRelease, source } from "@/shared/content";
 import { encodeMarkdownUrl } from "@/shared/lib/markdown-url";
 
 export type NewestReleaseLink = {
@@ -14,6 +14,8 @@ export type NewestReleaseLink = {
 
 export interface LoadedDoc {
   path: string;
+  title: string;
+  description: string;
   markdownUrl: string;
   pageTree: SerializedPageTree;
   version: string;
@@ -24,7 +26,9 @@ const newestReleaseLink = (
   version: string,
   rest: string[]
 ): NewestReleaseLink => {
-  const samePage = source.getPage([version, ...rest]);
+  const samePage =
+    source.getPage([version, ...rest]) ?? findMovedPage([version, ...rest]);
+
   const versionIndex = `${docsRoute}/${version}`;
 
   return {
@@ -41,13 +45,21 @@ export const loadDoc = createServerFn({
   .handler(async ({ data: slugs }): Promise<LoadedDoc> => {
     const page = source.getPage(slugs);
 
-    if (!page) throw notFound();
+    if (!page) {
+      const moved = findMovedPage(slugs);
+
+      if (moved) throw redirect({ href: moved.url });
+
+      throw notFound();
+    }
 
     const version = page.slugs[0];
     const newest = newestRelease();
 
     return {
       path: page.path,
+      title: page.data.title,
+      description: page.data.description,
       markdownUrl: encodeMarkdownUrl(page.slugs, page.locale),
       pageTree: await source.serializePageTree(source.getPageTree()),
       version,

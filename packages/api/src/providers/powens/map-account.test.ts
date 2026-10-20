@@ -46,6 +46,7 @@ describe("mapPowensAccount", () => {
     expect(
       mapPowensAccount({ id: 1, last_update: "2026-03-04 09:15:30" }).balanceAt
     ).toBe("2026-03-04T09:15:30Z");
+
     expect(
       mapPowensAccount({ id: 1, last_update: null }).balanceAt
     ).toBeUndefined();

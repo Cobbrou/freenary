@@ -69,10 +69,12 @@ describe("narrowing the recurring list", () => {
       merchantKey: "insurance",
       typicalAmountMinor: 24_000,
     });
+
     const monthlyGymCostingOneFifty = item({
       merchantKey: "gym",
       typicalAmountMinor: 15_000,
     });
+
     const items = [
       yearlyInsuranceCostingAboutTwentyAMonth,
       monthlyGymCostingOneFifty,

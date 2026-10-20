@@ -7,6 +7,7 @@ describe("budgetSearchSchema", () => {
     expect(
       budgetSearchSchema.parse({ cat: ["groceries", "not-a-category"] })
     ).toEqual({ cat: ["groceries"] });
+
     expect(budgetSearchSchema.parse({ cat: "not-a-category" })).toEqual({});
   });
 
@@ -14,6 +15,7 @@ describe("budgetSearchSchema", () => {
     expect(budgetSearchSchema.parse({ cat: "groceries" })).toEqual({
       cat: ["groceries"],
     });
+
     expect(budgetSearchSchema.parse({ grp: "spending" })).toEqual({
       grp: ["spending"],
     });
@@ -49,6 +51,7 @@ describe("nextBudgetSearch", () => {
     expect(nextBudgetSearch({}, { sort: "amount" })).toEqual({
       sort: "amount",
     });
+
     expect(nextBudgetSearch({ range: "3M" }, { agg: "median" })).toEqual({
       agg: "median",
       range: "3M",

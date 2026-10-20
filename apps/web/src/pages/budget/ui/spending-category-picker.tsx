@@ -70,12 +70,12 @@ export const SpendingCategoryPicker = ({
             // SAFETY: every row comes from `items`, built above.
             const row = item as CategoryRow;
 
+            // SAFETY: as above — the rows come from the taxonomy.
+            const category = row.value as SpendingCategory;
+
             return (
               <ComboboxItem
-                icon={categoryMenuIcon(
-                  // SAFETY: as above — the rows come from the taxonomy.
-                  predefinedCategoryAppearance(row.value as SpendingCategory)
-                )}
+                icon={categoryMenuIcon(predefinedCategoryAppearance(category))}
                 value={row.value}
               >
                 <span className="flex w-full items-baseline justify-between gap-3">

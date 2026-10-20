@@ -1,0 +1,119 @@
+---
+title: Contribute
+description: Run Freenary from source, pass the same checks as CI, and open a pull request.
+icon: GitPullRequest
+---
+
+Run the code on your machine, pass the checks CI runs, and open a pull request against `dev`.
+
+## Prerequisites
+
+- **Bun.** The repository pins `bun@1.3.14` in `package.json`, and CI installs the latest Bun.
+- **Node.js 20.19+, 22.12+ or 24+.** `bun install` runs Prisma's install script, which refuses other Node versions.
+- **Docker with Compose v2.**
+
+Then clone the repository and install:
+
+```bash
+git clone https://github.com/suiramdev/freenary.git
+cd freenary
+bun install
+```
+
+## Run it in Docker
+
+```bash
+bun run dev:up
+```
+
+It starts PostgreSQL, applies the migrations, and runs the API server, the web app and the documentation site with live reload. It prints the addresses it serves:
+
+- `http://web.<slug>.freenary.localhost`
+- `http://server.<slug>.freenary.localhost`
+- `http://docs.<slug>.freenary.localhost`
+
+The slug comes from your git branch, so two worktrees run side by side. A shared Traefik container on port 80 routes these hostnames. Use Chrome or Firefox, which resolve `*.localhost` on their own.
+
+`bun run dev:logs` follows the logs, `bun run dev:down` stops everything, and `bun run dev:reset` deletes the database and starts over.
+
+There's no seed data. Create an account on the sign-in screen: with no email provider, sign-up signs you in at once.
+
+To work on emailed codes, start with `bun run dev:mail` instead. It adds a Mailpit inbox at `http://mail.<slug>.freenary.localhost`, and the server sends every email there.
+
+## Run it without Docker for the apps
+
+Only PostgreSQL runs in Docker:
+
+```bash
+cp .env.example .env
+echo 'DATABASE_URL=postgresql://postgres:password@localhost:5432/freenary' > apps/server/.env
+docker compose up -d --wait postgres
+(cd packages/db && bun run db:migrate:deploy)
+bun run dev
+```
+
+The server listens on port 3000, the web app on 3001 and the documentation site on 4000.
+
+## Checks
+
+CI runs `bun install --frozen-lockfile`, then these steps in order. Run them before you push:
+
+```bash
+bun run check         # Lint & format
+bun run check-types   # Type check
+bun run check:fsd     # Architecture
+bun run docs:check    # Documentation
+bun run env:check     # Environment
+bun run build         # Build
+```
+
+`bun run fix` repairs most lint and format errors. A second CI job parses every Compose file.
+
+On each commit, lefthook runs three jobs on the staged files:
+
+- `oxlint --fix`, then stages the fixes.
+- `oxfmt --write`, then stages the fixes.
+- `bun run env:sync`, when the commit touches `packages/env/src/schema*.ts`, a `docker-compose*.yml` file or `scripts/env-sync.ts`.
+
+## Tests
+
+CI runs no tests, and there's no root `test` script. Run the files your change touches:
+
+```bash
+bun test packages/api/src/categorisation/dictionary.test.ts
+```
+
+## Pull requests
+
+Open your pull request against `dev`. `main` holds released code. [`CONTRIBUTING.md`](https://github.com/suiramdev/freenary/blob/dev/.github/CONTRIBUTING.md) has the rules: branch names, the pull request template, signed-off commits, documentation in the same change.
+
+Maintainers cut releases from `main` with the `Release` workflow. Don't tag, and don't bump a version.
+
+## Labels
+
+Open an issue with the bug report, feature request or other form. Write the title plainly: the forms add no `[Bug]` or `[Feature]` prefix.
+
+The `Triage` workflow labels an issue or pull request with SubQ Snap (`subq-snap-preview`) when it is opened or reopened. It runs again when someone edits the title or description, when the author replies, and when someone adds a `type:`, `area:`, `impact:`, `priority:`, `status:`, `security` or `regression` label. On a pull request from a branch of this repository, it also runs when the `CI` workflow finishes. It skips closed items, skips a draft pull request until it is marked ready for review, and skips events a bot triggers. It adds one `type:`, `priority:`, `impact:` and `status:` label, one or more `area:` labels, and any of `regression`, `breaking-change`, `security` and `performance`. An issue can also get `duplicate`, `good-first-issue` and, for a bug with no steps to reproduce it, `needs-reproduction`. The workflow removes a `needs-reproduction` label it added once the steps are written or the issue is no longer a bug. A pull request takes its `area:` labels from the paths it changes, and from the model when no path maps to an area.
+
+The workflow does not ask the model for a priority. It derives one from the impact and the signals: `security` gives `priority:p0`; `regression` gives at least `priority:p1`; otherwise `impact:critical`, `impact:high`, `impact:medium` and `impact:low` give `priority:p0` to `priority:p3`. An `impact:` label already on the item replaces the model's impact, and a `security` or `regression` label already on the item counts the same as one the model found. With no impact and no such signal, the item gets no priority. The workflow recomputes a `priority:` label it set itself on each run, and removes it when a maintainer adds another `priority:` label.
+
+An answer below 0.6 confidence adds no label for its group. The model reads the title, the description and the author's replies. The status follows a checklist:
+
+- A bug needs the steps that show it, what happened and what you expected, and the version or deployment.
+- A feature or enhancement needs the problem, the expected result, and no open design choice.
+- A documentation issue needs the page and what is wrong on it.
+- A maintenance issue needs what should change and why, and no open design choice.
+- A pull request needs a written Summary, every section of the template filled, and passing `ci` and `compose` checks. When it changes documented behaviour and no page under `content/docs/next`, its Notes must name the pages or say why none needed a change.
+- A question always waits for a maintainer.
+
+`status:blocked` comes first. Something only the author can add gives `status:needs-info`. A group the model was unsure of, an open design choice, a possible duplicate or a check still running gives `status:needs-triage`. An item with nothing missing gets `status:ready`. When something is missing, the workflow posts one comment that lists it, for the author and for a maintainer, and names the two likeliest labels of an unsure group. It updates that comment when the list changes. It deletes the comment once nothing is missing, when the item is blocked, when only a running check is left, or when a maintainer has set the `status:` label. The workflow never replaces a group a maintainer already labelled, and never adds back a label other than `status:` that someone else removed. It replaces a `status:` label it set itself when its answer changes, and removes it when a maintainer adds another `status:` label. It labels nothing when the repository has no `SUBQ_API_KEY` secret. A maintainer reruns it from the Actions tab with an item number.
+
+`scripts/triage/taxonomy.ts` defines every label. The `Labels` workflow creates and updates them when that file changes on `dev` or `main`.
+
+<Cards>
+  <Card
+    title="Configuration"
+    href="/docs/reference/configuration"
+    description="Every environment variable the server reads."
+  />
+</Cards>

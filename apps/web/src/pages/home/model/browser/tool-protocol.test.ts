@@ -12,8 +12,7 @@ const collect = (chunks: string[]): ParsedEvent[] => {
 
 const text = (events: ParsedEvent[]): string =>
   events
-    .filter((event) => event.kind === "text")
-    .map((event) => event.delta)
+    .flatMap((event) => (event.kind === "text" ? [event.delta] : []))
     .join("");
 
 describe("ToolCallParser", () => {
@@ -56,6 +55,7 @@ describe("ToolCallParser", () => {
     expect(text(collect(["<tool_call>not json</tool_call> done"]))).toBe(
       "<tool_call>not json</tool_call> done"
     );
+
     expect(text(collect(['<tool_call>{"name":']))).toBe('<tool_call>{"name":');
   });
 });
@@ -106,11 +106,13 @@ describe("toChatMessages", () => {
       "assistant",
       "user",
     ]);
+
     expect(messages[0]?.content).toStartWith("Be brief.\n\n# Tools");
     expect(messages[0]?.content).toContain('"name":"get_cash_flow"');
     expect(messages[2]?.content).toBe(
       '<tool_call>\n{"arguments":{"from":"2026-01-01","to":"2026-01-31"},"name":"get_cash_flow"}\n</tool_call>'
     );
+
     expect(messages[3]?.content).toBe(
       '<tool_response>\n{"content":"{\\"periods\\":[]}","name":"get_cash_flow"}\n</tool_response>'
     );

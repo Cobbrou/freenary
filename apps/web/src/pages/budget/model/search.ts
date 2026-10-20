@@ -13,11 +13,17 @@ import {
 } from "./recurring";
 
 export type PrimaryView = (typeof PRIMARY_VIEWS)[number];
+
 export type CompanionView = (typeof COMPANION_VIEWS)[number];
+
 export type RecurringView = (typeof RECURRING_VIEWS)[number];
+
 export type RecurringCompanionView = (typeof RECURRING_COMPANION_VIEWS)[number];
+
 export type TransactionDirection = (typeof TRANSACTION_DIRECTIONS)[number];
+
 export type SortMode = (typeof SORT_MODES)[number];
+
 export type RecurringSortMode = (typeof RECURRING_SORT_MODES)[number];
 
 export type BudgetSearch = z.infer<typeof budgetSearchSchema>;
@@ -27,11 +33,13 @@ export type BudgetSearchPatch = BudgetSearch;
 export const PRIMARY_VIEWS = ["flow", "categories"] as const;
 export const COMPANION_VIEWS = ["fixed", "planned"] as const;
 export const RECURRING_VIEWS = ["trend", "forecast", "scatter"] as const;
+
 export const RECURRING_COMPANION_VIEWS = [
   "categories",
   "frequency",
   "split",
 ] as const;
+
 export const SORT_MODES = ["date", "amount"] as const;
 export const RECURRING_SORT_MODES = ["next", "cost"] as const;
 

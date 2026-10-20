@@ -1,0 +1,78 @@
+---
+title: Assistant
+description: Ask questions about your money in plain words, pick the model that answers, and know what data goes where.
+icon: Sparkles
+---
+
+The assistant is the question box on Home. Ask it about your accounts, spending or budget, and it answers from the data your banks sent to Freenary. Connect a [bank](/docs/use/bank-connections) first, or it has little to read.
+
+## Ask a question
+
+Type your question on Home and send it, for example:
+
+- How much did I spend on eating out this year?
+- Where did my money go last month?
+- Which subscriptions am I paying for?
+
+An empty conversation offers these as suggestions. Pick one to fill the box, edit it, then send.
+
+Above each answer, Freenary lists the lookups it made, such as `Searching your transactions`. Open `How the assistant answered` to see where a figure came from. Some answers include a chart. Use `Copy` to copy an answer and `Retry` to ask again.
+
+The assistant only reads. It doesn't change a category or a budget line, doesn't start a sync, and never moves money.
+
+## Pick a model
+
+The model button in the question box shows which model answers. It lists two kinds:
+
+- **`On your instance`**: a model your operator set up. Nothing to download.
+- **`On this device`**: a model that runs in your browser, on your graphics card. It downloads once from Hugging Face, and needs WebGPU, which a current Chrome, Edge or Safari has. Answers are simpler than a large hosted model's.
+
+If the box says `Choose a model` and stays greyed out, your instance has no model. Pick one for your device, or ask your operator to turn the assistant on.
+
+## What data goes where
+
+To answer, the model receives your question, the earlier turns of the conversation, today's date, your interface language, the dates your transaction data covers, and what it looked up:
+
+- your account names and their banks;
+- up to 20 transactions per lookup: date, amount, currency, the bank's label, the other party and the category;
+- spending and cash-flow totals, your plan against what you spent, and the recurring payments Freenary found.
+
+It never receives your IBAN, your account balances, your name or your email address.
+
+Where that goes depends on the model:
+
+- **A model on your instance** sends it to the model service your operator chose. That can be a company outside your instance, under its own terms.
+- **A model on this device** keeps it in your browser. Nothing goes to an outside model provider.
+
+<Callout type="info">
+
+Your conversation is saved on your instance with either kind of model, so it's there after a reload and in your other browsers.
+
+</Callout>
+
+## Too many questions
+
+You can ask about 30 questions every 5 minutes, whatever the model. Past that, the assistant says `Too many questions in a row. Wait a moment and try again.`
+
+With a model on this device, the answer still appears, but Freenary doesn't save it to your conversation.
+
+## Start a new conversation
+
+Press `New conversation` to start over. You have one conversation at a time: the previous one stays on your instance, but no screen shows it again.
+
+A long conversation can outgrow a model on this device. When that happens, the assistant asks you to start a new conversation.
+
+Operators turn on a model for the whole instance in [Configuration](/docs/reference/configuration#assistant).
+
+<Cards>
+  <Card
+    title="Budget"
+    href="/docs/use/budget"
+    description="The charts and transactions behind every figure an answer quotes."
+  />
+  <Card
+    title="Your account"
+    href="/docs/use/account"
+    description="Sign-in, account protection, language and theme."
+  />
+</Cards>

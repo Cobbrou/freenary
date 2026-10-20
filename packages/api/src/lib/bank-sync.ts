@@ -98,6 +98,7 @@ const connectionFailure =
       },
     });
 
+// SAFETY: Prisma requires DbNull (not plain null) to clear a Json? column
 const mapProviderFields = (tx: ProviderTransaction) => ({
   amount: tx.amountMinor,
   balanceAfterTransaction: tx.balanceAfterMinor ?? null,
@@ -108,7 +109,6 @@ const mapProviderFields = (tx: ProviderTransaction) => ({
   creditorAccountIban: tx.creditorIban ?? null,
   creditorAgentBic: tx.creditorAgentBic ?? null,
   creditorCountry: tx.creditorCountry ?? null,
-  // SAFETY: Prisma requires DbNull (not plain null) to clear a Json? column
   creditorIdentifications: tx.creditorIdentifications
     ? (tx.creditorIdentifications.map(({ identification, schemeName }) => ({
         identification,
@@ -229,6 +229,7 @@ const refreshProviderAccounts = async (
       name: account.name ?? null,
       type: account.type,
     };
+
     // eslint-disable-next-line no-await-in-loop -- sequential to avoid unique constraint races
     const row = await prisma.bankAccount.upsert({
       create: {
@@ -279,6 +280,7 @@ const replaceHoldings = async (
         valuationMinor: holding.valuationMinor,
         valuedAt: holding.valuedAt ? new Date(holding.valuedAt) : null,
       };
+
       // eslint-disable-next-line no-await-in-loop -- sequential to avoid unique constraint races
       await db.holding.upsert({
         create: {
@@ -306,6 +308,7 @@ const syncWindow = (
   const fullWindowStart = new Date(
     now.getTime() - PROVIDER_SERVED_HISTORY_DAYS * MS_PER_DAY
   );
+
   const start = reReadFullWindow
     ? fullWindowStart
     : (connection.lastSyncedAt ?? fullWindowStart);

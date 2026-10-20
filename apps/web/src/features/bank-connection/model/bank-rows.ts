@@ -44,6 +44,7 @@ export const buildBankRows = (
   const institutionsByKey = new Map(
     banks.map((bank) => [institutionKey(bank), bank])
   );
+
   const connectedKeys = new Set(
     connections.flatMap((connection) =>
       connection.institutionId === null
@@ -79,12 +80,15 @@ export const buildBankRows = (
     };
   });
 
-  const unconnectedRows = banks
-    .filter((bank) => !connectedKeys.has(institutionKey(bank)))
-    .map((bank) => {
-      const origin = spansCountries ? countryName(bank.country, locale) : null;
+  const unconnectedRows = banks.flatMap((bank) => {
+    if (connectedKeys.has(institutionKey(bank))) {
+      return [];
+    }
 
-      return {
+    const origin = spansCountries ? countryName(bank.country, locale) : null;
+
+    return [
+      {
         connection: null,
         description:
           origin && bank.bic ? `${origin} · ${bank.bic}` : (origin ?? bank.bic),
@@ -92,8 +96,9 @@ export const buildBankRows = (
         institution: bank,
         logo: bank.logo,
         name: bank.name,
-      };
-    });
+      },
+    ];
+  });
 
   return [...connectedRows, ...unconnectedRows];
 };

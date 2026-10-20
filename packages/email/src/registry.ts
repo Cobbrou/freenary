@@ -1,4 +1,5 @@
-import { env } from "@freenary/env/server";
+import type { ServerSettings } from "@freenary/instance-config";
+import { settings as instanceSettings } from "@freenary/instance-config";
 import { Data, Match, Result } from "effect";
 
 import { createResendEmailProvider } from "./providers/resend";
@@ -89,15 +90,17 @@ export const createEmailProvider = (
   );
 };
 
+export const emailSettingsOf = (source: ServerSettings): EmailSettings => ({
+  from: source.EMAIL_FROM,
+  provider: source.EMAIL_PROVIDER,
+  resendApiKey: source.RESEND_API_KEY,
+  smtpHost: source.SMTP_HOST,
+  smtpPassword: source.SMTP_PASSWORD,
+  smtpPort: source.SMTP_PORT,
+  smtpSecure: source.SMTP_SECURE,
+  smtpUser: source.SMTP_USER,
+});
+
 export const emailProvider = Result.getOrThrow(
-  createEmailProvider({
-    from: env.EMAIL_FROM,
-    provider: env.EMAIL_PROVIDER,
-    resendApiKey: env.RESEND_API_KEY,
-    smtpHost: env.SMTP_HOST,
-    smtpPassword: env.SMTP_PASSWORD,
-    smtpPort: env.SMTP_PORT,
-    smtpSecure: env.SMTP_SECURE,
-    smtpUser: env.SMTP_USER,
-  })
+  createEmailProvider(emailSettingsOf(instanceSettings))
 );

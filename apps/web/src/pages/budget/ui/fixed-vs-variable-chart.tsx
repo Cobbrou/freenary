@@ -26,6 +26,7 @@ export const FixedVsVariableChart = ({
     maximumFractionDigits: 0,
     style: "percent",
   });
+
   const slices = [
     {
       color: CHART_COLOR_VARS.blue,

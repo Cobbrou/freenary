@@ -42,6 +42,7 @@ export const AssistantTranscript = ({
         viewport.scrollTop = viewport.scrollHeight;
       }
     });
+
     observer.observe(content);
 
     return () => observer.disconnect();
@@ -56,6 +57,7 @@ export const AssistantTranscript = ({
 
     const distance =
       viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight;
+
     const bottom = distance <= BOTTOM_SLACK_PX;
     isFollowingNewestRef.current = bottom;
     setAtBottom(bottom);

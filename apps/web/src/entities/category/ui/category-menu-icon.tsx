@@ -15,6 +15,7 @@ export const categoryMenuIcon = (
     icon = () => (
       <CategoryIcon {...appearance} className="size-5 [&_svg]:size-3" />
     );
+
     cache.set(key, icon);
   }
 

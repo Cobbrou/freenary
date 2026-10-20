@@ -119,6 +119,7 @@ const PeriodYearPicker = ({
   const [pageStart, setPageStart] = useState(
     selectedYear - (selectedYear % YEAR_PAGE_SIZE)
   );
+
   const years = Array.from({ length: YEAR_PAGE_SIZE }, (_, i) => pageStart + i);
   const gridRef = useRef<HTMLDivElement>(null);
   const hover = useFluidHover(gridRef, {
@@ -214,10 +215,12 @@ export const PeriodNavigator = ({
 
     onMonthIntent(stepped.getFullYear(), stepped.getMonth());
   });
+
   const rangeIntent = useHoverIntent(onRangeIntent);
 
   const canGoBack =
     !firstMonth || new Date(anchorYear, anchorMonth - step, 1) >= firstMonth;
+
   const canGoForward =
     !lastMonth || new Date(anchorYear, anchorMonth + step, 1) <= lastMonth;
 

@@ -72,7 +72,7 @@ export const chatHandler = async (ctx: { request: Request }) => {
       ? requestedVersion
       : newestRelease();
 
-  const result = streamText({
+  const stream = streamText({
     model: openrouter.chat(process.env.OPENROUTER_MODEL ?? DEFAULT_MODEL),
     stopWhen: stepCountIs(MAX_TOOL_STEPS),
     tools: {
@@ -94,7 +94,7 @@ export const chatHandler = async (ctx: { request: Request }) => {
   });
 
   return createUIMessageStreamResponse({
-    stream: toUIMessageStream({ stream: result.stream }),
+    stream: toUIMessageStream({ stream: stream.stream }),
   });
 };
 
@@ -119,17 +119,18 @@ async function createSearchServer(version: string) {
   });
 
   const documents = await chunkedAll(
-    source
-      .getPages()
-      .filter((page) => page.slugs[0] === version)
-      .map(async (page): Promise<CustomDocument> => {
-        return {
-          title: page.data.title,
-          description: page.data.description,
-          url: page.url,
-          content: await page.data.getText("processed"),
-        };
-      })
+    source.getPages().flatMap((page) =>
+      page.slugs[0] === version
+        ? [
+            (async (): Promise<CustomDocument> => ({
+              title: page.data.title,
+              description: page.data.description,
+              url: page.url,
+              content: await page.data.getText("processed"),
+            }))(),
+          ]
+        : []
+    )
   );
 
   for (const document of documents) {

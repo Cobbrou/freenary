@@ -13,6 +13,7 @@ export const remixIcon = (Icon: RemixiconComponentType): IconComponent => {
     adapted = ({ className, size, strokeWidth }: IconComponentProps) => (
       <Icon className={className} size={size} strokeWidth={strokeWidth} />
     );
+
     cache.set(Icon, adapted);
   }
 

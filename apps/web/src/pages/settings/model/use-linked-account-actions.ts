@@ -43,6 +43,7 @@ export const useLinkedAccountActions = () => {
       await queryClient.invalidateQueries({
         queryKey: AUTH_ACCOUNTS_QUERY_KEY,
       });
+
       toast.success(m.settings_accounts_disconnected_toast());
     },
   });

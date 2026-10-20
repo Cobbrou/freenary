@@ -155,6 +155,7 @@ const collectHeadings = (raw: string): PageHeadings => {
     const text = explicit
       ? match[2].slice(0, explicit.index).trim()
       : match[2].trim();
+
     headings.push({ index: match.index, text });
     anchorIds.add(explicit ? (explicit[1] ?? explicit[2]) : slugify(text));
     match = HEADING.exec(raw);
@@ -225,6 +226,7 @@ const maskNonProse = (raw: string): string => {
     INLINE_CODE,
     maskAsCapitalisedWord
   );
+
   const withoutExpressions = maskPattern(withInlineCodeAsWords, JSX_EXPRESSION);
 
   return maskPattern(withoutExpressions, JSX_TAG);

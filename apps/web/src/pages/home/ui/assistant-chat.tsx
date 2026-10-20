@@ -222,6 +222,7 @@ export const AssistantChat = ({
     },
     [sendMessage]
   );
+
   const redo = useCallback(
     (messageId: string | null) => {
       setTurn({ retrying: true, startedAt: Date.now() });
@@ -229,6 +230,7 @@ export const AssistantChat = ({
     },
     [regenerate]
   );
+
   const redoLastTurn = useCallback(() => redo(null), [redo]);
 
   const avatarState = assistantAvatarState({
@@ -273,6 +275,7 @@ export const AssistantChat = ({
               const live = message.id === streamingMessageId;
               const isLastAnswer =
                 message.role === "assistant" && index === messages.length - 1;
+
               const retryable = isLastAnswer && status === "ready" && ready;
 
               return (

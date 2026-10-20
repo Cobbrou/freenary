@@ -30,6 +30,7 @@ export const resolveNsiCountries = (
 
     if (code === NSI_CODE_FOR_METROPOLITAN_FRANCE) {
       countries.add(ISO_COUNTRY_BEHIND_METROPOLITAN_FRANCE);
+
       continue;
     }
 

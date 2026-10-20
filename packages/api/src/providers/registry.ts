@@ -1,4 +1,4 @@
-import { env } from "@freenary/env/server";
+import { settings } from "@freenary/instance-config";
 
 import { enableBankingProvider } from "./enable-banking";
 import { powensProvider } from "./powens";
@@ -20,4 +20,4 @@ export const getProvider = (id: string): BankingProvider => {
 };
 
 export const getDefaultProvider = (): BankingProvider =>
-  getProvider(env.BANKING_PROVIDER);
+  getProvider(settings.BANKING_PROVIDER);

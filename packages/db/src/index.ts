@@ -14,4 +14,5 @@ export const createPrismaClient = () => {
 const prisma = createPrismaClient();
 
 export { Prisma } from "../prisma/generated/client";
+
 export default prisma;

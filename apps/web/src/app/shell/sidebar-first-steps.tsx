@@ -121,6 +121,7 @@ export const SidebarFirstSteps = () => {
     state === null
       ? 0
       : FIRST_STEPS.filter((step) => step.isDone(state)).length;
+
   const isComplete = state !== null && doneCount === FIRST_STEPS.length;
   const itemVariants = prefersReducedMotion ? undefined : ITEM_VARIANTS;
 

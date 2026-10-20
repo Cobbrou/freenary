@@ -68,13 +68,13 @@ const stripVerbPrefix = (line: string): VerbPrefixMatch => {
 };
 
 const cleanTrailingNoise = (text: string): string => {
-  let result = text;
+  let cleaned = text;
 
   for (const noise of allTrailingNoiseInStripOrder) {
-    result = result.replace(noise, "");
+    cleaned = cleaned.replace(noise, "");
   }
 
-  return result.trim();
+  return cleaned.trim();
 };
 
 const firstPatternMatch = (
@@ -296,6 +296,7 @@ export const parseWithInstitution = (
     labelDate: undefined,
     payee: null,
   };
+
   const clean = institution?.cleanPayee ?? keepPayeeAsIs;
 
   for (const raw of input.remittanceLines.toSorted()) {
@@ -303,6 +304,7 @@ export const parseWithInstitution = (
 
     if (isBlankOrDeclaredNoise(line, institution)) {
       state.droppedLines.push(line);
+
       continue;
     }
 

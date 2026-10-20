@@ -252,6 +252,7 @@ const recurringFrom = (
   const amounts = txs
     .map((tx) => Math.abs(tx.amount))
     .toSorted((a, b) => a - b);
+
   const amountSpread = relativeSpread(amounts);
   const intervalSpread = relativeSpread(intervals);
   const { confidence, kind } = classifyRecurrence({
@@ -260,10 +261,14 @@ const recurringFrom = (
     intervalSpread,
     occurrences: txs.length,
   });
+
   const lastTx = Arr.lastNonEmpty(txs);
-  const storedCategories = txs
-    .map((tx) => tx.category ?? tx.resolvedCategory)
-    .filter((category): category is string => category !== null);
+  const storedCategories = txs.flatMap((tx) => {
+    const category = tx.category ?? tx.resolvedCategory;
+
+    return category === null ? [] : [category];
+  });
+
   const modalCategory = Arr.isArrayNonEmpty(storedCategories)
     ? mode(storedCategories)
     : "uncategorised";
@@ -345,6 +350,7 @@ export const recurringMonthsInWindow = (
         fixedMinor: 0,
         month,
       };
+
       months.set(month, totals);
     }
 

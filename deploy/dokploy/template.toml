@@ -1,0 +1,18 @@
+[variables]
+main_domain = "${domain}"
+postgres_password = "${password:32}"
+auth_secret = "${password:64}"
+
+[config]
+env = [
+  "FREENARY_URL=http://${main_domain}",
+  "FREENARY_VERSION=latest",
+  "POSTGRES_PASSWORD=${postgres_password}",
+  "BETTER_AUTH_SECRET=${auth_secret}",
+]
+mounts = []
+
+[[config.domains]]
+serviceName = "web"
+port = 3001
+host = "${main_domain}"

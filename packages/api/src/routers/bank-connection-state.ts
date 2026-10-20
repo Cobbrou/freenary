@@ -56,6 +56,7 @@ export const encodeBankConnectionState = ({
     providerId,
     returnTo,
   };
+
   const hmac = computeHmac(JSON.stringify(payload), userId, secret);
 
   return JSON.stringify({ ...payload, hmac });

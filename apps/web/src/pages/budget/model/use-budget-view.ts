@@ -78,8 +78,10 @@ export const useBudgetView = ({ dateBounds }: BudgetViewOptions) => {
 
   const companion: CompanionView =
     search.companion ?? BUDGET_SEARCH_DEFAULTS.companion;
+
   const direction: TransactionDirection =
     search.dir ?? BUDGET_SEARCH_DEFAULTS.dir;
+
   const sort: SortMode = search.sort ?? BUDGET_SEARCH_DEFAULTS.sort;
   const view: PrimaryView = search.view ?? BUDGET_SEARCH_DEFAULTS.view;
 

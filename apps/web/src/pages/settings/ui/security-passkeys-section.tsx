@@ -18,9 +18,10 @@ import { SettingsRowList } from "./settings-row-list";
 import { SettingsSection } from "./settings-section";
 
 export const SecurityPasskeysSection = () => {
-  const { data, error, isPending } = authClient.useListPasskeys();
+  const { data: passkeys, error, isPending } = authClient.useListPasskeys();
   const { add, isAdding, remove, removingId, rename, renamingId } =
     usePasskeyActions();
+
   const [isAddOpen, setIsAddOpen] = useState(false);
   const isWebAuthnSupported = useWebAuthnSupport();
   const listRef = useRef<HTMLUListElement>(null);
@@ -58,13 +59,13 @@ export const SecurityPasskeysSection = () => {
           </p>
         )}
 
-        {data === null || data.length === 0 ? (
+        {passkeys === null || passkeys.length === 0 ? (
           <p className="text-muted-foreground">
             {m.settings_passkeys_empty_explanation()}
           </p>
         ) : (
           <SettingsRowList hover={hover} ref={listRef}>
-            {data.map((passkey, index) => (
+            {passkeys.map((passkey, index) => (
               <SecurityPasskeyRow
                 formatter={formatter}
                 index={index}

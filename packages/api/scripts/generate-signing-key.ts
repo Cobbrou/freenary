@@ -18,6 +18,7 @@ if (
   console.error(
     `Key already exists at ${PRIVATE_KEY_PATH}. Pass ${FORCE_OVERWRITE_FLAG} to overwrite.`
   );
+
   process.exit(1);
 }
 
@@ -27,8 +28,13 @@ const { publicKey, privateKey } = generateKeyPairSync("ed25519", {
 });
 
 mkdirSync(path.dirname(PRIVATE_KEY_PATH), { recursive: true });
+
 writeFileSync(PRIVATE_KEY_PATH, privateKey, { mode: OWNER_READ_WRITE_ONLY });
+
 chmodSync(PRIVATE_KEY_PATH, OWNER_READ_WRITE_ONLY);
+
 console.log("Private key written to:", PRIVATE_KEY_PATH);
+
 console.log("\nPublic key (embed in verify.ts):\n");
+
 console.log(publicKey);

@@ -53,6 +53,7 @@ export const resolveCookiePolicy = ({
 
   const isProvablySameSite =
     declaredParent !== undefined || api.hostname === web.hostname;
+
   const secure = api.protocol === "https:";
 
   if (!(isProvablySameSite || secure)) {

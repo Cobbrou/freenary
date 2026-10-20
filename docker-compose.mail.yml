@@ -14,16 +14,24 @@ services:
       MP_SMTP_AUTH_ALLOW_INSECURE: 1
     expose:
       - "1025"
+    # `mailpit` also resolves on devproxy, to every worktree's inbox; the
+    # server reaches this one through a default-network-only alias.
+    networks:
+      default:
+        aliases: [freenary-mailpit]
+      devproxy: {}
     labels:
-      - dev.orbstack.domains=${MAIL_HOST:-mail.freenary.orb.local}
-      - dev.orbstack.http-port=8025
+      - traefik.enable=true
+      - traefik.http.routers.freenary-${FREENARY_SLUG:-dev}-mail.rule=Host(`${MAIL_HOST:-mail.freenary.localhost}`)
+      - traefik.http.routers.freenary-${FREENARY_SLUG:-dev}-mail.entrypoints=web
+      - traefik.http.services.freenary-${FREENARY_SLUG:-dev}-mail.loadbalancer.server.port=8025
     restart: unless-stopped
 
   server:
     environment:
       EMAIL_PROVIDER: smtp
       EMAIL_FROM: Freenary <no-reply@freenary.test>
-      SMTP_HOST: mailpit
+      SMTP_HOST: freenary-mailpit
       SMTP_PORT: 1025
       SMTP_SECURE: false
     depends_on:

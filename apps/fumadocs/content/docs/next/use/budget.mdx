@@ -1,0 +1,145 @@
+---
+title: Budget
+description: Read what came in and went out, fix a transaction's category, see your recurring payments, and plan a monthly budget.
+icon: ChartNoAxesColumn
+---
+
+Budget shows the money your banks report, sorted into categories, and compares it with a monthly plan you set. It fills once you have a [bank connection](/docs/use/bank-connections).
+
+Budget has two pages in the sidebar: **Transactions** and **Recurring**.
+
+## Transactions
+
+**Transactions** shows income, spending and the difference for one period, two charts, and the list of transactions behind them.
+
+### Pick a period
+
+Choose `1M`, `3M` or `1Y`, then use the arrows to move to the previous or next period. On `3M` and `1Y`, the figures can show the monthly average or median instead of the total.
+
+### Narrow the list
+
+The list has two tabs: `Outgoing`, where it opens, and `Incoming`. Each tab shows the total of the transactions that match what you've narrowed it to.
+
+- Type in the search box to match the bank's label or the other party's name.
+- Use the `Amount`, `Company` and `Category` filters.
+- Press a part of a chart to filter the list to that category.
+
+With two or more filters on, `Clear all` removes them. It leaves the search text.
+
+The page address holds the period and every filter, so a bookmark brings back exactly what you see.
+
+### Get the latest transactions
+
+Opening Budget fetches what's new. To read your banks again in full, press `Sync transactions`. [Bank connections](/docs/use/bank-connections#sync) says what each sync reads.
+
+## Fix a category
+
+Freenary sorts each transaction into a category. When it gets one wrong:
+
+1. Press the transaction's row. A panel opens with its details.
+2. Pick the right category. Freenary saves at once.
+
+The picker only offers categories that match the transaction's direction, money in or money out. It offers the built-in categories only: [custom categories](#add-a-custom-category) are for budget lines, and no transaction can be filed under one.
+
+**Your choice applies to the whole company.** Every other transaction from the same company moves to your category, and so do the ones that arrive later. Two kinds of transaction keep their own category:
+
+- a transaction you already fixed by hand;
+- a cash withdrawal, a cheque or a bank fee that arrives later.
+
+A transaction Freenary can't tie to a company changes alone.
+
+**Reset undoes it.** A transaction whose category differs from Freenary's shows a reset button next to the picker. Pressing it puts this transaction and the company's other transactions back to Freenary's category, except the ones you fixed by hand. Transactions that arrived after your choice keep it until you press `Sync transactions`.
+
+You can change a category, nothing else. Freenary has no way to add, edit or delete a transaction: everything comes from your bank.
+
+### Internal transfers
+
+When the same amount in the same currency leaves one of your accounts and reaches another within a day, Freenary marks the pair as an internal transfer. It doesn't give them a category, and Recurring leaves them out.
+
+On **Transactions**, internal transfers still count: they're in the totals, the charts and the list.
+
+## Recurring
+
+**Recurring** lists the payments that repeat, such as rent and subscriptions: what each one costs per month and per year, and when the next one is due. It always looks at your last 12 months, whatever period you picked on **Transactions**.
+
+## Plan a budget
+
+Your plan is a list of budget lines, each one a monthly amount for one category.
+
+<Steps>
+
+<Step>
+
+### Open the plan
+
+Open Settings, then `Budget`. The plan is under `Budgeting profile`.
+
+</Step>
+
+<Step>
+
+### Add your lines
+
+Press `Add a line`, pick a category, type the monthly amount in euros, and name the line if you like. The category decides whether the line counts as income, savings or spending.
+
+</Step>
+
+<Step>
+
+### Save
+
+A bar appears at the bottom of the page. Press `Save`.
+
+</Step>
+
+</Steps>
+
+A diagram above the editor shows how your planned income flows into each line, and what's left or over-allocated. A plan holds up to 200 lines.
+
+<Callout type="warn">
+
+Leaving the page before you press `Save` loses your changes. The browser warns you when you close or reload the tab, but not when you go to another page in Freenary.
+
+</Callout>
+
+### Add a custom category
+
+A custom category lets you plan the way you think, for example "Holidays" or "Kids".
+
+1. In Settings, `Budget`, `Categories`, press `New category`.
+2. Give it a name and an icon, and choose where it sits in `Nested under`: a group, one of your own categories, or nothing.
+3. Press `Create category`.
+
+Nesting goes one level deep. You can edit, reorder and delete your own categories; the built-in ones can't change. Deleting a custom category also deletes its subcategories, and moves their budget lines to a catch-all: `Other income` under Income, `Savings` under Savings & investment, and `Other` everywhere else.
+
+### Compare plan and actual
+
+On **Transactions**, open the chart menu and choose `Budget vs. actual`. Each category shows what you spent against what you planned, and how much is left or over.
+
+- Income lines aren't compared.
+- Spending in a category with no line shows as `Unplanned`.
+- A line on a custom category counts toward its group's catch-all: `Other` or `Savings`.
+- With the total shown, the plan is multiplied by the number of months of the period that have passed so far.
+
+With no spending line yet, the chart offers `Set a spending plan`, which opens the editor.
+
+## How amounts appear
+
+Each transaction shows in its own currency, in the list and in its details panel.
+
+On **Transactions**, the totals, the tabs and the charts are in euros. On **Recurring**, the figures are in the currency most of your accounts use, and each row keeps its own.
+
+Freenary doesn't convert between currencies. An amount in another currency is added to a total as it is: 100 US dollars counts as 100 euros.
+
+<Cards>
+  <Card
+    title="Bank connections"
+    href="/docs/use/bank-connections"
+    description="Where every transaction on this screen comes from."
+  />
+  <Card
+    title="Assistant"
+    href="/docs/use/assistant"
+    description="Ask for the same figures in plain words."
+  />
+</Cards>

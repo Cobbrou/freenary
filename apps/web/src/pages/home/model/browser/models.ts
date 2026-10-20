@@ -62,6 +62,7 @@ export const browserModels = (
       KV_VALUES_PER_TOKEN *
       bytesPerValue) /
     MB;
+
   const models: BrowserModel[] = [];
 
   for (const entry of CATALOG) {

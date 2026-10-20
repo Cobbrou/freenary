@@ -183,6 +183,7 @@ const generatePlaceTokens = Effect.fnUntraced(function* generatePlaceTokens() {
       new PlaceTokenBuildFailed({ reason: { cause, kind: "writeFailed" } }),
     try: () => writeFile(OUTPUT_PATH, JSON.stringify(tokens, null, 2)),
   });
+
   console.log(`Generated ${tokens.length} place tokens → ${OUTPUT_PATH}`);
 });
 
@@ -199,6 +200,7 @@ const keepExistingArtifact = (
     console.warn(
       "Download/extraction failed but existing place-tokens.json found — keeping it."
     );
+
     console.warn(notice);
   });
 

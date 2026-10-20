@@ -53,6 +53,7 @@ const ISO_CURRENCY_CODE = /^[A-Z]{3}$/u;
 
 const currencyOf = (code: string | undefined): string =>
   code !== undefined && ISO_CURRENCY_CODE.test(code) ? code : DEFAULT_CURRENCY;
+
 const CHART_HEIGHT_CLASS = "aspect-auto h-56 w-full";
 
 const seriesKey = (index: number): string => `s${index}`;
@@ -286,6 +287,7 @@ const AssistantDonutChart = defineComponent({
             },
           ];
     });
+
     const total = slices.reduce((sum, slice) => sum + slice.value, 0);
     const config: ChartConfig = Object.fromEntries(
       slices.map((slice) => [slice.key, { label: slice.label }])

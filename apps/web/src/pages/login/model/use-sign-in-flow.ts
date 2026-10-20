@@ -118,9 +118,10 @@ export const useSignInFlow = (passwordBounds: PasswordBounds | undefined) => {
   }) => {
     setEmail(values.email);
     setIsSubmitting(true);
-    const { data, error } = await attemptAuthRequest(() =>
+    const { data: signedIn, error } = await attemptAuthRequest(() =>
       authClient.signIn.email(values)
     );
+
     setIsSubmitting(false);
 
     if (error) {
@@ -133,7 +134,7 @@ export const useSignInFlow = (passwordBounds: PasswordBounds | undefined) => {
       return;
     }
 
-    if (secondFactorOwedSchema.safeParse(data).success) {
+    if (secondFactorOwedSchema.safeParse(signedIn).success) {
       setSecondFactor("app");
       setStep("two-factor");
 
@@ -150,9 +151,10 @@ export const useSignInFlow = (passwordBounds: PasswordBounds | undefined) => {
   }) => {
     setEmail(values.email);
     setIsSubmitting(true);
-    const { data, error } = await attemptAuthRequest(() =>
+    const { data: signedUp, error } = await attemptAuthRequest(() =>
       authClient.signUp.email(values)
     );
+
     setIsSubmitting(false);
 
     if (error) {
@@ -161,7 +163,7 @@ export const useSignInFlow = (passwordBounds: PasswordBounds | undefined) => {
       return;
     }
 
-    const isSessionWithheldUntilConfirmed = (data?.token ?? null) === null;
+    const isSessionWithheldUntilConfirmed = (signedUp?.token ?? null) === null;
 
     if (isSessionWithheldUntilConfirmed) {
       toast.success(m.auth_signup_code_sent_toast());
@@ -178,6 +180,7 @@ export const useSignInFlow = (passwordBounds: PasswordBounds | undefined) => {
     const { error } = await attemptAuthRequest(() =>
       authClient.emailOtp.verifyEmail({ email, otp })
     );
+
     setIsSubmitting(false);
 
     if (error) {
@@ -199,6 +202,7 @@ export const useSignInFlow = (passwordBounds: PasswordBounds | undefined) => {
             type: "email-verification",
           })
     );
+
     setIsResending(false);
 
     if (error) {
@@ -221,6 +225,7 @@ export const useSignInFlow = (passwordBounds: PasswordBounds | undefined) => {
     const { error } = await attemptAuthRequest(() =>
       authClient.emailOtp.requestPasswordReset({ email: address })
     );
+
     setIsSubmitting(false);
 
     if (error) {
@@ -244,6 +249,7 @@ export const useSignInFlow = (passwordBounds: PasswordBounds | undefined) => {
         password: values.password,
       })
     );
+
     setIsSubmitting(false);
 
     if (error) {
@@ -266,6 +272,7 @@ export const useSignInFlow = (passwordBounds: PasswordBounds | undefined) => {
         ? authClient.twoFactor.verifyBackupCode(values)
         : authClient.twoFactor.verifyTotp(values)
     );
+
     setIsSubmitting(false);
 
     if (error) {
@@ -302,6 +309,7 @@ export const useSignInFlow = (passwordBounds: PasswordBounds | undefined) => {
     const { error } = await attemptAuthRequest(() =>
       authClient.signIn.passkey()
     );
+
     setIsPasskeyPending(false);
 
     if (error) {

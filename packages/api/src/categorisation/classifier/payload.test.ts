@@ -51,12 +51,15 @@ describe("classificationInputFrom", () => {
     expect(
       classificationInputFrom(input({ amountMinor: -4599 }))
     ).toMatchObject({ amountBucket: "small", direction: "debit" });
+
     expect(
       classificationInputFrom(input({ amountMinor: 250_000 }))
     ).toMatchObject({ amountBucket: "large", direction: "credit" });
+
     expect(classificationInputFrom(input({ amountMinor: -50 }))).toMatchObject({
       amountBucket: "micro",
     });
+
     expect(
       classificationInputFrom(input({ amountMinor: -10_000 }))
     ).toMatchObject({ amountBucket: "medium" });
@@ -80,6 +83,7 @@ describe("classificationInputFrom", () => {
       merchantKey: null,
       normalisedDescriptor: "loyer juin",
     });
+
     expect(JSON.stringify(classificationInputFrom(ibanPath))).not.toContain(
       "FR76"
     );

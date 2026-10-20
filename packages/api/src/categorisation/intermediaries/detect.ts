@@ -54,6 +54,7 @@ export const detectIntermediary = (
         marked.definition.carriesSubmerchant && leadingTokenEnd !== -1
           ? normalisedDescriptor.slice(leadingTokenEnd + 1)
           : "";
+
       const submerchantText = trailingText.length > 0 ? trailingText : null;
 
       return {

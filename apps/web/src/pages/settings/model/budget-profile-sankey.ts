@@ -79,6 +79,7 @@ export const toBudgetProfileSankey = (
         label: line.label,
         value: line.amount,
       });
+
       links.push({ source: groupId, target: lineId, value: line.amount });
     }
   }

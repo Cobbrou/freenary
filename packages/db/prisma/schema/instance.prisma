@@ -1,0 +1,33 @@
+/// One operator-supplied configuration value for this instance, sealed with a
+/// key derived from BETTER_AUTH_SECRET. A process environment variable of the
+/// same name still wins over the row, so an operator who manages secrets
+/// outside the database keeps doing so and the setup screen shows the value as
+/// owned by the environment.
+model InstanceSetting {
+  key       String   @id
+  sealed    String
+  updatedAt DateTime @updatedAt
+  updatedBy String?
+
+  @@map("instance_setting")
+}
+
+/// The setup lifecycle of this instance, in one row. `claimedAt` is the mutex
+/// the first sessions compete for: the account whose sign-in sets it becomes the
+/// operator. `completedAt` is what stops the landing page from sending
+/// everybody to the setup screen.
+model InstanceSetup {
+  id          String    @id @default("singleton")
+  claimedAt   DateTime?
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@map("instance_setup")
+}
+
+/// OPERATOR configures the instance itself; MEMBER uses it. The first account
+/// to sign in becomes the operator, and nothing grants the role afterwards.
+enum UserRole {
+  MEMBER
+  OPERATOR
+}

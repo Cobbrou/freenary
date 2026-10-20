@@ -75,8 +75,12 @@ const requireInstitutionsOf = async (
     provider
       .listInstitutions(country)
       .pipe(
-        Effect.catchTag("BankInstitutionsUnavailable", () =>
-          Effect.succeed(null)
+        Effect.catchTag("BankInstitutionsUnavailable", (cause) =>
+          Effect.logWarning(
+            "Bank institutions unavailable",
+            country,
+            cause
+          ).pipe(Effect.as(null))
         )
       )
   );
@@ -159,6 +163,7 @@ export const bankConnectionRouter = {
         provider,
         connectionState.institution.country
       );
+
       const institution = findInstitution(
         institutions,
         connectionState.institution.id,
@@ -179,11 +184,12 @@ export const bankConnectionRouter = {
         });
       }
 
-      const result = await provider.completeConnection({
+      const completed = await provider.completeConnection({
         callbackParams: input.params,
         user: providerUser,
       });
-      const providerInstitutionName = result.institutionName.trim();
+
+      const providerInstitutionName = completed.institutionName.trim();
       const bankName = providerInstitutionName || institution.name;
 
       const connection = await prisma.$transaction(async (db) => {
@@ -192,17 +198,17 @@ export const bankConnectionRouter = {
             institutionBic: institution.bic ?? null,
             institutionCountry: institution.country,
             institutionGroup:
-              result.institutionGroup ?? institution.group ?? null,
+              completed.institutionGroup ?? institution.group ?? null,
             institutionId: institution.id,
             institutionName: bankName,
             provider: provider.id,
-            providerSessionId: result.providerSessionId,
+            providerSessionId: completed.providerSessionId,
             userId,
           },
         });
 
         await db.bankAccount.createMany({
-          data: result.accounts.map((account) => ({
+          data: completed.accounts.map((account) => ({
             connectionId: created.id,
             iban: account.iban ?? null,
             identificationHash: account.identificationHash ?? null,
@@ -215,7 +221,7 @@ export const bankConnectionRouter = {
       });
 
       return {
-        accounts: result.accounts.map((a) => ({
+        accounts: completed.accounts.map((a) => ({
           iban: a.iban,
           name: a.name,
           uid: a.providerAccountId,
@@ -223,7 +229,7 @@ export const bankConnectionRouter = {
         connectionId: connection.id,
         institutionName: bankName,
         returnTo: connectionState.returnTo,
-        sessionId: result.providerSessionId,
+        sessionId: completed.providerSessionId,
       };
     }),
 
@@ -262,6 +268,7 @@ export const bankConnectionRouter = {
           select: { taxCountries: true },
           where: { id: context.session.user.id },
         });
+
         countries = user.taxCountries;
       }
 
@@ -277,8 +284,12 @@ export const bankConnectionRouter = {
           [...new Set(countries)],
           (country) =>
             provider.listInstitutions(country).pipe(
-              Effect.catchTag("BankInstitutionsUnavailable", () =>
-                Effect.succeed(null)
+              Effect.catchTag("BankInstitutionsUnavailable", (cause) =>
+                Effect.logWarning(
+                  "Bank institutions unavailable",
+                  country,
+                  cause
+                ).pipe(Effect.as(null))
               ),
               Effect.map((institutions) => ({ country, institutions }))
             ),
@@ -294,11 +305,13 @@ export const bankConnectionRouter = {
         logo: string | null;
         name: string;
       }[] = [];
+
       const unavailableCountries: string[] = [];
 
       for (const listed of perCountry) {
         if (listed.institutions === null) {
           unavailableCountries.push(listed.country);
+
           continue;
         }
 
@@ -337,6 +350,7 @@ export const bankConnectionRouter = {
         provider,
         input.bankCountry
       );
+
       const institution = findInstitution(
         institutions,
         input.institutionId,
@@ -359,14 +373,13 @@ export const bankConnectionRouter = {
         secret: env.BETTER_AUTH_SECRET,
         userId,
       });
-      const result = await provider.startConnection({
+
+      return await provider.startConnection({
         country: input.bankCountry,
         institutionId: institution.id,
         redirectUrl,
         state: encodedState,
         user: providerUser,
       });
-
-      return result;
     }),
 };

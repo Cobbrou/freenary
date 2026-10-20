@@ -32,15 +32,15 @@ interface ProgramParse {
 
 const HEADER_PAD = { compact: "px-2.5 py-1", default: "px-3 py-1.5" } as const;
 
-const isBroken = (result: ParseResult | null): boolean => {
-  if (result === null || result.root === null) {
+const isBroken = (parse: ParseResult | null): boolean => {
+  if (parse === null || parse.root === null) {
     return true;
   }
 
-  const { children } = result.root.props;
+  const { children } = parse.root.props;
   const everyChildDropped = Array.isArray(children) && children.length === 0;
 
-  return result.meta.errors.length > 0 || everyChildDropped;
+  return parse.meta.errors.length > 0 || everyChildDropped;
 };
 
 export const AssistantChart = ({ program, streaming }: AssistantChartProps) => {
@@ -96,7 +96,7 @@ export const AssistantChart = ({ program, streaming }: AssistantChartProps) => {
       <Renderer
         isStreaming={streaming}
         library={assistantUiLibrary}
-        onParseResult={(result) => setParsed({ program, result })}
+        onParseResult={(parse) => setParsed({ program, result: parse })}
         response={program}
       />
       <Sheet onOpenChange={setLarge} open={large}>

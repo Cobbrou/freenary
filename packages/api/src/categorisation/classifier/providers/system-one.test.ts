@@ -186,10 +186,12 @@ describe("createSystemOneClassifier", () => {
       certainty: 0.99,
       probabilities: { "bills-utilities": 0.55, subscriptions: 0.45 },
     };
+
     const sharp = createSystemOneClassifier(
       hosted,
       answering({ category: spread })
     );
+
     const flattened = createSystemOneClassifier(
       { ...hosted, temperature: 3 },
       answering({ category: spread })

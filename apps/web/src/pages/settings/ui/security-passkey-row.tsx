@@ -69,6 +69,7 @@ export const SecurityPasskeyRow = ({
   const storedName = passkey.name?.trim() ?? "";
   const displayName =
     storedName === "" ? m.settings_passkeys_unnamed() : storedName;
+
   const reach = REACH_LABELS[signInReachOf(passkey)]();
 
   useRegisterFluidHoverItem(registerItem, index, rowRef);

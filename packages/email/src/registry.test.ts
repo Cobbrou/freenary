@@ -19,8 +19,8 @@ const settings = (overrides: Partial<EmailSettings>): EmailSettings => ({
 });
 
 const failure = (
-  result: Result.Result<EmailProvider | null, EmailProviderUnavailable>
-): EmailProviderUnavailable => Option.getOrThrow(Result.getFailure(result));
+  created: Result.Result<EmailProvider | null, EmailProviderUnavailable>
+): EmailProviderUnavailable => Option.getOrThrow(Result.getFailure(created));
 
 describe("createEmailProvider", () => {
   test("reports no provider when none is named", () => {
@@ -36,6 +36,7 @@ describe("createEmailProvider", () => {
       kind: "missing-variable",
       variable: "RESEND_API_KEY",
     });
+
     expect(() => Result.getOrThrow(resend)).toThrow(/RESEND_API_KEY/u);
 
     const smtp = createEmailProvider(
@@ -60,6 +61,7 @@ describe("createEmailProvider", () => {
         )
       )?.id
     ).toBe("resend");
+
     expect(
       Result.getOrThrow(
         createEmailProvider(

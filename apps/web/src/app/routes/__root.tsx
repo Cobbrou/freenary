@@ -22,6 +22,7 @@ import { publicServerUrlScript } from "@/shared/config";
 import { ffIcons } from "@/shared/lib/ff-icons";
 import { isServer } from "@/shared/lib/is-server";
 
+import { UNKNOWN_INSTANCE, getInstanceSetup } from "../api/get-instance";
 import { UNKNOWN_VIEWER, getViewer } from "../api/get-viewer";
 
 import appCss from "../styles/index.css?url";
@@ -94,6 +95,7 @@ export const Route = createRootRouteWithContext<RouterAppContext>()({
   },
 
   beforeLoad: async () => ({
+    instance: isServer ? await getInstanceSetup() : UNKNOWN_INSTANCE,
     viewer: isServer ? await getViewer() : UNKNOWN_VIEWER,
   }),
 

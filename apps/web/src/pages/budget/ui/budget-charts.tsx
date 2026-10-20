@@ -37,10 +37,12 @@ import { SpendingBreakdownChart } from "./spending-breakdown-chart";
 import { StaleRegion } from "./stale-region";
 
 type BreakdownData = ComponentProps<typeof SpendingBreakdownChart>["data"];
+
 type PlannedData = Pick<
   ComponentProps<typeof BudgetVsActualChart>,
   "categories" | "hasPlan"
 >;
+
 type FixedData = ComponentProps<typeof FixedVsVariableChart>;
 
 interface ChartQuery<T> {

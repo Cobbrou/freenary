@@ -72,10 +72,13 @@ const parseDdmmyySlashed = (raw: string): string | undefined => {
 
 const BOURSORAMA_CARD_PAYMENT_RE =
   /^CARTE\s+(?<date>\d{2}\/??\d{2}\/??\d{2,4})\s+(?<payee>.+?)(?:\s+\d+)?(?:\s+CB\*(?<card>\d{4}))?\s*$/iu;
+
 const BOURSORAMA_ATM_WITHDRAWAL_RE =
   /^RETRAIT\s+DAB\s+(?<date>\d{2}\/??\d{2}\/??\d{2,4})\s+(?<payee>.+?)\s+CB\*(?<card>\d{4,})\s*$/iu;
+
 const BOURSORAMA_CARD_REFUND_RE =
   /^AVOIR\s+(?<date>\d{2}\/??\d{2}\/??\d{2,4})\s+(?<payee>.+?)\s+CB\*(?<card>\d{4,})\s*$/iu;
+
 const BOURSORAMA_SEPA_DIRECT_DEBIT_RE = /^PRLV\s+SEPA\s+(?<payee>.+)/iu;
 const BOURSORAMA_TRANSFER_RE = /^VIR(?:\s+(?:SEPA|INST))?\s+(?<payee>.+)/iu;
 const BOURSORAMA_LOAN_INSTALMENT_RE = /^ECH\s+PRET\s*:\s*(?<payee>.+)/iu;
@@ -84,54 +87,72 @@ const BOURSORAMA_TRAILING_LOCATION_RE = /\\.+$/u;
 
 const BNP_PARIBAS_CARD_PAYMENT_RE =
   /^FACTURE\s+CARTE\s+DU\s+(?<date>\d{6})\s+(?<payee>.+?)(?:\s+CARTE\s+(?<card>\d{4}))?\s*$/iu;
+
 const BNP_PARIBAS_SEPA_DIRECT_DEBIT_RE =
   /^PRLV(?:\s+EUROPEEN)?\s+SEPA\s+(?<payee>.+?)(?:\s+MDT\/\S+)?(?:\s+ECH\/\S+)?(?:\s+ID\s+\S+)?\s*$/iu;
+
 const BNP_PARIBAS_TRANSFER_RE =
   /^VIR(?:EMENT)?\s+(?:SEPA\s+|INST\s+)?(?<payee>.+)/iu;
+
 const BNP_PARIBAS_ATM_WITHDRAWAL_RE = /^RETRAIT\s+DAB\s+(?<payee>.+)/iu;
 const BNP_PARIBAS_CHEQUE_RE = /^CHQ?\s+(?<payee>.+)/iu;
 const BNP_PARIBAS_FEE_RE = /^(?:FRAIS|COTISATION|COMMISSION)\s+(?<payee>.+)/iu;
 
 const CREDIT_AGRICOLE_CARD_PAYMENT_RE =
   /^PAIEMENT\s+PAR\s+CARTE\s+(?<payee>.+?)\s+(?<date>\d{2}\/\d{2})\s*$/iu;
+
 const CREDIT_AGRICOLE_DIRECT_DEBIT_DATED_RE =
   /^PRELEVEMENT\s+(?<payee>.+?)\s+(?<date>\d{2}\/\d{2}\/\d{4})\s*$/iu;
+
 const CREDIT_AGRICOLE_DIRECT_DEBIT_DAY_MONTH_RE =
   /^PRELEVEMENT\s+(?<payee>.+?)\s+(?<date>\d{2}-\d{2})\s*$/iu;
+
 const CREDIT_AGRICOLE_DIRECT_DEBIT_RE = /^PRELEVEMENT\s+(?<payee>.+)/iu;
+
 const CREDIT_AGRICOLE_TRANSFER_RE =
   /^VIR(?:EMENT)?\s+(?:SEPA\s+)?(?<payee>.+)/iu;
+
 const CREDIT_AGRICOLE_ATM_WITHDRAWAL_RE = /^RETRAIT\s+DAB\s+(?<payee>.+)/iu;
 const CREDIT_AGRICOLE_CHEQUE_RE = /^(?:CHEQUE|CHQ)\s+(?<payee>.+)/iu;
+
 const CREDIT_AGRICOLE_FEE_RE =
   /^(?:FRAIS|COTISATION|COMMISSION)\s+(?<payee>.+)/iu;
 
 const SOCIETE_GENERALE_CARD_PAYMENT_RE =
   /^CARTE\s+(?<card>\w+)\s+(?<date>\d{2}\/\d{2})\s+(?<payee>.+)\s*$/iu;
+
 const SOCIETE_GENERALE_DATE_PREFIXED_LINE_RE =
   /^(?<date>\d{4})\/(?<payee>.+)\s*$/u;
+
 const SOCIETE_GENERALE_TRANSFER_WITH_MOTIF_RE =
   /^VIR\s+POUR\s*:\s*(?<payee>.+?)\s+REF\s*:\s*\S+\s+MOTIF\s*:\s*(?<motif>.+)\s*$/iu;
+
 const SOCIETE_GENERALE_TRANSFER_RE =
   /^VIR(?:EMENT)?\s+(?:SEPA\s+)?(?<payee>.+)/iu;
+
 const SOCIETE_GENERALE_DIRECT_DEBIT_RE = /^PRLV\s+(?:SEPA\s+)?(?<payee>.+)/iu;
 const SOCIETE_GENERALE_ATM_WITHDRAWAL_RE = /^RETRAIT\s+DAB\s+(?<payee>.+)/iu;
+
 const SOCIETE_GENERALE_FEE_RE =
   /^(?:FRAIS|COTISATION|COMMISSION)\s+(?<payee>.+)/iu;
 
 const CREDIT_MUTUEL_CARD_PAYMENT_RE =
   /^PAIEMENT\s+(?:PSC|CB|MOB)\s+(?<date>\d{4})\s+(?<payee>.+?)\s+(?:CARTE\s*|PAYWEB)(?<card>\d+)\s*$/iu;
+
 const CREDIT_MUTUEL_CARD_PAYMENT_WITHOUT_CARD_RE =
   /^PAIEMENT\s+(?:PSC|CB|MOB)\s+(?<date>\d{4})\s+(?<payee>.+)\s*$/iu;
+
 const CREDIT_MUTUEL_DIRECT_DEBIT_RE = /^PRLV\s+(?:SEPA\s+)?(?<payee>.+)/iu;
 const CREDIT_MUTUEL_TRANSFER_RE = /^VIR(?:EMENT)?\s+(?:SEPA\s+)?(?<payee>.+)/iu;
 const CREDIT_MUTUEL_ATM_WITHDRAWAL_RE = /^RETRAIT\s+DAB\s+(?<payee>.+)/iu;
 const CREDIT_MUTUEL_CHEQUE_RE = /^(?:CHEQUE|CHQ)\s+(?<payee>.+)/iu;
+
 const CREDIT_MUTUEL_FEE_RE =
   /^(?:FRAIS|COTISATION|COMMISSION)\s+(?<payee>.+)/iu;
 
 const LCL_CARD_PAYMENT_RE =
   /^CB\s+(?<payee>.+?)\s+(?<date>\d{2}\/\d{2}\/\d{2})\s*$/iu;
+
 const LCL_DIRECT_DEBIT_RE = /^PRLV\s+(?:SEPA\s+)?(?<payee>.+)/iu;
 const LCL_TRANSFER_RE = /^VIR(?:EMENT)?\s+(?:SEPA\s+)?(?<payee>.+)/iu;
 const LCL_ATM_WITHDRAWAL_RE = /^RETRAIT\s+DAB\s+(?<payee>.+)/iu;
@@ -140,16 +161,21 @@ const LCL_FEE_RE = /^(?:FRAIS|COTISATION|COMMISSION)\s+(?<payee>.+)/iu;
 
 const LA_BANQUE_POSTALE_CARD_PAYMENT_RE =
   /^ACHAT\s+CB\s+(?<payee>.+?)\s+(?<date>\d{2}\.\d{2}\.\d{2})\s*$/iu;
+
 const LA_BANQUE_POSTALE_DIRECT_DEBIT_RE = /^PRLV\s+(?:SEPA\s+)?(?<payee>.+)/iu;
+
 const LA_BANQUE_POSTALE_TRANSFER_RE =
   /^VIR(?:EMENT)?\s+(?:SEPA\s+)?(?<payee>.+)/iu;
+
 const LA_BANQUE_POSTALE_ATM_WITHDRAWAL_RE = /^RETRAIT\s+DAB\s+(?<payee>.+)/iu;
 const LA_BANQUE_POSTALE_CHEQUE_RE = /^(?:CHEQUE|CHQ)\s+(?<payee>.+)/iu;
+
 const LA_BANQUE_POSTALE_FEE_RE =
   /^(?:FRAIS|COTISATION|COMMISSION)\s+(?<payee>.+)/iu;
 
 const TRAILING_MANDATE_REFERENCE_RE =
   /\s+(?:REF\s*:\s*\S+|MDT\/\S+|ECH\/\S+|ID\s+\S+)$/iu;
+
 const TRAILING_DATE_OR_CARD_RE =
   /\s+(?:CARTE\s+\d{4,}|CB\*?\d{4,}|\d{2}[./]\d{2}(?:[./]\d{2,4})?)$/iu;
 

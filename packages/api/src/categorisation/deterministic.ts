@@ -50,6 +50,7 @@ export const deterministicCategory = (
 ): DeterministicResult | null => {
   const { amountMinor, bankTransactionCode, country, merchantCategoryCode } =
     input;
+
   const byMcc = merchantCategoryCode
     ? accepted(
         categoryFromMcc(merchantCategoryCode),

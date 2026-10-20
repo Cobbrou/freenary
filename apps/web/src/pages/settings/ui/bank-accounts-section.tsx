@@ -23,6 +23,7 @@ export const BankAccountsSection = () => {
   const availability = useQuery(
     orpc.bankConnection.getProviderAvailability.queryOptions()
   );
+
   const isAvailable = availability.data?.available ?? false;
 
   const banksQuery = useQuery(

@@ -1,0 +1,128 @@
+---
+title: Updates and backups
+description: Pick a Freenary version, update to a newer one, and back up and restore your database.
+icon: DatabaseBackup
+---
+
+Run Compose commands beside your `docker-compose.yml`.
+
+## Create a backup
+
+The PostgreSQL database contains user data and any provider credentials entered through the setup screen. Export it in custom format:
+
+```bash
+docker compose exec -T postgres pg_dump -U postgres -d freenary -Fc > freenary.dump
+```
+
+`-T` prevents Docker from attaching a terminal to the binary output.
+
+On a hosting panel, first identify its PostgreSQL container. Then run the dump inside that container:
+
+```bash
+docker ps --filter name=postgres
+docker exec <postgres-container> pg_dump -U postgres -d freenary -Fc > freenary.dump
+```
+
+Automate this command with cron or your panel because Freenary has no built-in backup schedule. Move each dump to storage outside the server.
+
+<Callout type="error">
+
+Archive `BETTER_AUTH_SECRET` with each dump. In Coolify, its name is `SERVICE_HEX_64_AUTHSECRET`. Restoring with another value makes sealed settings unreadable and has other authentication costs. See [Security](/docs/reference/security).
+
+</Callout>
+
+Also retain the dump's `POSTGRES_PASSWORD`. Coolify calls it `SERVICE_PASSWORD_POSTGRES`.
+
+## Select an image tag
+
+`FREENARY_VERSION` controls the server and web image tags. No value means `latest`.
+
+| Value         | Image selected                                           |
+| ------------- | -------------------------------------------------------- |
+| `latest`      | Most recent stable release                               |
+| `1.2.0`       | Exactly that release                                     |
+| `1.2`         | Most recent release in the 1.2 series                    |
+| `1`           | Most recent release in the 1 series                      |
+| `1.3.0-rc.1`  | Exactly that pre-release; pre-releases get no moving tag |
+| `main`, `dev` | Current build of that branch                             |
+| `sha-1a2b3c4` | One immutable branch build                               |
+
+Use a complete version such as `1.2.0` when you want updates only after an explicit change.
+
+## Deploy an update
+
+Create a backup before moving forward. Database migrations aren't designed to run backward.
+
+<Tabs items={["Docker Compose", "Hosting panel"]}>
+
+<Tab value="Docker Compose">
+
+Set `FREENARY_VERSION` in `.env`, then fetch and recreate the services:
+
+```bash
+docker compose pull
+docker compose up -d
+```
+
+Don't substitute `docker compose restart`. It neither fetches a new image nor applies changed environment values.
+
+</Tab>
+
+<Tab value="Hosting panel">
+
+Open the app's environment settings in Dokploy or Coolify. Change `FREENARY_VERSION`, or leave it at `latest`, and redeploy.
+
+</Tab>
+
+</Tabs>
+
+Each `docker compose up` runs the one-shot `migrate` service before the API server. Confirm the result with:
+
+```bash
+docker compose ps -a
+```
+
+Expect `migrate` to report `Exited (0)`. `postgres`, `server` and `web` should become `healthy`. A hosting panel exposes the same statuses in its container view. Finally, sign in and load Budget.
+
+## Restore over a live database
+
+Use the environment that belongs to the dump. Stop the application first, so no request writes while the restore replaces database objects and rows:
+
+```bash
+docker compose stop web server
+docker compose exec -T postgres pg_restore -U postgres -d freenary --clean --if-exists --no-owner < freenary.dump
+docker compose up -d
+```
+
+For a hosting panel, stop the server and web containers, run the restore with `docker exec -i <postgres-container>` in place of `docker compose exec -T postgres`, then redeploy.
+
+## Restore into an empty database
+
+On a new server, place the dump beside the Compose file and restore before starting the application services:
+
+```bash
+docker compose up -d --wait postgres
+docker compose exec -T postgres pg_restore -U postgres -d freenary --no-owner < freenary.dump
+docker compose up -d
+```
+
+Use the dump's `BETTER_AUTH_SECRET` and `POSTGRES_PASSWORD`, then sign in and inspect your data.
+
+<Callout type="error">
+
+Don't run `docker compose down -v` unless you intend to erase the instance. `-v` removes the PostgreSQL volume.
+
+</Callout>
+
+<Cards>
+  <Card
+    title="Troubleshooting"
+    href="/docs/run/troubleshooting"
+    description="Recover when a deployment doesn't start."
+  />
+  <Card
+    title="Security"
+    href="/docs/reference/security"
+    description="Understand the secrets kept with a backup."
+  />
+</Cards>

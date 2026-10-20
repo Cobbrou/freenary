@@ -1,11 +1,22 @@
-import preset from "@jliocsar/begone-slop/preset.json" with { type: "json" };
 import { defineConfig } from "oxlint";
+import { oxslop } from "oxslop/config";
 import core from "ultracite/oxlint/core";
 import react from "ultracite/oxlint/react";
 import tanstack from "ultracite/oxlint/tanstack";
 
 export default defineConfig({
-  extends: [core, react, tanstack, preset],
+  extends: [
+    core,
+    react,
+    tanstack,
+    oxslop({
+      rules: {
+        "no-comments": ["error", { allowJsdoc: false }],
+        "no-reexport-only-modules": ["error", { allowFiles: ["index.ts"] }],
+      },
+      strict: true,
+    }),
+  ],
   ignorePatterns: [
     ...core.ignorePatterns,
     ".claude/**",
@@ -22,13 +33,12 @@ export default defineConfig({
     "packages/ui/**",
     "apps/web/src/paraglide/**",
   ],
-  jsPlugins: ["@jliocsar/begone-slop", "@shadcn/lint"],
+  jsPlugins: ["@shadcn/lint"],
   overrides: [
     {
       files: ["**/*.test.ts", "**/*.test.tsx"],
       rules: {
-        "begone-slop/expect-padding": "error",
-        "begone-slop/require-safety-comment-for-type-assertion": "off",
+        "oxslop/require-safety-comment-for-type-assertion": "off",
       },
     },
   ],
@@ -45,12 +55,6 @@ export default defineConfig({
     "react-perf",
     "jsx-a11y",
   ],
-  rules: {
-    "begone-slop/no-reexport-only-modules": [
-      "error",
-      { allowedFilenames: ["index.ts"], routeDirectoryNames: ["src"] },
-    ],
-  },
   settings: {
     shadcn: {
       componentImports: ["^@/shared/ui(/|$)"],

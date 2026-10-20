@@ -56,6 +56,7 @@ export const CategoryPicker = ({
 
     return rows;
   }, [categories]);
+
   const selected = items.find((row) => row.value === value);
 
   return (

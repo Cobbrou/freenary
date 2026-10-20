@@ -29,6 +29,7 @@ export const parseMinorUnits = (
   const fraction = rawFraction
     .padEnd(MINOR_UNIT_DIGITS, "0")
     .slice(0, MINOR_UNIT_DIGITS);
+
   const magnitude = Math.trunc(Number(`${units}${fraction}`));
   const sign = creditDebitIndicator === DEBIT_INDICATOR ? -1 : 1;
 

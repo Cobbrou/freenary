@@ -72,6 +72,7 @@ export const AmountFilterMenu = ({
   const isActive = range.min > NO_BOUND || range.max > NO_BOUND;
   const hasFloorAboveCeiling =
     range.min > NO_BOUND && range.max > NO_BOUND && range.min > range.max;
+
   const symbol = currencySymbol();
 
   const resyncDraftFromRange = () => {

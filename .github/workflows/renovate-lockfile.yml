@@ -1,0 +1,60 @@
+name: Renovate lockfile
+
+# Renovate cannot read a Bun workspace catalog yet, so `renovate.json5` updates
+# the catalog in the root package.json through a regex custom manager. A custom
+# manager writes no lock file, and `bun install --frozen-lockfile` in CI refuses
+# a catalog that moved without bun.lock. This job closes that one gap.
+#
+# The push below carries GITHUB_TOKEN, and a push made with that token starts no
+# workflow. GitHub exempts workflow_dispatch and repository_dispatch from that
+# rule, which is why ci.yml declares the first and why the last step here calls
+# it. GitHub reads that trigger from the default branch, so the call answers 422
+# until this change reaches main; the step says so rather than failing silently.
+
+on:
+  push:
+    branches: ["renovate/**"]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  lockfile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      # This job writes bun.lock, so it runs the Bun the repository pins rather
+      # than `latest`: another version can rewrite the whole file for its own
+      # format, and that rewrite would ride in on an automerged branch.
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+
+      # Resolves the manifests and rewrites bun.lock without installing or
+      # running a postinstall script. It is a no-op on every branch Renovate
+      # already locked for itself.
+      - run: bun install --lockfile-only --ignore-scripts
+
+      - name: Commit bun.lock and start CI on the new commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if git diff --quiet -- bun.lock; then
+            echo "bun.lock already matches the manifests"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "chore(deps): refresh bun.lock" -- bun.lock
+          git push
+          if ! gh workflow run ci.yml --ref "$GITHUB_REF_NAME"; then
+            echo "::error::bun.lock is committed, but CI did not start on it. GitHub reads the workflow_dispatch trigger from the default branch, so this call works once ci.yml carries it on main. Start CI by hand on $GITHUB_REF_NAME."
+            exit 1
+          fi

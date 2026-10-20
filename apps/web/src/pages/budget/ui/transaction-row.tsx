@@ -43,6 +43,7 @@ export const TransactionRow = ({
     Math.abs(transaction.amount),
     transaction.currency
   );
+
   const title = transaction.counterpartyName ?? transaction.description;
   const { variant } = useSize();
 

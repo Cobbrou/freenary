@@ -4,6 +4,18 @@ import react from "@vitejs/plugin-react";
 import { fumadocsMdx } from "fumadocs-mdx/vite";
 import { nitro } from "nitro/vite";
 import { defineConfig } from "vite";
+import type { Plugin } from "vite";
+
+const printPublicUrl = (publicUrl: string | undefined): Plugin => ({
+  configureServer(server) {
+    if (publicUrl) {
+      server.printUrls = () => {
+        server.config.logger.info(`  ➜  Local:   ${publicUrl}/`);
+      };
+    }
+  },
+  name: "print-public-url",
+});
 
 export default defineConfig({
   server: {
@@ -26,6 +38,7 @@ export default defineConfig({
       },
     }),
     react(),
+    printPublicUrl(process.env.DEV_PUBLIC_URL),
     nitro({
       preset: "vercel",
     }),

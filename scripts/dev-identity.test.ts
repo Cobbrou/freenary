@@ -90,24 +90,26 @@ describe("deriveDevIdentity URL / host consistency", () => {
 });
 
 describe("deriveDevIdentity host shapes", () => {
-  test("produces https + orb.local hosts", () => {
+  test("produces http + freenary.localhost hosts", () => {
     const id = deriveDevIdentity({ branch: "feat/projects" });
 
-    expect(new URL(id.corsOrigin).protocol).toBe("https:");
-    expect(id.webHost).toBe("web.feat-projects.freenary.orb.local");
-    expect(id.serverHost).toBe("server.feat-projects.freenary.orb.local");
-    expect(id.corsOrigin).toBe("https://web.feat-projects.freenary.orb.local");
+    expect(new URL(id.corsOrigin).protocol).toBe("http:");
+    expect(id.webHost).toBe("web.feat-projects.freenary.localhost");
+    expect(id.serverHost).toBe("server.feat-projects.freenary.localhost");
+    expect(id.corsOrigin).toBe("http://web.feat-projects.freenary.localhost");
     expect(id.betterAuthUrl).toBe(
-      "https://server.feat-projects.freenary.orb.local"
+      "http://server.feat-projects.freenary.localhost"
     );
+
     expect(id.viteServerUrl).toBe(
-      "https://server.feat-projects.freenary.orb.local"
+      "http://server.feat-projects.freenary.localhost"
     );
-    expect(id.docsHost).toBe("docs.feat-projects.freenary.orb.local");
-    expect(id.docsUrl).toBe("https://docs.feat-projects.freenary.orb.local");
-    expect(id.mailHost).toBe("mail.feat-projects.freenary.orb.local");
-    expect(id.mailUrl).toBe("https://mail.feat-projects.freenary.orb.local");
-    expect(id.cookieDomain).toBe(".feat-projects.freenary.orb.local");
+
+    expect(id.docsHost).toBe("docs.feat-projects.freenary.localhost");
+    expect(id.docsUrl).toBe("http://docs.feat-projects.freenary.localhost");
+    expect(id.mailHost).toBe("mail.feat-projects.freenary.localhost");
+    expect(id.mailUrl).toBe("http://mail.feat-projects.freenary.localhost");
+    expect(id.cookieDomain).toBe(".feat-projects.freenary.localhost");
   });
 });
 

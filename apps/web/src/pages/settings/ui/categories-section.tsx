@@ -200,8 +200,10 @@ export const CategoriesSection = ({
 }: CategoriesSectionProps) => {
   const { deleteCategory, isDeleting, isMoving, moveCategory } =
     useCustomCategoryActions();
+
   const [categoryEditor, setCategoryEditor] =
     useState<CategoryEditorState>(null);
+
   const [openGroups, setOpenGroups] = useState<string[]>([]);
   const listRef = useRef<HTMLDivElement>(null);
   const PlusIcon = useIcon("plus");

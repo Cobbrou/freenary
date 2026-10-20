@@ -30,6 +30,9 @@ export const TRANSACTIONS_QUERY_KEY = ["budget", "getTransactions"] as const;
 
 const PAGE_SIZE = 50;
 
+// SAFETY: TanStack Query requires initialPageParam typed to match pageParam; undefined is the valid initial state
+const INITIAL_PAGE_PARAM = undefined as string | undefined;
+
 export const transactionsQueryOptions = ({
   amount,
   direction,
@@ -74,8 +77,7 @@ export const transactionsQueryOptions = ({
         sort,
         to,
       }),
-    // SAFETY: TanStack Query requires initialPageParam typed to match pageParam; undefined is the valid initial state
-    initialPageParam: undefined as string | undefined,
+    initialPageParam: INITIAL_PAGE_PARAM,
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
     placeholderData: keepPreviousData,
   });

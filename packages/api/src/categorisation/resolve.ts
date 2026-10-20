@@ -232,12 +232,12 @@ const fromDeterministicRules = (
 };
 
 const inDirection = (
-  result: ResolutionResult | null,
+  resolution: ResolutionResult | null,
   amountMinor: CategoriseInput["amountMinor"]
 ): ResolutionResult | null =>
-  result?.category && readsAsRefund(result.category, amountMinor)
+  resolution?.category && readsAsRefund(resolution.category, amountMinor)
     ? null
-    : result;
+    : resolution;
 
 const categoriseInternal = async (
   input: CategoriseInput
@@ -304,8 +304,8 @@ const groupPending = (
 ): Map<string, PendingGroup> => {
   const groups = new Map<string, PendingGroup>();
 
-  for (const [index, result] of results.entries()) {
-    if (result.stage !== "none") {
+  for (const [index, resolution] of results.entries()) {
+    if (resolution.stage !== "none") {
       continue;
     }
 
@@ -336,7 +336,7 @@ const applyModelResult = (
   confidence: number,
   stage: ResolutionStage
 ): void => {
-  const result: ResolutionResult = {
+  const resolution: ResolutionResult = {
     band: confidence >= AUTO_BAND_MIN_CONFIDENCE ? "auto" : "suggest",
     category,
     confidence,
@@ -346,7 +346,7 @@ const applyModelResult = (
   };
 
   for (const index of indices) {
-    results[index] = result;
+    results[index] = resolution;
   }
 };
 

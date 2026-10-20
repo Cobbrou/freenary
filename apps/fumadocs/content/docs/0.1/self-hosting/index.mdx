@@ -56,7 +56,7 @@ Two more values name the public origins. Both default to `localhost`, which serv
 
 Compose gives the `web` service `PUBLIC_SERVER_URL` from `BETTER_AUTH_URL`, so the browser calls the same API origin. A `PUBLIC_SERVER_URL` line of your own does nothing.
 
-`FREENARY_VERSION` names the tag of both images. The compose default is `latest`, and the registry holds no tag of that name, so write a real tag.
+`FREENARY_VERSION` names the tag of both images. The compose default is `latest`, the newest release, and it moves at each one. Name a version such as `0.1` to hold an instance on one release line.
 
 [Configuration](/docs/self-hosting/configuration) holds every variable, its default and its refusal message.
 
@@ -72,8 +72,8 @@ The stack runs published images, so it needs no source code. Two files are enoug
 
 ```bash
 mkdir freenary && cd freenary
-curl -O https://raw.githubusercontent.com/suiramdev/freenary/main/docker-compose.yml
-curl -O https://raw.githubusercontent.com/suiramdev/freenary/main/.env.example
+curl -O https://raw.githubusercontent.com/suiramdev/freenary/v0.1.0/docker-compose.yml
+curl -O https://raw.githubusercontent.com/suiramdev/freenary/v0.1.0/.env.example
 ```
 
 A clone gives the same two files, plus the source for a [build from source](/docs/self-hosting/from-source). Every command below runs from the directory that holds the two files.

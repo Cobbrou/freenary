@@ -1,0 +1,114 @@
+---
+title: Email
+description: Let Freenary send confirmation and password-reset codes, through Resend or any SMTP server.
+icon: Mail
+---
+
+Send account confirmation and password-reset codes through Resend or an SMTP service.
+
+## What changes when email is enabled
+
+Without a delivery service, Freenary allows password and passkey sign-in but doesn't confirm addresses. It also hides `Forgot password?`.
+
+After you configure one:
+
+- A new user must confirm their address before signing in.
+- An existing user with an unconfirmed address receives a code on their next password sign-in.
+- `Forgot password?` sends a reset code.
+
+The figures for code length, lifetime and attempts are in [Sign-in](/docs/run/sign-in). Messages contain plain English text.
+
+## Choose where the values live
+
+The operator can open `https://freenary.example.com/setup` and select the `Email` step. Values saved there stay in the database.
+
+Environment variables are the other option. Start with `EMAIL_PROVIDER` and `EMAIL_FROM`, then add the variables for your service. An environment value overrides a saved value. The screen labels it `Set by your server`.
+
+When the environment supplies every required field, the screen reports that service as ready and offers `Test connection`. See [A value in the environment wins](/docs/reference/configuration#a-value-in-the-environment-wins).
+
+## Resend
+
+<Steps>
+
+<Step>
+
+### Prepare Resend
+
+Add your domain in the [Resend dashboard](https://resend.com) and verify its DNS records. Create a full-access API key. A sending-only key can't pass Freenary's domain-list test.
+
+</Step>
+
+<Step>
+
+### Enter the credentials
+
+Choose `Resend` in the `Email` step. Enter a `Sender address` on the verified domain, such as `Freenary <no-reply@example.com>`, and enter the `API key`.
+
+</Step>
+
+<Step>
+### Apply the Resend change
+
+Press `Save and continue`, followed by `Finish setup`. The instance restarts with the saved service.
+
+</Step>
+
+</Steps>
+
+## SMTP
+
+<Steps>
+
+<Step>
+
+### Enter the server details
+
+Choose `SMTP` in the `Email` step. Enter `Sender address` and `Host`, then open `More options` for the remaining fields.
+
+| Field | Value |
+| --- | --- |
+| `Port` | Empty selects `465` with `Implicit TLS`, or `587` without it |
+| `Implicit TLS` | On for port `465`; off for `587`, which upgrades its connection |
+| `User`, `Password` | Your SMTP login, or both empty for an unauthenticated relay |
+
+</Step>
+
+<Step>
+
+### Apply the SMTP change
+
+Press `Save and continue`, followed by `Finish setup`.
+
+</Step>
+
+</Steps>
+
+## Connection test results
+
+`Save and continue` tests the service before storing the values. The test times out after 10 seconds.
+
+| Message | Action |
+| --- | --- |
+| `Connection works.` | Continue to the final step |
+| `… refused these credentials. Check them and try again.` | Correct the key or login |
+| `Unable to reach …. Check the address and your network, then try again.` | Check the host, port and outbound access |
+| `A value has the wrong format. Check the fields and try again.` | Correct the invalid field |
+
+If the service is working despite the failed test, press `Save anyway`. The screen stores the values without checking them.
+
+## Send a real code
+
+Create an account with an unused address. Within a minute, expect a message titled `Confirm your Freenary email address`. Check spam and your sender domain's SPF, DKIM and DMARC records when it doesn't arrive.
+
+<Cards>
+  <Card
+    title="Sign-in"
+    href="/docs/run/sign-in"
+    description="Check sessions and code limits."
+  />
+  <Card
+    title="Troubleshooting"
+    href="/docs/run/troubleshooting"
+    description="Match a symptom to its fix."
+  />
+</Cards>

@@ -8,21 +8,21 @@ import { AssistantChat } from "./assistant-chat";
 
 export const HomePage = () => {
   const { data: session } = authClient.useSession();
-  const { data, isPending } = useQuery(
+  const { data: conversation, isPending } = useQuery(
     orpc.assistant.getConversation.queryOptions()
   );
 
   /* SAFETY: `parts` is the JSON the assistant's own stream wrote, so the stored
      shape is `UIMessage["parts"]` by construction; the API cannot type a JSON
      column more precisely than that. */
-  const initialMessages = data?.messages as UIMessage[] | undefined;
+  const initialMessages = conversation?.messages as UIMessage[] | undefined;
 
   return (
     <AssistantChat
-      conversationId={data?.conversationId}
+      conversationId={conversation?.conversationId}
       initialMessages={initialMessages}
       isPending={isPending}
-      serverModel={data?.serverModel ?? null}
+      serverModel={conversation?.serverModel ?? null}
       userName={session?.user.name ?? ""}
     />
   );

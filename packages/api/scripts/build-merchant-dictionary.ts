@@ -102,10 +102,12 @@ const OUTPUT_PATH = path.resolve(
   import.meta.dirname,
   "../data/merchants.jsonl.gz"
 );
+
 const WIKIDATA_PATH = path.resolve(
   import.meta.dirname,
   "../data/wikidata-brands.json"
 );
+
 const PRIVATE_KEY_PATH = path.resolve(
   import.meta.dirname,
   "../data/dictionary.key"
@@ -121,6 +123,7 @@ const OSM_TAG_PATH_SEGMENTS = 3;
 const WWW_PREFIX = /^www\./u;
 const NON_SLUG_CHARACTERS = /[^a-z0-9]+/gu;
 const SLUG_EDGE_DASHES = /^-|-$/gu;
+
 const TRANSIENT_MESSAGE =
   /fetch|ECONNREFUSED|ETIMEDOUT|ENOTFOUND|AbortError|network/u;
 
@@ -212,6 +215,7 @@ const extractFromTarball = Effect.fnUntraced(function* extractFromTarball(
       const proc = Bun.spawn(["tar", "-xzf", tarPath, "-C", tmpDir], {
         stderr: "pipe",
       });
+
       const exitCode = await proc.exited;
 
       return { exitCode, stderr: await new Response(proc.stderr).text() };
@@ -563,6 +567,7 @@ const mergeWikidataBrands = (
     const statesCountries = Boolean(
       brand.countries && brand.countries.length > 0
     );
+
     const hasCommercialEvidence = domains.length > 0;
 
     if (existing) {
@@ -570,6 +575,7 @@ const mergeWikidataBrands = (
         existing.normalisedName,
         ...existing.aliases.map((alias) => alias.normalisedAlias),
       ]);
+
       const seenDomains = new Set(existing.domains);
 
       let enriched = false;
@@ -612,6 +618,7 @@ const mergeWikidataBrands = (
         osmTag: null,
         source: "wikidata",
       });
+
       byNorm[normalisedName] = merchants.length - 1;
       wikidataNew += 1;
     }
@@ -711,6 +718,7 @@ const mergeCuratedSupplement = (
         aliases,
         domains: mergedDomains,
       };
+
       curatedOverridden += 1;
     }
   }
@@ -743,6 +751,7 @@ const resolveCollisions = (candidates: DictionaryMerchant[]) => {
 
     if (rest.length === 0) {
       merchants.push(primary);
+
       continue;
     }
 
@@ -917,6 +926,7 @@ const buildMerchantDictionary = Effect.fnUntraced(
     for (const candidate of rawMerchants) {
       if (isEntirelyPlaceName(candidate.normalisedName)) {
         placeDropped += 1;
+
         continue;
       }
 
@@ -927,6 +937,7 @@ const buildMerchantDictionary = Effect.fnUntraced(
 
     const { merchants: nsiMerchants, mergedCount } =
       resolveCollisions(afterPass2);
+
     console.log(
       `Collision resolution: merged ${mergedCount} NSI rows (category-priority)`
     );
@@ -947,6 +958,7 @@ const buildMerchantDictionary = Effect.fnUntraced(
       nsiMerchants,
       wikidata.brands
     );
+
     console.log(
       `Curated supplement: ${curatedAdded} added, ${curatedOverridden} overrode NSI`
     );
@@ -1001,6 +1013,7 @@ const buildMerchantDictionary = Effect.fnUntraced(
     console.log(
       `Wikidata new:       ${wikidata.wikidataNew} (${wikidataCount} total)`
     );
+
     console.log(`Curated:            ${curatedCount}`);
     console.log(`Total merchants:    ${merchants.length}`);
     console.log(`Aliases kept:       ${totalAliases}`);
@@ -1008,6 +1021,7 @@ const buildMerchantDictionary = Effect.fnUntraced(
     console.log(
       `Country-scoped:     ${scopedCount} (${merchants.length - scopedCount} unscoped)`
     );
+
     console.log(`Raw JSONL bytes:    ${rawBytes.toLocaleString()}`);
     console.log(`Gzipped bytes:      ${gzippedBytes.toLocaleString()}`);
     console.log(`Output:             ${OUTPUT_PATH}`);
@@ -1021,7 +1035,7 @@ const abandonBuild = (
   Effect.sync(() => {
     if (isTransient(reason) && existsSync(OUTPUT_PATH)) {
       console.warn(
-        `⚠ Merchant dictionary build failed (transient) — keeping existing merchants.jsonl.gz. Error: ${noticeFor(reason)}`
+        `Merchant dictionary build failed (transient) — keeping existing merchants.jsonl.gz. Error: ${noticeFor(reason)}`
       );
 
       return;

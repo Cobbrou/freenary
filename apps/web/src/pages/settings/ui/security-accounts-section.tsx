@@ -118,15 +118,11 @@ const buildProviderRows = (
     providerId: provider.id,
   }));
 
-  const retiredButStillLinked = linkedOauth
-    .filter(
-      (account) =>
-        !offeredProviders.some((provider) => provider.id === account.providerId)
-    )
-    .map((account) => ({
-      ...toLinkedRow(account),
-      isRetiredButStillLinked: true,
-    }));
+  const retiredButStillLinked = linkedOauth.flatMap((account) =>
+    offeredProviders.some((provider) => provider.id === account.providerId)
+      ? []
+      : [{ ...toLinkedRow(account), isRetiredButStillLinked: true }]
+  );
 
   return [...offered, ...retiredButStillLinked];
 };
@@ -180,6 +176,7 @@ export const SecurityAccountsSection = ({
 }: SecurityAccountsSectionProps) => {
   const { connect, connectingProvider, disconnect, disconnectingId } =
     useLinkedAccountActions();
+
   const listRef = useRef<HTMLUListElement>(null);
   const hover = useFluidHover(listRef, { axis: "y", gapClick: false });
 

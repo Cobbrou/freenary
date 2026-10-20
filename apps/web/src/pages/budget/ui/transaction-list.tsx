@@ -103,12 +103,19 @@ export const TransactionList = ({
   range: TimeRange;
 }) => {
   const directionIntent = useHoverIntent(onDirectionIntent);
+
+  // SAFETY: TabItem values are constrained to the two directions
+  const handleDirectionChange = (value: string) =>
+    onDirectionChange(value as TransactionDirection);
+
   const outgoingLabel = m.budget_tab_outgoing({
     amount: formatCurrency(Math.abs(totals.outgoing), "EUR"),
   });
+
   const incomingLabel = m.budget_tab_incoming({
     amount: formatCurrency(totals.incoming, "EUR"),
   });
+
   const activeCount = activeFilterCount(filter, merchants, amount);
   const hasAmountBound = amount.min > 0 || amount.max > 0;
 
@@ -169,8 +176,7 @@ export const TransactionList = ({
 
       <Tabs
         value={direction}
-        // SAFETY: TabItem values are constrained to the two directions
-        onValueChange={(v) => onDirectionChange(v as TransactionDirection)}
+        onValueChange={handleDirectionChange}
         className="flex flex-1 flex-col"
       >
         <TabsList>

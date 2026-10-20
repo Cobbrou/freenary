@@ -157,6 +157,7 @@ const readPrediction = Effect.fnUntraced(function* readPrediction(
   const distribution = answer.probabilities;
   const sharpenable =
     settings.temperature !== NEUTRAL_TEMPERATURE && distribution !== undefined;
+
   const confidence = sharpenable
     ? concentration(
         Object.values(distribution),

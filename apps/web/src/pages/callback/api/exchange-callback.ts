@@ -37,10 +37,10 @@ const exchangeCallbackCode = (
     catch: (cause) => new BankCodeExchangeFailed({ cause, providerId }),
     try: () => client.bankConnection.exchangeCode({ params, providerId }),
   }).pipe(
-    Effect.map((result) => ({
-      accounts: result.accounts,
+    Effect.map((exchanged) => ({
+      accounts: exchanged.accounts,
       ok: true as const,
-      returnTo: result.returnTo,
+      returnTo: exchanged.returnTo,
     })),
     Effect.catchTag("BankCodeExchangeFailed", () =>
       Effect.succeed({

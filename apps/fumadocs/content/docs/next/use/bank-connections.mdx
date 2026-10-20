@@ -1,0 +1,119 @@
+---
+title: Bank connections
+description: Add a bank, know what arrives and when, sync it, remove it, and act on its error messages.
+icon: Landmark
+---
+
+A bank connection links Freenary to one bank. Your accounts and transactions arrive through it; you never type them in.
+
+You manage connections in Settings, under `Connections`. The same list appears in the first-sign-in steps.
+
+<Callout type="warn">
+
+If the list says `Bank linking is unavailable`, your instance has no bank provider yet. Ask your operator to set one up: see [Connect a bank](/docs/get-started/connect-a-bank).
+
+</Callout>
+
+## Add a bank
+
+<Steps>
+
+<Step>
+
+### Find your bank
+
+Open Settings, then `Connections`. Search for your bank and press `Connect` on its row. The list holds the banks of the countries you chose as your tax residency.
+
+</Step>
+
+<Step>
+
+### Approve access at your bank
+
+Your browser goes to your bank, or to the service that links it. Sign in there, pass your bank's usual security check, and choose the accounts to share.
+
+</Step>
+
+<Step>
+
+### Come back to Freenary
+
+Your bank sends you back to Settings. Freenary says how many accounts it connected, or `Bank connected` if your bank shared none.
+
+</Step>
+
+</Steps>
+
+If you cancel at your bank, Freenary says `Bank connection cancelled. Nothing was linked.` Press `Connect` again whenever you're ready.
+
+## What arrives, and when
+
+Right after you connect, the bank and its accounts are in the list, marked `Not synced yet`. No transaction has arrived yet.
+
+Transactions arrive with the first sync: open Budget, or press the re-sync button on the bank's row. The first sync reads the last **90 days**. Anything older on the day you connect never arrives.
+
+While a sync runs, Budget shows its progress and fills in as transactions arrive. Freenary then sorts them into categories; [Budget](/docs/use/budget#fix-a-category) shows how to fix the ones it gets wrong.
+
+## Sync
+
+A sync fetches transactions from your banks. Freenary has no nightly sync: it syncs only when one of these happens.
+
+| You | Freenary |
+| --- | --- |
+| Open Budget | Runs a quiet sync of every bank. It fetches what's new since the last sync and sorts only the new transactions. Moving between Transactions and Recurring doesn't start another one |
+| Press `Sync transactions` on Budget | Reads the last 90 days again from every bank, and sorts all your transactions into categories again |
+| Press the re-sync button on a bank's row in Settings | Does the same for that one bank |
+
+Sorting again keeps every category you fixed by hand.
+
+When some of a bank's accounts fail, its last sync date still moves forward. Press `Sync transactions` to fill the gap.
+
+One sync runs at a time. A sync you start while another is running does nothing, even when the bank's row then says it re-synced. Wait until Budget shows no sync in progress, then start it again.
+
+## Remove a bank
+
+1. In Settings, `Connections`, press `Disconnect` on the bank's row.
+2. Confirm with `Disconnect bank`.
+
+Freenary asks your bank to revoke its access, then deletes the connection with its accounts and transactions. Your plan, your custom categories and your company-wide category fixes stay.
+
+<Callout type="warn">
+
+If Freenary couldn't reach your bank, it says the bank was disconnected but access could not be revoked. Revoke it from your bank's own app or website.
+
+</Callout>
+
+To connect the same bank again later, press `Connect` on it. It's a new connection, so it reads the last 90 days again.
+
+## Error messages
+
+| You see | What to do |
+| --- | --- |
+| `Bank linking is unavailable` | Ask your operator to set up a bank provider |
+| `Could not check bank linking`, `Could not load banks` or `Could not load your banks` | Reload the page |
+| `Freenary could not load banks for` a country | Reload the page. If it stays, ask your operator |
+| `No banks match your search` | Search for a shorter part of the name |
+| `Could not connect to` your bank, `Try again later.` | Wait a few minutes, then press `Connect` again |
+| `Bank connection failed. You can try again.` or `The bank sent back an incomplete response.` | Press `Connect` again |
+| `Failed to sync transactions` | Press `Retry` on the message, or the re-sync button on the bank's row. If it keeps failing, see below |
+
+### A bank keeps failing to sync
+
+Bank consents expire. When yours runs out, or your bank wants you to confirm access again, every sync of that bank fails with `Failed to sync transactions`, and Freenary has no reconnect button. Instead:
+
+1. Press the re-sync button on the bank's row once more. A temporary failure often clears.
+2. If it still fails, [remove the bank](#remove-a-bank). Its accounts and transactions go with it.
+3. Press `Connect` on the same bank and approve access again.
+
+<Cards>
+  <Card
+    title="Budget"
+    href="/docs/use/budget"
+    description="Read and sort the transactions your connections bring in."
+  />
+  <Card
+    title="Your account"
+    href="/docs/use/account"
+    description="First steps, sign-in and account protection."
+  />
+</Cards>

@@ -30,6 +30,7 @@ export const parseAmountBound = (text: string, locale: string): number => {
     .replace(SPACING, "")
     .replaceAll(group ?? ",", "")
     .replaceAll(",", ".");
+
   const lastDot = withCommasAsDots.lastIndexOf(".");
   const onlyDecimalDotSurvives =
     lastDot === -1
@@ -56,6 +57,7 @@ export const toggleMerchant = (merchants: string[], value: string): string[] =>
   merchants.includes(value)
     ? merchants.filter((merchant) => merchant !== value)
     : [...merchants, value];
+
 export const activeFilterCount = (
   filter: CategoryFilter,
   merchants: string[],

@@ -45,6 +45,7 @@ export const BudgetingSection = ({
   const [lineIdAwaitingNewCategory, setLineIdAwaitingNewCategory] = useState<
     string | null
   >(null);
+
   const PlusIcon = useIcon("plus");
   const { control } = useSize();
 

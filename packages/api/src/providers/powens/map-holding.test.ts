@@ -61,6 +61,7 @@ describe("mapPowensInvestment", () => {
         2
       )
     ).toBeNull();
+
     expect(
       mapPowensInvestment({ id: 1, quantity: 1, valuation: null }, "EUR", 2)
     ).toBeNull();

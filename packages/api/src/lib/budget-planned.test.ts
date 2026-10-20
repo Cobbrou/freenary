@@ -30,9 +30,11 @@ describe("categoryOfCategoryRef", () => {
     expect(categoryOfCategoryRef(line(0, null, "income"))).toBe(
       CATEGORY_GROUP_FALLBACKS.income
     );
+
     expect(categoryOfCategoryRef(line(0, null, "investments"))).toBe(
       CATEGORY_GROUP_FALLBACKS.investments
     );
+
     expect(categoryOfCategoryRef(line(0, null, "spending"))).toBe(
       CATEGORY_GROUP_FALLBACKS.spending
     );
@@ -48,6 +50,7 @@ describe("categoryOfCategoryRef", () => {
     expect(categoryOfCategoryRef(line(0, null, null))).toBe(
       CATEGORY_GROUP_FALLBACKS.spending
     );
+
     expect(categoryOfCategoryRef(line(0, "not-a-category", "custom:abc"))).toBe(
       CATEGORY_GROUP_FALLBACKS.spending
     );
@@ -107,6 +110,7 @@ describe("monthSpan", () => {
     expect(
       monthSpan(new Date(2026, 8, 1), new Date(2026, 8, 30, 23, 59, 59, 999))
     ).toBe(1);
+
     expect(
       monthSpan(new Date(2026, 1, 1), new Date(2026, 1, 28, 23, 59, 59, 999))
     ).toBe(1);
@@ -116,6 +120,7 @@ describe("monthSpan", () => {
     expect(
       monthSpan(new Date(2026, 6, 1), new Date(2026, 8, 30, 23, 59, 59, 999))
     ).toBe(3);
+
     expect(
       monthSpan(new Date(2025, 9, 1), new Date(2026, 8, 30, 23, 59, 59, 999))
     ).toBe(12);

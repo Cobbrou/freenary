@@ -31,6 +31,7 @@ export const toCategorySections = (
 
     if (isPredefinedGroup) {
       sections.push({ heading: entry, items: [], key: entry.key });
+
       continue;
     }
 
@@ -49,6 +50,7 @@ export const toCategorySections = (
 
     if (parentSection) {
       parentSection.items.push(entry);
+
       continue;
     }
 

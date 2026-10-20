@@ -1,0 +1,86 @@
+---
+title: Build from source
+description: Build Freenary's two container images or run the server and web app directly.
+icon: Hammer
+---
+
+Build from source when you need a local patch, a forked image or a non-Docker deployment. Use the repository root as the build context.
+
+## Build the images
+
+`apps/server/Dockerfile` and `apps/web/Dockerfile` are multi-stage Bun images. Both install the workspace. The server image starts the API server; Compose reuses it for the one-shot `migrate` service with a different command.
+
+```bash
+docker build \
+  -f apps/server/Dockerfile \
+  --build-arg GITHUB_REPOSITORY=suiramdev/freenary \
+  -t freenary-server:local .
+
+docker build \
+  -f apps/web/Dockerfile \
+  --build-arg FREENARY_VERSION=main \
+  -t freenary-web:local .
+```
+
+The server build downloads the merchant dictionary from the newest `data-*` release. `GITHUB_REPOSITORY` selects the repository and defaults to `suiramdev/freenary`.
+
+An optional GitHub token raises the API rate limit. Pass it as a BuildKit secret, never as a build argument:
+
+```bash
+docker build \
+  -f apps/server/Dockerfile \
+  --secret id=GITHUB_TOKEN,env=GITHUB_TOKEN \
+  -t freenary-server:local .
+```
+
+The secret doesn't enter an image layer. If the release download fails, the build generates the dictionary from its upstream datasets.
+
+`FREENARY_VERSION` is compiled into the web image. A stable `X.Y.Z` value links to that documentation release; other values link to `next`.
+
+The repository `.dockerignore` excludes Git data, dependencies, build output, logs, compose files and every `.env` file except examples.
+
+Use the local server image for both `migrate` and `server`, and the local web image for `web`. Keep the runtime variables from the chosen compose file.
+
+A local build targets the Docker daemon's platform. Release CI builds `linux/amd64` and `linux/arm64` natively, then joins their digests. Use `docker buildx build --platform` when you need another platform or a multi-platform manifest.
+
+## Run without Docker
+
+You need PostgreSQL, Bun `1.3.14`, and Node `^20.19`, `^22.12` or `>=24.0`. Node runs Prisma's install check; the applications run on Bun.
+
+Create a PostgreSQL role and database that match `DATABASE_URL`. The migration creates tables, not the role or the database. Then create `apps/server/.env`:
+
+```dotenv
+DATABASE_URL=postgresql://freenary:password@127.0.0.1:5432/freenary
+BETTER_AUTH_SECRET=replace-with-at-least-32-characters
+BETTER_AUTH_URL=https://freenary.example.com
+CORS_ORIGIN=https://freenary.example.com
+NODE_ENV=production
+PORT=3000
+```
+
+Install, prepare the dictionary and database, then build both applications:
+
+```bash
+bun install
+bun run build:data
+(cd packages/db && bun run db:migrate:deploy)
+(cd apps/server && bun run build)
+(cd apps/web && bun run build)
+```
+
+Run the processes separately:
+
+```bash
+(cd apps/server && bun run start)
+
+(cd apps/web && \
+  HOST=127.0.0.1 \
+  PORT=3001 \
+  SERVER_URL=http://127.0.0.1:3000 \
+  PUBLIC_SERVER_URL=https://freenary.example.com \
+  bun .output/server/index.mjs)
+```
+
+Put HTTPS in front of port 3001 and keep port 3000 private. The web process forwards the API paths to `SERVER_URL`; see [Reverse proxy](/docs/reference/reverse-proxy).
+
+Supervise both processes. When `Finish setup` applies stored settings, the server exits with status 0 after 250 milliseconds. Configure the supervisor to restart after a successful exit, not only after a failure.

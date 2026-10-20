@@ -7,11 +7,11 @@ export interface AppendTurnOptions {
   replaceMessageIds: string[];
 }
 
+/* SAFETY: every part is a plain object of JSON values; nothing in the array
+   carries a class instance, a function or a Date. Mapping each part restates
+   the index signature `Prisma.InputJsonValue` wants, which the SDK's part
+   interfaces do not declare, without widening the array through `unknown`. */
 const asJson = (parts: UIMessage["parts"]): Prisma.InputJsonArray =>
-  /* SAFETY: every part is a plain object of JSON values; nothing in the array
-     carries a class instance, a function or a Date. Mapping each part restates
-     the index signature `Prisma.InputJsonValue` wants, which the SDK's part
-     interfaces do not declare, without widening the array through `unknown`. */
   parts.map((part) => part as Prisma.InputJsonObject);
 
 export const activeConversation = async (userId: string) => {
@@ -66,6 +66,7 @@ export const appendTurn = async (
       select: { ordinal: true },
       where: { conversationId },
     });
+
     const next = (last?.ordinal ?? -1) + 1;
 
     await tx.conversationMessage.createMany({

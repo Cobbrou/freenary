@@ -9,6 +9,7 @@ export const docsUrl = (): string => {
   const released = RELEASED_VERSION.exec(
     env.VITE_FREENARY_VERSION ?? ""
   )?.groups;
+
   const version = released
     ? `${released.major}.${released.minor}`
     : UNRELEASED_DOCS_VERSION;

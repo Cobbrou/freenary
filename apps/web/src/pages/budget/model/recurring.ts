@@ -3,7 +3,9 @@ import type { SpendingCategory } from "@freenary/api/lib/taxonomy";
 import type { Locale } from "@/paraglide/runtime.js";
 
 export type RecurrenceConfidence = (typeof RECURRENCE_CONFIDENCES)[number];
+
 export type RecurrenceFrequency = (typeof RECURRENCE_FREQUENCIES)[number];
+
 export type RecurrenceKind = (typeof RECURRENCE_KINDS)[number];
 
 export interface RecurringItem {
@@ -237,6 +239,7 @@ export const upcomingPayments = (
         kind: item.kind,
         label: merchantLabel(item),
       });
+
       when = addDays(when, cadenceDays);
       daysAway = dayDelta(asOf, when);
       emitted += 1;
@@ -246,9 +249,9 @@ export const upcomingPayments = (
   return payments.toSorted((a, b) => a.date.getTime() - b.date.getTime());
 };
 
-const spendDenominator = (data: RecurringData): SpendDenominator => {
-  const declaredPlan = data.plannedOutgoingMinor;
-  const observedIncome = data.monthlyIncomeMinor;
+const spendDenominator = (recurring: RecurringData): SpendDenominator => {
+  const declaredPlan = recurring.plannedOutgoingMinor;
+  const observedIncome = recurring.monthlyIncomeMinor;
 
   if (declaredPlan !== null && declaredPlan > 0) {
     return { denominatorKind: "plan", denominatorMinor: declaredPlan };
@@ -262,7 +265,7 @@ const spendDenominator = (data: RecurringData): SpendDenominator => {
 };
 
 export const recurringSummary = (
-  data: RecurringData,
+  recurring: RecurringData,
   asOf: Date
 ): RecurringSummary => {
   let monthlyMinor = 0;
@@ -270,7 +273,7 @@ export const recurringSummary = (
   let activeCount = 0;
   let behavioralCount = 0;
 
-  for (const item of data.items) {
+  for (const item of recurring.items) {
     if (item.kind === "fixed") {
       activeCount += 1;
       monthlyMinor += monthlyEquivalentMinor(item);
@@ -280,8 +283,8 @@ export const recurringSummary = (
     }
   }
 
-  const upcoming = upcomingPayments(data.items, asOf);
-  const { denominatorKind, denominatorMinor } = spendDenominator(data);
+  const upcoming = upcomingPayments(recurring.items, asOf);
+  const { denominatorKind, denominatorMinor } = spendDenominator(recurring);
 
   return {
     activeCount,
@@ -355,17 +358,17 @@ export const frequencyCostPoints = (items: RecurringItem[]): FrequencyRow[] =>
   items.map(frequencyRow);
 
 export const forecastSeries = (
-  data: RecurringData,
+  recurring: RecurringData,
   asOf: Date,
   horizonDays: number = FORECAST_HORIZON_DAYS
 ): ForecastPoint[] => {
-  if (data.availableBalanceMinor === null) {
+  if (recurring.availableBalanceMinor === null) {
     return [];
   }
 
   const dueByDay = new Map<number, { labels: string[]; minor: number }>();
 
-  for (const payment of upcomingPayments(data.items, asOf, horizonDays)) {
+  for (const payment of upcomingPayments(recurring.items, asOf, horizonDays)) {
     const day = dueByDay.get(payment.daysAway);
 
     if (day) {
@@ -381,7 +384,7 @@ export const forecastSeries = (
 
   const points: ForecastPoint[] = [];
   const start = startOfDay(asOf);
-  let balanceMinor = data.availableBalanceMinor;
+  let balanceMinor = recurring.availableBalanceMinor;
 
   for (let daysAway = 0; daysAway <= horizonDays; daysAway += 1) {
     const day = dueByDay.get(daysAway);
@@ -433,6 +436,7 @@ export const recurringSections = (
       .toSorted(
         (a, b) => monthlyEquivalentMinor(b) - monthlyEquivalentMinor(a)
       );
+
     let monthlyMinor = 0;
 
     for (const item of own) {
@@ -498,11 +502,11 @@ const dearestCommitment = (items: RecurringItem[]): RecurringItem | null => {
 };
 
 export const recurringInsights = (
-  data: RecurringData,
+  recurring: RecurringData,
   asOf: Date
 ): RecurringInsight[] => {
   const mostActionableFirst: RecurringInsight[] = [];
-  const summary = recurringSummary(data, asOf);
+  const summary = recurringSummary(recurring, asOf);
 
   if (summary.dueSoonCount > 0) {
     mostActionableFirst.push({
@@ -512,7 +516,7 @@ export const recurringInsights = (
     });
   }
 
-  const trend = recurringTrend(data.monthly);
+  const trend = recurringTrend(recurring.monthly);
 
   if (trend) {
     mostActionableFirst.push({ kind: "trend", trend });
@@ -526,7 +530,7 @@ export const recurringInsights = (
     });
   }
 
-  const dearest = dearestCommitment(data.items);
+  const dearest = dearestCommitment(recurring.items);
 
   if (dearest) {
     mostActionableFirst.push({

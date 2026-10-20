@@ -89,6 +89,7 @@ describe("resolveCustomCategoryParent", () => {
         parentKey: "custom:top",
       })
     ).toEqual({ parentId: "top", parentSlug: null });
+
     expect(
       parentOf({
         categoryId: null,
@@ -106,6 +107,7 @@ describe("resolveCustomCategoryParent", () => {
         parentKey: "custom:other",
       })
     ).toBe("would-nest-a-parent");
+
     expect(
       refusalOf({
         categoryId: "top",
@@ -173,6 +175,7 @@ describe("resolveCustomCategoryParent", () => {
         parentKey: "groceries",
       })
     ).toBe("not-a-category");
+
     expect(
       refusalOf({
         categoryId: "edited",

@@ -32,12 +32,20 @@ x-app-env-file: &app-env-file
 x-app-env: &app-env
   DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-password}@postgres:5432/${POSTGRES_DB:-freenary}
   BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:-dev_secret_change_me_at_least_32chars}
-  # OrbStack fronts *.orb.local with auto-HTTPS (trusted local CA); browsers land on
-  # https, so these origins must be https or the SPA's cross-origin calls fail CORS.
-  BETTER_AUTH_URL: https://${SERVER_HOST:-server.freenary.orb.local}
-  CORS_ORIGIN: https://${WEB_HOST:-web.freenary.orb.local}
+  # The shared devproxy Traefik serves every *.localhost name over plain HTTP.
+  # Browsers treat *.localhost as a secure context, and web and server share the
+  # parent domain in AUTH_COOKIE_DOMAIN, so a Lax cookie reaches both.
+  BETTER_AUTH_URL: http://${SERVER_HOST:-server.freenary.localhost}
+  CORS_ORIGIN: http://${WEB_HOST:-web.freenary.localhost}
   AUTH_COOKIE_DOMAIN: ${AUTH_COOKIE_DOMAIN:-}
   NODE_ENV: development
+
+# Joined by every service the browser reaches. `devproxy` is the network of the
+# shared Traefik that `scripts/dev.ts` starts or reuses; the stack's own
+# default network keeps postgres off it.
+x-proxied: &proxied
+  - default
+  - devproxy
 
 services:
   postgres:
@@ -80,11 +88,18 @@ services:
     env_file: *app-env-file
     environment:
       <<: *app-env
+    # Compose also registers `server` on devproxy, where every worktree's API
+    # answers to it. In-stack callers use this alias, which only the stack's
+    # own default network knows.
+    networks:
+      default:
+        aliases: [freenary-server]
+      devproxy: {}
     labels:
-      # OrbStack's built-in proxy serves this container at server.freenary.orb.local;
-      # ignored outside OrbStack.
-      - dev.orbstack.domains=${SERVER_HOST:-server.freenary.orb.local}
-      - dev.orbstack.http-port=3000
+      - traefik.enable=true
+      - traefik.http.routers.freenary-${FREENARY_SLUG:-dev}-server.rule=Host(`${SERVER_HOST:-server.freenary.localhost}`)
+      - traefik.http.routers.freenary-${FREENARY_SLUG:-dev}-server.entrypoints=web
+      - traefik.http.services.freenary-${FREENARY_SLUG:-dev}-server.loadbalancer.server.port=3000
     develop:
       watch: *app-watch
     depends_on:
@@ -99,13 +114,17 @@ services:
     working_dir: /app/apps/web
     command: bun run dev -- --host 0.0.0.0
     environment:
-      VITE_SERVER_URL: https://${SERVER_HOST:-server.freenary.orb.local}
+      VITE_SERVER_URL: http://${SERVER_HOST:-server.freenary.localhost}
       # What the web app's own server calls while rendering a page: the
-      # container network, since OrbStack's local CA is not trusted inside it.
-      SERVER_URL: ${SERVER_URL:-http://server:3000}
+      # container network, since `*.localhost` resolves to the container itself.
+      SERVER_URL: ${SERVER_URL:-http://freenary-server:3000}
+      DEV_PUBLIC_URL: http://${WEB_HOST:-web.freenary.localhost}
+    networks: *proxied
     labels:
-      - dev.orbstack.domains=${WEB_HOST:-web.freenary.orb.local}
-      - dev.orbstack.http-port=3001
+      - traefik.enable=true
+      - traefik.http.routers.freenary-${FREENARY_SLUG:-dev}-web.rule=Host(`${WEB_HOST:-web.freenary.localhost}`)
+      - traefik.http.routers.freenary-${FREENARY_SLUG:-dev}-web.entrypoints=web
+      - traefik.http.services.freenary-${FREENARY_SLUG:-dev}-web.loadbalancer.server.port=3001
     develop:
       watch: *app-watch
     depends_on:
@@ -118,12 +137,21 @@ services:
     command: bun run dev -- --host 0.0.0.0
     environment:
       DOCS_PORT: ${DOCS_PORT:-4000}
+      DEV_PUBLIC_URL: http://${DOCS_HOST:-docs.freenary.localhost}
+    networks: *proxied
     labels:
-      - dev.orbstack.domains=${DOCS_HOST:-docs.freenary.orb.local}
-      - dev.orbstack.http-port=4000
+      - traefik.enable=true
+      - traefik.http.routers.freenary-${FREENARY_SLUG:-dev}-docs.rule=Host(`${DOCS_HOST:-docs.freenary.localhost}`)
+      - traefik.http.routers.freenary-${FREENARY_SLUG:-dev}-docs.entrypoints=web
+      - traefik.http.services.freenary-${FREENARY_SLUG:-dev}-docs.loadbalancer.server.port=4000
     develop:
       watch: *app-watch
     restart: unless-stopped
 
 volumes:
   pgdata:
+
+networks:
+  devproxy:
+    name: devproxy
+    external: true

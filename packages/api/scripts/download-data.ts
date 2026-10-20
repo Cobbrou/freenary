@@ -199,6 +199,7 @@ const downloadLatestData = Effect.fnUntraced(function* downloadLatestData() {
     catch: unexpected,
     try: () => mkdir(DATA_DIR, { recursive: true }),
   });
+
   yield* extractIntoPackage(tarballBytes);
 
   if (!existsSync(EXPECTED_ARTIFACT)) {

@@ -157,7 +157,7 @@ export const serverEnvSchema = {
     .meta({
       example: "postgresql://postgres:password@localhost:5432/freenary",
       onError:
-        "An empty value stops the start. An unreachable host fails at the first query, not at boot, because the driver connects late. In the Docker stack Compose builds this value from `POSTGRES_PASSWORD`.",
+        "An empty value stops the start. An unreachable host stops it too, because the server reads the database at startup. In the Docker stack Compose builds this value from `POSTGRES_PASSWORD`.",
       productionRequired: true,
       secret: true,
       section: "database",
@@ -521,10 +521,11 @@ export const serverEnvSchema = {
     .string()
     .optional()
     .transform((value) =>
-      value
-        ?.split(",")
-        .map((entry) => entry.trim())
-        .filter((entry) => entry.length > 0)
+      value?.split(",").flatMap((entry) => {
+        const trimmed = entry.trim();
+
+        return trimmed.length > 0 ? [trimmed] : [];
+      })
     )
     .pipe(
       z

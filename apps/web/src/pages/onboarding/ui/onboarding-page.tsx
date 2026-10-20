@@ -12,6 +12,7 @@ const OnboardingContent = () => {
   const availability = useQuery(
     orpc.bankConnection.getProviderAvailability.queryOptions()
   );
+
   const hasBankStep = availability.data?.available ?? false;
 
   const wizard = useOnboardingWizard({ hasBankStep });

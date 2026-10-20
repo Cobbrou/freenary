@@ -15,6 +15,7 @@ const tool = (state: ToolUIPart["state"], id = "call_1"): ToolUIPart =>
   }) as ToolUIPart;
 
 const step: UIMessage["parts"][number] = { type: "step-start" };
+
 const text = (value: string): UIMessage["parts"][number] => ({
   text: value,
   type: "text",
@@ -41,9 +42,11 @@ describe("traceOf", () => {
       state: "done",
       text: "Two\n\nlookups.",
     });
+
     expect(trace.steps[1]?.answer).toEqual([
       { kind: "markdown", text: "Done." },
     ]);
+
     expect(trace.lookups).toBe(2);
     expect(trace.steps.map((entry) => entry.status)).toEqual([
       "complete",
@@ -108,6 +111,7 @@ describe("activityOf", () => {
         "streaming"
       )
     ).toEqual({ kind: "drawing" });
+
     expect(
       activityOf(traceOf([step, text("Sure.")], true), "streaming")
     ).toEqual({ kind: "writing" });

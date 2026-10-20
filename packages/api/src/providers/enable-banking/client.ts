@@ -1,9 +1,9 @@
 import { createSign } from "node:crypto";
 
-import { env } from "@freenary/env/server";
+import { settings } from "@freenary/instance-config";
 import { Data, Effect, Match, Option, Schema } from "effect";
 
-interface EnableBankingCredentials {
+export interface EnableBankingCredentials {
   appId: string;
   privateKey: string;
 }
@@ -41,25 +41,26 @@ export class EnableBankingRequestFailed extends Data.TaggedError(
   }
 }
 
-const API_ORIGIN = "https://api.enablebanking.com";
+export const ENABLE_BANKING_ORIGIN = "https://api.enablebanking.com";
 const JWT_AUDIENCE = "api.enablebanking.com";
 const JWT_ISSUER = "enablebanking.com";
 const JWT_LIFETIME_SECONDS = 3600;
 const MILLISECONDS_PER_SECOND = 1000;
-const LITERAL_NEWLINE_ESCAPE = "\\n";
+export const LITERAL_NEWLINE_ESCAPE = "\\n";
 const LONGEST_HISTORY_STRATEGY = "longest";
 const NOT_FOUND = 404;
 
-const base64url = (data: Buffer | string): string => {
-  const buf = Buffer.isBuffer(data) ? data : Buffer.from(data);
+const base64url = (payload: Buffer | string): string => {
+  const buf = Buffer.isBuffer(payload) ? payload : Buffer.from(payload);
 
   return buf.toString("base64url");
 };
 
-const createJwt = (appId: string, privateKey: string): string => {
+export const createJwt = (appId: string, privateKey: string): string => {
   const header = base64url(
     JSON.stringify({ alg: "RS256", kid: appId, typ: "JWT" })
   );
+
   const issuedAt = Math.floor(Date.now() / MILLISECONDS_PER_SECOND);
   const payload = base64url(
     JSON.stringify({
@@ -80,8 +81,8 @@ const createJwt = (appId: string, privateKey: string): string => {
 };
 
 const readCredentials = (): Option.Option<EnableBankingCredentials> => {
-  const appId = env.ENABLE_BANKING_APP_ID;
-  const rawKey = env.ENABLE_BANKING_PRIVATE_KEY;
+  const appId = settings.ENABLE_BANKING_APP_ID;
+  const rawKey = settings.ENABLE_BANKING_PRIVATE_KEY;
 
   return appId && rawKey
     ? Option.some({
@@ -124,7 +125,7 @@ const send = Effect.fnUntraced(function* send(
         reason: { detail: String(cause), kind: "unreachable" },
       }),
     try: (signal) =>
-      fetch(`${API_ORIGIN}${path}`, {
+      fetch(`${ENABLE_BANKING_ORIGIN}${path}`, {
         ...init,
         headers: {
           Authorization: `Bearer ${token}`,
@@ -335,5 +336,7 @@ export const fetchTransactionPages = Effect.fn(
 
 export type EBCreditorIdentification =
   typeof EBCreditorIdentificationSchema.Type;
+
 export type EBTransaction = typeof EBTransactionSchema.Type;
+
 export type EBCompletedConnection = typeof EBCompletedConnectionSchema.Type;

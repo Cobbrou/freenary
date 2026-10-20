@@ -1,0 +1,41 @@
+# The development reverse proxy. Development only: docker-compose.yml, the
+# self-hosting stack, never reads this file.
+#
+# ONE Traefik on host port 80 serves every development stack on the machine,
+# each worktree of Freenary and any other project that joins the `devproxy`
+# network. `scripts/dev.ts` starts this file only when no container already
+# publishes port 80 on that network; when one does, it reuses it, so a second
+# proxy never fights the first for the port.
+#
+# Routes are not configured here. Each stack declares its own with Traefik
+# labels, and the docker provider picks them up when a container starts.
+#
+# Stop it by hand when no stack needs it:
+#   docker compose -f docker-compose.proxy.yml down
+name: devproxy-freenary
+
+services:
+  traefik:
+    # v3.7 or newer: older Traefik negotiates Docker API 1.24, which Docker
+    # Engine 29 refuses, and every route then answers 404.
+    image: traefik:v3.7
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    command:
+      - --providers.docker=true
+      - --providers.docker.exposedByDefault=false
+      - --providers.docker.network=devproxy
+      - --entrypoints.web.address=:80
+      # The assistant streams its answer; no idle cut-off mid-stream.
+      - --entrypoints.web.transport.respondingTimeouts.idleTimeout=0
+      - --log.level=INFO
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - devproxy
+
+networks:
+  devproxy:
+    name: devproxy
+    external: true

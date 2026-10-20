@@ -41,6 +41,7 @@ export const useTwoFactorDisable = ({
       await queryClient.invalidateQueries({
         queryKey: AUTH_SESSIONS_QUERY_KEY,
       });
+
       onDone();
       toast.success(m.settings_2fa_disabled_toast());
     },

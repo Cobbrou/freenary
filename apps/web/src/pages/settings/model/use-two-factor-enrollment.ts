@@ -36,9 +36,10 @@ export const useTwoFactorEnrollment = ({
       setPasswordError(null);
 
       if (purpose === "regenerate") {
-        const { data, error } = await authClient.twoFactor.generateBackupCodes({
-          password: value.password,
-        });
+        const { data: generated, error } =
+          await authClient.twoFactor.generateBackupCodes({
+            password: value.password,
+          });
 
         if (error) {
           setPasswordError(twoFactorErrorMessage(error));
@@ -46,13 +47,13 @@ export const useTwoFactorEnrollment = ({
           return;
         }
 
-        setBackupCodes(data.backupCodes);
+        setBackupCodes(generated.backupCodes);
         setStage("codes");
 
         return;
       }
 
-      const { data, error } = await authClient.twoFactor.enable({
+      const { data: enrolment, error } = await authClient.twoFactor.enable({
         method: "totp",
         password: value.password,
       });
@@ -63,7 +64,7 @@ export const useTwoFactorEnrollment = ({
         return;
       }
 
-      const hasNothingToScan = data.method !== "totp";
+      const hasNothingToScan = enrolment.method !== "totp";
 
       if (hasNothingToScan) {
         setPasswordError(m.settings_2fa_error_generic());
@@ -71,8 +72,8 @@ export const useTwoFactorEnrollment = ({
         return;
       }
 
-      setTotpUri(data.totpURI);
-      setBackupCodes(data.backupCodes);
+      setTotpUri(enrolment.totpURI);
+      setBackupCodes(enrolment.backupCodes);
       setStage("scan");
     },
     validators: { onSubmit: securityPasswordSchema },
@@ -97,6 +98,7 @@ export const useTwoFactorEnrollment = ({
       await queryClient.invalidateQueries({
         queryKey: AUTH_SESSIONS_QUERY_KEY,
       });
+
       setStage("codes");
       toast.success(m.settings_2fa_enabled_toast());
     },

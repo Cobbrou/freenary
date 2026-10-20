@@ -101,6 +101,7 @@ export const RecurringTrendChart = ({
       { color: series.color, label: series.label() },
     ])
   );
+
   const locale = getLocale();
   const rows: TrendRow[] = monthly.map((month) => ({
     behavioralMinor: month.behavioralMinor,

@@ -37,6 +37,7 @@ export const splitAnswer = (text: string): AnswerSegment[] => {
           code: pending.join("\n"),
           kind: "chart",
         });
+
         pending.length = 0;
         fence = "none";
       } else {
@@ -59,6 +60,7 @@ export const splitAnswer = (text: string): AnswerSegment[] => {
     if (CHART_FENCE_OPEN.test(line)) {
       pushMarkdown(segments, pending);
       fence = "chart";
+
       continue;
     }
 

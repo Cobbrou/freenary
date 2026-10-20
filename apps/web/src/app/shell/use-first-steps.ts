@@ -15,11 +15,13 @@ export const useFirstSteps = (): FirstStepsState | null => {
       enabled: isSessionReadable,
     })
   );
+
   const profile = useQuery(
     orpc.settings.getBudgetProfile.queryOptions({
       enabled: isSessionReadable,
     })
   );
+
   const passkeys = authClient.useListPasskeys();
 
   const connectionCount = connections.data?.connections.length;

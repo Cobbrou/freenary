@@ -1,6 +1,6 @@
 # Web interface
 
-Durable facts that the code cannot carry in a name. Each bullet names the module it belongs to. Source: comments deleted when the `begone-slop/no-comments` rule was adopted.
+Durable facts that the code cannot carry in a name. Each bullet names the module it belongs to. Source: comments deleted when the `no-comments` rule was adopted.
 
 ## Components
 

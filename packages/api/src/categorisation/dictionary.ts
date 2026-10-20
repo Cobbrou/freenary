@@ -170,6 +170,7 @@ const widenTo = async (
     new Map(),
     widenedScope
   );
+
   state.loadedScope = widenedScope;
 };
 
@@ -202,6 +203,7 @@ export const loadDictionary = async (
     countries && countries.length > 0
       ? new Set(countries.map((country) => country.toUpperCase()))
       : EVERY_COUNTRY;
+
   const loaded = await ensureLoaded(wanted).then(Option.some, Option.none);
 
   if (Option.isNone(loaded)) {

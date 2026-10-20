@@ -163,6 +163,7 @@ export const buildVirtualItems = (
         total: 0,
         type: "header",
       };
+
       items.push(headerAwaitingItsTotal);
     }
 

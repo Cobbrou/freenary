@@ -50,6 +50,7 @@ export const TransactionsPage = () => {
         }
       : undefined,
   });
+
   const {
     aggregation,
     firstMonth,
@@ -63,6 +64,7 @@ export const TransactionsPage = () => {
     setRange: handleRangeChange,
     to,
   } = period;
+
   const [selectedTransactionId, setSelectedTransactionId] = useState<
     string | null
   >(null);
@@ -165,13 +167,16 @@ export const TransactionsPage = () => {
 
   const allTransactions =
     transactionsQuery.data?.pages.flatMap((p) => p.transactions) ?? [];
+
   const totals = transactionsQuery.data?.pages[0]?.totals ?? {
     incoming: 0,
     outgoing: 0,
   };
+
   const syncProgress = useSyncProgress();
   const hasNoHistoryYet =
     accountsQuery.isSuccess && accountsQuery.data.firstTransactionDate === null;
+
   const isAwaitingFirstData = syncProgress !== null && hasNoHistoryYet;
   const isFilling = (isLoading: boolean) => isLoading || isAwaitingFirstData;
   const selectedTransaction = selectedTransactionId

@@ -46,9 +46,11 @@ describe("createClassifierChain", () => {
     const [systemOne] = Result.getOrThrow(
       createClassifierChain({ fallback: unset, primary: decider })
     );
+
     const [llm] = Result.getOrThrow(
       createClassifierChain({ fallback: unset, primary: ollama })
     );
+
     const [zeroShot] = Result.getOrThrow(
       createClassifierChain({
         fallback: unset,

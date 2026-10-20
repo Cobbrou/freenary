@@ -3,7 +3,9 @@ import { useQuery } from "@tanstack/react-query";
 import { orpc } from "@/shared/api";
 
 export const useSyncProgress = () => {
-  const { data } = useQuery(orpc.budget.getSyncStatus.queryOptions());
+  const { data: syncStatus } = useQuery(
+    orpc.budget.getSyncStatus.queryOptions()
+  );
 
-  return data ?? null;
+  return syncStatus ?? null;
 };

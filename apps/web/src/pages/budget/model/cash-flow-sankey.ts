@@ -78,6 +78,7 @@ const incomeColorOfCounterpartyName = (name: string): CategoryColor => {
 
 const incomeNodeId = (name: string) => `${INCOME_PREFIX}${name}`;
 const groupNodeId = (group: CategoryGroup) => `${GROUP_PREFIX}${group}`;
+
 const categoryNodeId = (category: SpendingCategory) =>
   `${CATEGORY_PREFIX}${category}`;
 
@@ -122,6 +123,7 @@ export const toCashFlowSankey = ({
         label: categoryLabel(category.category),
         value: category.value,
       });
+
       groupToCategoryLinks.push({
         source: id,
         target: categoryNodeId(category.category),

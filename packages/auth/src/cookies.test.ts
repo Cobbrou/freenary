@@ -89,6 +89,7 @@ describe("resolveCookiePolicy", () => {
         webOrigin: "https://app.acme-prod.com",
       })
     ).toThrow(/is not a parent of both/u);
+
     expect(() =>
       resolveCookiePolicy({
         authUrl: "https://api.example.com",

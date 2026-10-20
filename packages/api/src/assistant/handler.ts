@@ -149,6 +149,7 @@ export const handleAssistantChat = async ({
     activeConversation(session.user.id),
     api.budget.getAccounts(),
   ]);
+
   const stored = await conversationMessages(conversation.id);
 
   /* SAFETY: `postedQuestion` was parsed as a user message carrying only text
@@ -158,8 +159,10 @@ export const handleAssistantChat = async ({
     stored,
     body.trigger === REGENERATE_TRIGGER ? body.messageId : undefined
   );
+
   const replayableHistory =
     replaceMessageIds.length > 0 ? stored.slice(0, -2) : stored;
+
   /* SAFETY: the stream route writes `UIMessage.parts` as produced, and the only
      other writer, `assistant.saveTurn`, admits parts through `answerPartSchema`
      in `routers/assistant.ts`: each a plain object whose `type` is a string,
@@ -172,11 +175,12 @@ export const handleAssistantChat = async ({
         role: row.role === "USER" ? "user" : "assistant",
       }) as UIMessage
   );
+
   const originalMessages = [...history, question];
 
   const ai = createAILogger(log);
 
-  const result = streamText({
+  const stream = streamText({
     abortSignal: request.signal,
     instructions: assistantSystemPrompt({
       firstTransactionDate: isoDay(accounts.firstTransactionDate),
@@ -194,7 +198,7 @@ export const handleAssistantChat = async ({
 
   const answerId = crypto.randomUUID();
 
-  return result.toUIMessageStreamResponse({
+  return stream.toUIMessageStreamResponse({
     generateMessageId: () => answerId,
     onFinish: ({ finishReason, isAborted, responseMessage }) => {
       const parts = answerableParts(responseMessage.parts);

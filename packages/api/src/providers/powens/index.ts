@@ -167,6 +167,7 @@ const fetchAccounts = Effect.fn("powens.fetchAccounts")(function* fetchAccounts(
     request.providerSessionId,
     CONNECTION_WITH_ACCOUNTS
   );
+
   const { state } = connection;
 
   if (state && Object.hasOwn(STATES_ONLY_THE_ACCOUNT_HOLDER_CAN_CLEAR, state)) {
@@ -175,9 +176,9 @@ const fetchAccounts = Effect.fn("powens.fetchAccounts")(function* fetchAccounts(
     });
   }
 
-  return (connection.accounts ?? [])
-    .filter((account) => !account.deleted)
-    .map(mapPowensAccount);
+  return (connection.accounts ?? []).flatMap((account) =>
+    account.deleted ? [] : [mapPowensAccount(account)]
+  );
 });
 
 const fetchHoldings = Effect.fn("powens.fetchHoldings")(function* fetchHoldings(
@@ -188,6 +189,7 @@ const fetchHoldings = Effect.fn("powens.fetchHoldings")(function* fetchHoldings(
     user.accessToken,
     request.providerAccountId
   );
+
   const held = yield* powensJson(
     "investments",
     PowensInvestmentsSchema,
@@ -209,6 +211,7 @@ const fetchTransactions = Effect.fn("powens.fetchTransactions")(
       user.accessToken,
       request.providerAccountId
     );
+
     const raw = yield* fetchTransactionPages(
       user.accessToken,
       request.providerAccountId,
@@ -234,13 +237,17 @@ const listInstitutions = Effect.fn("powens.listInstitutions")(
       () => new BankInstitutionsUnavailable({ country })
     );
 
-    return (listed.connectors ?? [])
-      .filter(offersBankData)
-      .map((connector) => ({
-        country,
-        id: connector.uuid,
-        name: connector.name ?? connector.uuid,
-      }));
+    return (listed.connectors ?? []).flatMap((connector) =>
+      offersBankData(connector)
+        ? [
+            {
+              country,
+              id: connector.uuid,
+              name: connector.name ?? connector.uuid,
+            },
+          ]
+        : []
+    );
   }
 );
 
@@ -254,6 +261,7 @@ const startConnection = Effect.fn("powens.startConnection")(
       "/auth/token/code?type=singleAccess",
       { token: user.accessToken }
     );
+
     const params = new URLSearchParams({
       client_id: clientId,
       code: single.code,

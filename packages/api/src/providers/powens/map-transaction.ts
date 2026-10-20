@@ -46,6 +46,7 @@ const mapCounterparty = (
     counterparty.account_scheme_name === IBAN_SCHEME
       ? (counterparty.account_identification ?? undefined)
       : undefined;
+
   const roleImpliedBySign = value < 0 ? "creditor" : "debtor";
   const role = counterparty.type ?? roleImpliedBySign;
 
@@ -106,10 +107,14 @@ export const mapPowensTransactions = (
   const mapped: ProviderTransaction[] = [];
 
   for (const transaction of transactions) {
-    const result = mapPowensTransaction(transaction, currency, precision);
+    const providerTransaction = mapPowensTransaction(
+      transaction,
+      currency,
+      precision
+    );
 
-    if (result) {
-      mapped.push(result);
+    if (providerTransaction) {
+      mapped.push(providerTransaction);
     }
   }
 

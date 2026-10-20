@@ -41,7 +41,9 @@ const month = (
   month: key,
 });
 
-const data = (overrides: Partial<RecurringData> = {}): RecurringData => ({
+const recurringData = (
+  overrides: Partial<RecurringData> = {}
+): RecurringData => ({
   asOf: "2026-09-08T10:00:00.000Z",
   availableBalanceMinor: null,
   currency: "EUR",
@@ -144,7 +146,7 @@ describe("recurringSummary", () => {
 
   it("totals commitments only, and counts patterns beside them", () => {
     const summary = recurringSummary(
-      data({
+      recurringData({
         items: [
           item({ typicalAmountMinor: 1000 }),
           item({ merchantKey: "rent", typicalAmountMinor: 90_000 }),
@@ -167,7 +169,7 @@ describe("recurringSummary", () => {
 
   it("prefers a declared plan over observed income as the denominator", () => {
     const withBoth = recurringSummary(
-      data({
+      recurringData({
         items: [item({ typicalAmountMinor: 50_000 })],
         monthlyIncomeMinor: 400_000,
         plannedOutgoingMinor: 200_000,
@@ -182,7 +184,7 @@ describe("recurringSummary", () => {
 
   it("falls back to observed income when no plan is declared", () => {
     const summary = recurringSummary(
-      data({ items: [item()], monthlyIncomeMinor: 400_000 }),
+      recurringData({ items: [item()], monthlyIncomeMinor: 400_000 }),
       asOf
     );
 
@@ -191,7 +193,11 @@ describe("recurringSummary", () => {
 
   it("reports no share at all rather than a share of zero", () => {
     const summary = recurringSummary(
-      data({ items: [item()], monthlyIncomeMinor: 0, plannedOutgoingMinor: 0 }),
+      recurringData({
+        items: [item()],
+        monthlyIncomeMinor: 0,
+        plannedOutgoingMinor: 0,
+      }),
       asOf
     );
 
@@ -202,7 +208,7 @@ describe("recurringSummary", () => {
 
   it("separates what falls due this week from the whole horizon", () => {
     const summary = recurringSummary(
-      data({
+      recurringData({
         items: [
           item({ nextExpected: new Date(2026, 8, 10).toISOString() }),
           item({
@@ -223,12 +229,14 @@ describe("forecastSeries", () => {
   const asOf = new Date(2026, 8, 8);
 
   it("has nothing to draw when no account reported a balance", () => {
-    expect(forecastSeries(data({ items: [item()] }), asOf)).toHaveLength(0);
+    expect(
+      forecastSeries(recurringData({ items: [item()] }), asOf)
+    ).toHaveLength(0);
   });
 
   it("walks the balance down as each payment lands", () => {
     const points = forecastSeries(
-      data({
+      recurringData({
         availableBalanceMinor: 100_000,
         items: [
           item({ nextExpected: new Date(2026, 8, 10).toISOString() }),
@@ -252,7 +260,7 @@ describe("forecastSeries", () => {
 
   it("goes negative rather than clamping, because that is the warning", () => {
     const points = forecastSeries(
-      data({
+      recurringData({
         availableBalanceMinor: 5000,
         items: [
           item({
@@ -274,6 +282,7 @@ describe("recurringTrend", () => {
     const flat = Array.from({ length: 6 }, (_, i) =>
       month(`2026-0${i + 1}`, 10_000)
     );
+
     const withPartial = [...flat, month("2026-07", 500)];
 
     expect(recurringTrend(withPartial)?.direction).toBe("flat");
@@ -319,6 +328,7 @@ describe("recurringTrend", () => {
       month("2026-01", 0),
       month("2026-02", 0),
     ];
+
     const monthly = [
       ...zeroFilledBeforeTheHistoryBegins,
       month("2026-03", 10_000),
@@ -364,7 +374,7 @@ describe("recurringInsights", () => {
 
   it("leads with what falls due this week", () => {
     const insights = recurringInsights(
-      data({
+      recurringData({
         items: [item({ nextExpected: new Date(2026, 8, 10).toISOString() })],
         plannedOutgoingMinor: 200_000,
       }),
@@ -376,7 +386,7 @@ describe("recurringInsights", () => {
 
   it("names the dearest commitment by its yearly cost", () => {
     const insights = recurringInsights(
-      data({
+      recurringData({
         items: [
           item({ merchantKey: "small", typicalAmountMinor: 1000 }),
           item({
@@ -397,6 +407,6 @@ describe("recurringInsights", () => {
   });
 
   it("says nothing it cannot measure", () => {
-    expect(recurringInsights(data(), asOf)).toEqual([]);
+    expect(recurringInsights(recurringData(), asOf)).toEqual([]);
   });
 });

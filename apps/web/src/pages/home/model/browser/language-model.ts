@@ -90,10 +90,12 @@ export class WebLlmLanguageModel implements LanguageModelV4 {
       string,
       { kind: "text" | "reasoning"; text: string }
     >();
+
     let finishReason: LanguageModelV4FinishReason = {
       raw: undefined,
       unified: "other",
     };
+
     let usage = UNREPORTED_USAGE;
     let warnings: SharedV4Warning[] = [];
 
@@ -154,6 +156,7 @@ export class WebLlmLanguageModel implements LanguageModelV4 {
   ): Promise<LanguageModelV4StreamResult> {
     const { abortSignal, maxOutputTokens, prompt, temperature, toolChoice } =
       options;
+
     const warnings: SharedV4Warning[] = [];
     const tools: LanguageModelV4FunctionTool[] = [];
 
@@ -209,6 +212,7 @@ export class WebLlmLanguageModel implements LanguageModelV4 {
               id: open.id,
               type: open.kind === "text" ? "text-end" : "reasoning-end",
             });
+
             open = null;
           }
         };
@@ -250,11 +254,13 @@ export class WebLlmLanguageModel implements LanguageModelV4 {
                 toolName: event.name,
                 type: "tool-input-start",
               });
+
               controller.enqueue({
                 delta: event.input,
                 id,
                 type: "tool-input-delta",
               });
+
               controller.enqueue({ id, type: "tool-input-end" });
               controller.enqueue({
                 input: event.input,

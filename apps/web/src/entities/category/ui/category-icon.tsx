@@ -86,6 +86,7 @@ export const CategoryIcon = ({
 }: CategoryAppearance & { className?: string }) => {
   const IconComponent =
     FILL_ICON_BY_NAME[icon] ?? FILL_ICON_BY_NAME.DotsThreeIcon;
+
   const bg = SWATCH_BY_COLOR[color] ?? SWATCH_BY_COLOR.grey;
 
   return (

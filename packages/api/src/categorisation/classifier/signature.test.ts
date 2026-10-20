@@ -82,12 +82,15 @@ describe("classificationSignature", () => {
     expect(
       classificationSignature(classifier, { ...payload, merchantKey: "lidl" })
     ).not.toBe(signature);
+
     expect(
       classificationSignature(classifier, { ...payload, country: "SE" })
     ).not.toBe(signature);
+
     expect(
       classificationSignature(classifier, { ...payload, direction: "credit" })
     ).not.toBe(signature);
+
     expect(
       classificationSignature(classifier, {
         ...payload,
@@ -105,6 +108,7 @@ describe("classificationSignature", () => {
         payload
       )
     ).not.toBe(signature);
+
     expect(
       classificationSignature(
         { model: "decider-0.8b", provider: "system-one" },
@@ -132,6 +136,7 @@ describe("payloadSignature", () => {
     expect(payloadSignature(payload)).not.toBe(
       classificationSignature(classifier, payload)
     );
+
     expect(payloadSignature(payload)).not.toBe(
       classificationSignature(
         { model: "decider-2b-v10", provider: "system-one" },
@@ -144,6 +149,7 @@ describe("payloadSignature", () => {
     expect(payloadSignature(payload)).not.toBe(
       payloadSignature({ ...payload, merchantKey: "monoprix" })
     );
+
     expect(payloadSignature(payload)).not.toBe(
       payloadSignature({ ...payload, direction: "credit" })
     );

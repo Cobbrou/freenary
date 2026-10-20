@@ -1,0 +1,314 @@
+---
+title: Configuration
+description: Every environment variable Freenary reads, where to set it, which values the setup screen owns, and what stops a start.
+icon: Cog
+---
+
+Each variable, its default, what it does, and what happens when it's missing or wrong.
+
+## Where a value goes
+
+| You run | Put variables in | Required |
+| --- | --- | --- |
+| `deploy/docker-compose.yml` (Dokploy) | The panel's environment, or a `.env` next to the file | `FREENARY_URL`, `POSTGRES_PASSWORD`, `BETTER_AUTH_SECRET` |
+| `deploy/coolify.yml` | The `server` service's `environment:` list ([below](#add-a-variable-on-coolify)) | Nothing: Coolify generates them |
+| Root `docker-compose.yml` | A `.env` next to the file, which must exist | `POSTGRES_PASSWORD`, `BETTER_AUTH_SECRET`, and in practice `BETTER_AUTH_URL` and `CORS_ORIGIN` |
+
+`FREENARY_URL`, or the domain of Coolify's `web` service, fills `BETTER_AUTH_URL`, `CORS_ORIGIN` and `PUBLIC_SERVER_URL` with one address.
+
+The `server` service reads every line of `.env`, but five keys the Compose file sets win: `DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `CORS_ORIGIN` and `NODE_ENV`. The `web` service reads no `.env` line.
+
+After an edit, run `docker compose up -d` or redeploy. A `restart` keeps the old values.
+
+## Add a variable on Coolify
+
+Coolify passes a container only the variables its Compose file names, and `deploy/coolify.yml` names none of the optional ones. Edit that file and add one line per variable to the `environment:` list of the `server` service:
+
+```yaml
+- AI_BASE_URL=${AI_BASE_URL}
+- AI_MODEL=${AI_MODEL}
+```
+
+Save, set each value in the resource's environment-variable settings, and redeploy.
+
+## A value in the environment wins
+
+The setup screen (`/setup`) can store 14 variables: `BANKING_PROVIDER`, `POWENS_DOMAIN`, `POWENS_CLIENT_ID`, `POWENS_CLIENT_SECRET`, `ENABLE_BANKING_APP_ID`, `ENABLE_BANKING_PRIVATE_KEY`, `EMAIL_PROVIDER`, `EMAIL_FROM`, `RESEND_API_KEY`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER` and `SMTP_PASSWORD`. Every other variable comes from the environment alone.
+
+For each of the 14, a non-empty value in the environment wins over the stored one. The screen shows that field read-only, tagged `Set by your server`, never shows a secret, and masks a text or URL value to its first and last four characters. To hand a field to the screen, delete it from the environment and run `docker compose up -d`.
+
+The server reads stored values at startup only; `Finish setup` restarts it when one isn't in use yet. If the stored values fail validation together with the environment, the server ignores them and runs on the environment alone.
+
+Stored values are encrypted with `BETTER_AUTH_SECRET`. [Security](/docs/reference/security) says what a new secret breaks.
+
+## Startup checks
+
+{/* env-sync:start count */}
+
+The API server checks its environment once, at startup. The schema is [`packages/env/src/schema.ts`](https://github.com/suiramdev/freenary/blob/main/packages/env/src/schema.ts). It declares 48 variables with Zod, and `packages/env/src/server.ts` hands them to `@t3-oss/env-core`. The reference below, and `.env.example`, are generated from that one file.
+
+{/* env-sync:end */}
+
+An empty value counts as unset. A bad value stops the server before it opens a port, printing `❌ Invalid environment variables:` and the variable's `path` and `message`.
+
+<Callout type="error">
+
+Never set `SKIP_ENV_VALIDATION` at runtime. Any non-empty value turns the whole schema off, and the server starts with a broken configuration.
+
+</Callout>
+
+## What stops a start
+
+| Variable | Refused by | Message |
+| --- | --- | --- |
+| `POSTGRES_PASSWORD` or `BETTER_AUTH_SECRET` unset | Compose | `Set POSTGRES_PASSWORD in .env`, or similar |
+| `FREENARY_URL` unset | `deploy/docker-compose.yml` | `Set FREENARY_URL to the public URL of the web app, …` |
+| Any value outside its format, enum or range, such as a `BETTER_AUTH_SECRET` under 32 characters | The schema | The invalid-environment report |
+| `BETTER_AUTH_SECRET`, `DATABASE_URL`, `BETTER_AUTH_URL` or `CORS_ORIGIN` unset in production | The schema | The invalid-environment report |
+| `EMAIL_PROVIDER` without its other values | The email registry | `EMAIL_PROVIDER=resend requires RESEND_API_KEY to be set.` |
+| `TRANSACTION_CLASSIFIER` without its URL or model | The classifier registry | `TRANSACTION_CLASSIFIER=<protocol> requires TRANSACTION_CLASSIFIER_MODEL to be set.` |
+| `AUTH_COOKIE_DOMAIN` wrong, or two hostnames over plain HTTP without it | The cookie policy | See [Two subdomains](/docs/reference/reverse-proxy#two-subdomains) |
+| `DATABASE_URL` unreachable, in production | The setup values loader | `The instance configuration could not be read: …` |
+
+## Core and secrets
+
+{/* env-sync:start core */}
+
+| Variable | Default | What it does | Absent or wrong |
+| --- | --- | --- | --- |
+| `BETTER_AUTH_SECRET` | `dev_secret_change_me_at_least_32chars` outside production, required in production | Signs session cookies, encrypts two-factor secrets and backup codes, and signs the bank connection state. | Under 32 characters stops the start. The development default applies outside production alone, so a production start with no value stops. |
+| `NODE_ENV` | `development` | Picks the runtime mode: `development`, `production` or `test`. | `production` drops the log file drain and turns the cookie warning into a refusal. `test` turns the sign-in rate limits off. Compose always sets `production`. |
+| `PORT` | `3000` | The port the API server listens on. It also fills the `BETTER_AUTH_URL` default. | A non-digit character stops the start. In the Docker stack it must stay `3000`, because the healthcheck fetches port 3000 inside the container. Never put it in the root `.env` file, which the `server` service loads whole. |
+
+{/* env-sync:end */}
+
+To change the host port, set `SERVER_PORT`, never `PORT`.
+
+## Public URLs and cookies
+
+{/* env-sync:start origins */}
+
+| Variable | Default | What it does | Absent or wrong |
+| --- | --- | --- | --- |
+| `AUTH_COOKIE_DOMAIN` | unset | The parent domain the API server and the web app share, for example `.example.com`. It keeps the session cookie at `SameSite=Lax` and adds `Domain`. | Three shapes stop the start: a trailing dot, a single label, and a domain that is not a parent of both hostnames. Unset with two hostnames drops the cookie to `SameSite=None`. |
+| `BETTER_AUTH_URL` | `http://localhost:3000` outside production, required in production | The public origin of the API server. It builds the sign-in callback URLs and decides the cookie `Secure` flag. | A value that is not a URL stops the start. A wrong origin breaks every sign-in callback. |
+| `CORS_ORIGIN` | `http://localhost:3001` outside production, required in production | The public origin of the web app. It sets the CORS allow-list, the passkey relying party and the cookie same-site test. | A wrong value makes the browser report a CORS failure, and it binds passkeys to the wrong relying party. |
+| `TRUSTED_PROXIES` | unset | The addresses or CIDR ranges of the proxies in front of the API server. Rate limits key on the caller address behind them. | A malformed entry stops the start. Unset behind a multi-hop proxy makes every caller share one rate-limit bucket. |
+
+{/* env-sync:end */}
+
+[Reverse proxy](/docs/reference/reverse-proxy) shows the values for one hostname and for two.
+
+## Database
+
+{/* env-sync:start database */}
+
+| Variable | Default | What it does | Absent or wrong |
+| --- | --- | --- | --- |
+| `DATABASE_URL` | `postgresql://postgres:password@localhost:5432/freenary` outside production, required in production | The PostgreSQL connection string the Prisma driver adapter opens. | An empty value stops the start. An unreachable host stops it too, because the server reads the database at startup. In the Docker stack Compose builds this value from `POSTGRES_PASSWORD`. |
+
+{/* env-sync:end */}
+
+## Email
+
+Usually set on the setup screen: see [Email](/docs/run/email).
+
+{/* env-sync:start email */}
+
+| Variable | Default | What it does | Absent or wrong |
+| --- | --- | --- | --- |
+| `EMAIL_FROM` | unset | The envelope sender, for example `Freenary <no-reply@example.com>`. | Both `resend` and `smtp` stop the start without it. |
+| `EMAIL_PROVIDER` | unset | Picks the email adapter. Unset means no email provider is connected. | Unset means no email at all: Freenary sends no one-time code and asks for no address confirmation. |
+| `RESEND_API_KEY` | unset | The Resend API key. | `resend` stops the start without it. |
+| `SMTP_HOST` | unset | The mail host. | `smtp` stops the start without it. |
+| `SMTP_PASSWORD` | unset | The SMTP password. | The adapter reads it only when `SMTP_USER` holds a value. |
+| `SMTP_PORT` | `465` with `SMTP_SECURE=true`, else `587` | The mail port. | A value above 65535 stops the start. |
+| `SMTP_SECURE` | `false` | `true` picks implicit TLS. `false` picks STARTTLS. | A value that is not a boolean string stops the start. |
+| `SMTP_USER` | unset | The SMTP user. | Unset means Freenary sends no SMTP credentials at all. |
+
+{/* env-sync:end */}
+
+## Sign-in
+
+See [Sign-in](/docs/run/sign-in) for redirect URLs.
+
+{/* env-sync:start sign-in */}
+
+| Variable | Default | What it does | Absent or wrong |
+| --- | --- | --- | --- |
+| `APPLE_APP_BUNDLE_IDENTIFIER` | unset | Sets the Apple identity-token audience. | Alone it does nothing, because it is a field of the Apple provider. |
+| `APPLE_CLIENT_ID` | unset | With `APPLE_CLIENT_SECRET`, it adds the Apple button. | Alone it adds nothing. |
+| `APPLE_CLIENT_SECRET` | unset | With `APPLE_CLIENT_ID`, it adds the Apple button. | Alone it adds nothing. |
+| `AUTH_PASSWORD_BREACH_CHECK` | `true` | `true` checks each new password against Have I Been Pwned. | `false` drops the check. A value that is not a boolean string stops the start. |
+| `GOOGLE_CLIENT_ID` | unset | With `GOOGLE_CLIENT_SECRET`, it adds the Google button. | Alone it adds nothing. |
+| `GOOGLE_CLIENT_SECRET` | unset | With `GOOGLE_CLIENT_ID`, it adds the Google button. | Alone it adds nothing. |
+| `OIDC_CLIENT_ID` | unset | With `OIDC_DISCOVERY_URL`, it adds the single sign-on button. | Alone it adds nothing. |
+| `OIDC_CLIENT_SECRET` | unset | The client secret. | Unset means a public client. |
+| `OIDC_DISCOVERY_URL` | unset | With `OIDC_CLIENT_ID`, it adds the single sign-on button. Point it at the `.well-known/openid-configuration` document. | A value that is not a URL stops the start. |
+| `OIDC_PROVIDER_NAME` | unset | The button label. | Unset shows a translated `single sign-on` label. |
+| `OIDC_SCOPES` | unset | Comma-separated extra scopes. Freenary always asks for `openid`, `email` and `profile`. | Unset asks for those three alone. |
+
+{/* env-sync:end */}
+
+## Bank providers
+
+Usually set on the setup screen: see [Bank providers](/docs/reference/bank-providers).
+
+{/* env-sync:start bank */}
+
+| Variable | Default | What it does | Absent or wrong |
+| --- | --- | --- | --- |
+| `BANKING_PROVIDER` | `powens` | Picks the provider a new bank connection uses: `powens` or `enable-banking`. | Any other value stops the start. |
+| `ENABLE_BANKING_APP_ID` | unset | The Enable Banking application identifier. | Enable Banking needs both of its values. |
+| `ENABLE_BANKING_PRIVATE_KEY` | unset | The Enable Banking PEM private key. | Enable Banking needs both of its values. |
+| `POWENS_CLIENT_ID` | unset | The Powens client identifier. | Powens needs all three of its values. |
+| `POWENS_CLIENT_SECRET` | unset | The Powens client secret. | Powens needs all three of its values. |
+| `POWENS_DOMAIN` | unset | The Powens domain, for example `acme-sandbox`. A value that ends with `.biapi.pro` also works. | Powens needs all three of its values. |
+
+{/* env-sync:end */}
+
+An incomplete set doesn't stop the start: Freenary reports no bank provider.
+
+## Assistant
+
+Freenary ships without a model. To give every user one, point the instance at an OpenAI-compatible chat-completions endpoint. Only the environment configures it, not the setup screen.
+
+{/* env-sync:start assistant */}
+
+| Variable | Default | What it does | Absent or wrong |
+| --- | --- | --- | --- |
+| `AI_API_KEY` | unset | The key for that endpoint. | Unset is valid, because a local endpoint needs no key. |
+| `AI_BASE_URL` | unset | The base URL of the chat-completions endpoint, with its version path. | A value that is not a URL stops the start. Unset means the instance reports no server model. |
+| `AI_MODEL` | unset | The model id as the endpoint names it. | It needs `AI_BASE_URL` too. With either one unset, the assistant route answers `503 unconfigured`. |
+
+{/* env-sync:end */}
+
+```dotenv
+AI_BASE_URL=https://openrouter.ai/api/v1
+AI_API_KEY=<your key>
+AI_MODEL=<model id>
+```
+
+On the same Docker network, use the model server's service name, such as `http://ollama:11434/v1`: `localhost` is the `server` container itself.
+
+Freenary posts to `<AI_BASE_URL>/chat/completions`. The model must support tool calling, because it's told to state only figures a tool returned.
+
+Each question sends that endpoint the data listed in [What data goes where](/docs/use/assistant#what-data-goes-where).
+
+## Categorisation
+
+{/* env-sync:start categorisation */}
+
+| Variable | Default | What it does | Absent or wrong |
+| --- | --- | --- | --- |
+| `DICTIONARY_PUBLIC_KEY` | unset | An Ed25519 public key in PEM form. A value turns signature checks of the merchant dictionary on. | Unset loads the dictionary with no check. A set key with no signature file makes the loader refuse the dictionary, and it warns `Dictionary signature missing:`. |
+| `TRANSACTION_CLASSIFIER` | unset | Names the protocol of the classifier asked first for a merchant no rule, no dictionary entry and no correction knows. `system-one` posts the TypeSafe `/v1/systemone` shape, which TypeSafe Jev, `Mapika/decider-2b` and Laya all answer. `llm` posts an OpenAI-compatible chat completion. `zero-shot` posts the Hugging Face zero-shot-classification shape. | Unset calls no model, and such a transaction stays uncategorised. Any other value stops the start. |
+| `TRANSACTION_CLASSIFIER_API_KEY` | unset | The key that endpoint expects, if it expects one. | Unset sends no authorisation header at all, which a local endpoint accepts. |
+| `TRANSACTION_CLASSIFIER_ESCALATE_BELOW` | `0.85` | The confidence under which the answer of the first classifier goes to `TRANSACTION_CLASSIFIER_FALLBACK`. The default is the confidence the pipeline needs to write a category without asking the reader. | A value outside 0 to 1 stops the start. At 0 the fallback answers abstentions alone. |
+| `TRANSACTION_CLASSIFIER_FALLBACK` | unset | Names the protocol of the classifier asked when the first one abstains or answers under `TRANSACTION_CLASSIFIER_ESCALATE_BELOW`. The higher-confidence answer of the two wins, and each is cached against its own model. | It needs `TRANSACTION_CLASSIFIER` too. The same protocol and the same model as the first slot stops the start, because both would share one cache row. |
+| `TRANSACTION_CLASSIFIER_FALLBACK_API_KEY` | unset | The key the fallback endpoint expects, if it expects one. | Unset sends no authorisation header at all. |
+| `TRANSACTION_CLASSIFIER_FALLBACK_MODEL` | unset | Names the model the fallback endpoint serves. It is part of the cache key, so a change asks every merchant again. | A named fallback with no model stops the start with `TRANSACTION_CLASSIFIER_FALLBACK=<protocol> requires TRANSACTION_CLASSIFIER_FALLBACK_MODEL to be set.` |
+| `TRANSACTION_CLASSIFIER_FALLBACK_TEMPERATURE` | `1` | Sharpens or flattens the answer distribution of the fallback before its confidence is measured. It follows the same rule as `TRANSACTION_CLASSIFIER_TEMPERATURE`. | A value that is not a positive number stops the start. A value above 1 lowers the confidence of an over-confident model. |
+| `TRANSACTION_CLASSIFIER_FALLBACK_URL` | unset | The URL of the fallback endpoint. The `llm` protocol appends `/chat/completions` to it, and the other two post to it as it is. | A value that is not a URL stops the start. A named fallback with no URL stops it too. |
+| `TRANSACTION_CLASSIFIER_MODEL` | unset | Names the model that endpoint serves. It is part of the cache key, so a change asks every merchant again. | A named classifier with no model stops the start with `TRANSACTION_CLASSIFIER=<protocol> requires TRANSACTION_CLASSIFIER_MODEL to be set.` |
+| `TRANSACTION_CLASSIFIER_TEMPERATURE` | `1` | Sharpens or flattens the answer distribution before the confidence is measured. At 1 a `system-one` endpoint keeps the statistic it reports, and the other two protocols still measure the distribution themselves. | A value that is not a positive number stops the start. Fit it on merchants your own readers corrected. |
+| `TRANSACTION_CLASSIFIER_URL` | unset | The URL of the endpoint the classifier asks. The `llm` protocol appends `/chat/completions` to it, and the other two post to it as it is. It reaches a server you run or one somebody else hosts. | A value that is not a URL stops the start. An `llm` endpoint that returns no `logprobs` leaves every answer a suggestion. |
+
+{/* env-sync:end */}
+
+<Callout type="warn">
+
+Leave `DICTIONARY_PUBLIC_KEY` unset unless you sign a dictionary yourself. The published merchant dictionary has no signature, so a set key makes the server refuse it and stop matching merchants, with no startup error.
+
+</Callout>
+
+## Read outside the schema
+
+The code reads these from `process.env` directly, so a typo raises no startup error.
+
+{/* env-sync:start raw */}
+
+| Variable | Read by | What it does |
+| --- | --- | --- |
+| `DEV_PUBLIC_URL` | the web and documentation dev servers | The address the web and documentation dev servers print in place of their container address. Compose sets it from `WEB_HOST` and `DOCS_HOST`. |
+| `PUBLIC_SERVER_URL` | the web app, per request | The API origin the web app hands to the browser in the root document. Compose sets it from `BETTER_AUTH_URL`. A value that is not an absolute URL throws `PUBLIC_SERVER_URL must be an absolute URL such as https://api.example.com, got "…"`. |
+| `SERVER_URL` | the web app, on the server side | The origin the web app itself calls while it renders a page. It wins over `PUBLIC_SERVER_URL` there. The web app also forwards the API paths it receives (`/api/auth`, `/rpc`, `/ai/chat` and `/api-reference`) to it, so one public origin can serve both apps. Compose sets `http://server:3000`. |
+| `SKIP_ENV_VALIDATION` | the API server | Any non-empty value turns the whole server schema off. The image sets it in the builder stage alone. |
+| `GITHUB_REPOSITORY` | the server image build and the triage scripts | Which repository the merchant data release comes from; the server image build defaults it to `suiramdev/freenary`. GitHub Actions sets it in the `Triage` and `Labels` workflows, and the triage scripts exit without it. |
+| `GITHUB_TOKEN` | the server image build and the triage scripts | It lifts the GitHub API rate limit of that download. The build reads it as a BuildKit secret, so the value never enters a layer. The triage scripts call the GitHub API with it to read items, their label history, comments and check runs, to add and remove labels, and to post, edit and delete the triage comment. `scripts/triage/calibrate.ts` reads items and label history with it locally. |
+| `OPENROUTER_API_KEY` | the documentation site | The OpenRouter key behind the `Ask AI` panel of the documentation site. That app carries no workspace dependency, so it declares no schema. |
+| `OPENROUTER_MODEL` | the documentation site | The model that panel asks. The site carries its own default, so the value is optional. |
+| `SUBQ_API_KEY` | the `Triage` workflow | The SubQ Decisions API key the `Triage` workflow labels issues and pull requests with. It is a repository secret; with none, the workflow labels nothing. |
+| `GITHUB_STEP_SUMMARY` | the `Triage` workflow | The file GitHub Actions renders as the run summary. The `Triage` workflow writes the labels it added and removed, and the answers behind them, there. |
+
+{/* env-sync:end */}
+
+The web app's client schema holds two more. The image build fixes their values:
+
+{/* env-sync:start client */}
+
+| Variable | Default | What it does |
+| --- | --- | --- |
+| `VITE_FREENARY_VERSION` | none | The release the account menu links to. `1.2.0` opens the `1.2` documentation; any other value, and an empty one, opens the `next` documentation. The Dockerfile fills it from the `FREENARY_VERSION` build argument. |
+| `VITE_SERVER_URL` | `http://localhost:3000` | The build-time fallback API origin. It applies only while `SERVER_URL` and `PUBLIC_SERVER_URL` are both unset. |
+
+{/* env-sync:end */}
+
+## Compose variables
+
+Only Compose reads these.
+
+{/* env-sync:start compose */}
+
+| Variable | Default | What it does | Absent or wrong |
+| --- | --- | --- | --- |
+| `POSTGRES_PASSWORD` | none | The database password. It fills both the container password and the `DATABASE_URL` of `migrate` and `server`. | Compose refuses an unset or empty value. |
+| `FREENARY_VERSION` | `latest` | The tag of both published images. | An unset value falls back to `latest`, the newest release. A value that names no tag fails the pull with `not found`. The tags are `X.Y.Z`, `X.Y`, `X`, `latest`, `main`, `dev` and `sha-<7 characters>`. |
+| `FREENARY_URL` | none | The public URL of the web app in `deploy/docker-compose.yml`, the stack for a hosting panel. It fills `BETTER_AUTH_URL`, `CORS_ORIGIN` and `PUBLIC_SERVER_URL`, so the API server shares the web app origin. | `deploy/docker-compose.yml` refuses an unset or empty value. A value that differs from the browser origin makes every sign-in fail. |
+| `SERVER_PORT` | `3000` | The host port of the API server. | — |
+| `WEB_PORT` | `3001` | The host port of the web app. | — |
+| `POSTGRES_PORT` | `5432` | The host port of PostgreSQL. Compose publishes `127.0.0.1:<POSTGRES_PORT>:5432`, so the loopback interface alone gets it. | — |
+
+{/* env-sync:end */}
+
+The development stack reads a few more, which the production files ignore:
+
+{/* env-sync:start compose-dev */}
+
+| Variable | Default | What it does |
+| --- | --- | --- |
+| `FREENARY_SLUG` | the git branch, else the directory name, else `dev` | Names the Compose project and every hostname of one worktree stack. It reaches Compose through the `-p` flag. |
+| `SERVER_HOST` | `server.<slug>.freenary.localhost` | The API server hostname. It fills `BETTER_AUTH_URL`. |
+| `WEB_HOST` | `web.<slug>.freenary.localhost` | The web app hostname. It fills `CORS_ORIGIN`. |
+| `DOCS_HOST` | `docs.<slug>.freenary.localhost` | The documentation hostname, in the Traefik route alone. |
+| `MAIL_HOST` | `mail.<slug>.freenary.localhost` | The Mailpit inbox hostname, in the Traefik route alone. It applies to `bun run dev:mail`. |
+| `DOCS_PORT` | `4000` | The documentation port inside its own container. |
+
+{/* env-sync:end */}
+
+These appear in templates but do nothing in production:
+
+{/* env-sync:start inert */}
+
+| Variable | Why it does nothing |
+| --- | --- |
+| `POSTGRES_DB` | The production compose file hard-codes the database name `freenary`. The development stack does read the variable. |
+| `POSTGRES_USER` | The production compose file hard-codes the user `postgres`. The development stack does read the variable. |
+
+{/* env-sync:end */}
+
+<Cards>
+
+<Card
+  title="Reverse proxy"
+  href="/docs/reference/reverse-proxy"
+  description="One hostname or two, and trusted proxies."
+/>
+
+<Card
+  title="Security"
+  href="/docs/reference/security"
+  description="Secrets and what leaves the instance."
+/>
+
+</Cards>

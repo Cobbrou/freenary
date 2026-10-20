@@ -1,0 +1,107 @@
+---
+title: Security
+description: Network exposure, secret rotation, access boundaries, and every path that sends data outside your instance.
+icon: ShieldCheck
+---
+
+Use these boundaries to deploy Freenary safely. Start with HTTPS, private database access, and a secret you can restore with the database.
+
+## Network edge
+
+The root `docker-compose.yml` publishes the API on port 3000 and the web app on 3001, on every host interface by default. PostgreSQL binds to `127.0.0.1` only.
+
+The panel-oriented `deploy/docker-compose.yml` publishes no host ports. Its proxy routes one hostname to the web container on port 3001.
+
+If a proxy runs on the host with the root compose file, bind the public services to loopback:
+
+```dotenv
+SERVER_PORT=127.0.0.1:3000
+WEB_PORT=127.0.0.1:3001
+```
+
+Don't publish PostgreSQL publicly. Docker-published ports can bypass host firewall rules, so verify the listening addresses after deployment changes.
+
+The server and web images declare no non-root user, so their application processes run as root inside each container. Add no host mounts, Docker socket or capabilities.
+
+Session cookies are always `HttpOnly`. They get `Secure` only when `BETTER_AUTH_URL` starts with `https://`; TLS at the proxy doesn't change a value left as `http://`.
+
+Cookie scope, one-hostname and two-subdomain setups are in [Reverse proxy](/docs/reference/reverse-proxy). Set [trusted proxies](/docs/reference/reverse-proxy#trusted-proxies) so rate limits see each caller instead of one shared address.
+
+## Secrets and sealing
+
+`BETTER_AUTH_SECRET` must have at least 32 characters. It protects:
+
+- session and trusted-device cookie signatures;
+- authenticator secrets and two-factor backup codes;
+- bank-link state against tampering;
+- bank and email values saved on the setup screen.
+
+Setup values use authenticated encryption with a key derived from this secret. Environment values are never sealed and win over stored values.
+
+Passwords and emailed one-time codes are hashed. Keep `BETTER_AUTH_SECRET`, credentials, `.env` files and database dumps together: a dump alone can't recover sealed setup values.
+
+## What a rotation costs
+
+Changing `BETTER_AUTH_SECRET` signs everyone out. Trusted-device cookies stop working, bank-link state fails verification, and stored authenticator secrets and backup codes no longer decrypt.
+
+Restore the old secret when possible. Otherwise, a user with a passkey or linked provider can sign in, disable two-factor with their password, then enrol again.
+
+With no alternate sign-in, the operator must clear that user's two-factor flag and row in PostgreSQL. The user then signs in by password and enrols again.
+
+Every setup value sealed under the old secret is skipped, with one warning per value in the server log. Environment values keep working. [Troubleshooting](/docs/run/troubleshooting#bank-and-email-stopped-working-after-a-restore) shows the warning and how to recover.
+
+## Operator boundary
+
+The first account to create a session wins the operator claim. No later sign-in changes it.
+
+The operator can inspect, test, save and finish instance setup. The role grants no access to another user's finances or conversations. Freenary has no in-app role transfer.
+
+If the wrong account won, follow [The wrong account became the operator](/docs/run/troubleshooting#the-wrong-account-became-the-operator). Treat an unknown operator as a compromised installation.
+
+## Sign-in protections
+
+Freenary supports password checks, database-backed rate limits, two-factor authentication, trusted devices, passkeys and recent-session checks.
+
+The [leaked-password check](/docs/run/sign-in#leaked-password-check) contacts Have I Been Pwned and fails closed.
+
+[Sign-in](/docs/run/sign-in) gives the password limits, session lifetime, lockout figures, verification-code limits and provider behaviour.
+
+## Data
+
+Accounts, transactions, plans, conversations and credentials live in PostgreSQL. Production writes no application data to the container filesystem.
+
+Data leaves the instance through these paths:
+
+- **Bank providers** receive connection and sync requests. A database reader gets a usable Powens user token. Enable Banking stores no per-user token; requests need the application's private key.
+- **The assistant endpoint** receives the question, conversation context and requested finance data. This can include account and bank names, transactions, counterparties, categories and aggregates, but not IBANs or balances.
+- **Classifier endpoints** receive merchant descriptors, counterparties, country, currency, direction, channel, merchant category, a coarse amount bucket and routing fields. They don't receive exact amounts, dates, IBANs or accounts.
+- **Email and sign-in providers** receive the addresses, codes and provider requests their feature needs.
+- **The breach check** receives the five-character hash prefix described above.
+
+A device model downloads into the user's browser. Finance data stays there, while the conversation is saved on the instance.
+
+The server-image build downloads its merchant dictionary from this repository's GitHub releases. Its fallback contacts GeoNames, Wikidata and npm. It sends no user data, and the running image reads the file locally.
+
+`/api-reference` is a live OpenAPI endpoint. It and `/rpc` reach the same handlers with the same session and role checks. See [API](/docs/reference/api) before automating either path.
+
+<Cards>
+
+<Card
+  title="Sign-in"
+  href="/docs/run/sign-in"
+  description="Passwords, sessions, two-factor authentication and providers."
+/>
+
+<Card
+  title="Reverse proxy"
+  href="/docs/reference/reverse-proxy"
+  description="TLS, cookie scope and trusted proxy configuration."
+/>
+
+<Card
+  title="Updates and backups"
+  href="/docs/run/updates-and-backups"
+  description="Protect and restore the database and its matching secret."
+/>
+
+</Cards>

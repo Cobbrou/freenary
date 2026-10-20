@@ -198,6 +198,7 @@ describe("createLlmClassifier", () => {
     expect(calls[0]?.body.top_logprobs).toBe(
       offeredCategories("credit").length
     );
+
     expect(calls[0]?.body.messages?.[0]?.content).toContain("(A) salary");
     expect(calls[0]?.body.messages?.[0]?.content).not.toContain("groceries");
     expect(prediction?.category).toBe("salary");
@@ -304,10 +305,12 @@ describe("createLlmClassifier", () => {
       { logprob: -8, token: " G" },
       { logprob: -9, token: " E" },
     ];
+
     const neutral = await createLlmClassifier(
       settings,
       answering(completion(distribution, "H"))
     ).classify(payload);
+
     const flattened = await createLlmClassifier(
       { ...settings, temperature: 4 },
       answering(completion(distribution, "H"))

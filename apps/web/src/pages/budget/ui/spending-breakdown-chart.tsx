@@ -35,10 +35,12 @@ interface SpendingBreakdownChartProps {
 
 const UNSELECTED_OPACITY = 0.3;
 
-const buildConfigKeyedByCategorySlug = (data: CategoryData[]): ChartConfig => {
+const buildConfigKeyedByCategorySlug = (
+  categories: CategoryData[]
+): ChartConfig => {
   const config: ChartConfig = {};
 
-  for (const entry of data) {
+  for (const entry of categories) {
     config[entry.category] = {
       color: categoryChartColor(entry.category),
       label: categoryLabel(entry.category),
@@ -134,16 +136,17 @@ const LegendChip = ({
 };
 
 export const SpendingBreakdownChart = ({
-  data,
+  data: categories,
   onSelect,
 }: SpendingBreakdownChartProps) => {
-  const config = buildConfigKeyedByCategorySlug(data);
+  const config = buildConfigKeyedByCategorySlug(categories);
   const [selectedCategory, setSelectedCategory] =
     useState<SpendingCategory | null>(null);
+
   const legendRef = useRef<HTMLUListElement>(null);
   const legendHover = useFluidHover(legendRef, { axis: "xy" });
 
-  const total = data.reduce((sum, entry) => sum + entry.amount, 0);
+  const total = categories.reduce((sum, entry) => sum + entry.amount, 0);
 
   const toggleCategory = useCallback(
     (category: SpendingCategory) => {
@@ -156,16 +159,16 @@ export const SpendingBreakdownChart = ({
 
   const selectSlice = useCallback(
     (_sector: PieSectorDataItem, index: number) => {
-      const entry = data[index];
+      const entry = categories[index];
 
       if (entry) {
         toggleCategory(entry.category);
       }
     },
-    [data, toggleCategory]
+    [categories, toggleCategory]
   );
 
-  if (data.length === 0) {
+  if (categories.length === 0) {
     return (
       <p className="text-muted-foreground flex h-full items-center justify-center px-4 text-center text-xs">
         {m.budget_breakdown_empty()}
@@ -184,7 +187,7 @@ export const SpendingBreakdownChart = ({
             content={<SpendingBreakdownTooltip config={config} total={total} />}
           />
           <Pie
-            data={data}
+            data={categories}
             isAnimationActive={false}
             dataKey="amount"
             nameKey="category"
@@ -193,7 +196,7 @@ export const SpendingBreakdownChart = ({
             className={onSelect ? "cursor-pointer" : undefined}
             onClick={onSelect ? selectSlice : undefined}
           >
-            {data.map((entry) => (
+            {categories.map((entry) => (
               <Cell
                 key={entry.category}
                 fill={config[entry.category]?.color}
@@ -219,7 +222,7 @@ export const SpendingBreakdownChart = ({
             hidden={!onSelect}
             hover={legendHover}
           />
-          {data.map((d, index) => (
+          {categories.map((d, index) => (
             <LegendChip
               amount={d.amount}
               color={config[d.category]?.color}

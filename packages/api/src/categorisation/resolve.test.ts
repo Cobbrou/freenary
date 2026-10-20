@@ -45,80 +45,80 @@ const baseInput: CategoriseInput = {
 describe("categoriseTransaction", () => {
   describe("channel short-circuit", () => {
     it("returns cash-withdrawal for ATM channel", async () => {
-      const result = await categoriseTransaction({
+      const categorised = await categoriseTransaction({
         ...baseInput,
         channel: "atm",
       });
 
-      expect(result.stage).toBe("channel");
-      expect(result.category).toBe("cash-withdrawal");
-      expect(result.band).toBe("auto");
-      expect(result.confidence).toBe(0.9);
+      expect(categorised.stage).toBe("channel");
+      expect(categorised.category).toBe("cash-withdrawal");
+      expect(categorised.band).toBe("auto");
+      expect(categorised.confidence).toBe(0.9);
     });
 
     it("returns loans-bank-fees for fee channel", async () => {
-      const result = await categoriseTransaction({
+      const categorised = await categoriseTransaction({
         ...baseInput,
         channel: "fee",
       });
 
-      expect(result.stage).toBe("channel");
-      expect(result.category).toBe("loans-bank-fees");
+      expect(categorised.stage).toBe("channel");
+      expect(categorised.category).toBe("loans-bank-fees");
     });
 
     it("returns uncategorised for cheque channel", async () => {
-      const result = await categoriseTransaction({
+      const categorised = await categoriseTransaction({
         ...baseInput,
         channel: "cheque",
       });
 
-      expect(result.stage).toBe("channel");
-      expect(result.category).toBe("uncategorised");
+      expect(categorised.stage).toBe("channel");
+      expect(categorised.category).toBe("uncategorised");
     });
   });
 
   describe("empty merchant key", () => {
     it("returns unknown when nothing else carries a signal", async () => {
-      const result = await categoriseTransaction({
+      const categorised = await categoriseTransaction({
         ...baseInput,
         merchantKey: "",
         normalisedDescriptor: "unknown merchant xyz abc",
       });
 
-      expect(result.stage).toBe("none");
-      expect(result.band).toBe("unknown");
-      expect(result.category).toBeNull();
+      expect(categorised.stage).toBe("none");
+      expect(categorised.band).toBe("unknown");
+      expect(categorised.category).toBeNull();
     });
 
     it("still runs the deterministic layer without a merchant key", async () => {
-      const result = await categoriseTransaction({
+      const categorised = await categoriseTransaction({
         ...baseInput,
         merchantCategoryCode: "5411",
         merchantKey: "",
         normalisedDescriptor: "",
       });
 
-      expect(result.stage).toBe("mcc");
-      expect(result.category).toBe("groceries");
+      expect(categorised.stage).toBe("mcc");
+      expect(categorised.category).toBe("groceries");
     });
   });
 
   describe("deterministic layer", () => {
     it("uses MCC when no earlier stage matches", async () => {
-      const result = await categoriseTransaction({
+      const categorised = await categoriseTransaction({
         ...baseInput,
         merchantCategoryCode: "5411",
         merchantKey: "unknown-merchant-xyz-abc",
         normalisedDescriptor: "unknown-merchant-xyz-abc",
       });
 
-      expect(result.stage).toBe("mcc");
-      expect(result.category).toBe("groceries");
-      expect(result.band).toBe("auto");
+      expect(categorised.stage).toBe("mcc");
+      expect(categorised.category).toBe("groceries");
+      expect(categorised.band).toBe("auto");
     });
 
     it("uses this country's rules when no code is reported", async () => {
-      const result = await categoriseTransaction({
+      const categorised = await categoriseTransaction({
         ...baseInput,
         bankTransactionCode: "PRLV LOYER",
         country: "FR",
@@ -126,9 +126,9 @@ describe("categoriseTransaction", () => {
         normalisedDescriptor: "unknown-merchant-xyz-abc",
       });
 
-      expect(result.stage).toBe("rules");
-      expect(result.category).toBe("rent-mortgage");
-      expect(result.band).toBe("auto");
+      expect(categorised.stage).toBe("rules");
+      expect(categorised.category).toBe("rent-mortgage");
+      expect(categorised.band).toBe("auto");
     });
 
     it("uses transport-travel across the issuer-assigned 3000-3999 range", async () => {
@@ -143,9 +143,9 @@ describe("categoriseTransaction", () => {
         )
       );
 
-      for (const result of results) {
-        expect(result.stage).toBe("mcc");
-        expect(result.category).toBe("transport-travel");
+      for (const categorised of results) {
+        expect(categorised.stage).toBe("mcc");
+        expect(categorised.category).toBe("transport-travel");
       }
     });
   });
@@ -153,27 +153,27 @@ describe("categoriseTransaction", () => {
   describe("error resilience", () => {
     it("never throws, returns unknown on error", async () => {
       // SAFETY: deliberately passing empty object to test error resilience
-      const result = await categoriseTransaction({} as CategoriseInput);
+      const categorised = await categoriseTransaction({} as CategoriseInput);
 
-      expect(result.band).toBe("unknown");
-      expect(result.stage).toBe("none");
+      expect(categorised.band).toBe("unknown");
+      expect(categorised.stage).toBe("none");
     });
   });
 
   describe("direction invariant", () => {
     it("refuses an outgoing-only dictionary hit on a credit", async () => {
-      const result = await categoriseTransaction({
+      const categorised = await categoriseTransaction({
         ...baseInput,
         amountMinor: 4200,
       });
 
-      expect(result.category).toBeNull();
+      expect(categorised.category).toBeNull();
     });
 
     it("keeps that same merchant on a debit", async () => {
-      const result = await categoriseTransaction(baseInput);
+      const categorised = await categoriseTransaction(baseInput);
 
-      expect(result).toMatchObject({
+      expect(categorised).toMatchObject({
         category: "groceries",
         stage: "dictionary",
       });
@@ -243,6 +243,7 @@ describe("categoriseBatch", () => {
     const classifier = scriptedClassifier(() =>
       Promise.resolve({ category: "groceries", confidence: 0.9 })
     );
+
     const store = memoryStore();
 
     const results = await categoriseBatch(
@@ -253,7 +254,11 @@ describe("categoriseBatch", () => {
       { classifiers: [classifier], countries: undefined, store }
     );
 
-    expect(results.map((result) => result.stage)).toEqual(["mcc", "channel"]);
+    expect(results.map((categorised) => categorised.stage)).toEqual([
+      "mcc",
+      "channel",
+    ]);
+
     expect(classifier.calls).toBe(0);
     expect(store.rows.size).toBe(0);
   });
@@ -261,14 +266,14 @@ describe("categoriseBatch", () => {
   it("leaves a merchant unresolved when no classifier is configured", async () => {
     const store = memoryStore();
 
-    const [result] = await categoriseBatch([unresolved], {
+    const [categorised] = await categoriseBatch([unresolved], {
       classifiers: [],
       countries: undefined,
       store,
     });
 
-    expect(result?.stage).toBe("none");
-    expect(result?.category).toBeNull();
+    expect(categorised?.stage).toBe("none");
+    expect(categorised?.category).toBeNull();
     expect(store.rows.size).toBe(0);
   });
 
@@ -280,20 +285,22 @@ describe("categoriseBatch", () => {
         confidence: 0.9,
       })
     );
+
     const store = memoryStore();
 
-    const [result] = await categoriseBatch([unresolved], {
+    const [categorised] = await categoriseBatch([unresolved], {
       classifiers: [classifier],
       countries: undefined,
       store,
     });
 
-    expect(result).toMatchObject({
+    expect(categorised).toMatchObject({
       band: "auto",
       category: "groceries",
       confidence: 0.9,
       stage: "model",
     });
+
     expect([...store.rows.values()]).toEqual([
       {
         answeredBy: "test-model-1",
@@ -308,14 +315,15 @@ describe("categoriseBatch", () => {
     const classifier = scriptedClassifier(() =>
       Promise.resolve({ category: "groceries" as const, confidence: 0.9 })
     );
+
     const store = memoryStore();
 
-    const [result] = await categoriseBatch(
+    const [categorised] = await categoriseBatch(
       [{ ...unresolved, amountMinor: 4200 }],
       { classifiers: [classifier], countries: undefined, store }
     );
 
-    expect(result?.category).toBeNull();
+    expect(categorised?.category).toBeNull();
     expect(store.rows.size).toBe(0);
   });
 
@@ -323,20 +331,22 @@ describe("categoriseBatch", () => {
     const classifier = scriptedClassifier(() =>
       Promise.resolve({ category: "people" as const, confidence: 0.9 })
     );
+
     const store = memoryStore();
 
-    const [result] = await categoriseBatch(
+    const [categorised] = await categoriseBatch(
       [{ ...unresolved, amountMinor: 4200 }],
       { classifiers: [classifier], countries: undefined, store }
     );
 
-    expect(result?.category).toBe("people");
+    expect(categorised?.category).toBe("people");
   });
 
   it("asks once per merchant identity, whatever the amounts", async () => {
     const classifier = scriptedClassifier(() =>
       Promise.resolve({ category: "groceries", confidence: 0.9 })
     );
+
     const store = memoryStore();
 
     const results = await categoriseBatch(
@@ -348,13 +358,17 @@ describe("categoriseBatch", () => {
     );
 
     expect(classifier.calls).toBe(1);
-    expect(results.map((result) => result.stage)).toEqual(["model", "model"]);
+    expect(results.map((categorised) => categorised.stage)).toEqual([
+      "model",
+      "model",
+    ]);
   });
 
   it("reports once per merchant identity it settled", async () => {
     const classifier = scriptedClassifier(() =>
       Promise.resolve({ category: "groceries", confidence: 0.9 })
     );
+
     const settled: number[] = [];
 
     await categoriseBatch(
@@ -383,6 +397,7 @@ describe("categoriseBatch", () => {
     const first = scriptedClassifier(() =>
       Promise.resolve({ category: "groceries", confidence: 0.9 })
     );
+
     await categoriseBatch([unresolved], {
       classifiers: [first],
       countries: undefined,
@@ -392,28 +407,29 @@ describe("categoriseBatch", () => {
     const second = scriptedClassifier(() =>
       Promise.resolve({ category: "groceries", confidence: 0.9 })
     );
-    const [result] = await categoriseBatch([unresolved], {
+
+    const [categorised] = await categoriseBatch([unresolved], {
       classifiers: [second],
       countries: undefined,
       store,
     });
 
     expect(second.calls).toBe(0);
-    expect(result?.stage).toBe("cached-model");
-    expect(result?.category).toBe("groceries");
+    expect(categorised?.stage).toBe("cached-model");
+    expect(categorised?.category).toBe("groceries");
   });
 
   it("caches an abstention and retries it after a month", async () => {
     const store = memoryStore();
     const abstaining = scriptedClassifier(() => Promise.resolve(null));
 
-    const [result] = await categoriseBatch([unresolved], {
+    const [categorised] = await categoriseBatch([unresolved], {
       classifiers: [abstaining],
       countries: undefined,
       store,
     });
 
-    expect(result?.stage).toBe("none");
+    expect(categorised?.stage).toBe("none");
     expect([...store.rows.values()]).toMatchObject([{ category: null }]);
 
     const soon = scriptedClassifier(() => Promise.resolve(null));
@@ -443,15 +459,16 @@ describe("categoriseBatch", () => {
         confidence: 0.9,
       })
     );
+
     const store = memoryStore();
 
-    const [result] = await categoriseBatch([unresolved], {
+    const [categorised] = await categoriseBatch([unresolved], {
       classifiers: [classifier],
       countries: undefined,
       store,
     });
 
-    expect(result?.stage).toBe("none");
+    expect(categorised?.stage).toBe("none");
     expect(store.rows.size).toBe(0);
   });
 
@@ -459,15 +476,16 @@ describe("categoriseBatch", () => {
     const classifier = scriptedClassifier(() =>
       Promise.reject(new Error("provider down"))
     );
+
     const store = memoryStore();
 
-    const [result] = await categoriseBatch([unresolved], {
+    const [categorised] = await categoriseBatch([unresolved], {
       classifiers: [classifier],
       countries: undefined,
       store,
     });
 
-    expect(result?.stage).toBe("none");
+    expect(categorised?.stage).toBe("none");
     expect(store.rows.size).toBe(0);
   });
 
@@ -476,7 +494,7 @@ describe("categoriseBatch", () => {
     const classifier = scriptedClassifier(() => held.promise);
     const store = memoryStore();
 
-    const [result] = await categoriseBatch([unresolved], {
+    const [categorised] = await categoriseBatch([unresolved], {
       classifiers: [classifier],
       countries: undefined,
       store,
@@ -486,7 +504,7 @@ describe("categoriseBatch", () => {
     held.resolve(null);
 
     expect(classifier.calls).toBe(1);
-    expect(result?.stage).toBe("none");
+    expect(categorised?.stage).toBe("none");
     expect(store.rows.size).toBe(0);
   });
 
@@ -495,13 +513,15 @@ describe("categoriseBatch", () => {
       () => Promise.resolve({ category: "groceries", confidence: 0.6 }),
       "local"
     );
+
     const escalated = scriptedClassifier(
       () => Promise.resolve({ category: "restaurants", confidence: 0.92 }),
       "hosted"
     );
+
     const store = memoryStore();
 
-    const [result] = await categoriseBatch([unresolved], {
+    const [categorised] = await categoriseBatch([unresolved], {
       classifiers: [asked, escalated],
       countries: undefined,
       store,
@@ -509,7 +529,7 @@ describe("categoriseBatch", () => {
 
     expect(asked.calls).toBe(1);
     expect(escalated.calls).toBe(1);
-    expect(result).toMatchObject({
+    expect(categorised).toMatchObject({
       band: "auto",
       category: "restaurants",
       confidence: 0.92,
@@ -522,18 +542,19 @@ describe("categoriseBatch", () => {
       () => Promise.resolve({ category: "groceries", confidence: 0.7 }),
       "local"
     );
+
     const escalated = scriptedClassifier(
       () => Promise.resolve({ category: "restaurants", confidence: 0.55 }),
       "hosted"
     );
 
-    const [result] = await categoriseBatch([unresolved], {
+    const [categorised] = await categoriseBatch([unresolved], {
       classifiers: [asked, escalated],
       countries: undefined,
       store: memoryStore(),
     });
 
-    expect(result).toMatchObject({
+    expect(categorised).toMatchObject({
       band: "suggest",
       category: "groceries",
       confidence: 0.7,
@@ -545,19 +566,20 @@ describe("categoriseBatch", () => {
       () => Promise.resolve({ category: "groceries", confidence: 0.9 }),
       "local"
     );
+
     const escalated = scriptedClassifier(
       () => Promise.resolve({ category: "restaurants", confidence: 0.99 }),
       "hosted"
     );
 
-    const [result] = await categoriseBatch([unresolved], {
+    const [categorised] = await categoriseBatch([unresolved], {
       classifiers: [asked, escalated],
       countries: undefined,
       store: memoryStore(),
     });
 
     expect(escalated.calls).toBe(0);
-    expect(result?.category).toBe("groceries");
+    expect(categorised?.category).toBe("groceries");
   });
 
   it("escalates an abstention", async () => {
@@ -566,16 +588,17 @@ describe("categoriseBatch", () => {
       () => Promise.resolve({ category: "restaurants", confidence: 0.9 }),
       "hosted"
     );
+
     const store = memoryStore();
 
-    const [result] = await categoriseBatch([unresolved], {
+    const [categorised] = await categoriseBatch([unresolved], {
       classifiers: [asked, escalated],
       countries: undefined,
       store,
     });
 
     expect(escalated.calls).toBe(1);
-    expect(result?.category).toBe("restaurants");
+    expect(categorised?.category).toBe("restaurants");
     expect([...store.rows.values()]).toMatchObject([
       { category: null },
       { category: "restaurants" },
@@ -597,7 +620,7 @@ describe("categoriseBatch", () => {
 
     const asked = scriptedClassifier(weak, "local");
     const escalated = scriptedClassifier(strong, "hosted");
-    const [result] = await categoriseBatch([unresolved], {
+    const [categorised] = await categoriseBatch([unresolved], {
       classifiers: [asked, escalated],
       countries: undefined,
       store,
@@ -605,7 +628,7 @@ describe("categoriseBatch", () => {
 
     expect(asked.calls).toBe(0);
     expect(escalated.calls).toBe(0);
-    expect(result).toMatchObject({
+    expect(categorised).toMatchObject({
       band: "auto",
       category: "restaurants",
       stage: "cached-model",
@@ -617,12 +640,13 @@ describe("categoriseBatch", () => {
       () => Promise.resolve({ category: "groceries", confidence: 0.6 }),
       "local"
     );
+
     const escalated = scriptedClassifier(
       () => Promise.resolve({ category: "restaurants", confidence: 0.99 }),
       "hosted"
     );
 
-    const [result] = await categoriseBatch([unresolved], {
+    const [categorised] = await categoriseBatch([unresolved], {
       classifiers: [asked, escalated],
       countries: undefined,
       escalateBelow: 0,
@@ -630,7 +654,10 @@ describe("categoriseBatch", () => {
     });
 
     expect(escalated.calls).toBe(0);
-    expect(result).toMatchObject({ band: "suggest", category: "groceries" });
+    expect(categorised).toMatchObject({
+      band: "suggest",
+      category: "groceries",
+    });
   });
 });
 
@@ -654,6 +681,7 @@ describe("merchantKeyCandidates", () => {
       "forfait mobile",
       "forfait",
     ]);
+
     expect(merchantKeyCandidates("halls beer mobile", "FR")).toEqual([
       "halls beer mobile",
       "halls beer",

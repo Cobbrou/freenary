@@ -102,6 +102,7 @@ const engineFor = Effect.fnUntraced(function* engineFor(
     catch: (cause) => new BrowserModelLoadFailed({ cause, modelId }),
     try: () => importWebLlm(),
   });
+
   const running = shared.engine;
 
   if (running) {

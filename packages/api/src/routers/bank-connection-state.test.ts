@@ -36,6 +36,7 @@ describe("bank connection state", () => {
       providerId: "enable-banking",
       returnTo: "settings",
     });
+
     expect(state.hmac).toBeString();
   });
 
@@ -47,6 +48,7 @@ describe("bank connection state", () => {
       secret,
       userId,
     });
+
     const state = parseBankConnectionState(encoded);
 
     expect(verifyBankConnectionState(state, userId, secret)).toBe(true);
@@ -60,6 +62,7 @@ describe("bank connection state", () => {
       secret,
       userId,
     });
+
     const state = parseBankConnectionState(encoded);
 
     expect(verifyBankConnectionState(state, "other-user", secret)).toBe(false);
@@ -101,6 +104,7 @@ describe("bank connection state", () => {
     expect(findInstitution([institution], "bank-id", "FR")).toEqual(
       institution
     );
+
     expect(findInstitution([institution], "bank-id", "DE")).toBeUndefined();
     expect(findInstitution([institution], "other-bank", "FR")).toBeUndefined();
   });
