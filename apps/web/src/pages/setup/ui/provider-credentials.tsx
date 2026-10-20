@@ -36,11 +36,13 @@ const filledValuesOf = (
   fields: readonly SetupFieldDescriptor[]
 ): Record<string, string> =>
   Object.fromEntries(
-    fields.flatMap((field) =>
-      field.value === null || isFromServer(field)
+    fields.flatMap((field) => {
+      const starting = field.value ?? field.suggestion;
+
+      return starting === null || isFromServer(field)
         ? []
-        : [[field.key, field.value]]
-    )
+        : [[field.key, starting]];
+    })
   );
 
 export const ProviderCredentials = ({
@@ -53,6 +55,7 @@ export const ProviderCredentials = ({
 }: ProviderCredentialsProps) => {
   const ArrowLeftIcon = useIcon("arrow-left");
   const [values, setValues] = useState(() => filledValuesOf(variant.fields));
+
   const provider = variantLabel(variant.id);
   const guideUrl = variantGuideUrl(variant.id);
 

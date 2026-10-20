@@ -127,16 +127,16 @@ If someone else got there first, see [The wrong account became the operator](/do
 
 ## The setup screen
 
-You land on the setup screen, where the operator enters the bank and email credentials. Until you finish it, every account that signs in is sent there. It has three steps: **Bank**, **Email** and **Done**.
+You land on the setup screen, where the operator enters the bank, email and model settings. Until you finish it, every account that signs in is sent there. It has five steps: **Bank**, **Email**, **Assistant**, **Categories** and **Done**.
 
 - **Connect a bank now.** Keep this tab open and continue to [Connect a bank](/docs/get-started/connect-a-bank).
-- **Skip it for now.** On **Bank** and **Email**, choose **Skip for now** and press **Continue**. On **Done**, press **Finish setup**.
+- **Skip it for now.** On **Bank**, **Email**, **Assistant** and **Categories**, choose **Skip for now** and press **Continue**. On **Done**, press **Finish setup**.
 
 You can come back later at `https://freenary.example.com/setup`. Until a bank provider is set up, no account can finish onboarding, yours included: onboarding asks every account to connect a bank.
 
 <Callout type="warn">
 
-Keep `BETTER_AUTH_SECRET` once the instance runs. Freenary encrypts the bank and email credentials you enter on the setup screen with it, so a new secret makes them unreadable. See [What a rotation costs](/docs/reference/security#what-a-rotation-costs).
+Keep `BETTER_AUTH_SECRET` once the instance runs. Freenary encrypts the values you enter on the setup screen with it, so a new secret makes them unreadable. See [What a rotation costs](/docs/reference/security#what-a-rotation-costs).
 
 </Callout>
 

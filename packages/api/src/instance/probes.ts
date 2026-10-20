@@ -1,9 +1,15 @@
 import { probeEmailSettings } from "@freenary/email/probe";
 import { emailSettingsOf } from "@freenary/email/registry";
 import type { ServerSettings } from "@freenary/instance-config/candidate";
+import {
+  findIntegration,
+  isOffVariant,
+} from "@freenary/instance-config/integrations";
 import { IntegrationProbeFailed } from "@freenary/instance-config/probe";
 import { Effect, Option } from "effect";
 
+import { probeAssistantEndpoint } from "../assistant/probe";
+import { probeClassifier } from "../categorisation/classifier/probe";
 import { probeEnableBankingCredentials } from "../providers/enable-banking/probe";
 import { probePowensCredentials } from "../providers/powens/probe";
 
@@ -63,7 +69,26 @@ const probeEmail: IntegrationProbe = (candidate) =>
 
 const nothingToProbe: IntegrationProbe = () => Effect.void;
 
+const probeAssistant: IntegrationProbe = (candidate) =>
+  probeAssistantEndpoint(candidate);
+
+const classifierProbes: Record<string, IntegrationProbe> = Object.fromEntries(
+  Option.match(findIntegration("categorisation"), {
+    onNone: () => [],
+    onSome: (categorisation) =>
+      categorisation.variants.map((variant) => [
+        `categorisation:${variant.id}`,
+        isOffVariant(categorisation, variant)
+          ? nothingToProbe
+          : probeClassifier(variant.id),
+      ]),
+  })
+);
+
 const probes: Record<string, IntegrationProbe> = {
+  ...classifierProbes,
+  "assistant:disabled": nothingToProbe,
+  "assistant:openai-compatible": probeAssistant,
   "banking:disabled": nothingToProbe,
   "banking:enable-banking": probeEnableBanking,
   "banking:mock": nothingToProbe,

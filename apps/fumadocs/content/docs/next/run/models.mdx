@@ -1,0 +1,95 @@
+---
+title: AI models
+description: Pick the model that answers in the assistant and the one that categorises transactions, on the setup screen.
+icon: Brain
+---
+
+Freenary ships with no model. Pick one for the assistant and one for categorisation, or leave either off.
+
+## What each model does
+
+- **The assistant model** answers members' questions on the home screen. With none, members can still run a model in their own browser. See [Assistant](/docs/use/assistant).
+- **The categorisation model** names the category of a transaction that no rule, no dictionary entry and no correction recognises. With none, such a transaction stays uncategorised.
+
+## Choose where the values live
+
+Open `https://freenary.example.com/setup` as the operator. The `Assistant` and `Categories` steps start on `Skip for now` until you pick a model. Values saved there stay in the database.
+
+Environment variables are the other option, and they win over a saved value. The variables are in [Assistant](/docs/reference/configuration#assistant) and [Categorisation](/docs/reference/configuration#categorisation). The fallback classifier, its threshold and the temperatures live in the environment alone.
+
+## Assistant
+
+Choose `OpenAI-compatible endpoint`, then enter:
+
+| Field | Value |
+| --- | --- |
+| `Base URL` | The chat-completions endpoint with its version path, such as `https://openrouter.ai/api/v1` |
+| `Model` | The model id as that endpoint names it |
+| `API key` | Under `More options`. Leave it empty for a local endpoint |
+
+Freenary posts to `<Base URL>/chat/completions`. The model must call tools, because it may only state figures a tool returned.
+
+On the same Docker network, use the model server's service name, such as `http://ollama:11434/v1`. `localhost` is the `server` container itself.
+
+## Categorisation
+
+Every option asks one question per merchant and caches the answer, so a merchant costs one call to this model. Freenary sends the merchant's descriptor, never the exact amount: [Security](/docs/reference/security) lists the fields.
+
+| Option | Where it runs | What you enter |
+| --- | --- | --- |
+| `Jev by TypeSafe` | TypeSafe's service | A TypeSafe API key |
+| `SubQ Snap` | SubQ's service | A SubQ API key |
+| `Von` | A server you run | Its address |
+| `Laya` | A server you run | Its address |
+| `Another System One server` | Wherever you run it | Its address and model; API key under `More options`, if required |
+| `Language model` | Any OpenAI-compatible endpoint | Its base URL and model; API key under `More options`, if required |
+| `Zero-shot classifier` | A Hugging Face classification server | Its address and model; API key under `More options`, if required |
+
+The `Model` field is part of the cache key. Changing it asks every merchant again. A moving name such as `jev-latest` keeps its answers when the vendor moves it.
+
+### Jev
+
+Jev is TypeSafe's hosted decision model. Get a key as the [TypeSafe quickstart](https://docs.typesafe.ai/introduction/quickstart) describes, and paste it in `API key`. `Model` starts at `jev-latest`; enter a version such as `jev-1.13.0` to freeze the answers.
+
+### SubQ Snap
+
+SubQ Snap is SubQ's hosted decision model, in public preview. Get a key as the [SubQ Decisions API quickstart](https://docs.subq.ai/endpoints/decisions-api/) describes, and paste it in `API key`. `Model` starts at `subq-snap-preview`.
+
+### Von
+
+[Von](https://github.com/wfzyx/von) is an open-weight decision model under Apache-2.0. Its project is archived, so the weights get no more updates, and it reads English only: a French descriptor gets a low-quality answer. Its server answers on port `8000`. `Endpoint URL` starts at `http://von:8000/v1/systemone` and `Model` at `von-latest`. Fill in `API key` under `More options` only if you set `VON_API_KEY` on that server.
+
+### Laya
+
+[Laya](https://github.com/NandhaKishorM/laya) is an open-weight decision model under Apache-2.0, served by `laya-serve` on port `8000`. `Endpoint URL` starts at `http://laya:8000/v1/systemone`. `Model` starts at `multilingual`, the checkpoint for text in more than one language; `english` and `typed-decisions` are the others.
+
+### Another System One server
+
+Pick this for any other server that answers TypeSafe's `POST /v1/systemone` request, such as `Mapika/decider-2b`. OpenJev Verdict ships no server of its own, so it needs one you add in front of it. Enter the full URL of the route and the model name the server expects.
+
+### A language model
+
+Pick this for a chat model behind an OpenAI-compatible endpoint, such as Ollama or a gateway. Enter the base URL with its version path, such as `http://ollama:11434/v1`. An endpoint that returns no log probabilities still answers, but below the confidence Freenary needs to set a category without asking.
+
+### A zero-shot classifier
+
+Pick this for a Hugging Face zero-shot classification server, such as one running `MoritzLaurer/ModernBERT-large-zeroshot-v2.0`. Enter the URL the request goes to and the model name.
+
+## Test and apply
+
+`Save and continue` tests the model before it stores anything. For categorisation, it asks about one sample merchant. For the assistant, it sends one short chat message. The messages match the ones in [Connection test results](/docs/run/email#connection-test-results).
+
+Press `Finish setup` to restart the instance with the new model.
+
+<Cards>
+  <Card
+    title="Configuration"
+    href="/docs/reference/configuration#categorisation"
+    description="Every model variable, with its default."
+  />
+  <Card
+    title="Troubleshooting"
+    href="/docs/run/troubleshooting"
+    description="Match a symptom to its fix."
+  />
+</Cards>

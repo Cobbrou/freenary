@@ -13,9 +13,11 @@ export {
   readSetupState,
 } from "./claim";
 export type {
+  HeldValue,
   Integration,
   IntegrationField,
   IntegrationFieldKind,
+  IntegrationPreset,
   IntegrationVariant,
   ServerSettingKey,
 } from "./integrations";
@@ -24,8 +26,12 @@ export {
   findVariant,
   instanceConfigurableKeys,
   integrations,
+  isOffVariant,
   isSecretField,
   keysOf,
+  presetsOf,
+  recogniseVariant,
+  rememberedVariantKey,
 } from "./integrations";
 export { instanceConfigFault, settings, storedSettingsAtBoot } from "./resolve";
 export {

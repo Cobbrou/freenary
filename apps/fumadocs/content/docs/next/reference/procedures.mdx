@@ -320,7 +320,7 @@ The category is remembered for the merchant and copied to its other transactions
 
 ## `instance`
 
-The setup screen's procedures. Integrations are `banking` (variants `disabled`, `powens`, `enable-banking`) and `email` (variants `disabled`, `resend`, `smtp`).
+The setup screen's procedures. Integrations are `banking` (variants `disabled`, `powens`, `enable-banking`), `email` (variants `disabled`, `resend`, `smtp`), `assistant` (variants `disabled`, `openai-compatible`) and `categorisation` (variants `disabled`, `jev`, `subq-snap`, `von`, `laya`, `system-one`, `llm`, `zero-shot`).
 
 ### instance.status
 
@@ -336,7 +336,7 @@ The setup screen's procedures. Integrations are `banking` (variants `disabled`, 
 | `state` | `disabled`, `incomplete` or `configured` |
 | `configuredBy` | `environment`, `instance` or `null` |
 | `discriminantKey`, `discriminantSource` | The variable that picks the variant, such as `BANKING_PROVIDER`, and whether it comes from `environment`, `instance` or is `unset` |
-| `variants` | `{ id, fields }`. A field is `{ key, kind, present, required, source, value }`; `value` is `null` for a secret and masked when the environment owns a text or URL value |
+| `variants` | `{ id, fields }`. A field is `{ key, kind, present, required, source, suggestion, value }`; `value` is `null` for a secret and masked when the environment owns a text or URL value, and `suggestion` is the value the form starts from, or `null` |
 
 ### instance.check
 
