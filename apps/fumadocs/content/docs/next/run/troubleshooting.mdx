@@ -92,7 +92,7 @@ With a hosting panel, read the `server` logs there and redeploy. Then press `Try
 
 ## Bank and email stopped working after a restore
 
-**What you see.** After restoring a dump or changing `BETTER_AUTH_SECRET`, everyone is signed out, and the bank and email credentials saved on the setup screen are gone. The server still starts, and its log shows one warning per saved value:
+**What you see.** After restoring a dump or changing `BETTER_AUTH_SECRET`, everyone is signed out, and the values saved on the setup screen are gone. The server still starts, and its log shows one warning per saved value:
 
 ```text
 The stored value of EMAIL_PROVIDER does not open with the current BETTER_AUTH_SECRET.
@@ -100,7 +100,7 @@ The stored value of EMAIL_PROVIDER does not open with the current BETTER_AUTH_SE
 
 **Why.** The setup screen's values are encrypted with `BETTER_AUTH_SECRET`. The server can't read them under another secret, so it skips them and runs on the environment's values alone.
 
-**Fix.** Put back the secret that was in use when the dump was taken, then run `docker compose up -d`, or redeploy with a panel. If that secret is lost, open the setup screen, enter the bank and email credentials again, and press `Finish setup`. What else a new secret costs, two-factor included, is in [What a rotation costs](/docs/reference/security#what-a-rotation-costs).
+**Fix.** Put back the secret that was in use when the dump was taken, then run `docker compose up -d`, or redeploy with a panel. If that secret is lost, open the setup screen, enter the saved values again, and press `Finish setup`. What else a new secret costs, two-factor included, is in [What a rotation costs](/docs/reference/security#what-a-rotation-costs).
 
 ## The setup screen shows a configuration problem
 
@@ -154,7 +154,15 @@ The stored value of EMAIL_PROVIDER does not open with the current BETTER_AUTH_SE
 
 ## The assistant has no model
 
-Users see `Choose a model`, or `This instance has no model configured`. Set `AI_BASE_URL` and `AI_MODEL`, then redeploy. On Coolify, [add them to the compose file](/docs/reference/configuration#add-a-variable-on-coolify) first. See [Assistant](/docs/reference/configuration#assistant).
+Users see `Choose a model`, or `This instance has no model configured`. Pick a model in the `Assistant` step of the setup screen, then press `Finish setup`. See [AI models](/docs/run/models#assistant).
+
+## The server ignores the saved categorisation model
+
+**What you see.** Transactions stop getting a category from the model you picked on the setup screen, and the server log shows a line that ends with `The stored classifier is ignored, and the environment alone is in force.`
+
+**Why.** The saved model and the environment's `TRANSACTION_CLASSIFIER_FALLBACK` can't run together, for example because both name the same protocol and model.
+
+**Fix.** Pick another model in the `Categories` step, or change the fallback in the environment, then press `Finish setup` or run `docker compose up -d`.
 
 ## The wrong account became the operator
 

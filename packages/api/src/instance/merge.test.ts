@@ -1,6 +1,9 @@
 import { describe, expect, test } from "bun:test";
 
-import type { Integration } from "@freenary/instance-config/integrations";
+import type {
+  HeldValue,
+  Integration,
+} from "@freenary/instance-config/integrations";
 import {
   findIntegration,
   findVariant,
@@ -10,6 +13,7 @@ import { Option } from "effect";
 import type { OwnedByEnvironment } from "./merge";
 import {
   candidateOf,
+  conflictingPresetsOf,
   environmentVariantOf,
   isWhollyOwnedByEnvironment,
   missingKeysOf,
@@ -33,6 +37,11 @@ const ownedKeys =
   (...keys: string[]): OwnedByEnvironment =>
   (key) =>
     keys.includes(key);
+
+const heldFrom =
+  (values: Readonly<Record<string, string>>): HeldValue =>
+  (key) =>
+    values[key];
 
 const SMTP_FORM = {
   EMAIL_FROM: "Freenary <no-reply@example.test>",
@@ -241,8 +250,8 @@ describe("environmentVariantOf", () => {
   test("finds the default provider when the environment holds its fields", () => {
     const found = environmentVariantOf(
       banking,
-      undefined,
-      "powens",
+      {},
+      heldFrom({ BANKING_PROVIDER: "powens" }),
       powensFields
     );
 
@@ -252,8 +261,8 @@ describe("environmentVariantOf", () => {
   test("finds the provider the environment names", () => {
     const found = environmentVariantOf(
       banking,
-      undefined,
-      "powens",
+      {},
+      heldFrom({ BANKING_PROVIDER: "powens" }),
       ownedKeys(
         "BANKING_PROVIDER",
         "POWENS_DOMAIN",
@@ -268,8 +277,8 @@ describe("environmentVariantOf", () => {
   test("defers to a provider saved in the app", () => {
     const found = environmentVariantOf(
       banking,
-      "enable-banking",
-      "powens",
+      { BANKING_PROVIDER: "enable-banking" },
+      heldFrom({ BANKING_PROVIDER: "powens" }),
       powensFields
     );
 
@@ -279,8 +288,8 @@ describe("environmentVariantOf", () => {
   test("ignores a provider with a required field left to the app", () => {
     const found = environmentVariantOf(
       banking,
-      undefined,
-      "powens",
+      {},
+      heldFrom({ BANKING_PROVIDER: "powens" }),
       ownedKeys("POWENS_DOMAIN")
     );
 
@@ -290,11 +299,179 @@ describe("environmentVariantOf", () => {
   test("finds nothing when no provider is in force", () => {
     const found = environmentVariantOf(
       email,
-      undefined,
-      undefined,
+      {},
+      heldFrom({}),
       ownedKeys("EMAIL_FROM")
     );
 
     expect(found).toBeNull();
+  });
+});
+
+describe("a classifier with presets", () => {
+  const categorisation: Integration = Option.getOrThrow(
+    findIntegration("categorisation")
+  );
+
+  const jev = variantOf(categorisation, "jev");
+  const subqSnap = variantOf(categorisation, "subq-snap");
+  const von = variantOf(categorisation, "von");
+  const classifierOff = variantOf(categorisation, "disabled");
+
+  const JEV_FORM = {
+    TRANSACTION_CLASSIFIER_API_KEY: "ts-key",
+    TRANSACTION_CLASSIFIER_MODEL: "jev-latest",
+  };
+
+  test("writes the protocol, the fixed endpoint and the chosen variant", () => {
+    const candidate = candidateOf(
+      categorisation,
+      jev,
+      JEV_FORM,
+      {},
+      nothingOwned
+    );
+
+    expect(candidate).toMatchObject({
+      TRANSACTION_CLASSIFIER: "system-one",
+      TRANSACTION_CLASSIFIER_URL: "https://api.typesafe.ai/v1/systemone",
+      "variant:categorisation": "jev",
+    });
+  });
+
+  test("remembers a self-hosted model the values cannot tell apart", () => {
+    const candidate = candidateOf(
+      categorisation,
+      von,
+      {
+        TRANSACTION_CLASSIFIER_MODEL: "von-latest",
+        TRANSACTION_CLASSIFIER_URL: "http://von:8000/v1/systemone",
+      },
+      {},
+      nothingOwned
+    );
+
+    expect(
+      writesOf(categorisation, candidate, nothingOwned).get(
+        "variant:categorisation"
+      )
+    ).toBe("von");
+  });
+
+  test("keeps no stored key when the operator moves to another vendor", () => {
+    const candidate = candidateOf(
+      categorisation,
+      subqSnap,
+      { TRANSACTION_CLASSIFIER_MODEL: "subq-snap-preview" },
+      { ...JEV_FORM, "variant:categorisation": "jev" },
+      nothingOwned,
+      false
+    );
+
+    expect(candidate.TRANSACTION_CLASSIFIER_API_KEY).toBeUndefined();
+    expect(missingKeysOf(subqSnap, candidate, nothingOwned)).toEqual([
+      "TRANSACTION_CLASSIFIER_API_KEY",
+    ]);
+  });
+
+  test("drops a stored key when the endpoint of the same variant moves", () => {
+    const stored = {
+      TRANSACTION_CLASSIFIER: "system-one",
+      TRANSACTION_CLASSIFIER_API_KEY: "von-key",
+      TRANSACTION_CLASSIFIER_MODEL: "von-latest",
+      TRANSACTION_CLASSIFIER_URL: "http://von:8000/v1/systemone",
+      "variant:categorisation": "von",
+    };
+
+    const moved = candidateOf(
+      categorisation,
+      von,
+      {
+        TRANSACTION_CLASSIFIER_MODEL: "von-latest",
+        TRANSACTION_CLASSIFIER_URL:
+          "https://elsewhere.example.com/v1/systemone",
+      },
+      stored,
+      nothingOwned
+    );
+
+    const kept = candidateOf(
+      categorisation,
+      von,
+      {
+        TRANSACTION_CLASSIFIER_MODEL: "von-1.3.0",
+        TRANSACTION_CLASSIFIER_URL: "http://von:8000/v1/systemone",
+      },
+      stored,
+      nothingOwned
+    );
+
+    expect(moved.TRANSACTION_CLASSIFIER_API_KEY).toBeUndefined();
+    expect(kept.TRANSACTION_CLASSIFIER_API_KEY).toBe("von-key");
+  });
+
+  test("clears the endpoint and the remembered choice when switched off", () => {
+    const writes = writesOf(
+      categorisation,
+      candidateOf(
+        categorisation,
+        classifierOff,
+        {},
+        {
+          ...JEV_FORM,
+          TRANSACTION_CLASSIFIER: "system-one",
+          TRANSACTION_CLASSIFIER_URL: "https://api.typesafe.ai/v1/systemone",
+          "variant:categorisation": "jev",
+        },
+        nothingOwned
+      ),
+      nothingOwned
+    );
+
+    expect(writes.get("TRANSACTION_CLASSIFIER")).toBeNull();
+    expect(writes.get("TRANSACTION_CLASSIFIER_URL")).toBeNull();
+    expect(writes.get("variant:categorisation")).toBeNull();
+  });
+
+  test("refuses a vendor whose endpoint the environment sets elsewhere", () => {
+    const conflicts = conflictingPresetsOf(
+      categorisation,
+      jev,
+      heldFrom({
+        TRANSACTION_CLASSIFIER_URL: "http://decider:8000/v1/systemone",
+      }),
+      ownedKeys("TRANSACTION_CLASSIFIER_URL")
+    );
+
+    expect(conflicts).toEqual(["TRANSACTION_CLASSIFIER_URL"]);
+  });
+
+  test("refuses to switch off a classifier the environment names", () => {
+    const conflicts = conflictingPresetsOf(
+      categorisation,
+      classifierOff,
+      heldFrom({ TRANSACTION_CLASSIFIER: "llm" }),
+      ownedKeys("TRANSACTION_CLASSIFIER")
+    );
+
+    expect(conflicts).toEqual(["TRANSACTION_CLASSIFIER"]);
+  });
+
+  test("finds the vendor the environment configures in full", () => {
+    const environment: Record<string, string> = {
+      TRANSACTION_CLASSIFIER: "system-one",
+      TRANSACTION_CLASSIFIER_API_KEY: "ts-key",
+      TRANSACTION_CLASSIFIER_MODEL: "jev-latest",
+      TRANSACTION_CLASSIFIER_URL: "https://api.typesafe.ai/v1/systemone",
+    };
+
+    const found = environmentVariantOf(
+      categorisation,
+      {},
+      heldFrom(environment),
+      (key) => environment[key] !== undefined
+    );
+
+    expect(found?.id).toBe("jev");
   });
 });

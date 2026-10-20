@@ -18,6 +18,7 @@ export interface SetupFieldDescriptor {
   present: boolean;
   required: boolean;
   source: string;
+  suggestion: string | null;
   value: string | null;
 }
 

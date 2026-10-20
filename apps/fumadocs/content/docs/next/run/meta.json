@@ -1,6 +1,12 @@
 {
   "title": "Run your instance",
-  "description": "Email, sign-in, updates, backups and troubleshooting for the operator.",
+  "description": "Email, AI models, sign-in, updates, backups and troubleshooting for the operator.",
   "icon": "Server",
-  "pages": ["email", "sign-in", "updates-and-backups", "troubleshooting"]
+  "pages": [
+    "email",
+    "models",
+    "sign-in",
+    "updates-and-backups",
+    "troubleshooting"
+  ]
 }

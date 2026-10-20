@@ -1,22 +1,22 @@
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
-import { env } from "@freenary/env/server";
+import { settings } from "@freenary/instance-config";
 
 export const isAssistantConfigured = (): boolean =>
-  env.AI_BASE_URL !== undefined && env.AI_MODEL !== undefined;
+  settings.AI_BASE_URL !== undefined && settings.AI_MODEL !== undefined;
 
 export const assistantModelId = (): string | null =>
-  isAssistantConfigured() ? (env.AI_MODEL ?? null) : null;
+  isAssistantConfigured() ? (settings.AI_MODEL ?? null) : null;
 
 export const assistantModel = () => {
-  if (!(env.AI_BASE_URL && env.AI_MODEL)) {
+  if (!(settings.AI_BASE_URL && settings.AI_MODEL)) {
     return null;
   }
 
   const provider = createOpenAICompatible({
-    apiKey: env.AI_API_KEY,
-    baseURL: env.AI_BASE_URL,
+    apiKey: settings.AI_API_KEY,
+    baseURL: settings.AI_BASE_URL,
     name: "freenary-assistant",
   });
 
-  return provider.chatModel(env.AI_MODEL);
+  return provider.chatModel(settings.AI_MODEL);
 };

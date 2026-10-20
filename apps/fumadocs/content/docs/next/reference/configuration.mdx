@@ -33,9 +33,9 @@ Save, set each value in the resource's environment-variable settings, and redepl
 
 ## A value in the environment wins
 
-The setup screen (`/setup`) can store 14 variables: `BANKING_PROVIDER`, `POWENS_DOMAIN`, `POWENS_CLIENT_ID`, `POWENS_CLIENT_SECRET`, `ENABLE_BANKING_APP_ID`, `ENABLE_BANKING_PRIVATE_KEY`, `EMAIL_PROVIDER`, `EMAIL_FROM`, `RESEND_API_KEY`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER` and `SMTP_PASSWORD`. Every other variable comes from the environment alone.
+The setup screen (`/setup`) can store 21 variables: `BANKING_PROVIDER`, `POWENS_DOMAIN`, `POWENS_CLIENT_ID`, `POWENS_CLIENT_SECRET`, `ENABLE_BANKING_APP_ID`, `ENABLE_BANKING_PRIVATE_KEY`, `EMAIL_PROVIDER`, `EMAIL_FROM`, `RESEND_API_KEY`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASSWORD`, `AI_BASE_URL`, `AI_MODEL`, `AI_API_KEY`, `TRANSACTION_CLASSIFIER`, `TRANSACTION_CLASSIFIER_URL`, `TRANSACTION_CLASSIFIER_MODEL` and `TRANSACTION_CLASSIFIER_API_KEY`. Every other variable comes from the environment alone.
 
-For each of the 14, a non-empty value in the environment wins over the stored one. The screen shows that field read-only, tagged `Set by your server`, never shows a secret, and masks a text or URL value to its first and last four characters. To hand a field to the screen, delete it from the environment and run `docker compose up -d`.
+For each of the 21, a non-empty value in the environment wins over the stored one. The screen shows that field read-only, tagged `Set by your server`, never shows a secret, and masks a text or URL value to its first and last four characters. To hand a field to the screen, delete it from the environment and run `docker compose up -d`.
 
 The server reads stored values at startup only; `Finish setup` restarts it when one isn't in use yet. If the stored values fail validation together with the environment, the server ignores them and runs on the environment alone.
 
@@ -171,7 +171,7 @@ An incomplete set doesn't stop the start: Freenary reports no bank provider.
 
 ## Assistant
 
-Freenary ships without a model. To give every user one, point the instance at an OpenAI-compatible chat-completions endpoint. Only the environment configures it, not the setup screen.
+Usually set on the setup screen: see [AI models](/docs/run/models#assistant).
 
 {/* env-sync:start assistant */}
 
@@ -189,13 +189,11 @@ AI_API_KEY=<your key>
 AI_MODEL=<model id>
 ```
 
-On the same Docker network, use the model server's service name, such as `http://ollama:11434/v1`: `localhost` is the `server` container itself.
-
-Freenary posts to `<AI_BASE_URL>/chat/completions`. The model must support tool calling, because it's told to state only figures a tool returned.
-
 Each question sends that endpoint the data listed in [What data goes where](/docs/use/assistant#what-data-goes-where).
 
 ## Categorisation
+
+The setup screen sets the first classifier: see [AI models](/docs/run/models#categorisation). The fallback, the threshold and both temperatures come from the environment alone.
 
 {/* env-sync:start categorisation */}
 

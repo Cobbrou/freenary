@@ -87,7 +87,7 @@ Use exactly these terms, and keep the same one on every page:
 | --- | --- |
 | instance | An installed copy of Freenary |
 | operator | The person who installs and runs the instance; the first account to sign in |
-| setup screen | `/setup`, where the operator enters bank and email credentials |
+| setup screen | `/setup`, where the operator enters bank, email and model settings |
 | your domain, your hostname | For example `freenary.example.com` |
 | `FREENARY_URL` | The full `https://` URL of your domain |
 | hosting panel | Dokploy, Coolify and similar |

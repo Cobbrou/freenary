@@ -7,6 +7,11 @@ import type { SetupFieldDescriptor } from "./setup-field";
 
 const SKIP_VARIANT = "disabled";
 
+const OFF_UNTIL_CHOSEN: ReadonlySet<string> = new Set([
+  "assistant",
+  "categorisation",
+]);
+
 export interface SetupVariantDescriptor {
   fields: SetupFieldDescriptor[];
   id: string;
@@ -40,6 +45,10 @@ interface ProviderStepProps {
 const defaultChoiceOf = (descriptor: SetupIntegrationDescriptor): string => {
   if (descriptor.selectedVariantId !== SKIP_VARIANT) {
     return descriptor.selectedVariantId;
+  }
+
+  if (OFF_UNTIL_CHOSEN.has(descriptor.id)) {
+    return SKIP_VARIANT;
   }
 
   const firstProvider = descriptor.variants.find(

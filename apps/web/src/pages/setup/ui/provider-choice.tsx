@@ -9,6 +9,7 @@ import { WizardStepHeader } from "@/shared/ui/wizard-step-header";
 import {
   integrationDescription,
   integrationTitle,
+  variantDescription,
   variantLabel,
 } from "../model/labels";
 import type { SetupIntegrationDescriptor } from "./provider-step";
@@ -55,11 +56,13 @@ export const ProviderChoice = ({
           .toSorted((first, second) => skipLast(first.id) - skipLast(second.id))
           .map((variant) => {
             const isChosen = variant.id === chosen;
+            const description = variantDescription(descriptor.id, variant.id);
 
             return (
               <label
                 className={cn(
-                  "flex cursor-pointer items-center gap-3 rounded-xl px-4 py-3 text-sm ring-1 transition-[box-shadow,background-color] duration-150 ease-out",
+                  "flex cursor-pointer gap-3 rounded-xl px-4 py-3 text-sm ring-1 transition-[box-shadow,background-color] duration-150 ease-out",
+                  description === null ? "items-center" : "items-start",
                   "has-[:focus-visible]:ring-ring has-[:focus-visible]:ring-2",
                   isChosen
                     ? "bg-accent ring-primary"
@@ -69,14 +72,24 @@ export const ProviderChoice = ({
               >
                 <input
                   checked={isChosen}
-                  className="accent-primary size-4 shrink-0"
+                  className={cn(
+                    "accent-primary size-4 shrink-0",
+                    description === null ? undefined : "mt-0.5"
+                  )}
                   name={groupName}
                   onChange={() => onChoose(variant.id)}
                   type="radio"
                   value={variant.id}
                 />
-                <span className={isChosen ? "font-medium" : undefined}>
-                  {variantLabel(variant.id)}
+                <span className="flex min-w-0 flex-col gap-0.5">
+                  <span className={isChosen ? "font-medium" : undefined}>
+                    {variantLabel(variant.id)}
+                  </span>
+                  {description === null ? null : (
+                    <span className="text-muted-foreground text-xs">
+                      {description}
+                    </span>
+                  )}
                 </span>
               </label>
             );
