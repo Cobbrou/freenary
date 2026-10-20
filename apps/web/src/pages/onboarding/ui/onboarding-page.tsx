@@ -1,26 +1,21 @@
 import { useQuery } from "@tanstack/react-query";
 
 import { AuthGate } from "@/features/auth-gate";
+import { useBankLinking } from "@/features/bank-connection";
 import { orpc } from "@/shared/api";
 
 import { useOnboardingWizard } from "../model/use-onboarding-wizard";
 import { OnboardingWizard } from "./onboarding-wizard";
 
-const BANK_STEP_INDEX = 1;
-
 const OnboardingContent = () => {
-  const availability = useQuery(
-    orpc.bankConnection.getProviderAvailability.queryOptions()
-  );
+  const bankLinking = useBankLinking();
+  const instanceStatus = useQuery(orpc.instance.status.queryOptions());
 
-  const hasBankStep = availability.data?.available ?? false;
-
-  const wizard = useOnboardingWizard({ hasBankStep });
-  const isBankStepReachable = hasBankStep || wizard.step === BANK_STEP_INDEX;
+  const wizard = useOnboardingWizard();
 
   const banksQuery = useQuery(
     orpc.bankConnection.listInstitutions.queryOptions({
-      enabled: wizard.taxCountries.length > 0 && isBankStepReachable,
+      enabled: wizard.taxCountries.length > 0 && bankLinking === "available",
       input: { countries: wizard.taxCountries },
     })
   );
@@ -31,14 +26,15 @@ const OnboardingContent = () => {
 
   return (
     <OnboardingWizard
+      bankLinking={bankLinking}
       banks={banksQuery.data?.banks ?? []}
       connectedCount={connectionsQuery.data?.connections.length ?? 0}
       direction={wizard.direction}
-      hasBankStep={hasBankStep}
       isBanksError={banksQuery.isError}
       isBanksPending={banksQuery.isPending}
       isCompleting={wizard.isCompleting}
-      isPending={availability.isLoading}
+      isOperator={instanceStatus.data?.isOperator ?? false}
+      isPending={bankLinking === "pending"}
       onBack={wizard.handleBack}
       onCountriesChange={wizard.handleCountriesChange}
       onCountryContinue={wizard.handleCountryContinue}

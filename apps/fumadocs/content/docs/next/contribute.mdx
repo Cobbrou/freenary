@@ -40,6 +40,14 @@ There's no seed data. Create an account on the sign-in screen: with no email pro
 
 To work on emailed codes, start with `bun run dev:mail` instead. It adds a Mailpit inbox at `http://mail.<slug>.freenary.localhost`, and the server sends every email there.
 
+### Bank data without credentials
+
+When `.env` sets none of `BANKING_PROVIDER`, `POWENS_CLIENT_ID` and `ENABLE_BANKING_APP_ID`, `bun run dev:up` starts the server with `BANKING_PROVIDER=mock`, and prints `bank    mock provider, generated data`. The environment then owns `BANKING_PROVIDER`, so the setup screen can't pick another bank provider, and one saved there before is ignored. To use a real provider, set one of the three in `.env`.
+
+The mock provider lists three made-up banks for every country. Connecting one opens a consent page on the API server: **Approve** returns to Freenary with a new connection, and **Decline** returns to Freenary as a refused consent. Each connection gets a checking account and a Livret A, and some also get a PEA or a life-insurance contract.
+
+The checking account books French bank descriptors: card payments, direct debits, rent, a monthly salary and cash withdrawals. A day's transactions stay the same from one sync to the next, so a sync only adds the days since the last one. Today's card payments arrive as pending. Holdings take a new price every day.
+
 ## Run it without Docker for the apps
 
 Only PostgreSQL runs in Docker:
@@ -53,6 +61,8 @@ bun run dev
 ```
 
 The server listens on port 3000, the web app on 3001 and the documentation site on 4000.
+
+To use the mock bank provider on this path, add `BANKING_PROVIDER=mock` to `apps/server/.env`.
 
 ## Checks
 

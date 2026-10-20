@@ -45,11 +45,7 @@ export const BankConnectionCallback = () => {
     } else if (exchangeResult.reason === "declined") {
       toast.error(m.bank_callback_declined());
     } else if (exchangeResult.reason === "failed") {
-      toast.error(
-        exchangeResult.returnTo === "settings"
-          ? m.bank_callback_failed_settings()
-          : m.bank_callback_failed_onboarding()
-      );
+      toast.error(m.bank_callback_failed());
     } else {
       toast.error(m.bank_callback_incomplete());
     }

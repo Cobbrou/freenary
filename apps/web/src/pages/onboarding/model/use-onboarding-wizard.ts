@@ -1,3 +1,4 @@
+import { ORPCError } from "@orpc/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
@@ -13,11 +14,14 @@ import {
   persistOnboardingState,
 } from "./onboarding-state";
 
-export const useOnboardingWizard = ({
-  hasBankStep,
-}: {
-  hasBankStep: boolean;
-}) => {
+type CompletionOutcome = "completed" | "failed" | "needs-bank";
+
+const outcomeOfFailure = (error: Error): CompletionOutcome =>
+  error instanceof ORPCError && error.code === "PRECONDITION_FAILED"
+    ? "needs-bank"
+    : "failed";
+
+export const useOnboardingWizard = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { refetch: refetchSession } = authClient.useSession();
@@ -35,18 +39,25 @@ export const useOnboardingWizard = ({
     }
 
     setIsCompleting(true);
-    const wasCompleted = await client.onboarding
+    const outcome = await client.onboarding
       .completeOnboarding({ taxCountries })
-      .then(() => true as const)
-      .catch(() => false as const);
+      .then((): CompletionOutcome => "completed")
+      .catch(outcomeOfFailure);
 
-    if (wasCompleted) {
+    if (outcome === "completed") {
+      clearOnboardingState();
       await queryClient.invalidateQueries({
         queryKey: orpc.onboarding.getStatus.queryOptions().queryKey,
       });
 
       toast.success(m.onboarding_completed_toast());
       navigate({ to: "/" });
+    } else if (outcome === "needs-bank") {
+      await queryClient.invalidateQueries({
+        queryKey: orpc.bankConnection.listConnections.queryOptions().queryKey,
+      });
+
+      toast.error(m.onboarding_error_no_bank());
     } else {
       toast.error(m.onboarding_error_generic());
     }
@@ -64,23 +75,15 @@ export const useOnboardingWizard = ({
   };
 
   const handleCountryContinue = () => {
-    if (hasBankStep) {
-      if (taxCountries.length > 0) {
-        persistOnboardingState({ taxCountries });
-      }
-
-      setDirection(1);
-      setStep(1);
-
-      return;
+    if (taxCountries.length > 0) {
+      persistOnboardingState({ taxCountries });
     }
 
-    clearOnboardingState();
-    void completeOnboarding();
+    setDirection(1);
+    setStep(1);
   };
 
   const handleFinish = () => {
-    clearOnboardingState();
     void completeOnboarding();
   };
 

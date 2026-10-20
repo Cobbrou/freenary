@@ -99,14 +99,18 @@ export const serverEnvSchema = {
       section: "sign-in",
     }),
   BANKING_PROVIDER: z
-    .enum(["powens", "enable-banking"])
+    .enum(["powens", "enable-banking", "mock"])
+    .refine((provider) => !(isProduction && provider === "mock"), {
+      error: "mock generates bank data and is refused in production",
+    })
     .default("powens")
     .describe(
-      "Picks the provider a new bank connection uses: `powens` or `enable-banking`."
+      "Picks the provider a new bank connection uses: `powens`, `enable-banking`, or `mock`, which generates bank data for development."
     )
     .meta({
       example: "powens",
-      onError: "Any other value stops the start.",
+      onError:
+        "Any other value stops the start, and so does `mock` when `NODE_ENV` is `production`.",
       section: "bank",
     }),
   BETTER_AUTH_SECRET: devDefault(

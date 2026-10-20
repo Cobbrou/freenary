@@ -17,6 +17,13 @@ const WORKTREE_ENV_FILE = ".env";
 const DETACHED_HEAD_REF = "HEAD";
 const RESET_VERB = "reset";
 const SPAWN_FAILURE_EXIT_CODE = 1;
+const MOCK_BANKING_PROVIDER = "mock";
+
+const BANK_SETTING_KEYS = [
+  "BANKING_PROVIDER",
+  "POWENS_CLIENT_ID",
+  "ENABLE_BANKING_APP_ID",
+] as const;
 
 const STARTING_VERBS: Partial<Record<string, true>> = {
   [RESET_VERB]: true,
@@ -61,6 +68,16 @@ const readEnvOverride = (key: string): string | null => {
       Option.filter((value) => value.length > 0)
     )
   );
+};
+
+const bankingProviderFor = (): string => {
+  const configuresOwnProvider = BANK_SETTING_KEYS.some(
+    (key) => readEnvOverride(key) !== null
+  );
+
+  return configuresOwnProvider
+    ? (readEnvOverride("BANKING_PROVIDER") ?? "")
+    : MOCK_BANKING_PROVIDER;
 };
 
 const compose = (args: string[], env: typeof process.env): number => {
@@ -164,10 +181,12 @@ const main = (): number => {
     slugOverride: readEnvOverride("FREENARY_SLUG"),
   });
 
+  const bankingProvider = bankingProviderFor();
   const env = {
     ...process.env,
     AUTH_COOKIE_DOMAIN:
       readEnvOverride("AUTH_COOKIE_DOMAIN") ?? identity.cookieDomain,
+    BANKING_PROVIDER: bankingProvider,
     DOCS_HOST: identity.docsHost,
     FREENARY_SLUG: identity.slug,
     MAIL_HOST: identity.mailHost,
@@ -184,7 +203,7 @@ const main = (): number => {
   ];
 
   process.stdout.write(
-    `[freenary dev] worktree "${identity.slug}"\n  web     ${identity.corsOrigin}\n  server  ${identity.betterAuthUrl}\n  docs    ${identity.docsUrl}\n${withMail ? `  mail    ${identity.mailUrl}\n` : ""}  project ${identity.composeProjectName}\n`
+    `[freenary dev] worktree "${identity.slug}"\n  web     ${identity.corsOrigin}\n  server  ${identity.betterAuthUrl}\n  docs    ${identity.docsUrl}\n${withMail ? `  mail    ${identity.mailUrl}\n` : ""}${bankingProvider === MOCK_BANKING_PROVIDER ? "  bank    mock provider, generated data\n" : ""}  project ${identity.composeProjectName}\n`
   );
 
   const startsTheStack = STARTING_VERBS[rest[0] ?? ""] === true;

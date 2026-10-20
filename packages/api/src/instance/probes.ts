@@ -66,6 +66,7 @@ const nothingToProbe: IntegrationProbe = () => Effect.void;
 const probes: Record<string, IntegrationProbe> = {
   "banking:disabled": nothingToProbe,
   "banking:enable-banking": probeEnableBanking,
+  "banking:mock": nothingToProbe,
   "banking:powens": probePowens,
   "email:disabled": nothingToProbe,
   "email:resend": probeEmail,

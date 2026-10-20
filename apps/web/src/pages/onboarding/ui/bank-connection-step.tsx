@@ -1,40 +1,68 @@
 import { Button } from "@freenary/ui/components/button";
 import { useIcon } from "@freenary/ui/lib/icon-context";
+import { Link } from "@tanstack/react-router";
 
-import { BankConnectionPanel } from "@/features/bank-connection";
-import type { BankInstitution } from "@/features/bank-connection";
+import {
+  BankConnectionPanel,
+  BankLinkingCheckFailed,
+  BankLinkingUnavailable,
+} from "@/features/bank-connection";
+import type { BankInstitution, BankLinking } from "@/features/bank-connection";
 import { m } from "@/paraglide/messages.js";
 import { WizardStepHeader } from "@/shared/ui/wizard-step-header";
 
 interface BankConnectionStepProps {
+  bankLinking: BankLinking;
   banks: BankInstitution[];
   connectedCount: number;
   isBanksError: boolean;
   isBanksPending: boolean;
   isCompleting: boolean;
+  isOperator: boolean;
   onBack: () => void;
   onFinish: () => void;
   unavailableCountries: string[];
 }
 
 export const BankConnectionStep = ({
+  bankLinking,
   banks,
   connectedCount,
   isBanksError,
   isBanksPending,
   isCompleting,
+  isOperator,
   onBack,
   onFinish,
   unavailableCountries,
 }: BankConnectionStepProps) => {
   const ArrowLeftIcon = useIcon("arrow-left");
+  const hasConnectedBank = connectedCount > 0;
 
-  return (
-    <div className="flex flex-col gap-6">
-      <WizardStepHeader
-        description={m.onboarding_bank_description()}
-        title={m.onboarding_bank_title()}
-      />
+  const renderBankLinking = () => {
+    if (bankLinking === "check-failed") {
+      return <BankLinkingCheckFailed />;
+    }
+
+    if (bankLinking === "unavailable") {
+      return (
+        <BankLinkingUnavailable>
+          {isOperator ? (
+            <Button asChild>
+              <Link to="/setup">
+                {m.onboarding_bank_unavailable_setup_cta()}
+              </Link>
+            </Button>
+          ) : (
+            <p className="text-muted-foreground text-sm">
+              {m.onboarding_bank_unavailable_ask_operator()}
+            </p>
+          )}
+        </BankLinkingUnavailable>
+      );
+    }
+
+    return (
       <BankConnectionPanel
         banks={banks}
         isBanksError={isBanksError}
@@ -42,6 +70,16 @@ export const BankConnectionStep = ({
         returnTo="onboarding"
         unavailableCountries={unavailableCountries}
       />
+    );
+  };
+
+  return (
+    <div className="flex flex-col gap-6">
+      <WizardStepHeader
+        description={m.onboarding_bank_description()}
+        title={m.onboarding_bank_title()}
+      />
+      {renderBankLinking()}
       <div className="flex items-center justify-between gap-3">
         <Button
           leadingIcon={ArrowLeftIcon}
@@ -51,16 +89,16 @@ export const BankConnectionStep = ({
         >
           {m.onboarding_back()}
         </Button>
-        <div className="flex items-center gap-2">
-          <Button onClick={onFinish} type="button" variant="secondary">
-            {m.onboarding_skip()}
-          </Button>
-          <Button loading={isCompleting} onClick={onFinish} type="button">
-            {connectedCount > 0
-              ? m.onboarding_finish_with_count({ count: connectedCount })
-              : m.onboarding_finish()}
-          </Button>
-        </div>
+        <Button
+          disabled={!hasConnectedBank}
+          loading={isCompleting}
+          onClick={onFinish}
+          type="button"
+        >
+          {hasConnectedBank
+            ? m.onboarding_finish_with_count({ count: connectedCount })
+            : m.onboarding_finish()}
+        </Button>
       </div>
     </div>
   );

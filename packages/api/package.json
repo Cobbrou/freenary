@@ -18,6 +18,7 @@
   },
   "dependencies": {
     "@ai-sdk/openai-compatible": "^3.0.43",
+    "@faker-js/faker": "^10.6.0",
     "@freenary/auth": "workspace:*",
     "@freenary/db": "workspace:*",
     "@freenary/email": "workspace:*",
