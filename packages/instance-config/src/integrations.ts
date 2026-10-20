@@ -41,6 +41,7 @@ const isProduction = process.env.NODE_ENV === "production";
 
 const developmentOnlyBankingVariants: readonly IntegrationVariant[] =
   isProduction ? [] : [{ discriminantValue: "mock", fields: [], id: "mock" }];
+
 export type HeldValue = (key: ServerSettingKey) => string | undefined;
 
 const bankingIntegration: Integration = {

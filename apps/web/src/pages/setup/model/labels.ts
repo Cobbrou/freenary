@@ -55,11 +55,11 @@ const STEP_LABELS = {
 const VARIANT_LABELS = {
   disabled: m.setup_variant_disabled,
   "enable-banking": m.setup_variant_enable_banking,
-  "openai-compatible": m.setup_variant_openai_compatible,
   jev: m.setup_variant_jev,
   laya: m.setup_variant_laya,
   llm: m.setup_variant_llm,
   mock: m.setup_variant_mock,
+  "openai-compatible": m.setup_variant_openai_compatible,
   powens: m.setup_variant_powens,
   resend: m.setup_variant_resend,
   smtp: m.setup_variant_smtp,
