@@ -15,30 +15,36 @@ const NoulAnswer = Schema.Struct({
   type: Schema.Literal("noul"),
 });
 
+const Probabilities = Schema.optional(
+  Schema.Record(Schema.String, Schema.Number)
+);
+
 const ChoiceAnswer = Schema.Struct({
   choice: Schema.String,
   confidence: Schema.Number,
+  probabilities: Probabilities,
   type: Schema.Literal("choice"),
 });
 
 const ScoreAnswer = Schema.Struct({
   confidence: Schema.Number,
+  probabilities: Probabilities,
   score: Schema.Number,
   type: Schema.Literal("score"),
 });
 
-const DecisionResponse = Schema.Struct({
-  answers: Schema.Record(
-    Schema.String,
-    Schema.Union([NoulAnswer, ChoiceAnswer, ScoreAnswer])
-  ),
-});
+export const AnswersSchema = Schema.Record(
+  Schema.String,
+  Schema.Union([NoulAnswer, ChoiceAnswer, ScoreAnswer])
+);
+
+const DecisionResponse = Schema.Struct({ answers: AnswersSchema });
 
 export type DecisionState = Readonly<
   Record<string, string | boolean | readonly string[]>
 >;
 
-export type Answers = (typeof DecisionResponse.Type)["answers"];
+export type Answers = typeof AnswersSchema.Type;
 
 type SubqFailure =
   | { readonly kind: "unreachable"; readonly detail: string }

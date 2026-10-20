@@ -181,7 +181,7 @@ export const LABELS: readonly LabelDefinition[] = [
   },
   {
     color: "ededed",
-    description: "Waiting for a maintainer to confirm the labels",
+    description: "Waiting for a maintainer decision or a running check",
     name: STATUS_LABELS.needsTriage,
   },
   {
@@ -231,7 +231,7 @@ export const LABELS: readonly LabelDefinition[] = [
   },
   {
     color: "fef2c0",
-    description: "A maintainer cannot reproduce it yet",
+    description: "The report has no steps that reproduce it yet",
     name: SIGNAL_LABELS.needsReproduction,
   },
 ];

@@ -95,25 +95,6 @@ const IMPACT_QUESTION: Question = {
   type: "score",
 };
 
-const needsInfoQuestion = (kind: SubjectKind): Question => ({
-  criteria:
-    kind === "issue"
-      ? {
-          false:
-            "The problem or request, the expected outcome and the context are all clear",
-          true: "Vague or incomplete: missing steps, versions, expected versus actual behaviour, or the goal",
-        }
-      : {
-          false: "The description explains what changed and why",
-          true: "The description is empty, a bare template, or leaves out what changed and why",
-        },
-  instructions:
-    kind === "issue"
-      ? "Would a maintainer have to ask the author for more information before acting?"
-      : "Would a reviewer have to ask the author what this change does and why?",
-  type: "noul",
-});
-
 const BLOCKED_QUESTION: Question = {
   criteria: {
     false: "Nothing outside it holds this work back",
@@ -123,25 +104,6 @@ const BLOCKED_QUESTION: Question = {
     "Does the text say this work waits on something outside it before it can go on?",
   type: "noul",
 };
-
-const readyQuestion = (kind: SubjectKind): Question => ({
-  criteria:
-    kind === "issue"
-      ? {
-          false: "The scope or the expected outcome still needs discussion",
-          true: "A contributor could start right now: the scope and the expected outcome are clear",
-        }
-      : {
-          false:
-            "Marked as work in progress, or the description says more work is coming",
-          true: "Complete and ready for a reviewer to read",
-        },
-  instructions:
-    kind === "issue"
-      ? "Could a contributor start work on this issue right now?"
-      : "Is this pull request complete and ready for review?",
-  type: "noul",
-});
 
 const REGRESSION_QUESTION: Question = {
   criteria: {
@@ -192,13 +154,23 @@ const GOOD_FIRST_ISSUE_QUESTION: Question = {
   type: "noul",
 };
 
-const NEEDS_REPRODUCTION_QUESTION: Question = {
+const PULL_REQUEST_SUMMARY_QUESTION: Question = {
   criteria: {
-    false: "The steps to see the bug are written down",
-    true: "No steps, or steps too vague to follow",
+    false: "Empty, the template text, or only a title repeated",
+    true: "It says what changed and what a reviewer should read first",
   },
   instructions:
-    "Does this bug report lack steps a maintainer could follow to see the bug?",
+    "Does the Summary section of this pull request say what changed and what a reviewer should look at first?",
+  type: "noul",
+};
+
+const PULL_REQUEST_DOCS_QUESTION: Question = {
+  criteria: {
+    false: "The Notes say nothing about documentation",
+    true: "The Notes name the documentation pages updated, or say that none needed a change and why",
+  },
+  instructions:
+    "Do the Notes of this pull request say which documentation pages it updated, or that none needed a change?",
   type: "noul",
 };
 
@@ -229,9 +201,7 @@ export const buildQuestions = (
     blocked: BLOCKED_QUESTION,
     breaking_change: BREAKING_CHANGE_QUESTION,
     impact: IMPACT_QUESTION,
-    needs_info: needsInfoQuestion(kind),
     performance: PERFORMANCE_QUESTION,
-    ready: readyQuestion(kind),
     regression: REGRESSION_QUESTION,
     security: SECURITY_QUESTION,
     type: typeQuestion(kind),
@@ -239,7 +209,9 @@ export const buildQuestions = (
 
   if (kind === "issue") {
     questions.good_first_issue = GOOD_FIRST_ISSUE_QUESTION;
-    questions.needs_reproduction = NEEDS_REPRODUCTION_QUESTION;
+  } else {
+    questions.pr_summary = PULL_REQUEST_SUMMARY_QUESTION;
+    questions.pr_docs = PULL_REQUEST_DOCS_QUESTION;
   }
 
   if (candidates.length > 0) {

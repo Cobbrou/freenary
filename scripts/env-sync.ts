@@ -309,7 +309,7 @@ const EXTERNAL: ExternalVariable[] = [
   },
   {
     description:
-      "It lifts the GitHub API rate limit of that download. The build reads it as a BuildKit secret, so the value never enters a layer. The triage scripts call the GitHub API with it to read items and their label history, and to add and remove labels.",
+      "It lifts the GitHub API rate limit of that download. The build reads it as a BuildKit secret, so the value never enters a layer. The triage scripts call the GitHub API with it to read items, their label history, comments and check runs, to add and remove labels, and to post, edit and delete the triage comment. `scripts/triage/calibrate.ts` reads items and label history with it locally.",
     envFile: "none",
     kind: "raw",
     name: "GITHUB_TOKEN",
