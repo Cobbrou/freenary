@@ -7,6 +7,7 @@ import {
   MIN_SIGNAL_PROBABILITY,
   planLabels,
 } from "./plan";
+import type { PlanInput } from "./plan";
 import { buildQuestions } from "./questions";
 import type { Answers } from "./subq";
 import { LABELS } from "./taxonomy";
@@ -14,21 +15,38 @@ import { LABELS } from "./taxonomy";
 const confidentBug: Answers = {
   area: { choice: "frontend", confidence: 0.9, type: "choice" },
   blocked: { noul: 0.05, type: "noul" },
+  check_environment: { noul: 0.9, type: "noul" },
+  check_expected_actual: { noul: 0.9, type: "noul" },
+  check_steps: { noul: 0.9, type: "noul" },
   impact: { confidence: 0.8, score: 2.2, type: "score" },
-  needs_info: { noul: 0.1, type: "noul" },
-  ready: { noul: 0.9, type: "noul" },
   regression: { noul: 0.95, type: "noul" },
   security: { noul: 0.2, type: "noul" },
   type: { choice: "bug", confidence: 0.95, type: "choice" },
 };
 
+const planFor = (overrides: Partial<PlanInput>) =>
+  planLabels({
+    answers: confidentBug,
+    areasFromPaths: [],
+    checklist: "bug",
+    docsExpected: false,
+    existingLabels: [],
+    kind: "issue",
+    refusedLabels: [],
+    ruleGaps: [],
+    workflowPriorities: [],
+    workflowReproduction: false,
+    workflowStatuses: [],
+    ...overrides,
+  });
+
 describe("planLabels", () => {
   it("labels every group of a confident answer set", () => {
-    const plan = planLabels({
+    const plan = planFor({
       answers: confidentBug,
       areasFromPaths: [],
       existingLabels: [],
-      workflowStatus: undefined,
+      workflowStatuses: [],
     });
 
     expect(plan.labels.toSorted()).toEqual(
@@ -44,14 +62,14 @@ describe("planLabels", () => {
   });
 
   it("holds a low-confidence group back and marks the item for triage", () => {
-    const plan = planLabels({
+    const plan = planFor({
       answers: {
         ...confidentBug,
         type: { choice: "bug", confidence: 0.3, type: "choice" },
       },
       areasFromPaths: [],
       existingLabels: [],
-      workflowStatus: undefined,
+      workflowStatuses: [],
     });
 
     expect(plan.labels).not.toContain("type:bug");
@@ -59,11 +77,11 @@ describe("planLabels", () => {
   });
 
   it("never overrides a group a maintainer already labelled", () => {
-    const plan = planLabels({
+    const plan = planFor({
       answers: confidentBug,
       areasFromPaths: [],
       existingLabels: ["type:feature", "status:blocked"],
-      workflowStatus: undefined,
+      workflowStatuses: [],
     });
 
     expect(plan.labels).not.toContain("type:bug");
@@ -73,11 +91,11 @@ describe("planLabels", () => {
   });
 
   it("prefers the areas of changed files over the model", () => {
-    const plan = planLabels({
+    const plan = planFor({
       answers: confidentBug,
       areasFromPaths: ["database", "docs"],
       existingLabels: [],
-      workflowStatus: undefined,
+      workflowStatuses: [],
     });
 
     expect(plan.labels).toContain("area:database");
@@ -86,57 +104,44 @@ describe("planLabels", () => {
   });
 
   it("flags a confident duplicate", () => {
-    const plan = planLabels({
+    const plan = planFor({
       answers: {
         ...confidentBug,
         duplicate: { choice: "item-14", confidence: 0.9, type: "choice" },
       },
       areasFromPaths: [],
       existingLabels: [],
-      workflowStatus: undefined,
+      workflowStatuses: [],
     });
 
     expect(plan.duplicateOf).toBe(14);
     expect(plan.labels).toContain("duplicate");
   });
 
-  it("puts needs-reproduction on bugs alone", () => {
-    const answers: Answers = {
+  it("puts needs-reproduction on a bug with no steps", () => {
+    const noSteps: Answers = {
       ...confidentBug,
-      needs_reproduction: { noul: 0.95, type: "noul" },
+      check_steps: { noul: 0.2, type: "noul" },
     };
 
-    expect(
-      planLabels({
-        answers,
-        areasFromPaths: [],
-        existingLabels: [],
-        workflowStatus: undefined,
-      }).labels
-    ).toContain("needs-reproduction");
+    expect(planFor({ answers: noSteps }).labels).toContain(
+      "needs-reproduction"
+    );
 
     expect(
-      planLabels({
-        answers: {
-          ...answers,
-          type: { choice: "feature", confidence: 0.9, type: "choice" },
-        },
-        areasFromPaths: [],
-        existingLabels: [],
-        workflowStatus: undefined,
-      }).labels
+      planFor({ answers: noSteps, checklist: "request" }).labels
     ).not.toContain("needs-reproduction");
   });
 
   it("counts a group a maintainer labelled as settled", () => {
-    const plan = planLabels({
+    const plan = planFor({
       answers: {
         ...confidentBug,
         type: { choice: "bug", confidence: 0.3, type: "choice" },
       },
       areasFromPaths: [],
       existingLabels: ["type:feature"],
-      workflowStatus: undefined,
+      workflowStatuses: [],
     });
 
     expect(plan.labels).toContain("status:ready");
@@ -165,11 +170,12 @@ describe("buildQuestions", () => {
     expect(Object.keys(questions).length).toBeLessThanOrEqual(16);
   });
 
-  it("asks pull requests no reproduction or newcomer question", () => {
+  it("asks pull requests about their description, not newcomers", () => {
     const questions = buildQuestions("pull-request", []);
 
-    expect(questions.needs_reproduction).toBeUndefined();
     expect(questions.good_first_issue).toBeUndefined();
+    expect(questions.pr_summary).toBeDefined();
+    expect(questions.pr_docs).toBeDefined();
   });
 });
 
@@ -183,11 +189,11 @@ describe("taxonomy", () => {
 });
 
 const goodFirstIssueLabelsAt = (noul: number) =>
-  planLabels({
+  planFor({
     answers: { ...confidentBug, good_first_issue: { noul, type: "noul" } },
     areasFromPaths: [],
     existingLabels: [],
-    workflowStatus: undefined,
+    workflowStatuses: [],
   }).labels;
 
 describe("good-first-issue", () => {
@@ -236,33 +242,33 @@ describe("planLabels priority", () => {
   };
 
   it("derives priority from an impact label a maintainer set", () => {
-    const plan = planLabels({
+    const plan = planFor({
       answers: lowConfidenceImpact,
       areasFromPaths: [],
       existingLabels: ["impact:critical"],
-      workflowStatus: undefined,
+      workflowStatuses: [],
     });
 
     expect(plan.labels).toContain("priority:p0");
   });
 
   it("derives priority from an existing security label", () => {
-    const plan = planLabels({
+    const plan = planFor({
       answers: lowConfidenceImpact,
       areasFromPaths: [],
       existingLabels: ["security"],
-      workflowStatus: undefined,
+      workflowStatuses: [],
     });
 
     expect(plan.labels).toContain("priority:p0");
   });
 
   it("keeps a priority a maintainer set", () => {
-    const plan = planLabels({
+    const plan = planFor({
       answers: confidentBug,
       areasFromPaths: [],
       existingLabels: ["priority:p3"],
-      workflowStatus: undefined,
+      workflowStatuses: [],
     });
 
     expect(plan.labels.some((label) => label.startsWith("priority:"))).toBe(
@@ -271,22 +277,22 @@ describe("planLabels priority", () => {
   });
 
   it("maps a maintainer impact without a regression", () => {
-    const plan = planLabels({
+    const plan = planFor({
       answers: { ...confidentBug, regression: { noul: 0.1, type: "noul" } },
       areasFromPaths: [],
       existingLabels: ["impact:low"],
-      workflowStatus: undefined,
+      workflowStatuses: [],
     });
 
     expect(plan.labels).toContain("priority:p3");
   });
 
   it("derives priority from an existing regression label", () => {
-    const plan = planLabels({
+    const plan = planFor({
       answers: lowConfidenceImpact,
       areasFromPaths: [],
       existingLabels: ["regression"],
-      workflowStatus: undefined,
+      workflowStatuses: [],
     });
 
     expect(plan.labels).toContain("priority:p1");
@@ -295,11 +301,11 @@ describe("planLabels priority", () => {
 
 describe("workflow status", () => {
   it("replaces a status the workflow set when the answer changes", () => {
-    const plan = planLabels({
+    const plan = planFor({
       answers: confidentBug,
       areasFromPaths: [],
       existingLabels: ["status:needs-triage"],
-      workflowStatus: "status:needs-triage",
+      workflowStatuses: ["status:needs-triage"],
     });
 
     expect(plan.labels).toContain("status:ready");
@@ -307,11 +313,11 @@ describe("workflow status", () => {
   });
 
   it("keeps a status the workflow set when the answer is the same", () => {
-    const plan = planLabels({
+    const plan = planFor({
       answers: confidentBug,
       areasFromPaths: [],
       existingLabels: ["status:ready"],
-      workflowStatus: "status:ready",
+      workflowStatuses: ["status:ready"],
     });
 
     expect(plan.labels).not.toContain("status:ready");
@@ -319,11 +325,11 @@ describe("workflow status", () => {
   });
 
   it("never replaces a status a maintainer set", () => {
-    const plan = planLabels({
+    const plan = planFor({
       answers: confidentBug,
       areasFromPaths: [],
       existingLabels: ["status:blocked"],
-      workflowStatus: undefined,
+      workflowStatuses: [],
     });
 
     expect(plan.removed).toEqual([]);
@@ -332,32 +338,77 @@ describe("workflow status", () => {
     );
   });
 
-  it("keeps a maintainer status beside a workflow status", () => {
-    const plan = planLabels({
+  it("removes its own status once a maintainer sets one", () => {
+    for (const existingLabels of [
+      ["status:needs-triage", "status:blocked"],
+      ["status:blocked", "status:needs-triage"],
+    ]) {
+      const plan = planFor({
+        answers: confidentBug,
+        areasFromPaths: [],
+        existingLabels,
+        workflowStatuses: ["status:needs-triage"],
+      });
+
+      expect(plan.removed).toEqual(["status:needs-triage"]);
+      expect(plan.labels.some((label) => label.startsWith("status:"))).toBe(
+        false
+      );
+    }
+  });
+
+  it("removes every extra status it owns", () => {
+    const plan = planFor({
       answers: confidentBug,
       areasFromPaths: [],
-      existingLabels: ["status:needs-triage", "status:blocked"],
-      workflowStatus: "status:needs-triage",
+      existingLabels: ["status:needs-info", "status:needs-triage"],
+      workflowStatuses: ["status:needs-info", "status:needs-triage"],
     });
 
-    expect(plan.removed).toEqual([]);
-    expect(plan.labels.some((label) => label.startsWith("status:"))).toBe(
-      false
-    );
+    expect(plan.labels).toContain("status:ready");
+    expect(plan.removed.toSorted()).toEqual([
+      "status:needs-info",
+      "status:needs-triage",
+    ]);
   });
 
   it("downgrades a workflow ready status on a low-confidence answer", () => {
-    const plan = planLabels({
+    const plan = planFor({
       answers: {
         ...confidentBug,
         type: { choice: "bug", confidence: 0.3, type: "choice" },
       },
       areasFromPaths: [],
       existingLabels: ["status:ready"],
-      workflowStatus: "status:ready",
+      workflowStatuses: ["status:ready"],
     });
 
     expect(plan.labels).toContain("status:needs-triage");
     expect(plan.removed).toEqual(["status:ready"]);
+  });
+});
+
+describe("workflow priority", () => {
+  it("recomputes its own priority after a maintainer changes impact", () => {
+    const plan = planFor({
+      answers: { ...confidentBug, regression: { noul: 0.1, type: "noul" } },
+      existingLabels: ["impact:critical", "priority:p3", "status:ready"],
+      workflowPriorities: ["priority:p3"],
+    });
+
+    expect(plan.labels).toContain("priority:p0");
+    expect(plan.removed).toContain("priority:p3");
+  });
+
+  it("removes its own priority once a maintainer sets one", () => {
+    const plan = planFor({
+      existingLabels: ["priority:p3", "priority:p1"],
+      workflowPriorities: ["priority:p3"],
+    });
+
+    expect(plan.removed).toContain("priority:p3");
+    expect(plan.labels.some((label) => label.startsWith("priority:"))).toBe(
+      false
+    );
   });
 });

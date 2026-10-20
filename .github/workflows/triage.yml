@@ -2,11 +2,16 @@ name: Triage
 
 on:
   issues:
-    types: [opened, reopened]
+    types: [opened, reopened, edited, labeled]
+  issue_comment:
+    types: [created]
   # pull_request_target runs the base branch's code with secrets, so a pull
   # request from a fork is labelled too. The job never checks out the head.
   pull_request_target:
-    types: [opened, reopened, ready_for_review]
+    types: [opened, reopened, ready_for_review, edited, labeled]
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
   workflow_dispatch:
     inputs:
       kind:
@@ -20,19 +25,27 @@ on:
         required: true
 
 permissions:
+  checks: read
   contents: read
   issues: write
   pull-requests: write
 
-concurrency:
-  group: triage-${{ github.event.issue.number || github.event.pull_request.number || inputs.number }}
-  cancel-in-progress: true
-
 jobs:
   triage:
-    if: ${{ !endsWith(github.actor, '[bot]') && !github.event.pull_request.draft }}
+    if: >-
+      ${{
+        !endsWith(github.actor, '[bot]') &&
+        !github.event.pull_request.draft &&
+        (github.event_name != 'issue_comment' || github.event.comment.user.login == github.event.issue.user.login) &&
+        (github.event.action != 'edited' || github.event.changes.body || github.event.changes.title) &&
+        (github.event.action != 'labeled' || startsWith(github.event.label.name, 'type:') || startsWith(github.event.label.name, 'area:') || startsWith(github.event.label.name, 'impact:') || startsWith(github.event.label.name, 'status:') || startsWith(github.event.label.name, 'priority:') || github.event.label.name == 'security' || github.event.label.name == 'regression') &&
+        (github.event_name != 'workflow_run' || (github.event.workflow_run.pull_requests[0] && github.event.workflow_run.conclusion != 'cancelled'))
+      }}
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
+    concurrency:
+      group: triage-${{ github.event.issue.number || github.event.pull_request.number || github.event.workflow_run.pull_requests[0].number || inputs.number }}
+      cancel-in-progress: true
     steps:
       - name: Look for a SubQ key
         id: key
@@ -63,6 +76,14 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
           SUBQ_API_KEY: ${{ secrets.SUBQ_API_KEY }}
-          KIND: ${{ inputs.kind || (github.event.pull_request && 'pull-request') || 'issue' }}
-          NUMBER: ${{ inputs.number || github.event.issue.number || github.event.pull_request.number }}
+          KIND: ${{ inputs.kind || ((github.event.pull_request || github.event.issue.pull_request || github.event.workflow_run) && 'pull-request') || 'issue' }}
+          NUMBER: ${{ inputs.number || github.event.issue.number || github.event.pull_request.number || github.event.workflow_run.pull_requests[0].number }}
         run: bun scripts/triage/main.ts "$KIND" "$NUMBER"
+
+      - uses: actions/upload-artifact@v4
+        if: steps.key.outputs.present == 'true'
+        with:
+          name: triage-${{ github.run_id }}-${{ github.run_attempt }}
+          path: triage-record.json
+          if-no-files-found: ignore
+          retention-days: 90

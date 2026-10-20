@@ -1,9 +1,12 @@
 import { Data, Effect, Schema } from "effect";
 
 const API_ROOT = "https://api.github.com";
+export const WORKFLOW_ACTOR = "github-actions[bot]";
 const PAGE_SIZE = 100;
 const MAX_FILE_PAGES = 30;
 const NOT_FOUND = 404;
+const NO_CONTENT = 204;
+const MAX_COMMENT_PAGES = 10;
 
 type GitHubFailure =
   | { readonly kind: "unreachable"; readonly detail: string }
@@ -23,18 +26,40 @@ export class GitHubRequestFailed extends Data.TaggedError(
 
 const LabelSchema = Schema.Struct({ name: Schema.String });
 
+const UserSchema = Schema.Struct({ login: Schema.String });
+
 export const IssueSchema = Schema.Struct({
   body: Schema.optional(Schema.NullOr(Schema.String)),
   labels: Schema.Array(LabelSchema),
   number: Schema.Number,
   pull_request: Schema.optional(Schema.Unknown),
+  state: Schema.optional(Schema.String),
   title: Schema.String,
+  user: Schema.optional(Schema.NullOr(UserSchema)),
 });
 
 export type Issue = typeof IssueSchema.Type;
 
 const PullRequestSchema = Schema.Struct({
   draft: Schema.optional(Schema.Boolean),
+  head: Schema.Struct({ sha: Schema.String }),
+});
+
+const CheckRunsSchema = Schema.Struct({
+  check_runs: Schema.Array(
+    Schema.Struct({
+      conclusion: Schema.optional(Schema.NullOr(Schema.String)),
+      id: Schema.Number,
+      name: Schema.String,
+      status: Schema.String,
+    })
+  ),
+});
+
+const CommentSchema = Schema.Struct({
+  body: Schema.optional(Schema.NullOr(Schema.String)),
+  id: Schema.Number,
+  user: Schema.optional(Schema.NullOr(UserSchema)),
 });
 
 const PullRequestFileSchema = Schema.Struct({ filename: Schema.String });
@@ -100,6 +125,18 @@ const request = Effect.fnUntraced(function* request<
     });
   }
 
+  if (response.status === NO_CONTENT) {
+    return yield* Schema.decodeUnknownEffect(schema)(null).pipe(
+      Effect.mapError(
+        (cause: Schema.SchemaError) =>
+          new GitHubRequestFailed({
+            operation,
+            reason: { detail: cause.message, kind: "undecodable" },
+          })
+      )
+    );
+  }
+
   const payload = yield* Effect.tryPromise({
     catch: (cause) =>
       new GitHubRequestFailed({
@@ -132,14 +169,88 @@ export const getIssue = (client: GitHubClient, number: number) =>
     {}
   );
 
-export const isDraftPullRequest = (client: GitHubClient, number: number) =>
+export const getPullRequest = (client: GitHubClient, number: number) =>
   request(
     client,
     "get pull request",
     repoPath(client, `/pulls/${number}`),
     PullRequestSchema,
     {}
-  ).pipe(Effect.map((pull) => pull.draft === true));
+  );
+
+export const listCheckRuns = (client: GitHubClient, sha: string) =>
+  request(
+    client,
+    "list check runs",
+    repoPath(client, `/commits/${sha}/check-runs?per_page=${PAGE_SIZE}`),
+    CheckRunsSchema,
+    {}
+  ).pipe(Effect.map((listing) => listing.check_runs));
+
+export type Comment = typeof CommentSchema.Type;
+
+export const listComments = Effect.fnUntraced(function* listComments(
+  client: GitHubClient,
+  number: number
+) {
+  const comments: Comment[] = [];
+
+  for (let page = 1; page <= MAX_COMMENT_PAGES; page += 1) {
+    const batch = yield* request(
+      client,
+      "list comments",
+      repoPath(
+        client,
+        `/issues/${number}/comments?per_page=${PAGE_SIZE}&page=${page}`
+      ),
+      Schema.Array(CommentSchema),
+      {}
+    );
+
+    comments.push(...batch);
+
+    if (batch.length < PAGE_SIZE) {
+      break;
+    }
+  }
+
+  return comments;
+});
+
+export const createComment = (
+  client: GitHubClient,
+  number: number,
+  body: string
+) =>
+  request(
+    client,
+    "create comment",
+    repoPath(client, `/issues/${number}/comments`),
+    CommentSchema,
+    { body: { body }, method: "POST" }
+  );
+
+export const updateComment = (
+  client: GitHubClient,
+  commentId: number,
+  body: string
+) =>
+  request(
+    client,
+    "update comment",
+    repoPath(client, `/issues/comments/${commentId}`),
+    CommentSchema,
+    { body: { body }, method: "PATCH" }
+  );
+
+export const deleteComment = (client: GitHubClient, commentId: number) =>
+  request(
+    client,
+    "delete comment",
+    repoPath(client, `/issues/comments/${commentId}`),
+    Schema.Null,
+    { method: "DELETE" }
+  );
 
 const listFilesPage = (client: GitHubClient, number: number, page: number) =>
   request(
@@ -197,21 +308,18 @@ export const addLabels = (
   );
 
 const LabelEventSchema = Schema.Struct({
-  actor: Schema.optional(
-    Schema.NullOr(Schema.Struct({ login: Schema.String }))
-  ),
+  actor: Schema.optional(Schema.NullOr(UserSchema)),
   event: Schema.String,
   label: Schema.optional(Schema.Struct({ name: Schema.String })),
 });
 
 const MAX_EVENT_PAGES = 10;
 
-export const lastLabelledBy = Effect.fnUntraced(function* lastLabelledBy(
+export const listLabelEvents = Effect.fnUntraced(function* listLabelEvents(
   client: GitHubClient,
-  number: number,
-  labelName: string
+  number: number
 ) {
-  let login: string | undefined;
+  const events: (typeof LabelEventSchema.Type)[] = [];
 
   for (let page = 1; page <= MAX_EVENT_PAGES; page += 1) {
     const batch = yield* request(
@@ -225,14 +333,10 @@ export const lastLabelledBy = Effect.fnUntraced(function* lastLabelledBy(
       {}
     );
 
-    for (const event of batch) {
-      if (event.event === "labeled" && event.label?.name === labelName) {
-        login = event.actor?.login;
-      }
-    }
+    events.push(...batch);
 
     if (batch.length < PAGE_SIZE) {
-      return login;
+      return events;
     }
   }
 });
