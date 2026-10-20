@@ -1,6 +1,6 @@
 import { Button } from "@freenary/ui/components/button";
 
-import type { BankInstitution } from "@/features/bank-connection";
+import type { BankInstitution, BankLinking } from "@/features/bank-connection";
 import { m } from "@/paraglide/messages.js";
 import { WizardShell } from "@/shared/ui/wizard-shell";
 import { WizardStepper } from "@/shared/ui/wizard-stepper";
@@ -10,13 +10,14 @@ import { CountrySelectionStep } from "./country-selection-step";
 import { OnboardingWizardSkeleton } from "./onboarding-wizard-skeleton";
 
 interface OnboardingWizardProps {
+  bankLinking: BankLinking;
   banks: BankInstitution[];
   connectedCount: number;
   direction: 1 | -1;
-  hasBankStep: boolean;
   isBanksError: boolean;
   isBanksPending: boolean;
   isCompleting: boolean;
+  isOperator: boolean;
   isPending: boolean;
   onBack: () => void;
   onCountriesChange: (countries: string[]) => void;
@@ -33,18 +34,15 @@ const STEP_LABEL_FNS = [
   m.onboarding_step_bank,
 ] as const satisfies readonly (() => string)[];
 
-const STEP_LABEL_FNS_WITHOUT_BANKING = [
-  m.onboarding_step_country,
-] as const satisfies readonly (() => string)[];
-
 export const OnboardingWizard = ({
+  bankLinking,
   banks,
   connectedCount,
   direction,
-  hasBankStep,
   isBanksError,
   isBanksPending,
   isCompleting,
+  isOperator,
   isPending,
   onBack,
   onCountriesChange,
@@ -64,7 +62,7 @@ export const OnboardingWizard = ({
       <WizardStepper
         current={step}
         label={m.onboarding_progress_label()}
-        steps={hasBankStep ? STEP_LABEL_FNS : STEP_LABEL_FNS_WITHOUT_BANKING}
+        steps={STEP_LABEL_FNS}
       />
     }
     toolbar={
@@ -75,18 +73,19 @@ export const OnboardingWizard = ({
   >
     {step === 0 ? (
       <CountrySelectionStep
-        isCompleting={isCompleting}
         onContinue={onCountryContinue}
         onCountriesChange={onCountriesChange}
         selected={taxCountries}
       />
     ) : (
       <BankConnectionStep
+        bankLinking={bankLinking}
         banks={banks}
         connectedCount={connectedCount}
         isBanksError={isBanksError}
         isBanksPending={isBanksPending}
         isCompleting={isCompleting}
+        isOperator={isOperator}
         onBack={onBack}
         onFinish={onFinish}
         unavailableCountries={unavailableCountries}

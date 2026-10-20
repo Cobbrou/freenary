@@ -1,13 +1,18 @@
 import { settings } from "@freenary/instance-config";
 
 import { enableBankingProvider } from "./enable-banking";
+import { mockProvider } from "./mock";
 import { powensProvider } from "./powens";
 import type { BankingProvider } from "./types";
 
-const providers = {
+const developmentOnlyProviders: Record<string, BankingProvider> =
+  settings.NODE_ENV === "production" ? {} : { [mockProvider.id]: mockProvider };
+
+const providers: Record<string, BankingProvider> = {
   [enableBankingProvider.id]: enableBankingProvider,
   [powensProvider.id]: powensProvider,
-} as const satisfies Record<string, BankingProvider>;
+  ...developmentOnlyProviders,
+};
 
 export const getProvider = (id: string): BankingProvider => {
   const provider = providers[id];

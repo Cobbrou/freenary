@@ -2,7 +2,7 @@
 
 The BankingProvider members, the registry, what an optional member costs, the callback path and how to test with no credentials.
 
-A bank provider adapter is one object that satisfies the `BankingProvider` interface. It translates one aggregation API into the shapes the core understands, and it does nothing else. Two adapters ship: Powens and Enable Banking.
+A bank provider adapter is one object that satisfies the `BankingProvider` interface. It translates one aggregation API into the shapes the core understands, and it does nothing else. Three adapters ship: Powens, Enable Banking, and `mock`, which exists only outside production.
 
 The interface lives in [`packages/api/src/providers/types.ts`](https://github.com/suiramdev/freenary/blob/main/packages/api/src/providers/types.ts). Read that file for the exact field list, and read this file for the contract each member owes its caller.
 
@@ -43,6 +43,19 @@ Every call carries a fresh JSON Web Token as a bearer token:
 ### Credentials from the setup screen
 
 Saving a bank variant through the setup screen writes `null` for every key of the `banking` integration that the chosen variant does not use (`packages/api/src/instance/merge.ts › writesOf`). Stored credentials of the other adapter are therefore erased, and its existing connections can no longer sync or disconnect. Credentials held in the environment are untouched.
+
+### Mock
+
+| Detail | Value |
+| --- | --- |
+| Credentials | None. `isConfigured` is always `true` |
+| Institutions | Three made-up banks from `mock/catalog.ts`, listed for every country |
+| Consent screen | `MOCK_CONSENT_PATH` (`/mock-bank/consent`), a page `handleMockConsent` serves from `apps/server/src/index.ts`. It refuses a `redirect_uri` other than `CORS_ORIGIN` joined to `/callback/mock`, and answers 404 when `NODE_ENV` is `production` |
+| Session code | `mock_<YYYY-MM-DD>_<uuid>`, from `mock/session.ts › mockSessionCode`. The day is the consent day; `openedOnOf` parses it, and `completeConnection` refuses a code it cannot parse |
+| Generated data | `mock/generate.ts` seeds a fresh Faker per key (session, account, day), so a day's transactions and their ids are the same on every sync. The balance ledger starts 90 days before the consent day, so a balance moves only by the transactions booked since |
+| Production exclusion | The env schema refuses `BANKING_PROVIDER=mock`, `integrations.ts` adds no `mock` setup variant, and `registry.ts` registers the adapter only when `NODE_ENV` is not `production` |
+
+`mock/index.ts › mockProvider` loads `./generate`, and with it `@faker-js/faker`, through a dynamic `import()` inside `completeConnection` and the `fetch*` members. Importing the adapter therefore never loads Faker.
 
 ## The registry
 
@@ -137,12 +150,15 @@ An adapter reads `env` from `@freenary/env/server` and nothing else from the cor
 Add one line to the map in `packages/api/src/providers/registry.ts`:
 
 ```ts
-const providers = {
+const providers: Record<string, BankingProvider> = {
   [enableBankingProvider.id]: enableBankingProvider,
   [myBankProvider.id]: myBankProvider,
   [powensProvider.id]: powensProvider,
-} as const satisfies Record<string, BankingProvider>;
+  ...developmentOnlyProviders,
+};
 ```
+
+`developmentOnlyProviders` holds `mock`, and is empty when `NODE_ENV` is `production`.
 
 No router, no sync code and no web route changes.
 
@@ -243,7 +259,7 @@ The payload is a JSON object with the keys `institution` (its `country`, `id` an
 
 `syncAccounts` joins the collected messages and returns them in the response body. No screen renders that string: both callers toast one fixed catalog message. So keep the message short and free of secrets.
 
-Two rules both shipped adapters follow:
+Two rules the Powens and Enable Banking adapters follow:
 
 - `listInstitutions` does not throw, and it does not hide a failed call behind an empty list. It fails the `Effect` with `BankInstitutionsUnavailable`, which carries the `country`. An empty list therefore means the provider has no bank for that country.
 - `closeConnection` and `deleteUser` treat a 404 as success, because the record is already gone.
@@ -252,7 +268,7 @@ A sync failure changes no connection status. [Data model](./data-model.md#bankco
 
 ## Test an adapter with no live credentials
 
-A sandbox account is not a prerequisite. Split the work in two.
+A sandbox account is not a prerequisite. To exercise the connect flow, the sync and the screens with no adapter of your own, run the `mock` adapter: `bun run dev:up` picks it when `.env` names no provider. To test your own adapter, split the work in two.
 
 ### 1. Test the mappers directly
 

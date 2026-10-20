@@ -23,7 +23,6 @@ import { remixIcon } from "@/shared/lib/remix-icon";
 import { WizardStepHeader } from "@/shared/ui/wizard-step-header";
 
 interface CountrySelectionStepProps {
-  isCompleting: boolean;
   onContinue: () => void;
   onCountriesChange: (countries: string[]) => void;
   selected: string[];
@@ -37,7 +36,6 @@ interface CountryRow {
 }
 
 export const CountrySelectionStep = ({
-  isCompleting,
   onContinue,
   onCountriesChange,
   selected,
@@ -118,8 +116,7 @@ export const CountrySelectionStep = ({
       </p>
       <div className="flex justify-end">
         <Button
-          disabled={selected.length === 0 || isCompleting}
-          loading={isCompleting}
+          disabled={selected.length === 0}
           onClick={onContinue}
           trailingIcon={remixIcon(RiArrowRightLine)}
           type="button"

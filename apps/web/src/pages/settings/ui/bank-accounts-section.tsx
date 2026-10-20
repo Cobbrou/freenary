@@ -1,16 +1,11 @@
-import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "@freenary/ui/components/empty";
-import { RiErrorWarningLine, RiPlugLine } from "@remixicon/react";
 import { useQuery } from "@tanstack/react-query";
 
 import {
   BankConnectionPanel,
+  BankLinkingCheckFailed,
+  BankLinkingUnavailable,
   BankListSkeleton,
+  useBankLinking,
 } from "@/features/bank-connection";
 import { m } from "@/paraglide/messages.js";
 import { orpc } from "@/shared/api";
@@ -20,24 +15,17 @@ import { SettingsSection } from "./settings-section";
 const INSTITUTIONS_FOR_THE_USERS_OWN_JURISDICTIONS = {};
 
 export const BankAccountsSection = () => {
-  const availability = useQuery(
-    orpc.bankConnection.getProviderAvailability.queryOptions()
-  );
-
-  const isAvailable = availability.data?.available ?? false;
+  const bankLinking = useBankLinking();
 
   const banksQuery = useQuery(
     orpc.bankConnection.listInstitutions.queryOptions({
-      enabled: isAvailable,
+      enabled: bankLinking === "available",
       input: INSTITUTIONS_FOR_THE_USERS_OWN_JURISDICTIONS,
     })
   );
 
-  const checkFailedWithNoAnswerYet =
-    availability.isError && availability.data === undefined;
-
   const renderPanel = () => {
-    if (availability.isPending) {
+    if (bankLinking === "pending") {
       return (
         <div aria-busy="true">
           <output className="sr-only">
@@ -50,36 +38,12 @@ export const BankAccountsSection = () => {
       );
     }
 
-    if (checkFailedWithNoAnswerYet) {
-      return (
-        <Empty>
-          <EmptyHeader>
-            <EmptyMedia variant="icon">
-              <RiErrorWarningLine />
-            </EmptyMedia>
-            <EmptyTitle>{m.settings_bank_check_error_title()}</EmptyTitle>
-            <EmptyDescription>
-              {m.settings_bank_check_error_description()}
-            </EmptyDescription>
-          </EmptyHeader>
-        </Empty>
-      );
+    if (bankLinking === "check-failed") {
+      return <BankLinkingCheckFailed />;
     }
 
-    if (!isAvailable) {
-      return (
-        <Empty>
-          <EmptyHeader>
-            <EmptyMedia variant="icon">
-              <RiPlugLine />
-            </EmptyMedia>
-            <EmptyTitle>{m.settings_bank_unavailable_title()}</EmptyTitle>
-            <EmptyDescription>
-              {m.settings_bank_unavailable_description()}
-            </EmptyDescription>
-          </EmptyHeader>
-        </Empty>
-      );
+    if (bankLinking === "unavailable") {
+      return <BankLinkingUnavailable />;
     }
 
     return (

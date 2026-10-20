@@ -158,7 +158,7 @@ Usually set on the setup screen: see [Bank providers](/docs/reference/bank-provi
 
 | Variable | Default | What it does | Absent or wrong |
 | --- | --- | --- | --- |
-| `BANKING_PROVIDER` | `powens` | Picks the provider a new bank connection uses: `powens` or `enable-banking`. | Any other value stops the start. |
+| `BANKING_PROVIDER` | `powens` | Picks the provider a new bank connection uses: `powens`, `enable-banking`, or `mock`, which generates bank data for development. | Any other value stops the start, and so does `mock` when `NODE_ENV` is `production`. |
 | `ENABLE_BANKING_APP_ID` | unset | The Enable Banking application identifier. | Enable Banking needs both of its values. |
 | `ENABLE_BANKING_PRIVATE_KEY` | unset | The Enable Banking PEM private key. | Enable Banking needs both of its values. |
 | `POWENS_CLIENT_ID` | unset | The Powens client identifier. | Powens needs all three of its values. |

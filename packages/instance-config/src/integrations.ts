@@ -29,6 +29,11 @@ export interface Integration {
   readonly variants: readonly IntegrationVariant[];
 }
 
+const isProduction = process.env.NODE_ENV === "production";
+
+const developmentOnlyBankingVariants: readonly IntegrationVariant[] =
+  isProduction ? [] : [{ discriminantValue: "mock", fields: [], id: "mock" }];
+
 const bankingIntegration: Integration = {
   discriminantKey: "BANKING_PROVIDER",
   id: "banking",
@@ -55,6 +60,7 @@ const bankingIntegration: Integration = {
       ],
       id: "enable-banking",
     },
+    ...developmentOnlyBankingVariants,
   ],
 };
 

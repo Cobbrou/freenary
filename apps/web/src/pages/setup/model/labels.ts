@@ -43,6 +43,7 @@ const STEP_LABELS = {
 const VARIANT_LABELS = {
   disabled: m.setup_variant_disabled,
   "enable-banking": m.setup_variant_enable_banking,
+  mock: m.setup_variant_mock,
   powens: m.setup_variant_powens,
   resend: m.setup_variant_resend,
   smtp: m.setup_variant_smtp,

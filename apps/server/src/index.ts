@@ -1,6 +1,10 @@
 import { cors } from "@elysiajs/cors";
 import { handleAssistantChat } from "@freenary/api/assistant/handler";
 import { createContext } from "@freenary/api/context";
+import {
+  handleMockConsent,
+  MOCK_CONSENT_PATH,
+} from "@freenary/api/providers/mock/consent";
 import { appRouter } from "@freenary/api/routers/index";
 import { auth } from "@freenary/auth";
 import { env } from "@freenary/env/server";
@@ -146,6 +150,7 @@ new Elysia()
       parse: "none",
     }
   )
+  .get(MOCK_CONSENT_PATH, (context) => handleMockConsent(context.request))
   .get("/", () => "OK")
   .listen(env.PORT, () => {
     console.log(`Server is running on ${env.BETTER_AUTH_URL}`);

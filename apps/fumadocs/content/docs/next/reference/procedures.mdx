@@ -142,7 +142,7 @@ A caller with no session gets a `guest` answer, not a 401.
 
 ### bankConnection.exchangeCode
 
-**Input**: `params` is the raw callback query and must hold a `state` key. `providerId` is `powens` or `enable-banking`.
+**Input**: `params` is the raw callback query and must hold a `state` key. `providerId` is `powens`, `enable-banking` or, outside production, `mock`.
 
 **Output**: `{ accounts, connectionId, institutionName, returnTo, sessionId }`. `accounts` lists `{ iban?, name?, uid }` as the provider returned them. `returnTo` is `onboarding` or `settings`, as signed into the state. `sessionId` is the provider's session id.
 
@@ -371,6 +371,8 @@ Same input as `instance.check`. It stores only the values the environment doesn'
 ### onboarding.completeOnboarding
 
 **Output**: `{ success: true }`.
+
+**Errors**: `PRECONDITION_FAILED` (412) `Connect a bank before finishing onboarding`, when the caller has no bank connection.
 
 ### onboarding.getStatus
 

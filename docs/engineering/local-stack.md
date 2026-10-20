@@ -13,7 +13,7 @@ Two paths run Freenary on your machine. The containerised path runs every part i
 
 `bun run dev:up` is `bun scripts/dev.ts up --build --watch`. One command builds the images, applies the migrations and starts five services. `bun run dev:mail` adds a sixth service, Mailpit.
 
-The stack needs no `.env` file. The `server` service declares `env_file` with `path: .env` and `required: false`, so an absent file is valid. Its `environment` block holds the six values the stack derives: `DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `CORS_ORIGIN`, `AUTH_COOKIE_DOMAIN` and `NODE_ENV`. Compose gives `environment` precedence over `env_file`, so those six always win. Every other variable of a root `.env` reaches the container.
+The stack needs no `.env` file. The `server` service declares `env_file` with `path: .env` and `required: false`, so an absent file is valid. Its `environment` block holds the seven values the stack derives: `DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `CORS_ORIGIN`, `AUTH_COOKIE_DOMAIN`, `BANKING_PROVIDER` and `NODE_ENV`. Compose gives `environment` precedence over `env_file`, so those seven always win. `BANKING_PROVIDER` is the one that can be empty: `scripts/dev.ts` sets `mock` when the root `.env` names no bank provider, and otherwise passes the `.env` value, so an empty value leaves the schema default and the setup screen in charge. Every other variable of a root `.env` reaches the container.
 
 ### The services
 
