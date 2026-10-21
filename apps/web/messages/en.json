@@ -588,8 +588,6 @@
   "budget_sync_progress_accounts": "Account {done} of {total}",
   "budget_sync_progress_categorised": "{done} of {total}",
   "budget_sync_progress_categorising": "Sorting transactions into categories",
-  "budget_sync_progress_hint_categorising": "Categories fill in as they are decided. You can keep using the page.",
-  "budget_sync_progress_hint_importing": "Transactions appear as they arrive. You can keep using the page.",
   "budget_sync_progress_importing": "Importing transactions from your banks",
   "budget_sync_progress_starting": "Connecting to your banks",
   "budget_sync_progress_transactions": [
