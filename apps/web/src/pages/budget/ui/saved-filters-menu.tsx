@@ -1,20 +1,13 @@
 import { MAX_SAVED_FILTER_NAME_LENGTH } from "@freenary/api/lib/transaction-filters";
 import type { TransactionFilter } from "@freenary/api/lib/transaction-filters";
 import { Button } from "@freenary/ui/components/button";
-import {
-  Field,
-  FieldDescription,
-  FieldLabel,
-} from "@freenary/ui/components/field";
 import { Input } from "@freenary/ui/components/input";
 import {
   Popover,
   PopoverContent,
-  PopoverTitle,
   PopoverTrigger,
 } from "@freenary/ui/components/popover";
 import { Skeleton } from "@freenary/ui/components/skeleton";
-import { cn } from "@freenary/ui/lib/utils";
 import { RiBookmarkLine, RiCheckLine, RiDeleteBinLine } from "@remixicon/react";
 import { useId, useState } from "react";
 import type { FormEvent } from "react";
@@ -90,18 +83,6 @@ export const SavedFiltersMenu = ({
       trimmedName.toLocaleLowerCase(locale)
   );
 
-  const hintOf = () => {
-    if (!hasSomethingToSave) {
-      return m.budget_saved_filter_save_hint_empty();
-    }
-
-    return replaced
-      ? m.budget_saved_filter_save_hint_replace({ name: replaced.name })
-      : null;
-  };
-
-  const hint = hintOf();
-
   const handleSave = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
@@ -127,7 +108,7 @@ export const SavedFiltersMenu = ({
 
     if (savedFiltersQuery.isError) {
       return (
-        <p className="text-muted-foreground px-2 py-1">
+        <p className="text-muted-foreground px-2 py-1.5">
           {m.budget_saved_filters_error()}
         </p>
       );
@@ -135,53 +116,105 @@ export const SavedFiltersMenu = ({
 
     if (savedFilters.length === 0) {
       return (
-        <p className="text-muted-foreground px-2 py-1">
+        <p className="text-muted-foreground px-2 py-1.5">
           {m.budget_saved_filters_empty()}
         </p>
       );
     }
 
     return (
-      <ul className="flex max-h-64 flex-col overflow-y-auto">
+      <ul className="flex max-h-56 flex-col overflow-y-auto overscroll-contain">
         {savedFilters.map((saved) => {
           const isApplied =
             searchKey(saved.filters, saved.search) === currentKey;
 
           return (
-            <li className="flex items-center gap-1" key={saved.id}>
+            <li className="flex items-center gap-0.5" key={saved.id}>
               <button
                 aria-current={isApplied ? "true" : undefined}
-                className="hover:bg-hover flex min-w-0 flex-1 flex-col items-start gap-0.5 rounded-md px-2 py-1.5 text-left outline-none focus-visible:ring-1 focus-visible:ring-[color:var(--focus-ring,#6B97FF)]"
+                className="hover:bg-hover flex min-w-0 flex-1 flex-col items-start rounded-md px-2 py-1 text-left leading-snug outline-none focus-visible:ring-1 focus-visible:ring-[color:var(--focus-ring,#6B97FF)]"
                 onClick={() => applySaved(saved)}
                 type="button"
               >
-                <span className="flex max-w-full items-center gap-1.5 font-medium">
-                  <span className="truncate">{saved.name}</span>
+                <span className="flex max-w-full items-center gap-1 font-medium">
+                  <span className="min-w-0 break-words">{saved.name}</span>
                   {isApplied && (
                     <>
-                      <RiCheckLine aria-hidden="true" className="size-3.5" />
+                      <RiCheckLine
+                        aria-hidden="true"
+                        className="size-3.5 shrink-0"
+                      />
                       <span className="sr-only">
                         {m.budget_saved_filter_applied()}
                       </span>
                     </>
                   )}
                 </span>
-                <span className="text-muted-foreground max-w-full truncate">
+                <span className="text-muted-foreground max-w-full text-[11px] break-words">
                   {summaryOf(saved)}
                 </span>
               </button>
               <Button
-                aria-label={m.budget_saved_filter_delete({ name: saved.name })}
-                leadingIcon={remixIcon(RiDeleteBinLine)}
                 loading={deletingId === saved.id}
                 onClick={() => deleteSavedFilter(saved)}
                 size="icon-compact"
                 variant="ghost"
-              />
+              >
+                <RiDeleteBinLine aria-hidden="true" />
+                <span className="sr-only">
+                  {m.budget_saved_filter_delete({ name: saved.name })}
+                </span>
+              </Button>
             </li>
           );
         })}
       </ul>
+    );
+  };
+
+  const saveFormOf = () => {
+    if (!hasSomethingToSave) {
+      return (
+        <p className="text-muted-foreground px-2 py-1.5 text-[11px]">
+          {m.budget_saved_filter_save_hint_empty()}
+        </p>
+      );
+    }
+
+    return (
+      <form className="flex flex-col gap-1 px-1 pt-1" onSubmit={handleSave}>
+        <label
+          className="text-muted-foreground px-1 text-[11px] font-medium"
+          htmlFor={nameId}
+        >
+          {m.budget_saved_filter_save_as()}
+        </label>
+        <div className="flex items-center gap-1">
+          <Input
+            aria-describedby={replaced ? hintId : undefined}
+            className="min-w-0 flex-1"
+            id={nameId}
+            maxLength={MAX_SAVED_FILTER_NAME_LENGTH}
+            onChange={(event) => setName(event.target.value)}
+            placeholder={m.budget_saved_filter_name_placeholder()}
+            value={name}
+          />
+          <Button
+            disabled={trimmedName === ""}
+            loading={isSaving}
+            size="compact"
+            type="submit"
+            variant="secondary"
+          >
+            {m.budget_saved_filter_save_button()}
+          </Button>
+        </div>
+        {replaced && (
+          <p className="text-muted-foreground px-1 text-[11px]" id={hintId}>
+            {m.budget_saved_filter_save_hint_replace({ name: replaced.name })}
+          </p>
+        )}
+      </form>
     );
   };
 
@@ -194,48 +227,13 @@ export const SavedFiltersMenu = ({
       >
         {m.budget_saved_filters()}
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-80 gap-2.5">
-        <PopoverTitle className="px-2 pt-1">
-          {m.budget_saved_filters()}
-        </PopoverTitle>
+      <PopoverContent
+        align="end"
+        aria-label={m.budget_saved_filters()}
+        className="gap-1 p-1"
+      >
         {listOf()}
-        <form
-          className="border-border flex flex-col gap-2 border-t px-2 pt-2.5"
-          onSubmit={handleSave}
-        >
-          <Field>
-            <FieldLabel htmlFor={nameId}>
-              {m.budget_saved_filter_name_label()}
-            </FieldLabel>
-            <Input
-              aria-describedby={hint ? hintId : undefined}
-              disabled={!hasSomethingToSave}
-              id={nameId}
-              maxLength={MAX_SAVED_FILTER_NAME_LENGTH}
-              onChange={(event) => setName(event.target.value)}
-              placeholder={m.budget_saved_filter_name_placeholder()}
-              value={name}
-            />
-            {hint && (
-              <FieldDescription
-                className={cn(!hasSomethingToSave && "text-muted-foreground")}
-                id={hintId}
-              >
-                {hint}
-              </FieldDescription>
-            )}
-          </Field>
-          <Button
-            className="self-start"
-            disabled={!hasSomethingToSave || trimmedName === ""}
-            loading={isSaving}
-            size="compact"
-            type="submit"
-            variant="secondary"
-          >
-            {m.budget_saved_filter_save()}
-          </Button>
-        </form>
+        <div className="border-border border-t">{saveFormOf()}</div>
       </PopoverContent>
     </Popover>
   );

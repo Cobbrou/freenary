@@ -233,7 +233,7 @@ export const FilterTokenSearch = (options: FilterTokenSearchOptions) => {
   return (
     <div className="relative min-w-60 flex-1" onBlur={handleBlur}>
       <div
-        className="border-input bg-input/20 dark:bg-input/30 focus-within:border-ring focus-within:ring-ring/30 flex min-h-7 w-full cursor-text flex-wrap items-center gap-1 rounded-md border px-2 py-0.5 transition-colors focus-within:ring-2"
+        className="border-input bg-input/20 dark:bg-input/30 focus-within:border-ring focus-within:ring-ring/30 flex min-h-7 w-full cursor-text flex-wrap items-center gap-1 rounded-md border px-2 py-px transition-colors focus-within:ring-2"
         onClick={() => inputRef.current?.focus()}
         role="presentation"
       >
