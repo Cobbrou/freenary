@@ -58,9 +58,14 @@ export const useSavedFilters = ({ isListShown }: { isListShown: boolean }) => {
     onError: (_error, { name }) => {
       toast.error(m.budget_saved_filter_delete_error({ name }));
     },
-    onSuccess: async (_deleted, { name }) => {
+    onSuccess: async (_deleted, { filters, name, search }) => {
       await refreshList();
-      toast.success(m.budget_saved_filter_deleted({ name }));
+      toast.success(m.budget_saved_filter_deleted({ name }), {
+        action: {
+          label: m.budget_saved_filter_undo(),
+          onClick: () => saveMutation.mutate({ filters, name, search }),
+        },
+      });
     },
   });
 
