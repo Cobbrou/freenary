@@ -77,9 +77,14 @@ export const useBankConnections = ({
   const resyncMutation = useMutation({
     mutationFn: (connection: BankConnection) =>
       client.budget.syncAccounts({ connectionId: connection.id, force: true }),
+    mutationKey: orpc.budget.syncAccounts.mutationKey(),
     onError: () => {
       toast.error(m.budget_sync_error());
     },
+    onMutate: () =>
+      queryClient.invalidateQueries({
+        queryKey: orpc.budget.getSyncStatus.key(),
+      }),
     onSuccess: async (sync, connection) => {
       await Promise.all([
         queryClient.invalidateQueries({

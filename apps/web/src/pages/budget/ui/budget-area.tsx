@@ -1,19 +1,16 @@
 import { useQuery } from "@tanstack/react-query";
 import { Outlet } from "@tanstack/react-router";
 
+import { useSyncAccounts } from "@/features/account-sync";
 import { m } from "@/paraglide/messages.js";
 import { orpc } from "@/shared/api";
 import { SyncButton } from "@/shared/ui/sync-button";
 
-import { useAccountSync } from "../model/use-account-sync";
 import { NoBankAccount } from "./no-bank-account";
-import { SyncProgressBanner } from "./sync-progress-banner";
 
 export const BudgetArea = () => {
   const accountsQuery = useQuery(orpc.budget.getAccounts.queryOptions());
-  const { isSyncing, progress, resync } = useAccountSync(
-    accountsQuery.data?.hasAccounts
-  );
+  const { isSyncing, sync } = useSyncAccounts();
 
   const isAccountGateUndecided = accountsQuery.isPending;
 
@@ -31,10 +28,9 @@ export const BudgetArea = () => {
         <SyncButton
           isSyncing={isSyncing}
           label={m.budget_sync_now()}
-          onSync={resync}
+          onSync={() => sync({ force: true })}
         />
       </div>
-      <SyncProgressBanner progress={progress} />
       <Outlet />
     </div>
   );

@@ -676,8 +676,6 @@
   "budget_sync_progress_accounts": "Compte {done} sur {total}",
   "budget_sync_progress_categorised": "{done} sur {total}",
   "budget_sync_progress_categorising": "Classement des transactions par catégorie",
-  "budget_sync_progress_hint_categorising": "Les catégories se remplissent au fur et à mesure. Vous pouvez continuer à utiliser la page.",
-  "budget_sync_progress_hint_importing": "Les transactions apparaissent au fur et à mesure. Vous pouvez continuer à utiliser la page.",
   "budget_sync_progress_importing": "Import des transactions de vos banques",
   "budget_sync_progress_starting": "Connexion à vos banques",
   "budget_sync_progress_transactions": [

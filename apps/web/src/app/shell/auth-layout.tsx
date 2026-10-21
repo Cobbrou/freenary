@@ -19,6 +19,7 @@ import { AuthGate } from "@/features/auth-gate";
 
 import { AppSidebar } from "./app-sidebar";
 import { navTrailOf } from "./nav-items";
+import { SyncProgressToast } from "./sync-progress-toast";
 
 export const AuthLayout = () => {
   const matches = useMatches();
@@ -53,6 +54,7 @@ export const AuthLayout = () => {
               </BreadcrumbList>
             </Breadcrumb>
           </header>
+          <SyncProgressToast />
           <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col">
             <AuthGate audience="member">
               <Outlet />
