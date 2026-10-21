@@ -44,15 +44,22 @@ import {
   CATEGORY_GROUP_OF,
   CATEGORY_GROUPS,
   SPENDING_CATEGORIES,
-  categoriesInGroup,
 } from "../lib/taxonomy";
 import type { CategoryGroup, SpendingCategory } from "../lib/taxonomy";
 import {
   effectiveCategory,
   pipelineCategory,
 } from "../lib/transaction-category";
+import { transactionFiltersSchema } from "../lib/transaction-filters";
 import { getProvider } from "../providers/registry";
+import { savedFilterProcedures } from "./saved-filters";
 import { amountBoundsCondition } from "./transaction-amount-bounds";
+import {
+  categoryIsOneOf,
+  companyIsOneOf,
+  expandCategoryValues,
+  transactionFilterConditions,
+} from "./transaction-filter-conditions";
 
 interface OutgoingRow {
   amount: number;
@@ -708,6 +715,7 @@ const runSyncAccounts = Effect.fnUntraced(function* runSyncAccounts(
 });
 
 export const budgetRouter = {
+  ...savedFilterProcedures,
   getAccounts: protectedProcedure.handler(async ({ context }) => {
     const userId = context.session.user.id;
 
@@ -1206,6 +1214,7 @@ export const budgetRouter = {
         categories: z.array(z.enum(SPENDING_CATEGORIES)).optional(),
         cursor: z.string().optional(),
         direction: z.enum(["incoming", "outgoing"]).optional(),
+        filters: transactionFiltersSchema.optional(),
         from: z.coerce.date(),
         groups: z.array(z.enum(CATEGORY_GROUPS)).optional(),
         limit: z.number().min(1).max(100).default(50),
@@ -1223,6 +1232,7 @@ export const budgetRouter = {
         categories,
         cursor,
         direction,
+        filters,
         from,
         groups,
         limit,
@@ -1272,39 +1282,19 @@ export const budgetRouter = {
       }
 
       if (merchants && merchants.length > 0) {
-        const caseFoldedMerchantMatches = merchants.flatMap((name) => [
-          {
-            counterpartyName: { equals: name, mode: "insensitive" as const },
-          },
-          {
-            counterpartyName: null,
-            normalisedDescriptor: {
-              equals: name,
-              mode: "insensitive" as const,
-            },
-          },
-        ]);
-
-        conditions.push({ OR: caseFoldedMerchantMatches });
+        conditions.push(companyIsOneOf(merchants));
       }
 
-      const selected = new Set<SpendingCategory>(categories);
+      const selected = expandCategoryValues([
+        ...(categories ?? []),
+        ...(groups ?? []),
+      ]);
 
-      for (const group of groups ?? []) {
-        for (const category of categoriesInGroup(group)) {
-          selected.add(category);
-        }
+      if (selected.length > 0) {
+        conditions.push(categoryIsOneOf(selected));
       }
 
-      if (selected.size > 0) {
-        const wanted = [...selected];
-        conditions.push({
-          OR: [
-            { category: { in: wanted } },
-            { category: null, resolvedCategory: { in: wanted } },
-          ],
-        });
-      }
+      conditions.push(...transactionFilterConditions(filters ?? []));
 
       const baseWhere: Prisma.TransactionWhereInput = {
         account: { connection: { userId } },

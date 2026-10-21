@@ -3,6 +3,10 @@ import {
   SPENDING_CATEGORIES,
   TRANSACTION_DIRECTIONS,
 } from "@freenary/api/lib/taxonomy";
+import {
+  lenientTransactionFiltersSchema,
+  MAX_SEARCH_TEXT_LENGTH,
+} from "@freenary/api/lib/transaction-filters";
 import { z } from "zod";
 
 import { AGGREGATION_MODES, TIME_RANGES } from "./period";
@@ -47,7 +51,6 @@ const EARLIEST_PLAUSIBLE_YEAR = 1970;
 const LATEST_PLAUSIBLE_YEAR = 2999;
 
 const MAX_PLAUSIBLE_AMOUNT = 1_000_000_000;
-const MAX_PICKABLE_MERCHANTS = 50;
 
 const LAST_MONTH_INDEX = 11;
 
@@ -92,7 +95,9 @@ const absentUnlessNonEmptyText = z
   .transform((raw) => {
     const parsed = z.coerce.string().safeParse(raw);
 
-    return parsed.success && parsed.data.length > 0 ? parsed.data : undefined;
+    return parsed.success && parsed.data.length > 0
+      ? parsed.data.slice(0, MAX_SEARCH_TEXT_LENGTH)
+      : undefined;
   })
   .optional();
 
@@ -109,29 +114,15 @@ const absentUnlessPositiveAmount = z
   })
   .optional();
 
-const absentUnlessMerchantList = z
-  .unknown()
-  .transform((raw) => {
-    const values = Array.isArray(raw) ? raw : [raw];
-    const kept = values.flatMap((value) => {
-      const parsed = z.coerce.string().safeParse(value);
-
-      return parsed.success && parsed.data.length > 0 ? [parsed.data] : [];
-    });
-
-    return kept.length > 0 ? kept.slice(0, MAX_PICKABLE_MERCHANTS) : undefined;
-  })
+const absentUnlessFilters = lenientTransactionFiltersSchema
+  .transform((kept) => (kept.length > 0 ? kept : undefined))
   .optional();
 
 export const budgetSearchSchema = z.object({
   agg: absentUnlessOneOf(AGGREGATION_MODES),
-  cat: absentUnlessSlugList(SPENDING_CATEGORIES),
   companion: absentUnlessOneOf(COMPANION_VIEWS),
   dir: absentUnlessOneOf(TRANSACTION_DIRECTIONS),
-  grp: absentUnlessSlugList(CATEGORY_GROUPS),
-  max: absentUnlessPositiveAmount,
-  merchant: absentUnlessMerchantList,
-  min: absentUnlessPositiveAmount,
+  filters: absentUnlessFilters,
   month: absentUnlessBoundedInt(0, LAST_MONTH_INDEX),
   q: absentUnlessNonEmptyText,
   range: absentUnlessOneOf(TIME_RANGES),
@@ -155,8 +146,6 @@ export const BUDGET_SEARCH_DEFAULTS = {
   agg: "total",
   companion: "fixed",
   dir: "outgoing",
-  max: 0,
-  min: 0,
   q: "",
   range: "1M",
   rcomp: "categories",
@@ -176,7 +165,7 @@ const absentWhenDefault = <T extends number | string>(
 ): T | undefined =>
   value === undefined || value === fallback ? undefined : value;
 
-const absentWhenEmpty = <T extends string>(value: T[] | undefined) =>
+const absentWhenEmpty = <T>(value: T[] | undefined) =>
   value && value.length > 0 ? value : undefined;
 
 const nextTransactionsSearch = (
@@ -184,16 +173,12 @@ const nextTransactionsSearch = (
   patch: BudgetSearchPatch
 ) => ({
   agg: absentWhenDefault(patch.agg ?? current.agg, BUDGET_SEARCH_DEFAULTS.agg),
-  cat: absentWhenEmpty(patch.cat ?? current.cat),
   companion: absentWhenDefault(
     patch.companion ?? current.companion,
     BUDGET_SEARCH_DEFAULTS.companion
   ),
   dir: absentWhenDefault(patch.dir ?? current.dir, BUDGET_SEARCH_DEFAULTS.dir),
-  grp: absentWhenEmpty(patch.grp ?? current.grp),
-  max: absentWhenDefault(patch.max ?? current.max, BUDGET_SEARCH_DEFAULTS.max),
-  merchant: absentWhenEmpty(patch.merchant ?? current.merchant),
-  min: absentWhenDefault(patch.min ?? current.min, BUDGET_SEARCH_DEFAULTS.min),
+  filters: absentWhenEmpty(patch.filters ?? current.filters),
   month: patch.month ?? current.month,
   q: absentWhenDefault(patch.q ?? current.q, BUDGET_SEARCH_DEFAULTS.q),
   range: absentWhenDefault(

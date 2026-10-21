@@ -4,7 +4,7 @@ description: Every procedure of the Freenary API, with who can call it, the inpu
 icon: ListTree
 ---
 
-All 42 procedures, grouped by router. [API](/docs/reference/api) covers the base URL, the cookie, the request shapes and the rate limits.
+All 45 procedures, grouped by router. [API](/docs/reference/api) covers the base URL, the cookie, the request shapes and the rate limits.
 
 - **Path.** `budget.getTransactions` is `POST /rpc/budget/getTransactions` or `POST /api-reference/budget/getTransactions`.
 - **Input.** `/api-reference/spec.json` on your instance holds every input schema: types, required fields, enums, bounds and defaults. This page adds only the rules a schema can't express.
@@ -30,6 +30,7 @@ All 42 procedures, grouped by router. [API](/docs/reference/api) covers the base
 | [`bankConnection.listConnections`](#bankconnectionlistconnections) | Protected | The caller's bank connections and their accounts |
 | [`bankConnection.listInstitutions`](#bankconnectionlistinstitutions) | Protected | The banks the provider can link in some countries |
 | [`bankConnection.startConnection`](#bankconnectionstartconnection) | Protected | Opens a bank consent session |
+| [`budget.deleteSavedFilter`](#budgetdeletesavedfilter) | Protected | Deletes one saved search |
 | [`budget.getAccounts`](#budgetgetaccounts) | Protected | The caller's bank accounts and transaction date bounds |
 | [`budget.getBudgetVsActual`](#budgetgetbudgetvsactual) | Protected | Planned against real spend per category |
 | [`budget.getCashFlow`](#budgetgetcashflow) | Protected | Money in and out per day, week or month |
@@ -41,7 +42,9 @@ All 42 procedures, grouped by router. [API](/docs/reference/api) covers the base
 | [`budget.getSpendingBreakdown`](#budgetgetspendingbreakdown) | Protected | Money out per category |
 | [`budget.getSyncStatus`](#budgetgetsyncstatus) | Protected | The sync or recategorisation in flight |
 | [`budget.getTransactions`](#budgetgettransactions) | Protected | One page of transactions, with the range totals |
+| [`budget.listSavedFilters`](#budgetlistsavedfilters) | Protected | The caller's saved searches, by name |
 | [`budget.recategorise`](#budgetrecategorise) | Protected | Reruns the categorisation pipeline |
+| [`budget.saveFilter`](#budgetsavefilter) | Protected | Saves a search under a name, or replaces the one with that name |
 | [`budget.syncAccounts`](#budgetsyncaccounts) | Protected | Pulls fresh data from the bank provider |
 | [`budget.updateTransactionCategory`](#budgetupdatetransactioncategory) | Protected | Sets one transaction's category and remembers the merchant |
 | [`instance.status`](#instancestatus) | Public | The setup state |
@@ -189,6 +192,14 @@ The provider answers one country at a time and the result is the union. A bank i
 
 ## `budget`
 
+### budget.deleteSavedFilter
+
+**Input**: `id` must belong to the caller.
+
+**Output**: `{ id }`.
+
+**Errors**: `NOT_FOUND` (404) `Saved filter not found`.
+
 ### budget.getAccounts
 
 **Output**: `{ accounts, firstTransactionDate, hasAccounts, lastTransactionDate }`. `accounts` holds `{ iban, id, institutionName, name }` in no set order. The two dates bound the caller's transactions, and are `null` when there are none.
@@ -275,6 +286,11 @@ The one paged procedure: pass `nextCursor` back as `cursor`.
 
 - `limit`: send a whole number. The schema also accepts a fraction.
 - `amountMin` and `amountMax` compare the absolute amount. Setting either excludes zero-amount transactions.
+- `filters` holds up to 20 filters, and a transaction must match all of them, and every other input too. A filter is `{ field, operator, values }` for `field` `company` or `category`, and `{ field: "amount", operator, value }` for an amount.
+  - `company` and `category` take `operator` `is`, `isNot` or `isAnyOf`. `is` and `isNot` take exactly one value, `isAnyOf` up to 50.
+  - A `company` value matches like `merchants`. `isNot` keeps a transaction with no company name.
+  - A `category` value is a category slug or a group slug, and a group stands for every category in it. A transaction no step has categorised counts as `uncategorised`, here and in `categories`.
+  - `amount` takes `operator` `gt`, `lt` or `eq`, and compares `value`, in minor units, with the absolute amount. `gt` and `lt` are strict, and `eq` matches exactly.
 - `groups`: each group adds every category in it to `categories`.
 - `merchants` takes names as `getMerchants` returns them, matched without case.
 - `search` matches the description or the counterparty name as a plain substring, without case. Unlike `getMerchants`, `%` and `_` are literal.
@@ -290,11 +306,25 @@ The one paged procedure: pass `nextCursor` back as `cursor`.
 | `counterpartyName` | As the bank sends it, or `null` |
 | `currency`, `date`, `description`, `id` | As stored |
 
+### budget.listSavedFilters
+
+**Output**: `{ savedFilters }` of `{ filters, id, name, search }`, sorted by name without case. `filters` has the shape `getTransactions` reads. A stored filter that no longer passes its schema, such as one naming a removed category, is left out, and a saved search left with no filter and no text is left out too.
+
 ### budget.recategorise
 
 Drops the pipeline's verdicts and runs it again over every transaction. It claims the caller's sync run first, so it refuses while a sync runs, and `getSyncStatus` shows it in the `categorising` phase.
 
 **Output**: `{ categorised, started }`. `started: false` and `categorised: 0` mean another run already holds the user.
+
+### budget.saveFilter
+
+**Input**: `name` is trimmed, at most 60 characters. `filters` follows `getTransactions`. `search` is the free text, at most 200 characters. At least one filter or some non-blank text is required.
+
+Saving under a name the caller already uses, compared without case, replaces that saved search and takes the new spelling.
+
+**Output**: `{ id, name, replaced }`. `replaced` is `true` when a saved search with that name already existed.
+
+**Errors**: `SAVED_FILTER_LIMIT` (400) `Keep at most 50 saved filters`, when the name is new and the caller already has 50.
 
 ### budget.syncAccounts
 

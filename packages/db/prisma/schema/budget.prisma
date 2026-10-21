@@ -277,3 +277,24 @@ enum SyncPhase {
   CATEGORISING
   FINISHED
 }
+
+/// A named search of the Transactions list, which the user reapplies in one
+/// click: its filter tokens and its free text, never the period or the tab.
+model SavedFilter {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// Unique per user, case-insensitively: saving under a name already taken
+  /// replaces that saved filter.
+  name      String   @db.Citext
+  /// The `TransactionFilter[]` that `budget.getTransactions` reads as `filters`.
+  /// Read back through the same schema, so a token that no longer parses drops.
+  filters   Json
+  /// Free text of the search box; empty when there was none.
+  search    String   @default("")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, name])
+  @@map("saved_filter")
+}

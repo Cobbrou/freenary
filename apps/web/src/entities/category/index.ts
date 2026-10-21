@@ -5,7 +5,6 @@ export {
   EMPTY_CATEGORY_FILTER,
   filterCount,
   toggleCategory,
-  toggleCategoryFilter,
   toggleGroup,
 } from "./model/category-selection";
 export {

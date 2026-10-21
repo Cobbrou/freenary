@@ -20,13 +20,32 @@ Choose `1M`, `3M` or `1Y`, then use the arrows to move to the previous or next p
 
 The list has two tabs: `Outgoing`, where it opens, and `Incoming`. Each tab shows the total of the transactions that match what you've narrowed it to.
 
-- Type in the search box to match the bank's label or the other party's name.
-- Use the `Amount`, `Company` and `Category` filters.
-- Press a part of a chart to filter the list to that category.
+The search box takes free text and filters together:
 
-With two or more filters on, `Clear all` removes them. It leaves the search text.
+- Type to match the bank's label or the other party's name.
+- Pick `Company`, `Category` or `Amount` from the list under the box, then a comparison, then a value. Each filter shows as a chip in the box.
+- Press a part of a chart to filter the list to that category, in place of any category filter you set. Press it again to remove that filter.
 
-The page address holds the period and every filter, so a bookmark brings back exactly what you see.
+| Filter     | Comparisons                 |
+| ---------- | --------------------------- |
+| `Company`  | `is`, `is not`, `is any of` |
+| `Category` | `is`, `is not`, `is any of` |
+| `Amount`   | `>`, `<`, `=`               |
+
+A transaction has to match every filter. `is any of` takes several values: pick them, then press Enter or `Apply`. A category group, such as `Spending`, stands for every category in it. `Amount` compares how much money moved, whichever way it went.
+
+Press a chip's ✕ to remove it, or press Backspace in an empty box to remove the last one. The ✕ at the end of the box clears the text and every filter.
+
+The page address holds the period, the text and every filter, so a bookmark brings back exactly what you see. A bookmark from before filters moved into the search box opens with its period, but without its filters.
+
+### Save a search
+
+`Saved filters`, next to the search box, keeps the text and filters you're using under a name.
+
+1. Set up the search you want to keep.
+2. Open `Saved filters`, type a name, and press `Save current search`.
+
+Press a saved name to use it again. It replaces the text and filters in the box, and keeps the period and the tab. Saving under a name you already use replaces that saved search. You can keep up to 50.
 
 ### Get the latest transactions
 
