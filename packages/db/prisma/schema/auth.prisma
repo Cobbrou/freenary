@@ -24,6 +24,7 @@ model User {
   customCategories      CustomCategory[]
   conversations         Conversation[]
   syncRun               SyncRun?
+  savedFilters          SavedFilter[]
 
   @@unique([email])
   @@map("user")

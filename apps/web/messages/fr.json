@@ -407,21 +407,49 @@
   "budget_detail_description_label": "Description",
   "budget_detail_sr_description": "Consulter et modifier les détails de la transaction",
   "budget_detail_title": "Détails de la transaction",
-  "budget_filter_amount": "Montant",
   "budget_filter_amount_any": "Indifférent",
   "budget_filter_amount_between": "{min} – {max}",
   "budget_filter_amount_clear": "Effacer",
   "budget_filter_amount_from": "À partir de {amount}",
-  "budget_filter_amount_hint": "Filtre sur le montant déplacé, quel que soit le sens.",
   "budget_filter_amount_impossible": "Le minimum dépasse le maximum.",
   "budget_filter_amount_max": "Maximum",
   "budget_filter_amount_min": "Minimum",
+  "budget_filter_amount_prompt": "Saisissez un montant en euros.",
+  "budget_filter_amount_too_large": "Saisissez un montant jusqu’à {amount}.",
   "budget_filter_amount_upto": "Jusqu’à {amount}",
   "budget_filter_category": "Catégorie",
   "budget_filter_clear_all": "Tout effacer",
-  "budget_filter_merchant": "Entreprise",
+  "budget_filter_clear_search": "Effacer la recherche et les filtres",
+  "budget_filter_field_amount": "Montant",
+  "budget_filter_field_category": "Catégorie",
+  "budget_filter_field_company": "Entreprise",
+  "budget_filter_limit": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "Vous pouvez ajouter jusqu’à {count} filtre.",
+        "countPlural=other": "Vous pouvez ajouter jusqu’à {count} filtres."
+      }
+    }
+  ],
+  "budget_filter_operator_eq": "est exactement",
+  "budget_filter_operator_eq_symbol": "=",
+  "budget_filter_operator_gt": "est supérieur à",
+  "budget_filter_operator_gt_symbol": ">",
+  "budget_filter_operator_is": "est",
+  "budget_filter_operator_is_any_of": "est l’une de",
+  "budget_filter_operator_is_not": "n’est pas",
+  "budget_filter_operator_lt": "est inférieur à",
+  "budget_filter_operator_lt_symbol": "<",
   "budget_filter_recurrence": "Récurrence",
   "budget_filter_remove": "Retirer le filtre {label}",
+  "budget_filter_search_label": "Rechercher et filtrer les transactions",
+  "budget_filter_search_placeholder": "Rechercher ou filtrer les transactions…",
+  "budget_filter_token_remove": "Retirer le filtre : {filter}",
+  "budget_filter_token_sentence": "{field} {operator} {value}",
+  "budget_filter_values_apply": "Appliquer",
+  "budget_filter_values_hint": "Choisissez-en autant que vous voulez, puis appuyez sur Entrée.",
   "budget_fixed_label": "Fixe",
   "budget_fixed_variable_chart_label": "Part des dépenses fixes et des dépenses variables",
   "budget_fixed_variable_empty": "Aucune dépense sur cette période.",
@@ -577,7 +605,57 @@
   "budget_recurring_view_split": "Récurrent et autre",
   "budget_recurring_view_switch_label": "Graphique récurrent",
   "budget_recurring_view_trend": "Dans le temps",
-  "budget_search_placeholder": "Rechercher une transaction…",
+  "budget_saved_filter_applied": "Appliqué",
+  "budget_saved_filter_count": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} filtre",
+        "countPlural=other": "{count} filtres"
+      }
+    }
+  ],
+  "budget_saved_filter_count_with_search": [
+    {
+      "declarations": [
+        "input count",
+        "input search",
+        "local countPlural = count: plural"
+      ],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} filtre et « {search} »",
+        "countPlural=other": "{count} filtres et « {search} »"
+      }
+    }
+  ],
+  "budget_saved_filter_delete": "Supprimer le filtre enregistré {name}",
+  "budget_saved_filter_delete_error": "Impossible de supprimer « {name} ».",
+  "budget_saved_filter_deleted": "« {name} » supprimé.",
+  "budget_saved_filter_limit": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "Vous pouvez garder jusqu’à {count} filtre enregistré. Supprimez-en un d’abord.",
+        "countPlural=other": "Vous pouvez garder jusqu’à {count} filtres enregistrés. Supprimez-en un d’abord."
+      }
+    }
+  ],
+  "budget_saved_filter_name_label": "Nom",
+  "budget_saved_filter_name_placeholder": "Par exemple : Grosses courses",
+  "budget_saved_filter_replaced": "« {name} » mis à jour.",
+  "budget_saved_filter_save": "Enregistrer la recherche",
+  "budget_saved_filter_save_error": "Impossible d’enregistrer « {name} ».",
+  "budget_saved_filter_save_hint_empty": "Ajoutez un filtre ou saisissez une recherche pour l’enregistrer.",
+  "budget_saved_filter_save_hint_replace": "L’enregistrement remplace « {name} ».",
+  "budget_saved_filter_saved": "« {name} » enregistré.",
+  "budget_saved_filter_search_only": "« {search} »",
+  "budget_saved_filters": "Filtres enregistrés",
+  "budget_saved_filters_empty": "Aucun filtre enregistré pour l’instant.",
+  "budget_saved_filters_error": "Impossible de charger vos filtres enregistrés.",
+  "budget_saved_filters_loading": "Chargement des filtres enregistrés",
   "budget_sort_amount": "Les plus élevées",
   "budget_sort_date": "Les plus récentes",
   "budget_sort_label": "Trier",

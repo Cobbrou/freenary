@@ -1,14 +1,9 @@
-import { filterCount } from "@/entities/category";
-import type { CategoryFilter } from "@/entities/category";
-
 export interface AmountRange {
   max: number;
   min: number;
 }
 
 const NO_AMOUNT_BOUND = 0;
-const AMOUNT_RANGE_COUNTS_ONCE = 1;
-const MINOR_PER_UNIT = 100;
 const GROUPED_SAMPLE_NUMBER = 11_111;
 
 export const EMPTY_AMOUNT_RANGE: AmountRange = {
@@ -41,30 +36,3 @@ export const parseAmountBound = (text: string, locale: string): number => {
 
   return Number.isFinite(value) && value > 0 ? value : NO_AMOUNT_BOUND;
 };
-
-export const amountBoundsMinor = (amount: AmountRange) => ({
-  amountMax:
-    amount.max > NO_AMOUNT_BOUND
-      ? Math.round(amount.max * MINOR_PER_UNIT)
-      : undefined,
-  amountMin:
-    amount.min > NO_AMOUNT_BOUND
-      ? Math.round(amount.min * MINOR_PER_UNIT)
-      : undefined,
-});
-
-export const toggleMerchant = (merchants: string[], value: string): string[] =>
-  merchants.includes(value)
-    ? merchants.filter((merchant) => merchant !== value)
-    : [...merchants, value];
-
-export const activeFilterCount = (
-  filter: CategoryFilter,
-  merchants: string[],
-  amount: AmountRange
-): number =>
-  filterCount(filter) +
-  merchants.length +
-  (amount.min > NO_AMOUNT_BOUND || amount.max > NO_AMOUNT_BOUND
-    ? AMOUNT_RANGE_COUNTS_ONCE
-    : 0);

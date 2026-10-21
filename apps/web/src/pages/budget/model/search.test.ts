@@ -3,22 +3,27 @@ import { describe, expect, it } from "bun:test";
 import { budgetSearchSchema, nextBudgetSearch } from "./search";
 
 describe("budgetSearchSchema", () => {
-  it("drops an unknown category slug", () => {
+  it("drops a filter that does not parse and keeps the rest", () => {
     expect(
-      budgetSearchSchema.parse({ cat: ["groceries", "not-a-category"] })
-    ).toEqual({ cat: ["groceries"] });
-
-    expect(budgetSearchSchema.parse({ cat: "not-a-category" })).toEqual({});
+      budgetSearchSchema.parse({
+        filters: [
+          { field: "category", operator: "is", values: ["groceries"] },
+          { field: "category", operator: "is", values: ["not-a-category"] },
+          { field: "company", operator: "is", values: ["Uber", "Lyft"] },
+          { field: "amount", operator: "gt", value: 5000 },
+        ],
+      })
+    ).toEqual({
+      filters: [
+        { field: "category", operator: "is", values: ["groceries"] },
+        { field: "amount", operator: "gt", value: 5000 },
+      ],
+    });
   });
 
-  it("normalises a scalar category value to an array", () => {
-    expect(budgetSearchSchema.parse({ cat: "groceries" })).toEqual({
-      cat: ["groceries"],
-    });
-
-    expect(budgetSearchSchema.parse({ grp: "spending" })).toEqual({
-      grp: ["spending"],
-    });
+  it("reads a filters param that is not a list as absent", () => {
+    expect(budgetSearchSchema.parse({ filters: "groceries" })).toEqual({});
+    expect(budgetSearchSchema.parse({ filters: [] })).toEqual({});
   });
 
   it("reads a mangled param as absent", () => {
@@ -71,11 +76,13 @@ describe("nextBudgetSearch", () => {
     ).toEqual({ dir: "incoming", month: 7, year: 2026 });
   });
 
-  it("empties both category fields when the filter is cleared", () => {
+  it("removes the filters when the last one goes", () => {
     expect(
       nextBudgetSearch(
-        { cat: ["groceries"], grp: ["spending"] },
-        { cat: [], grp: [] }
+        {
+          filters: [{ field: "amount", operator: "lt", value: 100 }],
+        },
+        { filters: [] }
       )
     ).toEqual({});
   });

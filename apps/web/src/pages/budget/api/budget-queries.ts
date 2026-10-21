@@ -1,13 +1,11 @@
+import type { TransactionFilter } from "@freenary/api/lib/transaction-filters";
 import type { QueryClient } from "@tanstack/react-query";
 import { infiniteQueryOptions, keepPreviousData } from "@tanstack/react-query";
 
-import type { CategoryFilter } from "@/entities/category";
 import { client, orpc } from "@/shared/api";
 
 import type { AggregationMode } from "../model/period";
 import type { SortMode, TransactionDirection } from "../model/search";
-import { amountBoundsMinor } from "../model/transaction-filters";
-import type { AmountRange } from "../model/transaction-filters";
 
 export interface PeriodInput {
   aggregation: AggregationMode;
@@ -16,11 +14,9 @@ export interface PeriodInput {
 }
 
 export interface TransactionsInput {
-  amount: AmountRange;
   direction: TransactionDirection;
-  filter: CategoryFilter;
+  filters: TransactionFilter[];
   from: Date;
-  merchants: string[];
   search: string;
   sort: SortMode;
   to: Date;
@@ -34,28 +30,21 @@ const PAGE_SIZE = 50;
 const INITIAL_PAGE_PARAM = undefined as string | undefined;
 
 export const transactionsQueryOptions = ({
-  amount,
   direction,
-  filter,
+  filters,
   from,
-  merchants,
   search,
   sort,
   to,
-}: TransactionsInput) => {
-  const { amountMax, amountMin } = amountBoundsMinor(amount);
-
+}: TransactionsInput) =>
   // oxlint-disable-next-line sort-keys -- TanStack infers the page type from `queryFn`, so a later `getNextPageParam` reads its `lastPage`; alphabetical order puts it first, where the page is `unknown`.
-  return infiniteQueryOptions({
+  infiniteQueryOptions({
     queryKey: [
       ...TRANSACTIONS_QUERY_KEY,
       {
-        amountMax,
-        amountMin,
         direction,
-        filter,
+        filters,
         from: from.toISOString(),
-        merchants,
         search,
         sort,
         to: to.toISOString(),
@@ -63,16 +52,11 @@ export const transactionsQueryOptions = ({
     ],
     queryFn: ({ pageParam }) =>
       client.budget.getTransactions({
-        amountMax,
-        amountMin,
-        categories:
-          filter.categories.length > 0 ? filter.categories : undefined,
         cursor: pageParam,
         direction,
+        filters: filters.length > 0 ? filters : undefined,
         from,
-        groups: filter.groups.length > 0 ? filter.groups : undefined,
         limit: PAGE_SIZE,
-        merchants: merchants.length > 0 ? merchants : undefined,
         search: search || undefined,
         sort,
         to,
@@ -81,7 +65,6 @@ export const transactionsQueryOptions = ({
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
     placeholderData: keepPreviousData,
   });
-};
 
 const warmWithoutRaising = async (fetching: Promise<unknown>[]) => {
   await Promise.allSettled(fetching);

@@ -1,3 +1,4 @@
+import type { TransactionFilter } from "@freenary/api/lib/transaction-filters";
 import {
   keepPreviousData,
   useInfiniteQuery,
@@ -6,8 +7,7 @@ import {
 } from "@tanstack/react-query";
 import { useCallback, useMemo, useState } from "react";
 
-import { toggleCategoryFilter } from "@/entities/category";
-import type { CategoryFilter, CategorySelection } from "@/entities/category";
+import type { CategorySelection } from "@/entities/category";
 import { m } from "@/paraglide/messages.js";
 import { orpc } from "@/shared/api";
 
@@ -18,8 +18,11 @@ import {
   transactionsQueryOptions,
 } from "../api/budget-queries";
 import type { PeriodInput, TransactionsInput } from "../api/budget-queries";
+import {
+  highlightedChartCategories,
+  selectChartCategory,
+} from "../model/filter-tokens";
 import type { SortMode, TransactionDirection } from "../model/search";
-import type { AmountRange } from "../model/transaction-filters";
 import { useBudgetView } from "../model/use-budget-view";
 import { useSyncProgress } from "../model/use-sync-progress";
 import { BudgetCharts } from "./budget-charts";
@@ -31,12 +34,10 @@ import { TransactionList } from "./transaction-list";
 export const TransactionsPage = () => {
   const accountsQuery = useQuery(orpc.budget.getAccounts.queryOptions());
   const {
-    amount,
     applyPatch,
     companion,
     direction,
-    filter,
-    merchants,
+    filters,
     period,
     searchQuery,
     setSearchQuery,
@@ -99,16 +100,14 @@ export const TransactionsPage = () => {
 
   const listInput = useMemo<TransactionsInput>(
     () => ({
-      amount,
       direction,
-      filter,
+      filters,
       from,
-      merchants,
       search: searchQuery,
       sort,
       to,
     }),
-    [amount, direction, filter, from, merchants, searchQuery, sort, to]
+    [direction, filters, from, searchQuery, sort, to]
   );
 
   const transactionsQuery = useInfiniteQuery(
@@ -143,26 +142,26 @@ export const TransactionsPage = () => {
     }
   }, [transactionsQuery]);
 
-  const handleFilterChange = useCallback(
-    (next: CategoryFilter) =>
-      applyPatch({ cat: next.categories, grp: next.groups }),
+  const handleFiltersChange = useCallback(
+    (next: TransactionFilter[]) => applyPatch({ filters: next }),
     [applyPatch]
   );
 
-  const handleAmountChange = useCallback(
-    (next: AmountRange) => applyPatch({ max: next.max, min: next.min }),
+  const handleSearchReplace = useCallback(
+    (next: { filters: TransactionFilter[]; search: string }) =>
+      applyPatch({ filters: next.filters, q: next.search }),
     [applyPatch]
   );
 
-  const handleMerchantsChange = useCallback(
-    (next: string[]) => applyPatch({ merchant: next }),
-    [applyPatch]
+  const chartCategories = useMemo(
+    () => highlightedChartCategories(filters),
+    [filters]
   );
 
   const handleSelect = useCallback(
     (selection: CategorySelection | null) =>
-      handleFilterChange(toggleCategoryFilter(filter, selection)),
-    [filter, handleFilterChange]
+      handleFiltersChange(selectChartCategory(filters, selection)),
+    [filters, handleFiltersChange]
   );
 
   const allTransactions =
@@ -222,7 +221,7 @@ export const TransactionsPage = () => {
       />
 
       <BudgetCharts
-        activeCategories={filter.categories}
+        activeCategories={chartCategories}
         aggregation={aggregation}
         breakdown={{
           data: breakdownQuery.data?.categories,
@@ -256,7 +255,6 @@ export const TransactionsPage = () => {
       />
 
       <TransactionList
-        amount={amount}
         transactions={allTransactions}
         totals={totals}
         direction={direction}
@@ -266,11 +264,9 @@ export const TransactionsPage = () => {
         to={to}
         search={searchQuery}
         onSearchChange={setSearchQuery}
-        filter={filter}
-        onAmountChange={handleAmountChange}
-        onFilterChange={handleFilterChange}
-        merchants={merchants}
-        onMerchantsChange={handleMerchantsChange}
+        filters={filters}
+        onFiltersChange={handleFiltersChange}
+        onSearchReplace={handleSearchReplace}
         sort={sort}
         onSortChange={(next) => applyPatch({ sort: next })}
         onSortIntent={handleSortIntent}

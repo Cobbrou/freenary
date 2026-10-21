@@ -98,6 +98,8 @@ The `amount` column is signed minor units, and a negative value is outgoing. The
 | `CustomCategory`, table `custom_category` | `label String @db.Citext`, `color`, `icon`, `parentSlug?`, `parentId?`, `sortOrder @default(0)` | `@@unique([userId, label])`, `@@index([userId, parentSlug, sortOrder])`, `@@index([userId, parentId, sortOrder])`, cascade. `color` comes from `CATEGORY_COLOR_VALUES`, `icon` from `CATEGORY_ICON_NAMES`, and `parentSlug` from the three `CATEGORY_GROUPS` |
 | `BudgetLine`, table `budget_line` | `label?`, `amount Int` positive minor units, `categorySlug?`, `categoryId?`, `sortOrder @default(0)` | `@@index([userId, sortOrder])`, `@@index([categoryId])`. The `user` relation cascades and the `category` relation uses `onDelete: Restrict` |
 
+`budget.prisma` also holds `SavedFilter`, table `saved_filter`: `name String @db.Citext`, `filters Json`, `search String @default("")`, with `@@unique([userId, name])` and a cascade. `filters` is the `TransactionFilter[]` that `budget.getTransactions` reads, and nothing in the database checks its shape: `listSavedFilters` parses it on the way out.
+
 The budget lines of a user **are** the budget profile. No separate profile row exists. A line names a category and an amount. Its place in the flow comes from the group of that category, through `budgetLineKindOf`. The schema stores no kind column.
 
 > [!WARNING] No database constraint makes `categorySlug` and `categoryId` exclusive, and none makes `parentSlug` and `parentId` exclusive either. The migration adds the column, the self foreign key and the index, and no `CHECK`. PostgreSQL still accepts a row with both, and a row with neither.
@@ -269,7 +271,7 @@ Four writers touch the derived columns of a transaction.
 
 ## Ownership and deletion
 
-Ten models carry a `userId` column, with a foreign key to `user` and `ON DELETE CASCADE`. They are `Session`, `Account`, `TwoFactor`, `Passkey` and `BankConnection`. The rest are `BankProviderUser`, `MerchantOverride`, `CustomCategory`, `BudgetLine` and `Conversation`.
+Twelve models carry a `userId` column, with a foreign key to `user` and `ON DELETE CASCADE`. They are `Session`, `Account`, `TwoFactor`, `Passkey` and `BankConnection`. The rest are `BankProviderUser`, `MerchantOverride`, `CustomCategory`, `BudgetLine`, `Conversation`, `SyncRun`, whose `userId` is its primary key, and `SavedFilter`.
 
 Four models inherit ownership through a relation:
 
@@ -308,7 +310,7 @@ Onboarding needs no model. Two columns on `User` hold the whole state: `taxCount
 
 ## Migrations
 
-Twelve directories sit under `packages/db/prisma/migrations`, with `migration_lock.toml` pinned to `postgresql`. Oldest first:
+Thirteen directories sit under `packages/db/prisma/migrations`, with `migration_lock.toml` pinned to `postgresql`. Oldest first:
 
 | Directory | What it does |
 | --- | --- |
@@ -324,6 +326,7 @@ Twelve directories sit under `packages/db/prisma/migrations`, with `migration_lo
 | `20260920090000_sync_run` | Creates `SyncPhase`, then `sync_run` with its index and cascade |
 | `20260921120000_custom_category_nesting` | Adds `custom_category.parentId`, its self foreign key with `ON DELETE CASCADE`, and the index on `userId`, `parentId` and `sortOrder` |
 | `20260922120000_instance_configuration` | Creates `UserRole` and `user.role`, then `instance_setting` and `instance_setup`. On an instance that already has users it marks setup as claimed and completed, and gives `OPERATOR` to the oldest verified user, or the oldest user |
+| `20261020120000_saved_filter` | Creates `saved_filter` with its unique index on `userId` and `name`, and its cascade |
 
 ### The loop for a schema change
 

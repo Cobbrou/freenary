@@ -398,21 +398,49 @@
   "budget_detail_description_label": "Description",
   "budget_detail_sr_description": "View and edit transaction details",
   "budget_detail_title": "Transaction details",
-  "budget_filter_amount": "Amount",
   "budget_filter_amount_any": "Any",
   "budget_filter_amount_between": "{min} – {max}",
   "budget_filter_amount_clear": "Clear",
   "budget_filter_amount_from": "From {amount}",
-  "budget_filter_amount_hint": "Matches how much money moved, whichever way it went.",
   "budget_filter_amount_impossible": "The minimum is above the maximum.",
   "budget_filter_amount_max": "Maximum",
   "budget_filter_amount_min": "Minimum",
+  "budget_filter_amount_prompt": "Type an amount in euros.",
+  "budget_filter_amount_too_large": "Type an amount up to {amount}.",
   "budget_filter_amount_upto": "Up to {amount}",
   "budget_filter_category": "Category",
   "budget_filter_clear_all": "Clear all",
-  "budget_filter_merchant": "Company",
+  "budget_filter_clear_search": "Clear search and filters",
+  "budget_filter_field_amount": "Amount",
+  "budget_filter_field_category": "Category",
+  "budget_filter_field_company": "Company",
+  "budget_filter_limit": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "You can add up to {count} filter.",
+        "countPlural=other": "You can add up to {count} filters."
+      }
+    }
+  ],
+  "budget_filter_operator_eq": "is exactly",
+  "budget_filter_operator_eq_symbol": "=",
+  "budget_filter_operator_gt": "is more than",
+  "budget_filter_operator_gt_symbol": ">",
+  "budget_filter_operator_is": "is",
+  "budget_filter_operator_is_any_of": "is any of",
+  "budget_filter_operator_is_not": "is not",
+  "budget_filter_operator_lt": "is less than",
+  "budget_filter_operator_lt_symbol": "<",
   "budget_filter_recurrence": "Recurrence",
   "budget_filter_remove": "Remove {label} filter",
+  "budget_filter_search_label": "Search and filter transactions",
+  "budget_filter_search_placeholder": "Search or filter transactions…",
+  "budget_filter_token_remove": "Remove filter: {filter}",
+  "budget_filter_token_sentence": "{field} {operator} {value}",
+  "budget_filter_values_apply": "Apply",
+  "budget_filter_values_hint": "Pick as many as you like, then press Enter.",
   "budget_fixed_label": "Fixed",
   "budget_fixed_variable_chart_label": "Share of spending that is fixed versus variable",
   "budget_fixed_variable_empty": "Nothing spent in this period.",
@@ -568,7 +596,57 @@
   "budget_recurring_view_split": "Recurring vs. other",
   "budget_recurring_view_switch_label": "Recurring chart",
   "budget_recurring_view_trend": "Over time",
-  "budget_search_placeholder": "Search transactions…",
+  "budget_saved_filter_applied": "Applied",
+  "budget_saved_filter_count": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} filter",
+        "countPlural=other": "{count} filters"
+      }
+    }
+  ],
+  "budget_saved_filter_count_with_search": [
+    {
+      "declarations": [
+        "input count",
+        "input search",
+        "local countPlural = count: plural"
+      ],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} filter and “{search}”",
+        "countPlural=other": "{count} filters and “{search}”"
+      }
+    }
+  ],
+  "budget_saved_filter_delete": "Delete saved filter {name}",
+  "budget_saved_filter_delete_error": "Couldn’t delete “{name}”.",
+  "budget_saved_filter_deleted": "Deleted “{name}”.",
+  "budget_saved_filter_limit": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "You can keep up to {count} saved filter. Delete one first.",
+        "countPlural=other": "You can keep up to {count} saved filters. Delete one first."
+      }
+    }
+  ],
+  "budget_saved_filter_name_label": "Name",
+  "budget_saved_filter_name_placeholder": "For example: Big grocery runs",
+  "budget_saved_filter_replaced": "Updated “{name}”.",
+  "budget_saved_filter_save": "Save current search",
+  "budget_saved_filter_save_error": "Couldn’t save “{name}”.",
+  "budget_saved_filter_save_hint_empty": "Add a filter or type a search to save it.",
+  "budget_saved_filter_save_hint_replace": "Saving replaces “{name}”.",
+  "budget_saved_filter_saved": "Saved “{name}”.",
+  "budget_saved_filter_search_only": "“{search}”",
+  "budget_saved_filters": "Saved filters",
+  "budget_saved_filters_empty": "No saved filters yet.",
+  "budget_saved_filters_error": "Couldn’t load your saved filters.",
+  "budget_saved_filters_loading": "Loading saved filters",
   "budget_sort_amount": "Largest",
   "budget_sort_date": "Newest",
   "budget_sort_label": "Sort",

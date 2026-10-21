@@ -28,8 +28,8 @@ import {
 import type { AmountRange } from "../model/transaction-filters";
 
 interface AmountFilterMenuProps {
-  hint?: string;
-  label?: string;
+  hint: string;
+  label: string;
   onRangeChange: (range: AmountRange) => void;
   range: AmountRange;
 }
@@ -44,8 +44,8 @@ const draftOf = (range: AmountRange) => ({
 });
 
 export const AmountFilterMenu = ({
-  hint = m.budget_filter_amount_hint(),
-  label = m.budget_filter_amount(),
+  hint,
+  label,
   onRangeChange,
   range,
 }: AmountFilterMenuProps) => {
