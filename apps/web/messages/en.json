@@ -877,7 +877,7 @@
   "settings_cancel": "Cancel",
   "settings_categories_description": "Categories are grouped, and the groups are fixed. A category takes the color of its parent. Your own categories can be renamed, reordered or removed, and nested under a group or under one of your top-level categories. Nesting stops at one level.",
   "settings_categories_loading": "Loading your categories",
-  "settings_categories_title": "Categories",
+  "settings_categories_title": "Custom categories",
   "settings_category_create": "Create category",
   "settings_category_create_success": "Category created",
   "settings_category_delete_action": "Delete {label}",
