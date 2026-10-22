@@ -3,7 +3,11 @@ import { describe, expect, it } from "bun:test";
 import { predefinedCategoryGroups } from "@freenary/api/lib/categories";
 import type { CategoryEntry } from "@freenary/api/lib/categories";
 
-import { editedOf, toCategorySections } from "./category-sections";
+import {
+  editedOf,
+  toCategorySections,
+  toCustomCategoryTree,
+} from "./category-sections";
 import type { CategorySection } from "./category-sections";
 
 const custom = (
@@ -54,6 +58,12 @@ const listCategories = (customs: CategoryEntry[]): CategoryEntry[] => {
 
 const keysOf = (sections: CategorySection[]) =>
   sections.flatMap((section) => section.items.map((item) => item.key));
+
+const shapeOf = (categories: CategoryEntry[]) =>
+  toCustomCategoryTree(categories).map(({ children, group }) => [
+    group.key,
+    children.map((child) => child.key),
+  ]);
 
 describe("toCategorySections", () => {
   it("puts every predefined category under its own group heading", () => {
@@ -180,6 +190,34 @@ describe("toCategorySections", () => {
     );
 
     expect(rendered.toSorted()).toEqual(assignable.toSorted());
+  });
+});
+
+describe("toCustomCategoryTree", () => {
+  it("lists nothing when the user has no custom category", () => {
+    expect(toCustomCategoryTree(listCategories([]))).toEqual([]);
+  });
+
+  it("shows a group only with the custom categories nested under it", () => {
+    expect(
+      shapeOf(listCategories([custom("a", "Life insurance", "spending")]))
+    ).toEqual([["spending", ["custom:a"]]]);
+  });
+
+  it("keeps a custom top-level category with its subcategories, in order", () => {
+    expect(
+      shapeOf(
+        listCategories([
+          custom("a", "Side hustle", null),
+          custom("a1", "Petrol", "custom:a"),
+          custom("a2", "Tolls", "custom:a"),
+          custom("b", "Kids", null),
+        ])
+      )
+    ).toEqual([
+      ["custom:a", ["custom:a1", "custom:a2"]],
+      ["custom:b", []],
+    ]);
   });
 });
 
