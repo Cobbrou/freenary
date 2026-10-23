@@ -5,9 +5,14 @@ import { Option } from "effect";
 import type { HeldValue, Integration } from "./integrations";
 import {
   findIntegration,
+  findVariant,
   instanceConfigurableKeys,
+  integrations,
+  isRequiredForSetup,
+  isShownInSetup,
   recogniseVariant,
   rememberedVariantKey,
+  setupIntegrations,
 } from "./integrations";
 
 const categorisation: Integration = Option.getOrThrow(
@@ -123,5 +128,46 @@ describe("instanceConfigurableKeys", () => {
     expect(
       instanceConfigurableKeys.has("TRANSACTION_CLASSIFIER_FALLBACK")
     ).toBe(false);
+  });
+});
+
+const roleOf = (id: string) => {
+  const integration = Option.getOrThrow(findIntegration(id));
+
+  return {
+    required: isRequiredForSetup(integration),
+    shown: isShownInSetup(integration),
+  };
+};
+
+describe("setup roles", () => {
+  test("requires the bank and lets categories be skipped", () => {
+    expect(roleOf("banking")).toEqual({ required: true, shown: true });
+    expect(roleOf("categorisation")).toEqual({ required: false, shown: true });
+  });
+
+  test("leaves email and the assistant out of setup", () => {
+    expect(roleOf("email")).toEqual({ required: false, shown: false });
+    expect(roleOf("assistant")).toEqual({ required: false, shown: false });
+  });
+
+  test("orders the setup steps bank first, then categories", () => {
+    expect(setupIntegrations.map((integration) => integration.id)).toEqual([
+      "banking",
+      "categorisation",
+    ]);
+  });
+
+  test("keeps every integration and its off variant defined", () => {
+    expect(integrations.map((integration) => integration.id)).toEqual([
+      "banking",
+      "email",
+      "assistant",
+      "categorisation",
+    ]);
+
+    for (const integration of integrations) {
+      expect(Option.isSome(findVariant(integration, "disabled"))).toBe(true);
+    }
   });
 });

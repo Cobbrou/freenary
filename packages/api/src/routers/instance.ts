@@ -15,7 +15,9 @@ import {
   instanceConfigFault,
   instanceConfigurableKeys,
   integrations,
+  isRequiredForSetup,
   isSecretField,
+  isShownInSetup,
   markSetupComplete,
   readSetupState,
   readStoredSettings,
@@ -45,10 +47,13 @@ import {
   writesOf,
 } from "../instance/merge";
 import { findProbe } from "../instance/probes";
+import {
+  DISABLED_VARIANT,
+  integrationStateOf,
+  missingForSetup,
+} from "../instance/setup";
 
 const RESTART_GRACE_MS = 250;
-
-const DISABLED_VARIANT = "disabled";
 
 const readCurrentSettings = (): Promise<StoredSettings> =>
   Effect.runPromise(readStoredSettings(settings.BETTER_AUTH_SECRET));
@@ -91,14 +96,6 @@ const selectedVariantOf = (
       onNone: () => DISABLED_VARIANT,
       onSome: (variant) => variant.id,
     }
-  );
-
-const isVariantComplete = (
-  variant: IntegrationVariant,
-  stored: StoredSettings
-): boolean =>
-  variant.fields.every(
-    (field) => !field.required || heldValue(field.key, stored) !== null
   );
 
 const MASKED_KINDS: ReadonlySet<IntegrationField["kind"]> = new Set([
@@ -176,24 +173,19 @@ const describeIntegration = (
   const selectedVariantId =
     environmentVariant?.id ?? selectedVariantOf(integration, stored);
 
-  const selected = findVariant(integration, selectedVariantId);
-
   return {
     configuredBy: configuredByOf(integration, stored, environmentVariant),
     discriminantKey: integration.discriminantKey,
     discriminantSource: sourceFor(integration.discriminantKey, stored),
     id: integration.id,
+    requiredForSetup: isRequiredForSetup(integration),
     selectedVariantId,
-    state:
-      selectedVariantId === DISABLED_VARIANT
-        ? ("disabled" as const)
-        : Option.match(selected, {
-            onNone: () => "incomplete" as const,
-            onSome: (variant) =>
-              isVariantComplete(variant, stored)
-                ? ("configured" as const)
-                : ("incomplete" as const),
-          }),
+    shownInSetup: isShownInSetup(integration),
+    state: integrationStateOf(
+      integration,
+      selectedVariantId,
+      (key) => heldValue(key, stored) !== null
+    ),
     variants: integration.variants.map((variant) => ({
       fields: variant.fields.map((field) =>
         describeField(field, stored, variant.id === selectedVariantId)
@@ -339,9 +331,23 @@ export const instanceRouter = {
     }),
 
   complete: operatorProcedure.handler(async () => {
+    const stored = await readCurrentSettings();
+    const missing = missingForSetup(
+      integrations.map((integration) =>
+        describeIntegration(integration, stored)
+      )
+    );
+
+    if (missing.length > 0) {
+      throw new ORPCError("PRECONDITION_FAILED", {
+        data: { missing },
+        message: "Configure a bank provider before finishing setup",
+      });
+    }
+
     await Effect.runPromise(markSetupComplete());
 
-    const restarting = hasUnappliedChange(await readCurrentSettings());
+    const restarting = hasUnappliedChange(stored);
 
     if (restarting) {
       setTimeout(() => process.exit(0), RESTART_GRACE_MS);
