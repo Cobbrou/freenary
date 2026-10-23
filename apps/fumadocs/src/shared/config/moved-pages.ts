@@ -28,6 +28,7 @@ export const MOVED_PAGES: readonly MovedPage[] = [
   ["self-hosting/reverse-proxy", "reference/reverse-proxy"],
   ["self-hosting/security", "reference/security"],
   ["self-hosting/scaling", "reference/scaling"],
+  ["reference/scaling", "run/updates-and-backups"],
   ["self-hosting/from-source", "reference/from-source"],
   ["integrations/api", "reference/api"],
   ["integrations", "reference/api"],
