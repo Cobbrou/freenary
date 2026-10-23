@@ -10,6 +10,28 @@ export const CATEGORY_COLOR_VALUES = [
 
 export type CategoryColor = (typeof CATEGORY_COLOR_VALUES)[number];
 
+export const CATEGORY_PALETTE_SLOTS = [
+  "blue",
+  "blue-alt",
+  "orange",
+  "orange-alt",
+  "teal",
+  "teal-alt",
+  "pink",
+  "pink-alt",
+  "purple",
+  "purple-alt",
+  "yellow",
+  "yellow-alt",
+  "green",
+  "green-alt",
+  "brown",
+  "brown-alt",
+  "grey",
+] as const;
+
+export type CategoryPaletteSlot = (typeof CATEGORY_PALETTE_SLOTS)[number];
+
 export const CATEGORY_ICON_NAMES = [
   "AirplaneIcon",
   "ArrowsLeftRightIcon",
@@ -171,7 +193,7 @@ export const CATEGORY_LABELS = {
   subscriptions: "Subscriptions",
   taxes: "Taxes",
   "transport-travel": "Transport & travel",
-  uncategorised: "Other",
+  uncategorised: "Uncategorised",
 } as const satisfies Record<SpendingCategory, string>;
 
 export const CATEGORY_DIRECTION_OF = {
@@ -233,6 +255,36 @@ export const CATEGORY_ICONS = {
   "transport-travel": "AirplaneIcon",
   uncategorised: "DotsThreeIcon",
 } as const satisfies Record<SpendingCategory, CategoryIconName>;
+
+export const CATEGORY_PALETTE_SLOT_OF = {
+  benefits: "purple",
+  "bills-utilities": "pink",
+  "car-fuel": "green",
+  "cash-withdrawal": "green-alt",
+  crypto: "pink",
+  entertainment: "blue-alt",
+  "family-education": "teal-alt",
+  groceries: "orange",
+  health: "brown",
+  "investment-income": "teal",
+  "loans-bank-fees": "purple-alt",
+  "other-income": "green",
+  people: "yellow-alt",
+  refunds: "yellow",
+  "rent-mortgage": "blue",
+  "rental-income": "pink",
+  restaurants: "teal",
+  retirement: "teal",
+  salary: "blue",
+  savings: "blue",
+  securities: "orange",
+  "self-employment": "orange",
+  shopping: "yellow",
+  subscriptions: "orange-alt",
+  taxes: "pink-alt",
+  "transport-travel": "purple",
+  uncategorised: "grey",
+} as const satisfies Record<SpendingCategory, CategoryPaletteSlot>;
 
 export const CATEGORY_GROUP_FALLBACKS = {
   income: "other-income",
@@ -345,6 +397,10 @@ export const categoriesInGroup = (
 
 export const categoryColor = (category: SpendingCategory): CategoryColor =>
   CATEGORY_GROUP_COLORS[CATEGORY_GROUP_OF[category]];
+
+export const categoryPaletteSlot = (
+  category: SpendingCategory
+): CategoryPaletteSlot => CATEGORY_PALETTE_SLOT_OF[category];
 
 export const categoryIcon = (category: SpendingCategory): CategoryIconName =>
   CATEGORY_ICONS[category];

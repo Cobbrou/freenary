@@ -8,7 +8,7 @@ const cache = new Map<string, IconComponent>();
 export const categoryMenuIcon = (
   appearance: CategoryAppearance
 ): IconComponent => {
-  const key = `${appearance.color}/${appearance.icon}`;
+  const key = [appearance.color, appearance.slot, appearance.icon].join("/");
   let icon = cache.get(key);
 
   if (!icon) {

@@ -9,7 +9,7 @@ import {
 } from "@freenary/ui/hooks/use-fluid-hover";
 import { cn } from "@freenary/ui/lib/utils";
 import { motion } from "motion/react";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import type { ReactNode } from "react";
 import { Cell, Pie, PieChart } from "recharts";
 import type { PieSectorDataItem } from "recharts";
@@ -17,34 +17,75 @@ import type { PieSectorDataItem } from "recharts";
 import type { CategorySelection } from "@/entities/category";
 import { categoryLabel } from "@/entities/category";
 import { m } from "@/paraglide/messages.js";
-import { categoryChartColor } from "@/shared/lib/chart-colors";
+import {
+  CHART_COLOR_VARS,
+  categoryChartColor,
+} from "@/shared/lib/chart-colors";
 import { formatCurrency } from "@/shared/lib/format-currency";
 import { ChartTooltipCard } from "@/shared/ui/chart-tooltip";
 
+import {
+  breakdownSlices,
+  isSliceSelected,
+  sliceCategories,
+} from "../model/spending-breakdown";
+import type {
+  BreakdownSlice,
+  CategoryAmount,
+} from "../model/spending-breakdown";
 import { PRESS_MOTION } from "./list-controls";
 
-interface CategoryData {
-  amount: number;
-  category: SpendingCategory;
-}
-
 interface SpendingBreakdownChartProps {
-  data: CategoryData[];
+  activeCategories: SpendingCategory[];
+  data: CategoryAmount[];
   onSelect?: (selection: CategorySelection | null) => void;
 }
 
 const UNSELECTED_OPACITY = 0.3;
+const OTHER_SLICE_KEY = "other";
+const OTHER_SLICE_COLOR = `color-mix(in oklab, ${CHART_COLOR_VARS.grey} 35%, var(--foreground))`;
+
+const LEGEND_VIEWPORT_SELECTOR = '[data-slot="scroll-area-viewport"]';
+
+const revealOtherContents = (contents: HTMLElement | null) => {
+  const otherChip = contents?.previousElementSibling;
+  const viewport = contents?.closest(LEGEND_VIEWPORT_SELECTOR);
+
+  if (!(otherChip instanceof HTMLElement && viewport instanceof HTMLElement)) {
+    return;
+  }
+
+  const otherChipOffset =
+    otherChip.getBoundingClientRect().top -
+    viewport.getBoundingClientRect().top;
+
+  viewport.scrollTo({ top: viewport.scrollTop + otherChipOffset });
+};
+
+const sliceKey = (slice: BreakdownSlice): string =>
+  slice.kind === "other" ? OTHER_SLICE_KEY : slice.category;
+
+const sliceSelection = (slice: BreakdownSlice): CategorySelection =>
+  slice.kind === "other"
+    ? { categories: sliceCategories(slice), kind: "categories" }
+    : { category: slice.category, kind: "category" };
 
 const buildConfigKeyedByCategorySlug = (
-  categories: CategoryData[]
+  slices: BreakdownSlice[]
 ): ChartConfig => {
   const config: ChartConfig = {};
 
-  for (const entry of categories) {
-    config[entry.category] = {
-      color: categoryChartColor(entry.category),
-      label: categoryLabel(entry.category),
-    };
+  for (const slice of slices) {
+    config[sliceKey(slice)] =
+      slice.kind === "other"
+        ? {
+            color: OTHER_SLICE_COLOR,
+            label: m.budget_breakdown_other({ count: slice.categories.length }),
+          }
+        : {
+            color: categoryChartColor(slice.category),
+            label: categoryLabel(slice.category),
+          };
   }
 
   return config;
@@ -58,7 +99,7 @@ const SpendingBreakdownTooltip = ({
 }: {
   active?: boolean;
   config: ChartConfig;
-  payload?: { payload?: CategoryData }[];
+  payload?: { payload?: BreakdownSlice }[];
   total: number;
 }) => {
   const slice = active ? payload?.[0]?.payload : undefined;
@@ -67,6 +108,7 @@ const SpendingBreakdownTooltip = ({
     return null;
   }
 
+  const key = sliceKey(slice);
   const share = total > 0 ? Math.round((slice.amount / total) * 100) : 0;
 
   return (
@@ -75,10 +117,10 @@ const SpendingBreakdownTooltip = ({
         <span className="flex items-center gap-1.5">
           <span
             className="size-2.5 shrink-0 rounded-[2px]"
-            style={{ backgroundColor: config[slice.category]?.color }}
+            style={{ backgroundColor: config[key]?.color }}
           />
-          <span className="text-muted-foreground">
-            {config[slice.category]?.label ?? slice.category}
+          <span className="text-muted-foreground whitespace-nowrap">
+            {config[key]?.label ?? key}
           </span>
         </span>
         <span className="text-foreground font-mono font-medium tabular-nums">
@@ -136,39 +178,48 @@ const LegendChip = ({
 };
 
 export const SpendingBreakdownChart = ({
+  activeCategories,
   data: categories,
   onSelect,
 }: SpendingBreakdownChartProps) => {
-  const config = buildConfigKeyedByCategorySlug(categories);
-  const [selectedCategory, setSelectedCategory] =
-    useState<SpendingCategory | null>(null);
+  const slices = useMemo(() => breakdownSlices(categories), [categories]);
+  const config = buildConfigKeyedByCategorySlug(slices);
 
   const legendRef = useRef<HTMLUListElement>(null);
   const legendHover = useFluidHover(legendRef, { axis: "xy" });
 
   const total = categories.reduce((sum, entry) => sum + entry.amount, 0);
+  const isSelected = (slice: BreakdownSlice) =>
+    isSliceSelected(slice, activeCategories);
 
-  const toggleCategory = useCallback(
-    (category: SpendingCategory) => {
-      const next = selectedCategory === category ? null : category;
-      setSelectedCategory(next);
-      onSelect?.(next === null ? null : { category: next, kind: "category" });
-    },
-    [onSelect, selectedCategory]
-  );
+  const hasSelection = slices.some(isSelected);
+  const otherSlice = slices.find((slice) => slice.kind === "other");
+  const openOther =
+    otherSlice?.kind === "other" && isSelected(otherSlice)
+      ? otherSlice
+      : undefined;
+
+  const isOtherOpen = openOther !== undefined;
+  const otherContentsRef = useRef<HTMLLIElement>(null);
+
+  useEffect(() => {
+    if (isOtherOpen) {
+      revealOtherContents(otherContentsRef.current);
+    }
+  }, [isOtherOpen]);
 
   const selectSlice = useCallback(
     (_sector: PieSectorDataItem, index: number) => {
-      const entry = categories[index];
+      const slice = slices[index];
 
-      if (entry) {
-        toggleCategory(entry.category);
+      if (slice) {
+        onSelect?.(sliceSelection(slice));
       }
     },
-    [categories, toggleCategory]
+    [onSelect, slices]
   );
 
-  if (categories.length === 0) {
+  if (slices.length === 0) {
     return (
       <p className="text-muted-foreground flex h-full items-center justify-center px-4 text-center text-xs">
         {m.budget_breakdown_empty()}
@@ -187,24 +238,21 @@ export const SpendingBreakdownChart = ({
             content={<SpendingBreakdownTooltip config={config} total={total} />}
           />
           <Pie
-            data={categories}
+            data={slices}
             isAnimationActive={false}
             dataKey="amount"
-            nameKey="category"
+            nameKey="kind"
             innerRadius="55%"
             outerRadius="100%"
             className={onSelect ? "cursor-pointer" : undefined}
             onClick={onSelect ? selectSlice : undefined}
           >
-            {categories.map((entry) => (
+            {slices.map((slice) => (
               <Cell
-                key={entry.category}
-                fill={config[entry.category]?.color}
+                key={sliceKey(slice)}
+                fill={config[sliceKey(slice)]?.color}
                 fillOpacity={
-                  selectedCategory !== null &&
-                  selectedCategory !== entry.category
-                    ? UNSELECTED_OPACITY
-                    : 1
+                  hasSelection && !isSelected(slice) ? UNSELECTED_OPACITY : 1
                 }
               />
             ))}
@@ -222,18 +270,49 @@ export const SpendingBreakdownChart = ({
             hidden={!onSelect}
             hover={legendHover}
           />
-          {categories.map((d, index) => (
+          {slices.map((slice, index) => (
             <LegendChip
-              amount={d.amount}
-              color={config[d.category]?.color}
+              amount={slice.amount}
+              color={config[sliceKey(slice)]?.color}
               index={index}
-              isSelected={selectedCategory === d.category}
-              key={d.category}
-              label={config[d.category]?.label ?? d.category}
-              onToggle={onSelect ? () => toggleCategory(d.category) : undefined}
+              isSelected={isSelected(slice)}
+              key={sliceKey(slice)}
+              label={config[sliceKey(slice)]?.label ?? sliceKey(slice)}
+              onToggle={
+                onSelect ? () => onSelect(sliceSelection(slice)) : undefined
+              }
               registerItem={legendHover.registerItem}
             />
           ))}
+          {openOther ? (
+            <li className="basis-full" ref={otherContentsRef}>
+              <ul
+                aria-label={m.budget_breakdown_other_contents()}
+                className="border-border flex flex-wrap gap-x-4 gap-y-1.5 border-l pl-2"
+              >
+                {openOther.categories.map((entry, place) => (
+                  <LegendChip
+                    amount={entry.amount}
+                    color={categoryChartColor(entry.category)}
+                    index={slices.length + place}
+                    isSelected={activeCategories.includes(entry.category)}
+                    key={entry.category}
+                    label={categoryLabel(entry.category)}
+                    onToggle={
+                      onSelect
+                        ? () =>
+                            onSelect({
+                              category: entry.category,
+                              kind: "category",
+                            })
+                        : undefined
+                    }
+                    registerItem={legendHover.registerItem}
+                  />
+                ))}
+              </ul>
+            </li>
+          ) : null}
         </ul>
       </ScrollArea>
     </div>

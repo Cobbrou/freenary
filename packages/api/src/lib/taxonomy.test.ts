@@ -9,6 +9,7 @@ import {
   CATEGORY_GROUPS,
   CATEGORY_ICON_NAMES,
   CATEGORY_LABELS,
+  CATEGORY_PALETTE_SLOTS,
   LEGACY_CATEGORY_GROUPS,
   LEGACY_CATEGORY_SLUGS,
   SPENDING_CATEGORIES,
@@ -17,6 +18,7 @@ import {
   categoryColor,
   categoryDirection,
   categoryIcon,
+  categoryPaletteSlot,
   isCategoryGroup,
   isSpendingCategory,
   resolveCategoryGroup,
@@ -33,6 +35,7 @@ describe("category hierarchy", () => {
       expect(CATEGORY_LABELS[category]).toBeTruthy();
       expect(CATEGORY_COLOR_VALUES).toContain(categoryColor(category));
       expect(CATEGORY_ICON_NAMES).toContain(categoryIcon(category));
+      expect(CATEGORY_PALETTE_SLOTS).toContain(categoryPaletteSlot(category));
     }
   });
 
@@ -52,6 +55,22 @@ describe("category hierarchy", () => {
     }
 
     expect(seen.size).toBe(SPENDING_CATEGORIES.length);
+  });
+
+  it("gives every category of a group its own palette slot", () => {
+    for (const group of CATEGORY_GROUPS) {
+      const slots = categoriesInGroup(group).map(categoryPaletteSlot);
+
+      expect(new Set(slots).size).toBe(slots.length);
+    }
+  });
+
+  it("keeps the grey slot for uncategorised alone", () => {
+    const greyCategories = SPENDING_CATEGORIES.filter(
+      (category) => categoryPaletteSlot(category) === "grey"
+    );
+
+    expect(greyCategories).toEqual(["uncategorised"]);
   });
 
   it("keeps each group's categories contiguous and in group order", () => {

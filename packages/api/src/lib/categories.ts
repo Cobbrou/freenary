@@ -7,6 +7,7 @@ import {
   categoriesInGroup,
   categoryColor,
   categoryIcon,
+  categoryPaletteSlot,
   isCategoryColor,
   isSpendingCategory,
   resolveCategoryGroup,
@@ -15,6 +16,7 @@ import type {
   CategoryColor,
   CategoryGroup,
   CategoryIconName,
+  CategoryPaletteSlot,
   SpendingCategory,
 } from "./taxonomy";
 
@@ -28,12 +30,14 @@ export interface CategoryEntry {
   key: string;
   label: string;
   parentKey: string | null;
+  slot?: CategoryPaletteSlot;
   usageCount: number;
 }
 
 export interface CategoryAppearance {
   color: CategoryColor;
   icon: CategoryIconName;
+  slot?: CategoryPaletteSlot;
 }
 
 export interface PredefinedCategoryGroup {
@@ -68,6 +72,7 @@ export const predefinedCategoryAppearance = (
 ): CategoryAppearance => ({
   color: categoryColor(category),
   icon: categoryIcon(category),
+  slot: categoryPaletteSlot(category),
 });
 
 export const categoryGroupAppearance = (
@@ -127,6 +132,7 @@ const categoryEntry = (
   key: category,
   label: CATEGORY_LABELS[category],
   parentKey: group,
+  slot: categoryPaletteSlot(category),
   usageCount: 0,
 });
 

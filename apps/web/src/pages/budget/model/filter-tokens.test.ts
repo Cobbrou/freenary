@@ -51,6 +51,34 @@ describe("selectChartCategory", () => {
     ).toEqual([overFifty]);
   });
 
+  it("keeps several categories at once when the chart picks a group of them", () => {
+    expect(
+      selectChartCategory([isGroceries, overFifty], {
+        categories: ["taxes", "people"],
+        kind: "categories",
+      })
+    ).toEqual([
+      overFifty,
+      { field: "category", operator: "isAnyOf", values: ["taxes", "people"] },
+    ]);
+  });
+
+  it("clears the categories when the same group of them is picked again", () => {
+    expect(
+      selectChartCategory(
+        [
+          overFifty,
+          {
+            field: "category",
+            operator: "isAnyOf",
+            values: ["people", "taxes"],
+          },
+        ],
+        { categories: ["taxes", "people"], kind: "categories" }
+      )
+    ).toEqual([overFifty]);
+  });
+
   it("clears the category when the chart drops its selection", () => {
     expect(selectChartCategory([isGroceries, overFifty], null)).toEqual([
       overFifty,

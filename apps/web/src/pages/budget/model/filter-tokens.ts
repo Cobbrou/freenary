@@ -115,8 +115,21 @@ export const highlightedChartCategories = (
       : []
   );
 
-const selectionValue = (selection: CategorySelection): CategoryFilterValue =>
-  selection.kind === "group" ? selection.group : selection.category;
+const selectionValues = (
+  selection: CategorySelection
+): CategoryFilterValue[] => {
+  if (selection.kind === "categories") {
+    return selection.categories;
+  }
+
+  return [selection.kind === "group" ? selection.group : selection.category];
+};
+
+const sameValues = (
+  left: readonly CategoryFilterValue[],
+  right: readonly CategoryFilterValue[]
+) =>
+  left.length === right.length && left.every((value) => right.includes(value));
 
 export const selectChartCategory = (
   filters: readonly TransactionFilter[],
@@ -130,7 +143,7 @@ export const selectChartCategory = (
     return withoutCategories;
   }
 
-  const picked = selectionValue(selection);
+  const picked = selectionValues(selection);
   const categoryFilters = filters.filter(
     (filter) => filter.field === "category"
   );
@@ -138,15 +151,19 @@ export const selectChartCategory = (
   const [onlyCategoryFilter] = categoryFilters;
   const isAlreadyTheOnlyOne =
     categoryFilters.length === 1 &&
-    onlyCategoryFilter?.field === "category" &&
-    onlyCategoryFilter.operator === "is" &&
-    onlyCategoryFilter.values[0] === picked;
+    onlyCategoryFilter !== undefined &&
+    isInclusiveCategoryFilter(onlyCategoryFilter) &&
+    sameValues(onlyCategoryFilter.values, picked);
 
   return isAlreadyTheOnlyOne
     ? withoutCategories
     : [
         ...withoutCategories,
-        { field: "category", operator: "is", values: [picked] },
+        {
+          field: "category",
+          operator: picked.length > 1 ? "isAnyOf" : "is",
+          values: picked,
+        },
       ];
 };
 
