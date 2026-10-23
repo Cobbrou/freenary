@@ -82,11 +82,13 @@ const ChartUnavailable = () => (
 );
 
 const PrimaryChartBody = ({
+  activeCategories,
   breakdown,
   cashFlow,
   onSelect,
   view,
 }: {
+  activeCategories: SpendingCategory[];
   breakdown: ChartQuery<BreakdownData>;
   cashFlow: ChartQuery<CashFlowData>;
   onSelect: (selection: CategorySelection | null) => void;
@@ -118,7 +120,11 @@ const PrimaryChartBody = ({
 
   return (
     <StaleRegion className="h-full" isStale={breakdown.isStale}>
-      <SpendingBreakdownChart data={breakdown.data} onSelect={onSelect} />
+      <SpendingBreakdownChart
+        activeCategories={activeCategories}
+        data={breakdown.data}
+        onSelect={onSelect}
+      />
     </StaleRegion>
   );
 };
@@ -229,6 +235,7 @@ export const BudgetCharts = ({
         </CardHeader>
         <CardContent className={CHART_BODY}>
           <PrimaryChartBody
+            activeCategories={activeCategories}
             breakdown={breakdown}
             cashFlow={cashFlow}
             onSelect={onSelect}

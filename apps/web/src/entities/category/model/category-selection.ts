@@ -5,6 +5,7 @@ import type {
 } from "@freenary/api/lib/taxonomy";
 
 export type CategorySelection =
+  | { categories: SpendingCategory[]; kind: "categories" }
   | { category: SpendingCategory; kind: "category" }
   | { group: CategoryGroup; kind: "group" };
 

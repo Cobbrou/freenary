@@ -193,7 +193,7 @@ export const CATEGORY_LABELS = {
   subscriptions: "Subscriptions",
   taxes: "Taxes",
   "transport-travel": "Transport & travel",
-  uncategorised: "Other",
+  uncategorised: "Uncategorised",
 } as const satisfies Record<SpendingCategory, string>;
 
 export const CATEGORY_DIRECTION_OF = {
