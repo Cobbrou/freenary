@@ -97,7 +97,7 @@ export const SecuritySessionsSection = ({
     }
 
     return (
-      <SettingsRowList hover={hover} ref={listRef}>
+      <SettingsRowList className="px-2" hover={hover} ref={listRef}>
         {ordered.map((item, index) => (
           <SecuritySessionRow
             formatter={formatter}

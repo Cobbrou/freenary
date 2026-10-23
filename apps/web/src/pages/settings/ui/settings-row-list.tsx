@@ -8,6 +8,7 @@ import { SETTINGS_BLEED } from "./settings-section";
 
 interface SettingsRowListProps {
   children: ReactNode;
+  className?: string;
   hover: UseFluidHoverReturn;
   ref: Ref<HTMLUListElement>;
 }
@@ -16,6 +17,7 @@ const ITEM_SIDE_BORDER_CANCEL = "[&>li]:border-x-0";
 
 export const SettingsRowList = ({
   children,
+  className,
   hover,
   ref,
 }: SettingsRowListProps) => {
@@ -26,7 +28,8 @@ export const SettingsRowList = ({
       className={cn(
         "relative flex flex-col gap-1.5",
         ITEM_SIDE_BORDER_CANCEL,
-        SETTINGS_BLEED
+        SETTINGS_BLEED,
+        className
       )}
       ref={ref}
       {...hover.handlers}
