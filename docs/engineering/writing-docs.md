@@ -182,7 +182,7 @@ An internal link is an absolute site path with no extension and no version:
 
 `docs:check` resolves every link and `#anchor` against the real page tree. A relative `.mdx` link doesn't work. Link a repository file with its full URL under `https://github.com/suiramdev/freenary/blob/dev/`, the branch that holds the unreleased code; the snapshot pins `dev` to the release tag in a frozen copy.
 
-Some anchors are linked from the app itself, in `apps/web/src/pages/setup/model/labels.ts`. Keep them, or update that file in the same pull request.
+Some anchors are linked from the app itself, in `apps/web/src/features/instance-integration/model/labels.ts`. Keep them, or update that file in the same pull request.
 
 ## Navigation
 

@@ -3,12 +3,15 @@ import { Elevated } from "@freenary/ui/lib/elevated";
 import { useIcon } from "@freenary/ui/lib/icon-context";
 import { RiCheckLine, RiErrorWarningLine } from "@remixicon/react";
 
+import {
+  integrationTitle,
+  stateLabel,
+  variantLabel,
+} from "@/features/instance-integration";
+import type { SetupIntegrationDescriptor } from "@/features/instance-integration";
 import { m } from "@/paraglide/messages.js";
 import { remixIcon } from "@/shared/lib/remix-icon";
 import { WizardStepHeader } from "@/shared/ui/wizard-step-header";
-
-import { integrationTitle, stateLabel, variantLabel } from "../model/labels";
-import type { SetupIntegrationDescriptor } from "./provider-step";
 
 const CONFIGURED_STATE = "configured";
 const DISABLED_STATE = "disabled";
