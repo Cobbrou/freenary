@@ -82,7 +82,7 @@ describe("issue readiness", () => {
     expect(plan.gaps[0]?.owner).toBe("maintainer");
   });
 
-  it("names the two likeliest choices of an unsure group", () => {
+  it("applies the top type of an unsure group and stays ready", () => {
     const plan = planFor({
       answers: {
         ...settled,
@@ -96,13 +96,12 @@ describe("issue readiness", () => {
       },
     });
 
-    expect(plan.gaps).toContainEqual({
-      owner: "maintainer",
-      text: "Pick the type: `type:feature` (0.60) or `type:enhancement` (0.35).",
-    });
+    expect(plan.labels).toContain("type:feature");
+    expect(plan.status).toBe("status:ready");
+    expect(plan.gaps).toEqual([]);
   });
 
-  it("names impact levels from score probabilities", () => {
+  it("applies the rounded impact level of an unsure score", () => {
     const plan = planFor({
       answers: {
         ...settled,
@@ -116,10 +115,10 @@ describe("issue readiness", () => {
       },
     });
 
-    expect(plan.gaps).toContainEqual({
-      owner: "maintainer",
-      text: "Pick the impact: `impact:low` (0.50) or `impact:medium` (0.45).",
-    });
+    expect(plan.labels).toContain("impact:medium");
+    expect(plan.labels).toContain("priority:p2");
+    expect(plan.status).toBe("status:ready");
+    expect(plan.gaps).toEqual([]);
   });
 
   it("leaves a question to a maintainer", () => {
@@ -302,7 +301,7 @@ describe("decideReadiness", () => {
 describe("renderGapComment", () => {
   it("groups gaps by owner under the marker", () => {
     const comment = renderGapComment("issue", [
-      { owner: "maintainer", text: "Pick the area." },
+      { owner: "maintainer", text: "Answer the question." },
       { owner: "author", text: "Add the steps that reproduce the bug." },
     ]);
 
@@ -311,7 +310,7 @@ describe("renderGapComment", () => {
       "For the author:\n- Add the steps that reproduce the bug."
     );
 
-    expect(comment).toContain("For a maintainer:\n- Pick the area.");
+    expect(comment).toContain("For a maintainer:\n- Answer the question.");
   });
 });
 
@@ -462,13 +461,23 @@ describe("refused labels and readiness", () => {
     expect(plan.labels).not.toContain("priority:p0");
   });
 
-  it("asks for a type when the model's type was refused", () => {
-    const plan = planFor({ refusedLabels: ["type:feature"] });
+  it("adds no type and asks nothing when the model's type was refused", () => {
+    const plan = planFor({
+      answers: {
+        ...requestMet,
+        ...settled,
+        type: {
+          choice: "feature",
+          confidence: 0.9,
+          probabilities: { enhancement: 0.08, feature: 0.9 },
+          type: "choice",
+        },
+      },
+      refusedLabels: ["type:feature"],
+    });
 
-    expect(plan.status).toBe("status:needs-triage");
-    expect(plan.gaps.some((gap) => gap.text.startsWith("Pick the type"))).toBe(
-      true
-    );
+    expect(plan.labels.some((label) => label.startsWith("type:"))).toBe(false);
+    expect(plan.gaps).toEqual([]);
   });
 
   it("drops the duplicate check once duplicate was refused", () => {
@@ -528,8 +537,8 @@ describe("resolveTypeLabel", () => {
   });
 });
 
-describe("unsettled picks and comment wording", () => {
-  it("never suggests a refused label as a pick", () => {
+describe("refused picks and comment wording", () => {
+  it("substitutes no other area for a refused top area", () => {
     const plan = planFor({
       answers: {
         ...settled,
@@ -544,15 +553,14 @@ describe("unsettled picks and comment wording", () => {
       refusedLabels: ["area:frontend"],
     });
 
-    expect(plan.gaps).toContainEqual({
-      owner: "maintainer",
-      text: "Pick the area: `area:backend` (0.08).",
-    });
+    expect(plan.labels.some((label) => label.startsWith("area:"))).toBe(false);
+    expect(plan.gaps).toEqual([]);
+    expect(plan.status).toBe("status:ready");
   });
 
   it("tells a maintainer-only comment that a label reruns triage", () => {
     const comment = renderGapComment("issue", [
-      { owner: "maintainer", text: "Pick the area." },
+      { owner: "maintainer", text: "Answer the question." },
     ]);
 
     expect(comment).toContain(
@@ -563,13 +571,11 @@ describe("unsettled picks and comment wording", () => {
   });
 });
 
-describe("unsure type and missing answers", () => {
-  it("keeps needs-reproduction while the type is unsure", () => {
+describe("missing answers", () => {
+  it("keeps needs-reproduction while the type has no answer", () => {
+    const { type: _type, ...withoutType } = settled;
     const plan = planFor({
-      answers: {
-        ...settled,
-        type: { choice: "bug", confidence: 0.3, type: "choice" },
-      },
+      answers: withoutType,
       checklist: undefined,
       existingLabels: ["needs-reproduction"],
       workflowReproduction: true,

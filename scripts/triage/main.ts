@@ -129,6 +129,7 @@ interface TriageRecord {
   readonly removed: readonly string[];
   readonly status: string | undefined;
   readonly gaps: readonly Gap[];
+  readonly notes: readonly string[];
 }
 
 const writeRecord = (record: TriageRecord) =>
@@ -293,6 +294,7 @@ const triage = Effect.fnUntraced(function* triage() {
     gaps: plan.gaps,
     kind,
     labels: plan.labels,
+    notes: plan.notes,
     number,
     recordedAt: new Date().toISOString(),
     removed: plan.removed,
