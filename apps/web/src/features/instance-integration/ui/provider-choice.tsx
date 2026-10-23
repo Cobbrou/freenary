@@ -1,3 +1,4 @@
+import { Badge } from "@freenary/ui/components/badge";
 import { Button } from "@freenary/ui/components/button";
 import { useIcon } from "@freenary/ui/lib/icon-context";
 import { cn } from "@freenary/ui/lib/utils";
@@ -85,6 +86,11 @@ export const ProviderChoice = ({
                 <span className="flex min-w-0 flex-col gap-0.5">
                   <span className={isChosen ? "font-medium" : undefined}>
                     {variantLabel(variant.id)}
+                    {variant.recommended ? (
+                      <Badge className="ms-2" size="compact">
+                        {m.setup_variant_recommended()}
+                      </Badge>
+                    ) : null}
                   </span>
                   {description === null ? null : (
                     <span className="text-muted-foreground text-xs">

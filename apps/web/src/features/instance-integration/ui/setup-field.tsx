@@ -1,4 +1,9 @@
-import { Field, FieldLabel } from "@freenary/ui/components/field";
+import {
+  Field,
+  FieldDescription,
+  FieldError,
+  FieldLabel,
+} from "@freenary/ui/components/field";
 import { Input } from "@freenary/ui/components/input";
 import { Switch } from "@freenary/ui/components/switch";
 import { Textarea } from "@freenary/ui/components/textarea";
@@ -6,7 +11,8 @@ import { useId } from "react";
 
 import { m } from "@/paraglide/messages.js";
 
-import { fieldLabel } from "../model/labels";
+import { fieldHelp, fieldLabel } from "../model/labels";
+import { RichText } from "./rich-text";
 
 const TRUE = "true";
 const FALSE = "false";
@@ -24,6 +30,7 @@ export interface SetupFieldDescriptor {
 
 interface SetupFieldProps {
   descriptor: SetupFieldDescriptor;
+  error: string | null;
   onChange: (key: string, value: string) => void;
   value: string | undefined;
 }
@@ -41,10 +48,23 @@ const inputType = (kind: string): string => {
 
 export const SetupField = ({
   descriptor,
+  error,
   onChange,
   value,
 }: SetupFieldProps) => {
   const inputId = useId();
+  const helpId = useId();
+  const errorId = useId();
+  const help = fieldHelp(descriptor.key);
+  const isInvalid = error !== null;
+  const describingIds = [
+    ...(help === null ? [] : [helpId]),
+    ...(isInvalid ? [errorId] : []),
+  ];
+
+  const describedBy =
+    describingIds.length === 0 ? undefined : describingIds.join(" ");
+
   const secret = isSecretKind(descriptor.kind);
   const secretPlaceholder =
     secret && descriptor.present ? m.setup_secret_unchanged_hint() : undefined;
@@ -67,10 +87,12 @@ export const SetupField = ({
   }
 
   return (
-    <Field>
+    <Field data-invalid={isInvalid || undefined}>
       <FieldLabel htmlFor={inputId}>{fieldLabel(descriptor.key)}</FieldLabel>
       {descriptor.kind === "secret-block" ? (
         <Textarea
+          aria-describedby={describedBy}
+          aria-invalid={isInvalid || undefined}
           id={inputId}
           onChange={(event) => onChange(descriptor.key, event.target.value)}
           placeholder={secretPlaceholder}
@@ -79,6 +101,8 @@ export const SetupField = ({
         />
       ) : (
         <Input
+          aria-describedby={describedBy}
+          aria-invalid={isInvalid || undefined}
           id={inputId}
           onChange={(event) => onChange(descriptor.key, event.target.value)}
           placeholder={secretPlaceholder}
@@ -86,6 +110,12 @@ export const SetupField = ({
           value={secret ? (value ?? "") : held}
         />
       )}
+      {help === null ? null : (
+        <FieldDescription id={helpId}>
+          <RichText parts={help} />
+        </FieldDescription>
+      )}
+      {isInvalid ? <FieldError id={errorId}>{error}</FieldError> : null}
     </Field>
   );
 };

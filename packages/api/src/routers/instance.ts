@@ -191,6 +191,7 @@ const describeIntegration = (
         describeField(field, stored, variant.id === selectedVariantId)
       ),
       id: variant.id,
+      recommended: variant.recommended === true,
     })),
   };
 };

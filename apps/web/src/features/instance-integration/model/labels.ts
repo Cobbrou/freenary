@@ -1,7 +1,13 @@
 import { m } from "@/paraglide/messages.js";
 import { docsUrl } from "@/shared/config";
 
+import type { MessagePart } from "../lib/message-parts";
+import { code, messageParts, strong } from "../lib/message-parts";
+import type { FieldProblem } from "./field-rules";
+
 type Label = () => string;
+
+export const POWENS_CLIENT_APPLICATIONS = "Client Applications";
 
 const FIELD_LABELS = {
   AI_API_KEY: m.setup_field_ai_api_key,
@@ -23,6 +29,25 @@ const FIELD_LABELS = {
   TRANSACTION_CLASSIFIER_MODEL: m.setup_field_classifier_model,
   TRANSACTION_CLASSIFIER_URL: m.setup_field_classifier_url,
 } satisfies Record<string, Label>;
+
+const powensClientHelp = (): MessagePart[] =>
+  messageParts(m.setup_field_powens_client_help, {
+    section: strong(POWENS_CLIENT_APPLICATIONS),
+  });
+
+const FIELD_HELP: Readonly<Record<string, () => MessagePart[]>> = {
+  POWENS_CLIENT_ID: powensClientHelp,
+  POWENS_CLIENT_SECRET: powensClientHelp,
+  POWENS_DOMAIN: () =>
+    messageParts(m.setup_field_powens_domain_help, {
+      example: code("acme-sandbox"),
+      scheme: code("https://"),
+    }),
+};
+
+const FIELD_PROBLEMS = {
+  "domain-has-scheme": m.setup_field_powens_domain_has_scheme,
+} satisfies Record<FieldProblem, Label>;
 
 const INTEGRATION_TITLES = {
   assistant: m.setup_integration_assistant_title,
@@ -65,6 +90,7 @@ const VARIANT_DESCRIPTIONS = {
   "assistant:disabled": m.setup_variant_assistant_disabled_description,
   "assistant:openai-compatible":
     m.setup_variant_assistant_openai_compatible_description,
+  "banking:powens": m.setup_variant_powens_description,
   "categorisation:disabled":
     m.setup_variant_categorisation_disabled_description,
   "categorisation:jev": m.setup_variant_jev_description,
@@ -100,6 +126,12 @@ const readIfKnown = (
 ): string | null => table[key]?.() ?? null;
 
 export const fieldLabel = (key: string): string => read(FIELD_LABELS, key);
+
+export const fieldHelp = (key: string): MessagePart[] | null =>
+  FIELD_HELP[key]?.() ?? null;
+
+export const fieldProblemMessage = (problem: FieldProblem): string =>
+  FIELD_PROBLEMS[problem]();
 
 export const integrationTitle = (id: string): string =>
   read(INTEGRATION_TITLES, id);

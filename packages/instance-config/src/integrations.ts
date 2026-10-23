@@ -29,6 +29,7 @@ export interface IntegrationVariant {
   readonly fields: readonly IntegrationField[];
   readonly presets?: readonly IntegrationPreset[];
   readonly recognisedOnlyWhenRemembered?: boolean;
+  readonly recommended?: boolean;
 }
 
 export type SetupRole = "required" | "skippable" | "not-in-setup";
@@ -61,6 +62,7 @@ const bankingIntegration: Integration = {
         { key: "POWENS_CLIENT_SECRET", kind: "secret", required: true },
       ],
       id: "powens",
+      recommended: true,
     },
     {
       discriminantValue: "enable-banking",

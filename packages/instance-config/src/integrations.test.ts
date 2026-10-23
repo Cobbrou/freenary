@@ -21,6 +21,8 @@ const categorisation: Integration = Option.getOrThrow(
 
 const assistant: Integration = Option.getOrThrow(findIntegration("assistant"));
 
+const banking: Integration = Option.getOrThrow(findIntegration("banking"));
+
 const holding =
   (values: Readonly<Record<string, string>>): HeldValue =>
   (key) =>
@@ -169,5 +171,15 @@ describe("setup roles", () => {
     for (const integration of integrations) {
       expect(Option.isSome(findVariant(integration, "disabled"))).toBe(true);
     }
+  });
+});
+
+describe("recommended", () => {
+  test("recommends Powens and no other bank provider", () => {
+    const recommended = banking.variants.flatMap((variant) =>
+      variant.recommended === true ? [variant.id] : []
+    );
+
+    expect(recommended).toEqual(["powens"]);
   });
 });

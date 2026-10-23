@@ -15,6 +15,7 @@ const OFF_UNTIL_CHOSEN: ReadonlySet<string> = new Set([
 export interface SetupVariantDescriptor {
   fields: SetupFieldDescriptor[];
   id: string;
+  recommended: boolean;
 }
 
 export interface SetupIntegrationDescriptor {
