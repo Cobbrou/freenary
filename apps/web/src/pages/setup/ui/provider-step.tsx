@@ -10,6 +10,7 @@ const SKIP_VARIANT = "disabled";
 const OFF_UNTIL_CHOSEN: ReadonlySet<string> = new Set([
   "assistant",
   "categorisation",
+  "email",
 ]);
 
 export interface SetupVariantDescriptor {
