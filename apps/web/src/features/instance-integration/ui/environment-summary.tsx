@@ -14,6 +14,8 @@ import {
   variantLabel,
 } from "../model/labels";
 import type { SaveOutcome } from "../model/outcome";
+import type { IntegrationWording } from "../model/wording";
+import { ENVIRONMENT_DONE_LABELS } from "../model/wording";
 import { OutcomeNotice } from "./outcome-notice";
 import type { SetupIntegrationDescriptor } from "./provider-step";
 import { ServerValueRow } from "./server-value-row";
@@ -32,6 +34,7 @@ interface EnvironmentSummaryProps {
   onCheck: (variantId: string) => void;
   onNext: () => void;
   outcome: SaveOutcome | undefined;
+  wording?: IntegrationWording;
 }
 
 export const EnvironmentSummary = ({
@@ -42,6 +45,7 @@ export const EnvironmentSummary = ({
   onCheck,
   onNext,
   outcome,
+  wording = "setup",
 }: EnvironmentSummaryProps) => {
   const ArrowLeftIcon = useIcon("arrow-left");
   const variantId = descriptor.selectedVariantId;
@@ -144,7 +148,7 @@ export const EnvironmentSummary = ({
             {m.setup_test_connection()}
           </Button>
           <Button onClick={onNext} type="button">
-            {m.setup_continue()}
+            {ENVIRONMENT_DONE_LABELS[wording]()}
           </Button>
         </div>
       </div>

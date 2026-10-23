@@ -21,7 +21,6 @@ import {
 } from "./taxonomy";
 import type { AreaKey, PriorityLabel } from "./taxonomy";
 
-export const MIN_CONFIDENCE = 0.6;
 export const MIN_SIGNAL_PROBABILITY = 0.8;
 export const MIN_GOOD_FIRST_ISSUE_PROBABILITY = 0.95;
 export const MIN_DUPLICATE_CONFIDENCE = 0.85;
@@ -66,11 +65,66 @@ const isKnownKey = <T extends object>(
   key: string
 ): key is Extract<keyof T, string> => Object.hasOwn(table, key);
 
-const confidentChoice = (
+type TypeKey = keyof typeof TYPE_LABELS;
+
+export const TYPE_TIE_ORDER = [
+  "bug",
+  "documentation",
+  "enhancement",
+  "feature",
+  "maintenance",
+  "question",
+] as const satisfies readonly TypeKey[];
+
+export const AREA_TIE_ORDER = [
+  "api",
+  "auth",
+  "backend",
+  "ci-cd",
+  "database",
+  "docs",
+  "frontend",
+  "infra",
+] as const satisfies readonly AreaKey[];
+
+export const IMPACT_TIE_ORDER = IMPACT_LEVELS.toReversed();
+
+const roundHalfUp: (score: number) => number = Math.round;
+
+interface RankedOption<Option extends string> {
+  readonly option: Option;
+  readonly probability: number;
+}
+
+const rankOptions = <Option extends string>(
+  probabilityOf: (option: Option) => number | undefined,
+  tieOrder: readonly Option[]
+): RankedOption<Option>[] =>
+  tieOrder
+    .flatMap((option) => {
+      const probability = probabilityOf(option);
+
+      return probability === undefined ? [] : [{ option, probability }];
+    })
+    .toSorted((left, right) => right.probability - left.probability);
+
+const runnerUpText = <Option extends string>(
+  ranked: readonly RankedOption<Option>[],
+  top: Option
+): string => {
+  const runnerUp = ranked.find((entry) => entry.option !== top);
+
+  return runnerUp
+    ? `; next ${runnerUp.option} ${runnerUp.probability.toFixed(2)}`
+    : "";
+};
+
+const topChoice = <Option extends string>(
   answers: Answers,
   key: string,
+  tieOrder: readonly Option[],
   notes: string[]
-): string | undefined => {
+): Option | undefined => {
   const answer = answers[key];
 
   if (answer?.type !== "choice") {
@@ -79,35 +133,65 @@ const confidentChoice = (
     return undefined;
   }
 
-  notes.push(`${key}: ${answer.choice} (${answer.confidence.toFixed(2)})`);
+  const ranked = rankOptions(
+    (option) => answer.probabilities?.[option],
+    tieOrder
+  );
 
-  return answer.confidence >= MIN_CONFIDENCE ? answer.choice : undefined;
-};
+  const [leader] = ranked;
+  const stated = tieOrder.find((option) => option === answer.choice);
+  const statedTiesLeader =
+    leader !== undefined &&
+    stated !== undefined &&
+    answer.probabilities?.[stated] === leader.probability;
 
-const confidentLevel = <const Levels extends readonly string[]>(
-  answers: Answers,
-  key: string,
-  levels: Levels,
-  notes: string[]
-): Levels[number] | undefined => {
-  const answer = answers[key];
+  const top =
+    stated === undefined || statedTiesLeader ? leader?.option : stated;
 
-  if (answer?.type !== "score") {
+  if (top === undefined) {
     notes.push(`${key}: no answer`);
 
     return undefined;
   }
 
+  const confidence =
+    top === stated ? answer.confidence : (leader?.probability ?? 0);
+
+  notes.push(
+    `${key}: ${top} (${confidence.toFixed(2)}${runnerUpText(ranked, top)})`
+  );
+
+  return top;
+};
+
+const topImpact = (
+  answers: Answers,
+  notes: string[]
+): (typeof IMPACT_LEVELS)[number] | undefined => {
+  const answer = answers.impact;
+
+  if (answer?.type !== "score") {
+    notes.push("impact: no answer");
+
+    return undefined;
+  }
+
   const index = Math.min(
-    Math.max(Math.round(answer.score), 0),
-    levels.length - 1
+    Math.max(roundHalfUp(answer.score), 0),
+    IMPACT_LEVELS.length - 1
+  );
+
+  const top = IMPACT_LEVELS[index] ?? IMPACT_LEVELS[0];
+  const ranked = rankOptions(
+    (level) => answer.probabilities?.[String(IMPACT_LEVELS.indexOf(level))],
+    IMPACT_TIE_ORDER
   );
 
   notes.push(
-    `${key}: ${levels[index]} (score ${answer.score.toFixed(2)}, ${answer.confidence.toFixed(2)})`
+    `impact: ${top} (score ${answer.score.toFixed(2)}, ${answer.confidence.toFixed(2)}${runnerUpText(ranked, top)})`
   );
 
-  return answer.confidence >= MIN_CONFIDENCE ? levels[index] : undefined;
+  return top;
 };
 
 const isYes = (answers: Answers, key: string, notes: string[]): boolean => {
@@ -128,11 +212,9 @@ const hasGroup = (labels: readonly string[], prefix: string): boolean =>
   labels.some((label) => label.startsWith(prefix));
 
 const planType = (answers: Answers, notes: string[]): string | undefined => {
-  const choice = confidentChoice(answers, "type", notes);
+  const choice = topChoice(answers, "type", TYPE_TIE_ORDER, notes);
 
-  return choice && isKnownKey(TYPE_LABELS, choice)
-    ? TYPE_LABELS[choice]
-    : undefined;
+  return choice ? TYPE_LABELS[choice] : undefined;
 };
 
 export const resolveTypeLabel = (
@@ -146,49 +228,6 @@ export const resolveTypeLabel = (
     existingLabels.find((label) => label.startsWith(GROUP_PREFIXES.type)) ??
     (modelType && !refusedLabels.includes(modelType) ? modelType : undefined)
   );
-};
-
-const TOP_ALTERNATIVES = 2;
-
-const alternatives = (
-  probabilities: Readonly<Record<string, number>> | undefined,
-  labelFor: (key: string) => string | undefined
-): string => {
-  const ranked = Object.entries(probabilities ?? {})
-    .toSorted(([, left], [, right]) => right - left)
-    .flatMap(([key, probability]) => {
-      const label = labelFor(key);
-
-      return label ? [`\`${label}\` (${probability.toFixed(2)})`] : [];
-    })
-    .slice(0, TOP_ALTERNATIVES);
-
-  return ranked.length > 0 ? `: ${ranked.join(" or ")}` : "";
-};
-
-const unsettledGap = (
-  answers: Answers,
-  key: "type" | "area" | "impact",
-  refused: ReadonlySet<string>
-): Gap => {
-  const answer = answers[key];
-  const probabilities =
-    answer?.type === "choice" || answer?.type === "score"
-      ? answer.probabilities
-      : undefined;
-
-  const labelFor = (option: string): string | undefined => {
-    const table = key === "type" ? TYPE_LABELS : AREA_LABELS;
-    const fromTable = isKnownKey(table, option) ? table[option] : undefined;
-    const label = key === "impact" ? IMPACT_LEVELS[Number(option)] : fromTable;
-
-    return label && !refused.has(label) ? label : undefined;
-  };
-
-  return {
-    owner: "maintainer",
-    text: `Pick the ${key}${alternatives(probabilities, labelFor)}.`,
-  };
 };
 
 const STATUS_BY_READINESS = {
@@ -229,8 +268,8 @@ const pullRequestGaps = (input: PlanInput): Gap[] => {
 };
 
 const planAreas = (input: PlanInput, notes: string[]): string[] => {
-  const choice = confidentChoice(input.answers, "area", notes);
-  const fromModel = choice && isKnownKey(AREA_LABELS, choice) ? [choice] : [];
+  const choice = topChoice(input.answers, "area", AREA_TIE_ORDER, notes);
+  const fromModel = choice ? [choice] : [];
   const areas =
     input.areasFromPaths.length > 0 ? input.areasFromPaths : fromModel;
 
@@ -325,22 +364,13 @@ const planRemovals = (
   ];
 };
 
-const SETTLED_GROUPS = ["type", "area", "impact"] as const;
-
-type SettledGroup = (typeof SETTLED_GROUPS)[number];
-
 interface GapSources {
-  readonly refused: ReadonlySet<string>;
-  readonly unsettled: readonly SettledGroup[];
   readonly unmet: readonly string[];
   readonly duplicateOf: number | undefined;
   readonly settledType: string | undefined;
 }
 
 const collectGaps = (input: PlanInput, sources: GapSources): Gap[] => [
-  ...sources.unsettled.map((group) =>
-    unsettledGap(input.answers, group, sources.refused)
-  ),
   ...(sources.settledType === TYPE_LABELS.question
     ? [{ owner: "maintainer" as const, text: "Answer the question." }]
     : []),
@@ -377,9 +407,7 @@ export const planLabels = (input: PlanInput): Plan => {
 
   const type = allowed(planType(input.answers, notes));
   const areas = planAreas(input, notes).filter((area) => allowed(area));
-  const impact = allowed(
-    confidentLevel(input.answers, "impact", IMPACT_LEVELS, notes)
-  );
+  const impact = allowed(topImpact(input.answers, notes));
 
   const unmet = input.checklist
     ? unmetCriteria(input.checklist, input.answers)
@@ -417,18 +445,6 @@ export const planLabels = (input: PlanInput): Plan => {
     }
   }
 
-  const candidatesByGroup = {
-    area: areas,
-    impact: impact ? [impact] : [],
-    type: type ? [type] : [],
-  } as const;
-
-  const unsettled = SETTLED_GROUPS.filter(
-    (group) =>
-      candidatesByGroup[group].length === 0 &&
-      !hasGroup(existing, GROUP_PREFIXES[group])
-  );
-
   const duplicateOf = allowed(SIGNAL_LABELS.duplicate)
     ? planDuplicate(input.answers, notes)
     : undefined;
@@ -436,10 +452,8 @@ export const planLabels = (input: PlanInput): Plan => {
   const settledType = resolveTypeLabel(input.answers, existing, [...refused]);
   const gaps = collectGaps(input, {
     duplicateOf,
-    refused,
     settledType,
     unmet,
-    unsettled,
   });
 
   const blocked = isYes(input.answers, "blocked", notes);

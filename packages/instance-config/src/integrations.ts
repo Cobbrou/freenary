@@ -29,11 +29,15 @@ export interface IntegrationVariant {
   readonly fields: readonly IntegrationField[];
   readonly presets?: readonly IntegrationPreset[];
   readonly recognisedOnlyWhenRemembered?: boolean;
+  readonly recommended?: boolean;
 }
+
+export type SetupRole = "required" | "skippable" | "not-in-setup";
 
 export interface Integration {
   readonly id: string;
   readonly discriminantKey: ServerSettingKey;
+  readonly setup: SetupRole;
   readonly variants: readonly IntegrationVariant[];
 }
 
@@ -47,6 +51,7 @@ export type HeldValue = (key: ServerSettingKey) => string | undefined;
 const bankingIntegration: Integration = {
   discriminantKey: "BANKING_PROVIDER",
   id: "banking",
+  setup: "required",
   variants: [
     { discriminantValue: null, fields: [], id: "disabled" },
     {
@@ -57,6 +62,7 @@ const bankingIntegration: Integration = {
         { key: "POWENS_CLIENT_SECRET", kind: "secret", required: true },
       ],
       id: "powens",
+      recommended: true,
     },
     {
       discriminantValue: "enable-banking",
@@ -77,6 +83,7 @@ const bankingIntegration: Integration = {
 const emailIntegration: Integration = {
   discriminantKey: "EMAIL_PROVIDER",
   id: "email",
+  setup: "not-in-setup",
   variants: [
     { discriminantValue: null, fields: [], id: "disabled" },
     {
@@ -105,6 +112,7 @@ const emailIntegration: Integration = {
 const assistantIntegration: Integration = {
   discriminantKey: "AI_BASE_URL",
   id: "assistant",
+  setup: "not-in-setup",
   variants: [
     { discriminantValue: null, fields: [], id: "disabled" },
     {
@@ -160,6 +168,7 @@ const selfHostedClassifierFields = (
 const categorisationIntegration: Integration = {
   discriminantKey: "TRANSACTION_CLASSIFIER",
   id: "categorisation",
+  setup: "skippable",
   variants: [
     { discriminantValue: null, fields: [], id: "disabled" },
     {
@@ -220,6 +229,15 @@ export const integrations: readonly Integration[] = [
   assistantIntegration,
   categorisationIntegration,
 ];
+
+export const isShownInSetup = (integration: Integration): boolean =>
+  integration.setup !== "not-in-setup";
+
+export const isRequiredForSetup = (integration: Integration): boolean =>
+  integration.setup === "required";
+
+export const setupIntegrations: readonly Integration[] =
+  integrations.filter(isShownInSetup);
 
 export const findIntegration = (id: string): Option.Option<Integration> =>
   Option.fromNullishOr(

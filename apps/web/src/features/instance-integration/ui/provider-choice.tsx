@@ -1,3 +1,4 @@
+import { Badge } from "@freenary/ui/components/badge";
 import { Button } from "@freenary/ui/components/button";
 import { useIcon } from "@freenary/ui/lib/icon-context";
 import { cn } from "@freenary/ui/lib/utils";
@@ -12,6 +13,9 @@ import {
   variantDescription,
   variantLabel,
 } from "../model/labels";
+import { choosableVariants } from "../model/variant-choice";
+import type { IntegrationWording } from "../model/wording";
+import { SKIP_LABELS } from "../model/wording";
 import type { SetupIntegrationDescriptor } from "./provider-step";
 
 const SKIP_VARIANT = "disabled";
@@ -27,6 +31,7 @@ interface ProviderChoiceProps {
   onBack: () => void;
   onChoose: (variantId: string) => void;
   onContinue: () => void;
+  wording: IntegrationWording;
 }
 
 export const ProviderChoice = ({
@@ -37,6 +42,7 @@ export const ProviderChoice = ({
   onBack,
   onChoose,
   onContinue,
+  wording,
 }: ProviderChoiceProps) => {
   const ArrowLeftIcon = useIcon("arrow-left");
   const groupName = useId();
@@ -52,7 +58,7 @@ export const ProviderChoice = ({
       </div>
 
       <fieldset aria-labelledby={titleId} className="flex flex-col gap-2">
-        {descriptor.variants
+        {choosableVariants(descriptor)
           .toSorted((first, second) => skipLast(first.id) - skipLast(second.id))
           .map((variant) => {
             const isChosen = variant.id === chosen;
@@ -83,7 +89,14 @@ export const ProviderChoice = ({
                 />
                 <span className="flex min-w-0 flex-col gap-0.5">
                   <span className={isChosen ? "font-medium" : undefined}>
-                    {variantLabel(variant.id)}
+                    {variant.id === SKIP_VARIANT
+                      ? SKIP_LABELS[wording]()
+                      : variantLabel(variant.id)}
+                    {variant.recommended ? (
+                      <Badge className="ms-2" size="compact">
+                        {m.setup_variant_recommended()}
+                      </Badge>
+                    ) : null}
                   </span>
                   {description === null ? null : (
                     <span className="text-muted-foreground text-xs">

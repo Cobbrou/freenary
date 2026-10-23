@@ -1,6 +1,7 @@
 import { useState } from "react";
 
 import type { SaveOutcome } from "../model/outcome";
+import type { IntegrationWording } from "../model/wording";
 import { ProviderChoice } from "./provider-choice";
 import { ProviderCredentials } from "./provider-credentials";
 import type { SetupFieldDescriptor } from "./setup-field";
@@ -16,6 +17,7 @@ const OFF_UNTIL_CHOSEN: ReadonlySet<string> = new Set([
 export interface SetupVariantDescriptor {
   fields: SetupFieldDescriptor[];
   id: string;
+  recommended: boolean;
 }
 
 export interface SetupIntegrationDescriptor {
@@ -23,7 +25,9 @@ export interface SetupIntegrationDescriptor {
   discriminantKey: string;
   discriminantSource: string;
   id: string;
+  requiredForSetup: boolean;
   selectedVariantId: string;
+  shownInSetup: boolean;
   state: string;
   variants: SetupVariantDescriptor[];
 }
@@ -41,6 +45,7 @@ interface ProviderStepProps {
   ) => void;
   onSkip: () => void;
   outcome: SaveOutcome | undefined;
+  wording?: IntegrationWording;
 }
 
 const defaultChoiceOf = (descriptor: SetupIntegrationDescriptor): string => {
@@ -68,6 +73,7 @@ export const ProviderStep = ({
   onSave,
   onSkip,
   outcome,
+  wording = "setup",
 }: ProviderStepProps) => {
   const [chosen, setChosen] = useState(() => defaultChoiceOf(descriptor));
   const [isConfiguring, setIsConfiguring] = useState(false);
@@ -85,6 +91,7 @@ export const ProviderStep = ({
         onSave={(values, checkFirst) => onSave(chosen, values, checkFirst)}
         outcome={outcome}
         variant={variant}
+        wording={wording}
       />
     );
   }
@@ -106,6 +113,7 @@ export const ProviderStep = ({
 
         setIsConfiguring(true);
       }}
+      wording={wording}
     />
   );
 };

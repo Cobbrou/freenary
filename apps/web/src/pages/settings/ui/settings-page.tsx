@@ -23,11 +23,19 @@ import {
   CREDENTIAL_PROVIDER_ID,
 } from "../api/auth-queries";
 import type { LinkedAccount, UserSession } from "../api/auth-queries";
+import { applyFailureMessage } from "../model/apply-failure";
+import {
+  operatorStandingOf,
+  shownSettingsSection,
+} from "../model/settings-nav-items";
+import type { OperatorStanding } from "../model/settings-nav-items";
 import { useBudgetProfileEditor } from "../model/use-budget-profile-editor";
 import type {
   BudgetProfileEditor,
   ServerBudgetLine,
 } from "../model/use-budget-profile-editor";
+import { useIntegrationSettings } from "../model/use-integration-settings";
+import type { IntegrationSettings } from "../model/use-integration-settings";
 import {
   AppearanceLocaleSection,
   AppearanceThemeSection,
@@ -35,6 +43,9 @@ import {
 import { BankAccountsSection } from "./bank-accounts-section";
 import { BudgetingSection } from "./budgeting-section";
 import { CategoriesSection } from "./categories-section";
+import { IntegrationDialog } from "./integration-dialog";
+import { IntegrationsRestartNotice } from "./integrations-restart-notice";
+import { IntegrationsSection } from "./integrations-section";
 import { SecurityAccountsSection } from "./security-accounts-section";
 import type { OAuthProviderOption } from "./security-accounts-section";
 import { SecurityPasskeysSection } from "./security-passkeys-section";
@@ -63,6 +74,7 @@ interface SettingsContentProps extends SecurityPaneProps {
   categories: CategoryEntry[];
   isCategoriesPending: boolean;
   isPending: boolean;
+  operatorStanding: OperatorStanding;
   section: SettingsSection;
   serverLines: ServerBudgetLine[] | undefined;
 }
@@ -157,6 +169,52 @@ const SecurityPane = ({
   </SettingsGroup>
 );
 
+interface IntegrationsPaneProps {
+  integrations: IntegrationSettings;
+}
+
+const IntegrationsPane = ({ integrations }: IntegrationsPaneProps) => (
+  <SettingsGroup
+    description={m.settings_group_integrations_description()}
+    title={m.settings_group_integrations_title()}
+  >
+    <IntegrationsRestartNotice
+      applyError={
+        integrations.applyFailure === null
+          ? null
+          : applyFailureMessage(integrations.applyFailure)
+      }
+      isApplying={integrations.isApplying}
+      onApply={integrations.handleApply}
+      onReconnect={integrations.handleReconnect}
+      restartPhase={integrations.restartPhase}
+      restartRequired={integrations.restartRequired}
+    />
+
+    <IntegrationsSection
+      isError={integrations.isError}
+      isPending={integrations.isPending}
+      onConfigure={integrations.handleConfigure}
+      onRetry={integrations.handleRetry}
+      rows={integrations.rows}
+    />
+
+    <IntegrationDialog
+      integration={integrations.opened}
+      isBusy={integrations.isBusy}
+      isChecking={integrations.isChecking}
+      isOpen={integrations.isOpen}
+      onCheckEnvironment={integrations.handleCheckEnvironment}
+      onClose={integrations.handleClose}
+      onEdit={integrations.handleEdit}
+      onSave={integrations.handleSubmit}
+      onTurnOff={integrations.handleTurnOff}
+      outcome={integrations.outcome}
+      stepKey={integrations.dialogKey}
+    />
+  </SettingsGroup>
+);
+
 const SettingsContent = ({
   accounts,
   categories,
@@ -164,12 +222,15 @@ const SettingsContent = ({
   isCategoriesPending,
   isPending,
   isSessionsPending,
+  operatorStanding,
   providers,
   section,
   serverLines,
   sessions,
 }: SettingsContentProps) => {
   const editor = useBudgetProfileEditor(serverLines, categories);
+  const shownSection = shownSettingsSection(section, operatorStanding);
+  const integrations = useIntegrationSettings(shownSection === "integrations");
 
   const panes = {
     appearance: <AppearancePane />,
@@ -182,6 +243,7 @@ const SettingsContent = ({
       />
     ),
     connections: <ConnectionsPane />,
+    integrations: <IntegrationsPane integrations={integrations} />,
     security: (
       <SecurityPane
         accounts={accounts}
@@ -195,9 +257,14 @@ const SettingsContent = ({
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 pb-20 lg:flex-row lg:gap-8">
-      <SettingsNav section={section} />
+      <SettingsNav section={shownSection} standing={operatorStanding} />
 
-      <div className="flex min-w-0 flex-1 flex-col gap-8">{panes[section]}</div>
+      <div
+        aria-busy={shownSection === null}
+        className="flex min-w-0 flex-1 flex-col gap-8"
+      >
+        {shownSection === null ? null : panes[shownSection]}
+      </div>
     </div>
   );
 };
@@ -215,6 +282,7 @@ export const SettingsPage = () => {
   const capabilitiesQuery = useQuery(orpc.auth.capabilities.queryOptions());
   const sessionsQuery = useQuery(authSessionsQueryOptions());
   const accountsQuery = useQuery(authAccountsQueryOptions());
+  const instanceStatusQuery = useQuery(orpc.instance.status.queryOptions());
 
   if (categoriesQuery.isError || profileQuery.isError) {
     const isRetrying = categoriesQuery.isFetching || profileQuery.isFetching;
@@ -251,6 +319,10 @@ export const SettingsPage = () => {
       isCategoriesPending={categoriesQuery.isPending}
       isPending={categoriesQuery.isPending || profileQuery.isPending}
       isSessionsPending={sessionsQuery.isPending}
+      operatorStanding={operatorStandingOf({
+        isOperator: instanceStatusQuery.data?.isOperator,
+        isPending: instanceStatusQuery.isPending,
+      })}
       providers={capabilitiesQuery.data?.oauth}
       section={section}
       serverLines={profileQuery.data?.lines}

@@ -25,8 +25,8 @@ Compose refuses before any container starts, or a container keeps restarting: `d
 | `Error: P1000: Authentication failed against database server`, then `service "migrate" didn't complete successfully: exit 1` | `POSTGRES_PASSWORD` changed after the first start. The database keeps the password it was created with | Put the original `POSTGRES_PASSWORD` back, then run `docker compose up -d` |
 | `Please make sure your database server is running at` in `docker compose logs migrate` | `migrate` can't reach the database | Check that `postgres` shows `healthy` in `docker compose ps -a`, and read `docker compose logs postgres` |
 | `❌ Invalid environment variables:`, then `error: Invalid environment variables` | A value fails its check. The `path` line names the variable, and `message` says what's wrong, such as `Too small: expected string to have >=32 characters`. A `TRUSTED_PROXIES` path with `write an IPv4-mapped address in its IPv4 form` means an entry like `::ffff:10.0.0.1`: write `10.0.0.1` | Fix that variable, then run `docker compose up -d` or redeploy. With `deploy/docker-compose.yml`, a `BETTER_AUTH_URL` or `CORS_ORIGIN` path means `FREENARY_URL` is wrong: it must be a full URL, such as `https://freenary.example.com` |
-| `error: EMAIL_PROVIDER=resend requires RESEND_API_KEY to be set.`, or another `EMAIL_PROVIDER=… requires …` line | An email variable is half set in the environment | Set the variable it names, or remove `EMAIL_PROVIDER` and use the [setup screen](/docs/run/email) |
-| `error: The instance configuration could not be read: …` | The server couldn't read the values saved on the setup screen, usually because the database can't be reached or isn't migrated | Check `docker compose logs migrate` and `docker compose logs postgres`, then run `docker compose up -d` |
+| `error: EMAIL_PROVIDER=resend requires RESEND_API_KEY to be set.`, or another `EMAIL_PROVIDER=… requires …` line | An email variable is half set in the environment | Set the variable it names, or remove `EMAIL_PROVIDER` and set email in Settings. See [Email](/docs/run/email) |
+| `error: The instance configuration could not be read: …` | The server couldn't read the values saved on the setup screen or in Settings, usually because the database can't be reached or isn't migrated | Check `docker compose logs migrate` and `docker compose logs postgres`, then run `docker compose up -d` |
 
 Every message, with the variable it comes from, is in [What stops a start](/docs/reference/configuration#what-stops-a-start).
 
@@ -72,9 +72,9 @@ Check `docker compose ps -a` and `docker compose logs server`. If the server kee
 
 ## The server does not restart after setup
 
-**What you see.** After `Finish setup`, the setup screen waits, then shows `The server did not restart` and `It did not answer within one minute.`
+**What you see.** After `Finish setup` on the setup screen, or `Apply now` in Settings, under **Integrations**, the page waits, then shows `The server did not restart` and `It did not answer within one minute.`
 
-**Why.** `Finish setup` stops the server so it picks up the new settings at its next start. Something has to start it again. Both compose files tell Docker to, and Coolify does it by default. A server started by hand stays down, and one that fails on startup keeps restarting.
+**Why.** `Finish setup` and `Apply now` stop the server so it picks up the new settings at its next start. Something has to start it again. Both compose files tell Docker to, and Coolify does it by default. A server started by hand stays down, and one that fails on startup keeps restarting.
 
 **Fix.** Read the server log:
 
@@ -88,25 +88,25 @@ Fix the error it names (see [Freenary won't start](#freenary-wont-start)), then 
 docker compose up -d server
 ```
 
-With a hosting panel, read the `server` logs there and redeploy. Then press `Try again` on the setup screen.
+With a hosting panel, read the `server` logs there and redeploy. Then press `Try again` on the page that shows the message.
 
 ## Bank and email stopped working after a restore
 
-**What you see.** After restoring a dump or changing `BETTER_AUTH_SECRET`, everyone is signed out, and the values saved on the setup screen are gone. The server still starts, and its log shows one warning per saved value:
+**What you see.** After restoring a dump or changing `BETTER_AUTH_SECRET`, everyone is signed out, and the values saved on the setup screen or in Settings are gone. The server still starts, and its log shows one warning per saved value:
 
 ```text
 The stored value of EMAIL_PROVIDER does not open with the current BETTER_AUTH_SECRET.
 ```
 
-**Why.** The setup screen's values are encrypted with `BETTER_AUTH_SECRET`. The server can't read them under another secret, so it skips them and runs on the environment's values alone.
+**Why.** Saved values are encrypted with `BETTER_AUTH_SECRET`. The server can't read them under another secret, so it skips them and runs on the environment's values alone.
 
-**Fix.** Put back the secret that was in use when the dump was taken, then run `docker compose up -d`, or redeploy with a panel. If that secret is lost, open the setup screen, enter the saved values again, and press `Finish setup`. What else a new secret costs, two-factor included, is in [What a rotation costs](/docs/reference/security#what-a-rotation-costs).
+**Fix.** Put back the secret that was in use when the dump was taken, then run `docker compose up -d`, or redeploy with a panel. If that secret is lost, re-enter the bank values on the setup screen and press `Finish setup`. Re-enter the email and model values in Settings, under **Integrations**, then press `Apply now`. What else a new secret costs, two-factor included, is in [What a rotation costs](/docs/reference/security#what-a-rotation-costs).
 
 ## The setup screen shows a configuration problem
 
 **What you see.** The setup screen shows `Configuration problem` and `The stored configuration did not load:`, followed by the reason.
 
-**Why.** The values saved on the setup screen, combined with your environment, don't pass the startup checks. The server ignores every saved value and runs on the environment alone.
+**Why.** The saved values, combined with your environment, don't pass the startup checks. The server ignores every saved value and runs on the environment alone.
 
 **Fix.** Correct the value the reason names, on the setup screen or in the environment, then press `Finish setup` or run `docker compose up -d`.
 
@@ -154,15 +154,15 @@ The stored value of EMAIL_PROVIDER does not open with the current BETTER_AUTH_SE
 
 ## The assistant has no model
 
-Users see `Choose a model`, or `This instance has no model configured`. Pick a model in the `Assistant` step of the setup screen, then press `Finish setup`. See [AI models](/docs/run/models#assistant).
+Users see `Choose a model`, or `This instance has no model configured`. As the operator, open Settings, then **Integrations**, configure the `Assistant model` row, and press `Apply now`. See [AI models](/docs/run/models#assistant).
 
 ## The server ignores the saved categorisation model
 
-**What you see.** Transactions stop getting a category from the model you picked on the setup screen, and the server log shows a line that ends with `The stored classifier is ignored, and the environment alone is in force.`
+**What you see.** Transactions stop getting a category from the model you saved, and the server log shows a line that ends with `The stored classifier is ignored, and the environment alone is in force.`
 
 **Why.** The saved model and the environment's `TRANSACTION_CLASSIFIER_FALLBACK` can't run together, for example because both name the same protocol and model.
 
-**Fix.** Pick another model in the `Categories` step, or change the fallback in the environment, then press `Finish setup` or run `docker compose up -d`.
+**Fix.** Pick another model in Settings, under **Integrations**, or change the fallback in the environment, then press `Apply now` or run `docker compose up -d`.
 
 ## The wrong account became the operator
 

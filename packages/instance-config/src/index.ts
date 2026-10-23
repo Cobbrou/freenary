@@ -20,6 +20,7 @@ export type {
   IntegrationPreset,
   IntegrationVariant,
   ServerSettingKey,
+  SetupRole,
 } from "./integrations";
 export {
   findIntegration,
@@ -27,11 +28,14 @@ export {
   instanceConfigurableKeys,
   integrations,
   isOffVariant,
+  isRequiredForSetup,
   isSecretField,
+  isShownInSetup,
   keysOf,
   presetsOf,
   recogniseVariant,
   rememberedVariantKey,
+  setupIntegrations,
 } from "./integrations";
 export { instanceConfigFault, settings, storedSettingsAtBoot } from "./resolve";
 export {

@@ -3,7 +3,7 @@ import { Data, Effect, Schedule, Schema } from "effect";
 import type { Question } from "./questions";
 
 const DECISIONS_URL = "https://api.subq.ai/v1/systemone";
-const MODEL = "subq-snap-preview";
+const MODEL = "subq-snap-1.1";
 const RETRY_BASE_DELAY = "1 second";
 const MAX_RETRIES = 4;
 const REQUEST_TIMEOUT = "30 seconds";

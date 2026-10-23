@@ -3,12 +3,15 @@ import { Elevated } from "@freenary/ui/lib/elevated";
 import { useIcon } from "@freenary/ui/lib/icon-context";
 import { RiCheckLine, RiErrorWarningLine } from "@remixicon/react";
 
+import {
+  integrationTitle,
+  stateLabel,
+  variantLabel,
+} from "@/features/instance-integration";
+import type { SetupIntegrationDescriptor } from "@/features/instance-integration";
 import { m } from "@/paraglide/messages.js";
 import { remixIcon } from "@/shared/lib/remix-icon";
 import { WizardStepHeader } from "@/shared/ui/wizard-step-header";
-
-import { integrationTitle, stateLabel, variantLabel } from "../model/labels";
-import type { SetupIntegrationDescriptor } from "./provider-step";
 
 const CONFIGURED_STATE = "configured";
 const DISABLED_STATE = "disabled";
@@ -57,6 +60,7 @@ const rowValue = (integration: SetupIntegrationDescriptor): string =>
     : stateLabel(integration.state);
 
 interface FinishStepProps {
+  error: string | null;
   integrations: SetupIntegrationDescriptor[];
   isCompleting: boolean;
   onBack: () => void;
@@ -64,6 +68,7 @@ interface FinishStepProps {
 }
 
 export const FinishStep = ({
+  error,
   integrations,
   isCompleting,
   onBack,
@@ -101,6 +106,12 @@ export const FinishStep = ({
           ))}
         </dl>
       </Elevated>
+
+      {error === null ? null : (
+        <p className="text-destructive text-sm" role="alert">
+          {error}
+        </p>
+      )}
 
       <div className="flex items-center justify-between gap-3">
         <Button

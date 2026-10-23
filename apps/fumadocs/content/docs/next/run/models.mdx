@@ -1,6 +1,6 @@
 ---
 title: AI models
-description: Pick the model that answers in the assistant and the one that categorises transactions, on the setup screen.
+description: Pick the model that answers in the assistant and the one that categorises transactions, in Settings or on the setup screen.
 icon: Brain
 ---
 
@@ -13,19 +13,19 @@ Freenary ships with no model. Pick one for the assistant and one for categorisat
 
 ## Choose where the values live
 
-Open `https://freenary.example.com/setup` as the operator. The `Assistant` and `Categories` steps start on `Skip for now` until you pick a model. Values saved there stay in the database.
+As the operator, open Settings, then **Integrations**, and press `Configure` on the `Assistant model` or `Categorisation model` row. Only the operator sees that section. The setup screen also offers the categorisation model on its `Categories` step, which starts on `Skip for now` until you pick one. Values saved in either place stay in the database.
 
-Environment variables are the other option, and they win over a saved value. The variables are in [Assistant](/docs/reference/configuration#assistant) and [Categorisation](/docs/reference/configuration#categorisation). The fallback classifier, its threshold and the temperatures live in the environment alone.
+Environment variables are the other option, and they win over a saved value: the row then shows `Set by your server`. The variables are in [Assistant](/docs/reference/configuration#assistant) and [Categorisation](/docs/reference/configuration#categorisation). The fallback classifier, its threshold and the temperatures live in the environment alone.
 
 ## Assistant
 
-Choose `OpenAI-compatible endpoint`, then enter:
+The assistant is optional: the rest of Freenary works without it. Choose `OpenAI-compatible endpoint`, then enter:
 
-| Field | Value |
-| --- | --- |
-| `Base URL` | The chat-completions endpoint with its version path, such as `https://openrouter.ai/api/v1` |
-| `Model` | The model id as that endpoint names it |
-| `API key` | Under `More options`. Leave it empty for a local endpoint |
+| Field | Variable | Value |
+| --- | --- | --- |
+| `Base URL` | `AI_BASE_URL` | The chat-completions endpoint with its version path, such as `https://openrouter.ai/api/v1` |
+| `Model` | `AI_MODEL` | The model id as that endpoint names it |
+| `API key` | `AI_API_KEY` | Under `More options`. Leave it empty for a local endpoint |
 
 Freenary posts to `<Base URL>/chat/completions`. The model must call tools, because it may only state figures a tool returned.
 
@@ -77,9 +77,11 @@ Pick this for a Hugging Face zero-shot classification server, such as one runnin
 
 ## Test and apply
 
-`Save and continue` tests the model before it stores anything. For categorisation, it asks about one sample merchant. For the assistant, it sends one short chat message. The messages match the ones in [Connection test results](/docs/run/email#connection-test-results).
+`Save` in Settings, or `Save and continue` on the setup screen, tests the model before it stores anything. For categorisation, it asks about one sample merchant. For the assistant, it sends one short chat message. The messages, and `Save anyway`, are the ones in [Connection test results](/docs/run/email#connection-test-results).
 
-Press `Finish setup` to restart the instance with the new model.
+The server picks up a saved model when it restarts. In Settings, press `Apply now`, as [Apply a saved change](/docs/run/email#apply-a-saved-change) describes. On the setup screen, `Finish setup` restarts it.
+
+To stop using a model, choose `Off` in `Configure`, press `Continue`, then `Apply now`. [What each model does](#what-each-model-does) says what changes without it.
 
 <Cards>
   <Card

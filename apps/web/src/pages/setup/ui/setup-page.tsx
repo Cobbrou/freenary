@@ -8,20 +8,23 @@ import { Spinner } from "@freenary/ui/components/spinner";
 import { useState } from "react";
 import { toast } from "sonner";
 
+import {
+  EnvironmentSummary,
+  ProviderStep,
+  restartDocsUrl,
+} from "@/features/instance-integration";
+import type { SaveOutcome } from "@/features/instance-integration";
 import { m } from "@/paraglide/messages.js";
 import { WizardShell } from "@/shared/ui/wizard-shell";
 import { WizardStepper } from "@/shared/ui/wizard-stepper";
 
-import { restartDocsUrl, stepLabel } from "../model/labels";
-import type { SaveOutcome } from "../model/outcome";
+import { completionFailureMessage, stepLabel } from "../model/labels";
+import { FINISH_STEP, setupIntegrationsOf } from "../model/setup-steps";
 import { useSetup } from "../model/use-setup";
-import { EnvironmentSummary } from "./environment-summary";
 import { FaultNotice } from "./fault-notice";
 import { FinishStep } from "./finish-step";
-import { ProviderStep } from "./provider-step";
 import { SetupWizardSkeleton } from "./setup-wizard-skeleton";
 
-const FINISH_STEP = "finish";
 const SKIP_VARIANT = "disabled";
 
 export const SetupPage = () => {
@@ -106,7 +109,12 @@ export const SetupPage = () => {
     if (setup.stepId === FINISH_STEP) {
       return (
         <FinishStep
-          integrations={integrations}
+          error={
+            setup.completionFailure === null
+              ? null
+              : completionFailureMessage(setup.completionFailure)
+          }
+          integrations={setupIntegrationsOf(integrations)}
           isCompleting={setup.complete.isPending}
           onBack={setup.handleBack}
           onFinish={() => setup.complete.mutate({})}

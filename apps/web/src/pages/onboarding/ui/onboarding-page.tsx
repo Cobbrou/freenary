@@ -9,7 +9,6 @@ import { OnboardingWizard } from "./onboarding-wizard";
 
 const OnboardingContent = () => {
   const bankLinking = useBankLinking();
-  const instanceStatus = useQuery(orpc.instance.status.queryOptions());
 
   const wizard = useOnboardingWizard();
 
@@ -33,7 +32,6 @@ const OnboardingContent = () => {
       isBanksError={banksQuery.isError}
       isBanksPending={banksQuery.isPending}
       isCompleting={wizard.isCompleting}
-      isOperator={instanceStatus.data?.isOperator ?? false}
       isPending={bankLinking === "pending"}
       onBack={wizard.handleBack}
       onCountriesChange={wizard.handleCountriesChange}
