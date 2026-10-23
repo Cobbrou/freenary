@@ -65,11 +65,13 @@ Powens receives only the start of the [sync window](/docs/use/bank-connections#s
 
 <Callout type="warn">
 
-Saving a provider on the setup screen erases the stored credentials of the other one. Values set in the environment stay. Connections made with the erased provider can no longer sync. Disconnecting one removes it from Freenary without asking the provider to revoke access, and the user sees a warning to revoke it at their bank.
+Saving a provider on the setup screen or in Settings erases the stored credentials of the other one. Values set in the environment stay. Connections made with the erased provider can no longer sync. Disconnecting one removes it from Freenary without asking the provider to revoke access, and the user sees a warning to revoke it at their bank.
 
 </Callout>
 
-To switch and keep old connections working, set the old provider's credentials in the environment before you save the new one on the setup screen. Users then disconnect and reconnect each bank when they're ready.
+To switch and keep old connections working, set the old provider's credentials in the environment before you save the new one. Users then disconnect and reconnect each bank when they're ready.
+
+You can also change the provider in Settings: open **Integrations** and press `Configure` on the `Bank provider` row. When you save another provider and any member has a bank connection, a confirmation says how many connections are affected across the instance, and nothing is stored until you press `Switch provider`. Saving new credentials for the same provider asks nothing. If Freenary can't count the connections, it asks anyway, without a number. The change takes effect after `Apply now`, as [Apply a saved change](/docs/run/email#apply-a-saved-change) describes.
 
 ## With no provider
 

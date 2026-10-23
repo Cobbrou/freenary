@@ -7,6 +7,10 @@ interface IntegrationRow {
 
 export const INTEGRATION_ROWS = [
   {
+    description: m.settings_integrations_banking_description,
+    id: "banking",
+  },
+  {
     description: m.settings_integrations_categorisation_description,
     id: "categorisation",
   },

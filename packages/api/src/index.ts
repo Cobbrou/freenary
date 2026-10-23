@@ -30,16 +30,23 @@ export const isOperator = async (userId: string): Promise<boolean> => {
   return account?.role === "OPERATOR";
 };
 
-const requireOperator = o.middleware(async ({ context, next }) => {
-  if (!context.session?.user) {
-    throw new ORPCError("UNAUTHORIZED");
-  }
+const requireOperator = (
+  isOperatorAccount: (userId: string) => Promise<boolean>
+) =>
+  o.middleware(async ({ context, next }) => {
+    if (!context.session?.user) {
+      throw new ORPCError("UNAUTHORIZED");
+    }
 
-  if (!(await isOperator(context.session.user.id))) {
-    throw new ORPCError("FORBIDDEN");
-  }
+    if (!(await isOperatorAccount(context.session.user.id))) {
+      throw new ORPCError("FORBIDDEN");
+    }
 
-  return next({ context: { session: context.session } });
-});
+    return next({ context: { session: context.session } });
+  });
 
-export const operatorProcedure = publicProcedure.use(requireOperator);
+export const operatorProcedureWith = (
+  isOperatorAccount: (userId: string) => Promise<boolean>
+) => publicProcedure.use(requireOperator(isOperatorAccount));
+
+export const operatorProcedure = operatorProcedureWith(isOperator);

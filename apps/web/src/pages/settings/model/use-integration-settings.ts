@@ -12,9 +12,19 @@ import { orpc } from "@/shared/api";
 
 import { useUnsavedChangesWarning } from "../lib/use-unsaved-changes-warning";
 import { INTEGRATION_ROWS, integrationRowsOf } from "./integration-rows";
+import {
+  BANKING_INTEGRATION,
+  needsSwitchConfirmation,
+} from "./switch-confirmation";
 
 const OFF_VARIANT = "disabled";
 const INSTANCE_OWNER = "instance";
+
+interface PendingSave {
+  checkFirst: boolean;
+  values: Record<string, string>;
+  variantId: string;
+}
 
 export const useIntegrationSettings = (isShown: boolean) => {
   const queryClient = useQueryClient();
@@ -23,10 +33,12 @@ export const useIntegrationSettings = (isShown: boolean) => {
   const [openCount, setOpenCount] = useState(0);
   const [outcome, setOutcome] = useState<SaveOutcome | undefined>();
   const [isEdited, setIsEdited] = useState(false);
+  const [pendingSwitch, setPendingSwitch] = useState<PendingSave | null>(null);
 
   const close = () => {
     setIsOpen(false);
     setIsEdited(false);
+    setPendingSwitch(null);
   };
 
   const instanceIntegration = useInstanceIntegration({
@@ -45,6 +57,19 @@ export const useIntegrationSettings = (isShown: boolean) => {
       retry: false,
     })
   );
+
+  const isBankingOpen = isOpen && heldId === BANKING_INTEGRATION;
+
+  const connections = useQuery(
+    orpc.instance.bankConnectionCount.queryOptions({
+      enabled: isBankingOpen,
+      staleTime: 0,
+    })
+  );
+
+  const connectionCount = connections.isError
+    ? undefined
+    : (connections.data?.count ?? 0);
 
   useUnsavedChangesWarning(isOpen && isEdited);
 
@@ -106,6 +131,19 @@ export const useIntegrationSettings = (isShown: boolean) => {
       }
     );
 
+  const proceed = (
+    integrationId: string,
+    { checkFirst, values, variantId }: PendingSave
+  ) => {
+    if (checkFirst) {
+      checkThenSave(integrationId, variantId, values);
+
+      return;
+    }
+
+    saveValues(integrationId, variantId, values);
+  };
+
   const submit = (
     variantId: string,
     values: Record<string, string>,
@@ -115,13 +153,31 @@ export const useIntegrationSettings = (isShown: boolean) => {
       return;
     }
 
-    if (checkFirst) {
-      checkThenSave(opened.id, variantId, values);
+    const pending = { checkFirst, values, variantId };
+
+    if (
+      needsSwitchConfirmation({
+        chosenVariantId: variantId,
+        connectionCount,
+        currentVariantId: opened.selectedVariantId,
+        integrationId: opened.id,
+      })
+    ) {
+      setPendingSwitch(pending);
 
       return;
     }
 
-    saveValues(opened.id, variantId, values);
+    proceed(opened.id, pending);
+  };
+
+  const confirmSwitch = () => {
+    if (opened === undefined || pendingSwitch === null) {
+      return;
+    }
+
+    setPendingSwitch(null);
+    proceed(opened.id, pendingSwitch);
   };
 
   const turnOff = () => {
@@ -151,22 +207,29 @@ export const useIntegrationSettings = (isShown: boolean) => {
   return {
     applyFailure:
       complete.error === null ? null : completionFailureOf(complete.error),
+    connectionCount,
     dialogKey: `${heldId ?? ""}-${openCount}`,
     handleApply: () => complete.mutate({}),
+    handleCancelSwitch: () => setPendingSwitch(null),
     handleCheckEnvironment: checkEnvironment,
     handleClose: close,
     handleConfigure: open,
+    handleConfirmSwitch: confirmSwitch,
     handleEdit: edit,
     handleReconnect: instanceIntegration.reconnect,
     handleRetry: () => configuration.refetch(),
     handleSubmit: submit,
     handleTurnOff: turnOff,
     isApplying: complete.isPending,
-    isBusy: check.isPending || save.isPending,
+    isBusy:
+      check.isPending ||
+      save.isPending ||
+      (isBankingOpen && connections.isFetching),
     isChecking: check.isPending,
     isError: configuration.isError,
     isOpen,
     isPending: configuration.isPending,
+    isSwitchPending: pendingSwitch !== null,
     opened,
     outcome,
     restartPhase,

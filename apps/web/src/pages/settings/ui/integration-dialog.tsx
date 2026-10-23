@@ -10,18 +10,24 @@ import type {
   SetupIntegrationDescriptor,
 } from "@/features/instance-integration";
 
+import { SwitchProviderDialog } from "./switch-provider-dialog";
+
 const ENVIRONMENT_OWNER = "environment";
 
 const TALLER_THAN_A_SHORT_VIEWPORT =
   "max-h-[calc(100dvh-4rem)] overflow-y-auto";
 
 interface IntegrationDialogProps {
+  connectionCount: number | undefined;
   integration: SetupIntegrationDescriptor | undefined;
   isBusy: boolean;
   isChecking: boolean;
   isOpen: boolean;
+  isSwitchPending: boolean;
+  onCancelSwitch: () => void;
   onCheckEnvironment: (variantId: string) => void;
   onClose: () => void;
+  onConfirmSwitch: () => void;
   onEdit: () => void;
   onSave: (
     variantId: string,
@@ -34,12 +40,16 @@ interface IntegrationDialogProps {
 }
 
 export const IntegrationDialog = ({
+  connectionCount,
   integration,
   isBusy,
   isChecking,
   isOpen,
+  isSwitchPending,
+  onCancelSwitch,
   onCheckEnvironment,
   onClose,
+  onConfirmSwitch,
   onEdit,
   onSave,
   onTurnOff,
@@ -98,6 +108,12 @@ export const IntegrationDialog = ({
         size="lg"
       >
         {integration === undefined ? null : renderStep(integration)}
+        <SwitchProviderDialog
+          connectionCount={connectionCount}
+          isOpen={isSwitchPending}
+          onCancel={onCancelSwitch}
+          onConfirm={onConfirmSwitch}
+        />
       </DialogContent>
     </Dialog>
   );

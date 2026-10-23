@@ -1015,8 +1015,9 @@
   "settings_integrations_applied_toast": "Réglages appliqués",
   "settings_integrations_apply": "Appliquer maintenant",
   "settings_integrations_apply_failed": "Les réglages n’ont pas pu être appliqués. Réessayez.",
-  "settings_integrations_apply_needs_bank": "Configurez un fournisseur bancaire sur l’écran de configuration avant d’appliquer ces réglages.",
+  "settings_integrations_apply_needs_bank_provider": "Configurez le fournisseur bancaire avant d’appliquer ces réglages.",
   "settings_integrations_assistant_description": "Le modèle derrière l’assistant conversationnel. Il est facultatif : le reste de Freenary fonctionne sans lui.",
+  "settings_integrations_banking_description": "Le service qui relie les comptes bancaires et synchronise leurs transactions. Une connexion bancaire continue d’utiliser le fournisseur avec lequel elle a été créée.",
   "settings_integrations_categorisation_description": "Catégorise une transaction qu’aucune règle ni entrée du dictionnaire ne reconnaît. Sans modèle, ces transactions restent non catégorisées.",
   "settings_integrations_configure": "Configurer",
   "settings_integrations_configure_named": "Configurer : {integration}",
@@ -1027,6 +1028,19 @@
   "settings_integrations_restart_title": "Redémarrez pour appliquer vos modifications",
   "settings_integrations_state_configured": "Configuré · {provider}",
   "settings_integrations_state_environment": "Défini par votre serveur · {provider}",
+  "settings_integrations_switch_confirm": "Changer de fournisseur",
+  "settings_integrations_switch_description": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "Les connexions bancaires créées avec le fournisseur actuel ne peuvent plus se synchroniser. {count} connexion bancaire de ce serveur est concernée, tous membres confondus : son propriétaire doit déconnecter cette banque puis la reconnecter pour relancer la synchronisation.",
+        "countPlural=other": "Les connexions bancaires créées avec le fournisseur actuel ne peuvent plus se synchroniser. {count} connexions bancaires de ce serveur sont concernées, tous membres confondus : leurs propriétaires doivent déconnecter chaque banque puis la reconnecter pour relancer la synchronisation."
+      }
+    }
+  ],
+  "settings_integrations_switch_description_uncounted": "Les connexions bancaires créées avec le fournisseur actuel ne peuvent plus se synchroniser. Freenary n’a pas pu compter les connexions bancaires de ce serveur : leurs propriétaires doivent déconnecter chaque banque puis la reconnecter pour relancer la synchronisation.",
+  "settings_integrations_switch_title": "Changer de fournisseur bancaire ?",
   "settings_line_amount_label": "Montant mensuel",
   "settings_line_error_amount": "Saisissez un montant positif",
   "settings_line_error_amount_too_large": "Le montant est trop élevé",

@@ -52,6 +52,7 @@ All 45 procedures, grouped by router. [API](/docs/reference/api) covers the base
 | [`instance.check`](#instancecheck) | Operator | Tests credentials without saving them |
 | [`instance.save`](#instancesave) | Operator | Stores setup values |
 | [`instance.complete`](#instancecomplete) | Operator | Finishes setup |
+| [`instance.bankConnectionCount`](#instancebankconnectioncount) | Operator | Counts every member's bank connections |
 | [`onboarding.completeOnboarding`](#onboardingcompleteonboarding) | Protected | Stores the tax countries and ends the first-run flow |
 | [`onboarding.getStatus`](#onboardinggetstatus) | Protected | Whether the first-run flow is done |
 | [`settings.createCustomCategory`](#settingscreatecustomcategory) | Protected | Creates a custom category |
@@ -398,6 +399,10 @@ Same input as `instance.check`. It stores only the values the environment doesn'
 **Output**: `{ completed: true, restarting }`. `restarting` is `true` when a saved value isn't in use yet; the server then exits 250 ms later, and its restart policy starts it with the new values.
 
 **Errors**: `PRECONDITION_FAILED` (412) `Configure a bank provider before finishing setup`, with `data.missing` listing each required integration that isn't `configured`. Setup stays not completed.
+
+### instance.bankConnectionCount
+
+**Output**: `{ count }`, the number of bank connections on the instance, across every member.
 
 ## `onboarding`
 

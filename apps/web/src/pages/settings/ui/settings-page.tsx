@@ -200,12 +200,16 @@ const IntegrationsPane = ({ integrations }: IntegrationsPaneProps) => (
     />
 
     <IntegrationDialog
+      connectionCount={integrations.connectionCount}
       integration={integrations.opened}
       isBusy={integrations.isBusy}
       isChecking={integrations.isChecking}
       isOpen={integrations.isOpen}
+      isSwitchPending={integrations.isSwitchPending}
+      onCancelSwitch={integrations.handleCancelSwitch}
       onCheckEnvironment={integrations.handleCheckEnvironment}
       onClose={integrations.handleClose}
+      onConfirmSwitch={integrations.handleConfirmSwitch}
       onEdit={integrations.handleEdit}
       onSave={integrations.handleSubmit}
       onTurnOff={integrations.handleTurnOff}

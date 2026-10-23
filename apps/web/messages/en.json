@@ -1006,8 +1006,9 @@
   "settings_integrations_applied_toast": "Settings applied",
   "settings_integrations_apply": "Apply now",
   "settings_integrations_apply_failed": "The settings could not be applied. Try again.",
-  "settings_integrations_apply_needs_bank": "Set up a bank provider on the setup screen before you apply these settings.",
+  "settings_integrations_apply_needs_bank_provider": "Set up the bank provider before you apply these settings.",
   "settings_integrations_assistant_description": "The model behind the assistant chatbot. It's optional: the rest of Freenary works without it.",
+  "settings_integrations_banking_description": "The service that links bank accounts and syncs their transactions. A bank connection keeps using the provider it was made with.",
   "settings_integrations_categorisation_description": "Categorises a transaction that no rule or dictionary entry recognises. With no model, those transactions stay uncategorised.",
   "settings_integrations_configure": "Configure",
   "settings_integrations_configure_named": "Configure {integration}",
@@ -1018,6 +1019,19 @@
   "settings_integrations_restart_title": "Restart to apply your changes",
   "settings_integrations_state_configured": "Configured · {provider}",
   "settings_integrations_state_environment": "Set by your server · {provider}",
+  "settings_integrations_switch_confirm": "Switch provider",
+  "settings_integrations_switch_description": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "Bank connections made with the current provider can no longer sync. {count} bank connection on this server is affected, across every member: its owner has to disconnect that bank and connect it again to resume syncing.",
+        "countPlural=other": "Bank connections made with the current provider can no longer sync. {count} bank connections on this server are affected, across every member: their owners have to disconnect each bank and connect it again to resume syncing."
+      }
+    }
+  ],
+  "settings_integrations_switch_description_uncounted": "Bank connections made with the current provider can no longer sync. Freenary could not count the bank connections on this server: their owners have to disconnect each bank and connect it again to resume syncing.",
+  "settings_integrations_switch_title": "Switch the bank provider?",
   "settings_line_amount_label": "Monthly amount",
   "settings_line_error_amount": "Enter a positive amount",
   "settings_line_error_amount_too_large": "Amount is too large",

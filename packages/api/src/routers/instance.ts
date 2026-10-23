@@ -53,6 +53,7 @@ import {
   integrationStateOf,
   missingForSetup,
 } from "../instance/setup";
+import { bankConnectionCount } from "./bank-connection-count";
 
 const RESTART_GRACE_MS = 250;
 
@@ -306,6 +307,7 @@ const prepareIntegration = async (request: IntegrationRequest) => {
 };
 
 export const instanceRouter = {
+  bankConnectionCount,
   check: operatorProcedure
     .input(integrationInput)
     .handler(async ({ input }) => {

@@ -29,16 +29,16 @@ const described = [
 ];
 
 describe("integrationRowsOf", () => {
-  it("lists Categories, Email delivery and the Assistant model, in that order", () => {
+  it("lists the Bank provider first, then Categories, Email delivery and the Assistant model", () => {
     expect(
       integrationRowsOf(INTEGRATION_ROWS, described).map(({ row }) => row.id)
-    ).toEqual(["categorisation", "email", "assistant"]);
+    ).toEqual(["banking", "categorisation", "email", "assistant"]);
   });
 
   it("pairs each row with its described integration", () => {
     const [first] = integrationRowsOf(INTEGRATION_ROWS, described);
 
-    expect(first?.integration?.id).toBe("categorisation");
+    expect(first?.integration?.id).toBe("banking");
   });
 
   it("keeps every row, with no integration, while the description loads", () => {
@@ -49,6 +49,7 @@ describe("integrationRowsOf", () => {
     );
 
     expect(rows.map(({ row }) => row.id)).toEqual([
+      "banking",
       "categorisation",
       "email",
       "assistant",
