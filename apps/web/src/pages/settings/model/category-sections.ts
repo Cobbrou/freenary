@@ -11,6 +11,29 @@ export interface CategorySection {
   key: string;
 }
 
+export interface CategoryTreeGroup {
+  children: CategoryEntry[];
+  group: CategoryEntry;
+}
+
+export const toCustomCategoryTree = (
+  categories: CategoryEntry[]
+): CategoryTreeGroup[] => {
+  const tree: CategoryTreeGroup[] = [];
+
+  for (const entry of categories) {
+    if (entry.isGroup) {
+      tree.push({ children: [], group: entry });
+    } else if (entry.isCustom) {
+      tree.at(-1)?.children.push(entry);
+    }
+  }
+
+  return tree.filter(
+    ({ children, group }) => group.isCustom || children.length > 0
+  );
+};
+
 export const editedOf = (entry: CategoryEntry): EditedCustomCategory => ({
   color: entry.pickedColor ?? entry.color,
   icon: entry.icon,

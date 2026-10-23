@@ -32,7 +32,7 @@ import {
 import { m } from "@/paraglide/messages.js";
 
 import { categoryParentOptions } from "../model/category-parent-options";
-import { editedOf } from "../model/category-sections";
+import { editedOf, toCustomCategoryTree } from "../model/category-sections";
 import { useCustomCategoryActions } from "../model/use-custom-category-actions";
 import type { EditedCustomCategory } from "../model/use-custom-category-form";
 import {
@@ -46,11 +46,6 @@ import { CustomCategoryDialog } from "./custom-category-dialog";
 import { SETTINGS_BLEED, SettingsSection } from "./settings-section";
 
 type CategoryEditorState = EditedCustomCategory | "new" | null;
-
-interface CategoryTreeGroup {
-  children: CategoryEntry[];
-  group: CategoryEntry;
-}
 
 interface CategoriesSectionProps {
   categories: CategoryEntry[];
@@ -92,22 +87,6 @@ const catchAllCategoryLabelOf = (groupKey: string) =>
   isCategoryGroup(groupKey)
     ? categoryLabel(CATEGORY_GROUP_FALLBACKS[groupKey])
     : categoryLabel("uncategorised");
-
-const toGroupTreeInServerOrder = (
-  categories: CategoryEntry[]
-): CategoryTreeGroup[] => {
-  const tree: CategoryTreeGroup[] = [];
-
-  for (const entry of categories) {
-    if (entry.isGroup) {
-      tree.push({ children: [], group: entry });
-    } else {
-      tree.at(-1)?.children.push(entry);
-    }
-  }
-
-  return tree;
-};
 
 const CategoryGroupHeader = ({
   group,
@@ -222,33 +201,23 @@ export const CategoriesSection = ({
     }
   };
 
-  const tree = useMemo(
-    () => toGroupTreeInServerOrder(categories),
-    [categories]
-  );
+  const tree = useMemo(() => toCustomCategoryTree(categories), [categories]);
 
-  const { hoverIndices, rowsThatLightUp } = useMemo(() => {
+  const hoverIndices = useMemo(() => {
     const indices = new Map<string, number>();
-    const lit = new Set<number>();
     let next = 0;
 
     for (const { children, group } of tree) {
       indices.set(group.key, next);
-      lit.add(next);
       next += 1;
 
       for (const child of children) {
         indices.set(child.key, next);
-
-        if (child.isCustom) {
-          lit.add(next);
-        }
-
         next += 1;
       }
     }
 
-    return { hoverIndices: indices, rowsThatLightUp: lit };
+    return indices;
   }, [tree]);
 
   const parentOptions = useMemo(() => {
@@ -295,7 +264,11 @@ export const CategoriesSection = ({
             ))}
           </div>
         </div>
-      ) : (
+      ) : null}
+      {!isPending && tree.length === 0 ? (
+        <p className="text-muted-foreground">{m.settings_categories_empty()}</p>
+      ) : null}
+      {!isPending && tree.length > 0 ? (
         <SizeProvider size={LIST_SIZE}>
           <div
             className={cn("relative flex flex-col", SETTINGS_BLEED)}
@@ -304,10 +277,7 @@ export const CategoriesSection = ({
           >
             <FluidHoverHighlight
               className={shape.bg}
-              hidden={
-                hover.activeIndex === null ||
-                !rowsThatLightUp.has(hover.activeIndex)
-              }
+              hidden={hover.activeIndex === null}
               hover={hover}
             />
             <ul className="flex flex-col">
@@ -399,7 +369,7 @@ export const CategoriesSection = ({
             </ul>
           </div>
         </SizeProvider>
-      )}
+      ) : null}
 
       <CustomCategoryDialog
         edited={categoryEditor === "new" ? null : categoryEditor}
