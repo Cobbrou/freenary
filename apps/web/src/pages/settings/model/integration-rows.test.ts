@@ -92,6 +92,18 @@ describe("integrationRowStatus", () => {
     ).toEqual({ kind: "environment", variantId: "openai-compatible" });
   });
 
+  it("reads a mock bank the environment sets as set by the server", () => {
+    expect(
+      integrationRowStatus(
+        integration("banking", {
+          configuredBy: "environment",
+          selectedVariantId: "mock",
+          state: "configured",
+        })
+      )
+    ).toEqual({ kind: "environment", variantId: "mock" });
+  });
+
   it("reads a disabled integration as off", () => {
     expect(integrationRowStatus(integration("categorisation"))).toEqual({
       kind: "disabled",
