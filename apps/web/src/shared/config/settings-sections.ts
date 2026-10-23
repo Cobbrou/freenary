@@ -3,6 +3,7 @@ export const SETTINGS_SECTIONS = [
   "connections",
   "budget",
   "security",
+  "integrations",
 ] as const;
 
 export type SettingsSection = (typeof SETTINGS_SECTIONS)[number];

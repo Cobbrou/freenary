@@ -1,6 +1,5 @@
+import type { CompletionFailure } from "@/features/instance-integration";
 import { m } from "@/paraglide/messages.js";
-
-import type { CompletionFailure } from "./setup-steps";
 
 type Label = () => string;
 

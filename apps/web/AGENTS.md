@@ -54,7 +54,7 @@ There is no `main.tsx`: the Start plugin builds both entries from `src/app/route
 - `features/auth-gate` — the live session gate, used by `app/shell/auth-layout.tsx`, `pages/login` and `pages/onboarding`.
 - `features/bank-connection` — the bank list, its card, panel and disconnect dialog, used by `pages/onboarding` and `pages/settings`.
 - `features/account-sync` — the sync mutation and its toasts, used by `app/shell` for the background sync and by `pages/budget` for `Sync transactions`.
-- `features/instance-integration` — the provider step, its credentials form and outcome notice, and the save, check and complete mutations with the post-restart reconnect, used by `pages/setup` and, from #96, `pages/settings`. Until #96 lands, `steiger.config.ts` turns off `fsd/insignificant-slice` for this slice alone.
+- `features/instance-integration` — the provider step, its credentials form and outcome notice, and the save, check and complete mutations with the post-restart reconnect, used by `pages/setup` and `pages/settings`.
 - `entities/category` — the spending taxonomy: labels, selection, search and `CategoryIcon`, used across `pages/budget`, `pages/settings` and `pages/home`.
 
 ## Conventions

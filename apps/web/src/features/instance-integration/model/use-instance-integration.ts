@@ -59,6 +59,7 @@ export const useInstanceIntegration = ({
 
     await refreshConfiguration();
     await onApplied();
+    setRestartPhase("idle");
   };
 
   const complete = useMutation(

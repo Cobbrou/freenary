@@ -15,6 +15,8 @@ import {
   variantLabel,
 } from "../model/labels";
 import type { SaveOutcome } from "../model/outcome";
+import type { IntegrationWording } from "../model/wording";
+import { SAVE_LABELS } from "../model/wording";
 import { GuideLink } from "./guide-link";
 import { OutcomeNotice } from "./outcome-notice";
 import { PowensGuide, PowensSandboxNote } from "./powens-guide";
@@ -44,6 +46,7 @@ interface ProviderCredentialsProps {
   onSave: (values: Record<string, string>, checkFirst: boolean) => void;
   outcome: SaveOutcome | undefined;
   variant: SetupVariantDescriptor;
+  wording: IntegrationWording;
 }
 
 const isFromServer = (field: SetupFieldDescriptor): boolean =>
@@ -87,6 +90,7 @@ export const ProviderCredentials = ({
   onSave,
   outcome,
   variant,
+  wording,
 }: ProviderCredentialsProps) => {
   const ArrowLeftIcon = useIcon("arrow-left");
   const [values, setValues] = useState(() => filledValuesOf(variant.fields));
@@ -204,7 +208,7 @@ export const ProviderCredentials = ({
             </Button>
           ) : null}
           <Button loading={isBusy} onClick={() => save(true)} type="button">
-            {m.setup_save_and_continue()}
+            {SAVE_LABELS[wording]()}
           </Button>
         </div>
       </div>

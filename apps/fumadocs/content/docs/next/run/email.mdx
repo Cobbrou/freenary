@@ -20,9 +20,9 @@ The figures for code length, lifetime and attempts are in [Sign-in](/docs/run/si
 
 ## Choose where the values live
 
-The setup screen has no email step: set email in the environment. Start with `EMAIL_PROVIDER` and `EMAIL_FROM`, then add the variables for your service. Every variable is in [Email](/docs/reference/configuration#email).
+As the operator, open Settings, then **Integrations**, and press `Configure` on the `Email delivery` row. Values saved there stay in the database. Only the operator sees that section, and the setup screen has no email step.
 
-Email values already stored in the database stay in use. An environment value overrides a saved value. See [A value in the environment wins](/docs/reference/configuration#a-value-in-the-environment-wins).
+Environment variables are the other option. Start with `EMAIL_PROVIDER` and `EMAIL_FROM`, then add the variables for your service. Every variable is in [Email](/docs/reference/configuration#email). An environment value overrides a saved value, and the row shows `Set by your server`. See [A value in the environment wins](/docs/reference/configuration#a-value-in-the-environment-wins).
 
 ## Resend
 
@@ -32,15 +32,17 @@ Email values already stored in the database stay in use. An environment value ov
 
 ### Prepare Resend
 
-Add your domain in the [Resend dashboard](https://resend.com) and verify its DNS records. Create an API key.
+Add your domain in the [Resend dashboard](https://resend.com) and verify its DNS records. Create a full-access API key. A sending-only key can't pass Freenary's domain-list test.
 
 </Step>
 
 <Step>
 
-### Set the credentials
+### Enter the credentials
 
-Use a sender address on the verified domain.
+Choose `Resend` and press `Continue`. Enter a `Sender address` on the verified domain, such as `Freenary <no-reply@example.com>`, and the `API key`.
+
+In the environment, the same values are:
 
 ```dotenv
 EMAIL_PROVIDER=resend
@@ -53,7 +55,7 @@ RESEND_API_KEY=<your key>
 <Step>
 ### Apply the Resend change
 
-Run `docker compose up -d`, or redeploy with your hosting panel. A missing value stops the start, and the server log names it.
+Press `Save`, then `Apply now`. With environment variables, run `docker compose up -d`, or redeploy with your hosting panel. A missing value stops the start, and the server log names it.
 
 </Step>
 
@@ -65,7 +67,17 @@ Run `docker compose up -d`, or redeploy with your hosting panel. A missing value
 
 <Step>
 
-### Set the server details
+### Enter the server details
+
+Choose `SMTP` and press `Continue`. Enter `Sender address` and `Host`, then open `More options` for the remaining fields.
+
+| Field | Value |
+| --- | --- |
+| `Port` | Empty selects `465` with `Implicit TLS`, or `587` without it |
+| `Implicit TLS` | On for port `465`; off for `587`, which upgrades its connection |
+| `User`, `Password` | Your SMTP login, or both empty for an unauthenticated relay |
+
+In the environment, set these variables instead:
 
 ```dotenv
 EMAIL_PROVIDER=smtp
@@ -85,11 +97,30 @@ SMTP_HOST=smtp.example.com
 
 ### Apply the SMTP change
 
-Run `docker compose up -d`, or redeploy with your hosting panel.
+Press `Save`, then `Apply now`. With environment variables, run `docker compose up -d`, or redeploy with your hosting panel.
 
 </Step>
 
 </Steps>
+
+## Connection test results
+
+`Save` tests the service before it stores the values. The test times out after 10 seconds.
+
+| Message | Action |
+| --- | --- |
+| `Connection works.` | Nothing: the values are saved |
+| `… refused these credentials. Check them and try again.` | Correct the key or login |
+| `Unable to reach …. Check the address and your network, then try again.` | Check the host, port and outbound access |
+| `A value has the wrong format. Check the fields and try again.` | Correct the invalid field |
+
+If the service is working despite the failed test, press `Save anyway`. The values are stored without a check.
+
+## Apply a saved change
+
+The server reads saved values when it starts. After a save, Integrations shows `Restart to apply your changes`. Press `Apply now`: the server restarts, the section shows `Applying your settings…`, and the page reconnects on its own. If it shows `The server did not restart` instead, see [The server does not restart](/docs/run/troubleshooting#the-server-does-not-restart-after-setup).
+
+To turn email off, choose `Off` in `Configure`, press `Continue`, then `Apply now`.
 
 ## Send a real code
 

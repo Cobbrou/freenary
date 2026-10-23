@@ -3,12 +3,15 @@ import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
-import { useInstanceIntegration } from "@/features/instance-integration";
+import {
+  completionFailureOf,
+  useInstanceIntegration,
+} from "@/features/instance-integration";
 import { m } from "@/paraglide/messages.js";
 import { orpc } from "@/shared/api";
 import { authClient } from "@/shared/auth";
 
-import { FINISH_STEP, completionFailureOf, setupStepsOf } from "./setup-steps";
+import { FINISH_STEP, setupStepsOf } from "./setup-steps";
 
 export const useSetup = () => {
   const queryClient = useQueryClient();

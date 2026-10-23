@@ -1,3 +1,5 @@
+export { completionFailureOf } from "./model/completion-failure";
+export type { CompletionFailure } from "./model/completion-failure";
 export {
   integrationTitle,
   restartDocsUrl,
