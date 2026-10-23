@@ -1,4 +1,3 @@
-import { Badge } from "@freenary/ui/components/badge";
 import { Button } from "@freenary/ui/components/button";
 import {
   Combobox,
@@ -92,9 +91,9 @@ export const CountrySelectionStep = ({
                       {row.label}
                     </span>
                     {isFullySupportedCountry(row.code) ? null : (
-                      <Badge variant="dot">
+                      <span className="text-muted-foreground shrink-0 text-xs">
                         {m.onboarding_country_partial_badge()}
-                      </Badge>
+                      </span>
                     )}
                   </span>
                 </ComboboxItem>
