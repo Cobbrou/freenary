@@ -25,7 +25,7 @@ Compose refuses before any container starts, or a container keeps restarting: `d
 | `Error: P1000: Authentication failed against database server`, then `service "migrate" didn't complete successfully: exit 1` | `POSTGRES_PASSWORD` changed after the first start. The database keeps the password it was created with | Put the original `POSTGRES_PASSWORD` back, then run `docker compose up -d` |
 | `Please make sure your database server is running at` in `docker compose logs migrate` | `migrate` can't reach the database | Check that `postgres` shows `healthy` in `docker compose ps -a`, and read `docker compose logs postgres` |
 | `❌ Invalid environment variables:`, then `error: Invalid environment variables` | A value fails its check. The `path` line names the variable, and `message` says what's wrong, such as `Too small: expected string to have >=32 characters`. A `TRUSTED_PROXIES` path with `write an IPv4-mapped address in its IPv4 form` means an entry like `::ffff:10.0.0.1`: write `10.0.0.1` | Fix that variable, then run `docker compose up -d` or redeploy. With `deploy/docker-compose.yml`, a `BETTER_AUTH_URL` or `CORS_ORIGIN` path means `FREENARY_URL` is wrong: it must be a full URL, such as `https://freenary.example.com` |
-| `error: EMAIL_PROVIDER=resend requires RESEND_API_KEY to be set.`, or another `EMAIL_PROVIDER=… requires …` line | An email variable is half set in the environment | Set the variable it names, or remove `EMAIL_PROVIDER` and use the [setup screen](/docs/run/email) |
+| `error: EMAIL_PROVIDER=resend requires RESEND_API_KEY to be set.`, or another `EMAIL_PROVIDER=… requires …` line | An email variable is half set in the environment | Set the variable it names. See [Email](/docs/run/email) |
 | `error: The instance configuration could not be read: …` | The server couldn't read the values saved on the setup screen, usually because the database can't be reached or isn't migrated | Check `docker compose logs migrate` and `docker compose logs postgres`, then run `docker compose up -d` |
 
 Every message, with the variable it comes from, is in [What stops a start](/docs/reference/configuration#what-stops-a-start).
@@ -100,7 +100,7 @@ The stored value of EMAIL_PROVIDER does not open with the current BETTER_AUTH_SE
 
 **Why.** The setup screen's values are encrypted with `BETTER_AUTH_SECRET`. The server can't read them under another secret, so it skips them and runs on the environment's values alone.
 
-**Fix.** Put back the secret that was in use when the dump was taken, then run `docker compose up -d`, or redeploy with a panel. If that secret is lost, open the setup screen, enter the saved values again, and press `Finish setup`. What else a new secret costs, two-factor included, is in [What a rotation costs](/docs/reference/security#what-a-rotation-costs).
+**Fix.** Put back the secret that was in use when the dump was taken, then run `docker compose up -d`, or redeploy with a panel. If that secret is lost, re-enter the bank and categorisation values on the setup screen and press `Finish setup`. Set email and assistant values in the environment, then run `docker compose up -d` or redeploy. What else a new secret costs, two-factor included, is in [What a rotation costs](/docs/reference/security#what-a-rotation-costs).
 
 ## The setup screen shows a configuration problem
 
@@ -154,7 +154,7 @@ The stored value of EMAIL_PROVIDER does not open with the current BETTER_AUTH_SE
 
 ## The assistant has no model
 
-Users see `Choose a model`, or `This instance has no model configured`. Pick a model in the `Assistant` step of the setup screen, then press `Finish setup`. See [AI models](/docs/run/models#assistant).
+Users see `Choose a model`, or `This instance has no model configured`. Set `AI_BASE_URL` and `AI_MODEL` in the environment, then run `docker compose up -d` or redeploy. See [AI models](/docs/run/models#assistant).
 
 ## The server ignores the saved categorisation model
 

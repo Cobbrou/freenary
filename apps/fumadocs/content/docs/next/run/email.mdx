@@ -20,11 +20,9 @@ The figures for code length, lifetime and attempts are in [Sign-in](/docs/run/si
 
 ## Choose where the values live
 
-The operator can open `https://freenary.example.com/setup` and select the `Email` step. Values saved there stay in the database.
+The setup screen has no email step: set email in the environment. Start with `EMAIL_PROVIDER` and `EMAIL_FROM`, then add the variables for your service. Every variable is in [Email](/docs/reference/configuration#email).
 
-Environment variables are the other option. Start with `EMAIL_PROVIDER` and `EMAIL_FROM`, then add the variables for your service. An environment value overrides a saved value. The screen labels it `Set by your server`.
-
-When the environment supplies every required field, the screen reports that service as ready and offers `Test connection`. See [A value in the environment wins](/docs/reference/configuration#a-value-in-the-environment-wins).
+Email values already stored in the database stay in use. An environment value overrides a saved value. See [A value in the environment wins](/docs/reference/configuration#a-value-in-the-environment-wins).
 
 ## Resend
 
@@ -34,22 +32,28 @@ When the environment supplies every required field, the screen reports that serv
 
 ### Prepare Resend
 
-Add your domain in the [Resend dashboard](https://resend.com) and verify its DNS records. Create a full-access API key. A sending-only key can't pass Freenary's domain-list test.
+Add your domain in the [Resend dashboard](https://resend.com) and verify its DNS records. Create an API key.
 
 </Step>
 
 <Step>
 
-### Enter the credentials
+### Set the credentials
 
-Choose `Resend` in the `Email` step. Enter a `Sender address` on the verified domain, such as `Freenary <no-reply@example.com>`, and enter the `API key`.
+Use a sender address on the verified domain.
+
+```dotenv
+EMAIL_PROVIDER=resend
+EMAIL_FROM=Freenary <no-reply@example.com>
+RESEND_API_KEY=<your key>
+```
 
 </Step>
 
 <Step>
 ### Apply the Resend change
 
-Press `Save and continue`, followed by `Finish setup`. The instance restarts with the saved service.
+Run `docker compose up -d`, or redeploy with your hosting panel. A missing value stops the start, and the server log names it.
 
 </Step>
 
@@ -61,15 +65,19 @@ Press `Save and continue`, followed by `Finish setup`. The instance restarts wit
 
 <Step>
 
-### Enter the server details
+### Set the server details
 
-Choose `SMTP` in the `Email` step. Enter `Sender address` and `Host`, then open `More options` for the remaining fields.
+```dotenv
+EMAIL_PROVIDER=smtp
+EMAIL_FROM=Freenary <no-reply@example.com>
+SMTP_HOST=smtp.example.com
+```
 
-| Field | Value |
+| Variable | Value |
 | --- | --- |
-| `Port` | Empty selects `465` with `Implicit TLS`, or `587` without it |
-| `Implicit TLS` | On for port `465`; off for `587`, which upgrades its connection |
-| `User`, `Password` | Your SMTP login, or both empty for an unauthenticated relay |
+| `SMTP_PORT` | Unset selects `465` with `SMTP_SECURE=true`, or `587` without it |
+| `SMTP_SECURE` | `true` for port `465`; `false` for `587`, which upgrades its connection |
+| `SMTP_USER`, `SMTP_PASSWORD` | Your SMTP login, or both unset for an unauthenticated relay |
 
 </Step>
 
@@ -77,24 +85,11 @@ Choose `SMTP` in the `Email` step. Enter `Sender address` and `Host`, then open 
 
 ### Apply the SMTP change
 
-Press `Save and continue`, followed by `Finish setup`.
+Run `docker compose up -d`, or redeploy with your hosting panel.
 
 </Step>
 
 </Steps>
-
-## Connection test results
-
-`Save and continue` tests the service before storing the values. The test times out after 10 seconds.
-
-| Message | Action |
-| --- | --- |
-| `Connection works.` | Continue to the final step |
-| `… refused these credentials. Check them and try again.` | Correct the key or login |
-| `Unable to reach …. Check the address and your network, then try again.` | Check the host, port and outbound access |
-| `A value has the wrong format. Check the fields and try again.` | Correct the invalid field |
-
-If the service is working despite the failed test, press `Save anyway`. The screen stores the values without checking them.
 
 ## Send a real code
 

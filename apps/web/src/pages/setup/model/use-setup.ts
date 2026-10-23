@@ -8,7 +8,7 @@ import { m } from "@/paraglide/messages.js";
 import { orpc } from "@/shared/api";
 import { authClient } from "@/shared/auth";
 
-const FINISH_STEP = "finish";
+import { FINISH_STEP, completionFailureOf, setupStepsOf } from "./setup-steps";
 
 export const useSetup = () => {
   const queryClient = useQueryClient();
@@ -53,18 +53,20 @@ export const useSetup = () => {
     await (status.isError ? status.refetch() : configuration.refetch());
   };
 
-  const integrationSteps =
-    configuration.data?.integrations.map((integration) => integration.id) ?? [];
-
-  const steps = [...integrationSteps, FINISH_STEP];
+  const steps = setupStepsOf(configuration.data?.integrations ?? []);
 
   const stepId = chosenStep ?? steps[0] ?? FINISH_STEP;
   const stepIndex = Math.max(steps.indexOf(stepId), 0);
 
   const goTo = (next: string, heading: 1 | -1) => {
+    instanceIntegration.complete.reset();
     setDirection(heading);
     setChosenStep(next);
   };
+
+  const completeError = instanceIntegration.complete.error;
+  const completionFailure =
+    completeError === null ? null : completionFailureOf(completeError);
 
   const handleSignOut = async () => {
     await authClient.signOut();
@@ -94,6 +96,7 @@ export const useSetup = () => {
   return {
     check: instanceIntegration.check,
     complete: instanceIntegration.complete,
+    completionFailure,
     configuration,
     direction,
     handleBack,

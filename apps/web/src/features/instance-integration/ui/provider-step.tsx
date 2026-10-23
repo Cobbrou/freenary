@@ -22,7 +22,9 @@ export interface SetupIntegrationDescriptor {
   discriminantKey: string;
   discriminantSource: string;
   id: string;
+  requiredForSetup: boolean;
   selectedVariantId: string;
+  shownInSetup: boolean;
   state: string;
   variants: SetupVariantDescriptor[];
 }

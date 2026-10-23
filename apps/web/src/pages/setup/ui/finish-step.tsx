@@ -60,6 +60,7 @@ const rowValue = (integration: SetupIntegrationDescriptor): string =>
     : stateLabel(integration.state);
 
 interface FinishStepProps {
+  error: string | null;
   integrations: SetupIntegrationDescriptor[];
   isCompleting: boolean;
   onBack: () => void;
@@ -67,6 +68,7 @@ interface FinishStepProps {
 }
 
 export const FinishStep = ({
+  error,
   integrations,
   isCompleting,
   onBack,
@@ -104,6 +106,12 @@ export const FinishStep = ({
           ))}
         </dl>
       </Elevated>
+
+      {error === null ? null : (
+        <p className="text-destructive text-sm" role="alert">
+          {error}
+        </p>
+      )}
 
       <div className="flex items-center justify-between gap-3">
         <Button

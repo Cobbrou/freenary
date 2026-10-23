@@ -1,6 +1,5 @@
 import { Button } from "@freenary/ui/components/button";
 import { useIcon } from "@freenary/ui/lib/icon-context";
-import { Link } from "@tanstack/react-router";
 
 import {
   BankConnectionPanel,
@@ -18,7 +17,6 @@ interface BankConnectionStepProps {
   isBanksError: boolean;
   isBanksPending: boolean;
   isCompleting: boolean;
-  isOperator: boolean;
   onBack: () => void;
   onFinish: () => void;
   unavailableCountries: string[];
@@ -31,7 +29,6 @@ export const BankConnectionStep = ({
   isBanksError,
   isBanksPending,
   isCompleting,
-  isOperator,
   onBack,
   onFinish,
   unavailableCountries,
@@ -47,17 +44,9 @@ export const BankConnectionStep = ({
     if (bankLinking === "unavailable") {
       return (
         <BankLinkingUnavailable>
-          {isOperator ? (
-            <Button asChild>
-              <Link to="/setup">
-                {m.onboarding_bank_unavailable_setup_cta()}
-              </Link>
-            </Button>
-          ) : (
-            <p className="text-muted-foreground text-sm">
-              {m.onboarding_bank_unavailable_ask_operator()}
-            </p>
-          )}
+          <p className="text-muted-foreground text-sm">
+            {m.onboarding_bank_unavailable_ask_operator()}
+          </p>
         </BankLinkingUnavailable>
       );
     }

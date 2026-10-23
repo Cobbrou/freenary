@@ -12,6 +12,7 @@ import {
   variantDescription,
   variantLabel,
 } from "../model/labels";
+import { choosableVariants } from "../model/variant-choice";
 import type { SetupIntegrationDescriptor } from "./provider-step";
 
 const SKIP_VARIANT = "disabled";
@@ -52,7 +53,7 @@ export const ProviderChoice = ({
       </div>
 
       <fieldset aria-labelledby={titleId} className="flex flex-col gap-2">
-        {descriptor.variants
+        {choosableVariants(descriptor)
           .toSorted((first, second) => skipLast(first.id) - skipLast(second.id))
           .map((variant) => {
             const isChosen = variant.id === chosen;

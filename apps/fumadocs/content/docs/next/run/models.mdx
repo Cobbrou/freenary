@@ -1,6 +1,6 @@
 ---
 title: AI models
-description: Pick the model that answers in the assistant and the one that categorises transactions, on the setup screen.
+description: Pick the model that categorises transactions on the setup screen, and set the one that answers in the assistant.
 icon: Brain
 ---
 
@@ -13,21 +13,21 @@ Freenary ships with no model. Pick one for the assistant and one for categorisat
 
 ## Choose where the values live
 
-Open `https://freenary.example.com/setup` as the operator. The `Assistant` and `Categories` steps start on `Skip for now` until you pick a model. Values saved there stay in the database.
+Open `https://freenary.example.com/setup` as the operator to pick the categorisation model. The `Categories` step starts on `Skip for now` until you pick one. Values saved there stay in the database.
 
-Environment variables are the other option, and they win over a saved value. The variables are in [Assistant](/docs/reference/configuration#assistant) and [Categorisation](/docs/reference/configuration#categorisation). The fallback classifier, its threshold and the temperatures live in the environment alone.
+The setup screen has no assistant step: set the assistant model in the environment. Environment variables can also set the categorisation model, and they win over a saved value. The variables are in [Assistant](/docs/reference/configuration#assistant) and [Categorisation](/docs/reference/configuration#categorisation). The fallback classifier, its threshold and the temperatures live in the environment alone.
 
 ## Assistant
 
-Choose `OpenAI-compatible endpoint`, then enter:
+Set these variables, then run `docker compose up -d` or redeploy with your hosting panel:
 
-| Field | Value |
+| Variable | Value |
 | --- | --- |
-| `Base URL` | The chat-completions endpoint with its version path, such as `https://openrouter.ai/api/v1` |
-| `Model` | The model id as that endpoint names it |
-| `API key` | Under `More options`. Leave it empty for a local endpoint |
+| `AI_BASE_URL` | The chat-completions endpoint with its version path, such as `https://openrouter.ai/api/v1` |
+| `AI_MODEL` | The model id as that endpoint names it |
+| `AI_API_KEY` | The key for that endpoint. Leave it unset for a local endpoint |
 
-Freenary posts to `<Base URL>/chat/completions`. The model must call tools, because it may only state figures a tool returned.
+Freenary posts to `<AI_BASE_URL>/chat/completions`. The model must call tools, because it may only state figures a tool returned.
 
 On the same Docker network, use the model server's service name, such as `http://ollama:11434/v1`. `localhost` is the `server` container itself.
 
@@ -77,7 +77,16 @@ Pick this for a Hugging Face zero-shot classification server, such as one runnin
 
 ## Test and apply
 
-`Save and continue` tests the model before it stores anything. For categorisation, it asks about one sample merchant. For the assistant, it sends one short chat message. The messages match the ones in [Connection test results](/docs/run/email#connection-test-results).
+`Save and continue` tests the categorisation model before it stores anything: it asks about one sample merchant. The test times out after 10 seconds.
+
+| Message | Action |
+| --- | --- |
+| `Connection works.` | Continue to the final step |
+| `… refused these credentials. Check them and try again.` | Correct the key |
+| `Unable to reach …. Check the address and your network, then try again.` | Check the URL and outbound access |
+| `A value has the wrong format. Check the fields and try again.` | Correct the invalid field |
+
+If the model is working despite the failed test, press `Save anyway`. The screen stores the values without checking them.
 
 Press `Finish setup` to restart the instance with the new model.
 

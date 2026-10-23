@@ -40,8 +40,9 @@ Go back to the setup screen, or open `https://freenary.example.com/setup`.
 1. On the **Bank** step, pick **Powens** and press **Continue**.
 2. Fill in **Powens domain** (for example `acme-sandbox`), **Client ID** and **Client secret**.
 3. Press **Save and continue**. Freenary tests the credentials with Powens first. If Powens refuses them, the step says so and you can correct them.
-4. On the **Email**, **Assistant** and **Categories** steps, choose **Skip for now** and press **Continue**. You can add them later, see [Email](/docs/run/email) and [AI models](/docs/run/models).
-5. Press **Finish setup**. The server restarts to apply the credentials: the page shows **Applying your settings…** and reconnects on its own. If it shows **The server did not restart** instead, see [The server does not restart after setup](/docs/run/troubleshooting#the-server-does-not-restart-after-setup).
+4. On the **Categories** step, pick a model and fill in its settings, or choose **Skip for now** and press **Continue**. Without a model, a transaction that no rule, dictionary entry or correction recognises stays uncategorised. See [AI models](/docs/run/models).
+5. On **Done**, check that **Bank provider** shows Powens. Email and the assistant aren't part of the setup screen: see [Email](/docs/run/email) and [AI models](/docs/run/models#assistant).
+6. Press **Finish setup**. The server restarts to apply the credentials: the page shows **Applying your settings…** and reconnects on its own. If it shows **The server did not restart** instead, see [The server does not restart after setup](/docs/run/troubleshooting#the-server-does-not-restart-after-setup).
 
 </Step>
 

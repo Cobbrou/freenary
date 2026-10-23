@@ -17,7 +17,6 @@ interface OnboardingWizardProps {
   isBanksError: boolean;
   isBanksPending: boolean;
   isCompleting: boolean;
-  isOperator: boolean;
   isPending: boolean;
   onBack: () => void;
   onCountriesChange: (countries: string[]) => void;
@@ -42,7 +41,6 @@ export const OnboardingWizard = ({
   isBanksError,
   isBanksPending,
   isCompleting,
-  isOperator,
   isPending,
   onBack,
   onCountriesChange,
@@ -85,7 +83,6 @@ export const OnboardingWizard = ({
         isBanksError={isBanksError}
         isBanksPending={isBanksPending}
         isCompleting={isCompleting}
-        isOperator={isOperator}
         onBack={onBack}
         onFinish={onFinish}
         unavailableCountries={unavailableCountries}

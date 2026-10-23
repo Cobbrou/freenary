@@ -18,13 +18,13 @@ import { m } from "@/paraglide/messages.js";
 import { WizardShell } from "@/shared/ui/wizard-shell";
 import { WizardStepper } from "@/shared/ui/wizard-stepper";
 
-import { stepLabel } from "../model/labels";
+import { completionFailureMessage, stepLabel } from "../model/labels";
+import { FINISH_STEP, setupIntegrationsOf } from "../model/setup-steps";
 import { useSetup } from "../model/use-setup";
 import { FaultNotice } from "./fault-notice";
 import { FinishStep } from "./finish-step";
 import { SetupWizardSkeleton } from "./setup-wizard-skeleton";
 
-const FINISH_STEP = "finish";
 const SKIP_VARIANT = "disabled";
 
 export const SetupPage = () => {
@@ -109,7 +109,12 @@ export const SetupPage = () => {
     if (setup.stepId === FINISH_STEP) {
       return (
         <FinishStep
-          integrations={integrations}
+          error={
+            setup.completionFailure === null
+              ? null
+              : completionFailureMessage(setup.completionFailure)
+          }
+          integrations={setupIntegrationsOf(integrations)}
           isCompleting={setup.complete.isPending}
           onBack={setup.handleBack}
           onFinish={() => setup.complete.mutate({})}

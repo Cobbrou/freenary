@@ -363,6 +363,7 @@ The setup screen's procedures. Integrations are `banking` (variants `disabled`, 
 | Field of one integration | Note |
 | --- | --- |
 | `id`, `selectedVariantId` | The integration and the variant in use |
+| `shownInSetup`, `requiredForSetup` | Whether the setup screen shows the integration, and whether `instance.complete` needs it `configured` |
 | `state` | `disabled`, `incomplete` or `configured` |
 | `configuredBy` | `environment`, `instance` or `null` |
 | `discriminantKey`, `discriminantSource` | The variable that picks the variant, such as `BANKING_PROVIDER`, and whether it comes from `environment`, `instance` or is `unset` |
@@ -395,6 +396,8 @@ Same input as `instance.check`. It stores only the values the environment doesn'
 ### instance.complete
 
 **Output**: `{ completed: true, restarting }`. `restarting` is `true` when a saved value isn't in use yet; the server then exits 250 ms later, and its restart policy starts it with the new values.
+
+**Errors**: `PRECONDITION_FAILED` (412) `Configure a bank provider before finishing setup`, with `data.missing` listing each required integration that isn't `configured`. Setup stays not completed.
 
 ## `onboarding`
 
