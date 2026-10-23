@@ -1161,6 +1161,7 @@
   "setup_endpoint_classifier_ollama_title": "Using Ollama?",
   "setup_endpoint_classifier_privacy": "Sends the merchant name and description, a rough amount range and the country to this endpoint, never the exact amount.",
   "setup_endpoint_classifier_suggest_only": "Without log probabilities, the endpoint can only suggest a category, not set one.",
+  "setup_environment_configured": "Configured through environment variables",
   "setup_environment_default_provider": "{key} is not set, so {provider} is the default.",
   "setup_environment_learn_more": "Learn more about environment settings",
   "setup_environment_line": "Set by your server's environment variables.",
