@@ -7,6 +7,7 @@ import type {
 import {
   findIntegration,
   findVariant,
+  recogniseVariant,
 } from "@freenary/instance-config/integrations";
 import { Option } from "effect";
 
@@ -362,7 +363,7 @@ describe("a classifier with presets", () => {
     const candidate = candidateOf(
       categorisation,
       subqSnap,
-      { TRANSACTION_CLASSIFIER_MODEL: "subq-snap-preview" },
+      { TRANSACTION_CLASSIFIER_MODEL: "subq-snap-1.1" },
       { ...JEV_FORM, "variant:categorisation": "jev" },
       nothingOwned,
       false
@@ -372,6 +373,41 @@ describe("a classifier with presets", () => {
     expect(missingKeysOf(subqSnap, candidate, nothingOwned)).toEqual([
       "TRANSACTION_CLASSIFIER_API_KEY",
     ]);
+  });
+
+  test("keeps a SubQ Snap instance saved with the preview model", () => {
+    const stored = {
+      TRANSACTION_CLASSIFIER: "system-one",
+      TRANSACTION_CLASSIFIER_API_KEY: "subq-key",
+      TRANSACTION_CLASSIFIER_MODEL: "subq-snap-preview",
+      TRANSACTION_CLASSIFIER_URL: "https://api.subq.ai/v1/systemone",
+      "variant:categorisation": "subq-snap",
+    };
+
+    const recognised = recogniseVariant(
+      categorisation,
+      heldFrom(stored),
+      stored["variant:categorisation"]
+    );
+
+    const writes = writesOf(
+      categorisation,
+      candidateOf(
+        categorisation,
+        subqSnap,
+        { TRANSACTION_CLASSIFIER_MODEL: stored.TRANSACTION_CLASSIFIER_MODEL },
+        stored,
+        nothingOwned
+      ),
+      nothingOwned
+    );
+
+    expect(Option.getOrUndefined(recognised)?.id).toBe("subq-snap");
+    expect(writes.get("TRANSACTION_CLASSIFIER_MODEL")).toBe(
+      "subq-snap-preview"
+    );
+
+    expect(writes.get("TRANSACTION_CLASSIFIER_API_KEY")).toBe("subq-key");
   });
 
   test("drops a stored key when the endpoint of the same variant moves", () => {

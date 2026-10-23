@@ -8,6 +8,7 @@ import {
   findVariant,
   instanceConfigurableKeys,
   integrations,
+  isListedFor,
   isRequiredForSetup,
   isShownInSetup,
   recogniseVariant,
@@ -93,6 +94,21 @@ describe("recogniseVariant", () => {
         "variant:categorisation": "von",
       })
     ).toBe("llm");
+  });
+
+  test("reads the Ollama endpoint as the local model only when remembered", () => {
+    const ollama = {
+      TRANSACTION_CLASSIFIER: "llm",
+      TRANSACTION_CLASSIFIER_URL: "http://ollama:11434/v1",
+    };
+
+    expect(recognised(categorisation, ollama)).toBe("llm");
+    expect(
+      recognised(categorisation, {
+        ...ollama,
+        "variant:categorisation": "ollama",
+      })
+    ).toBe("ollama");
   });
 
   test("reads a vendor endpoint as that vendor whatever was remembered", () => {
@@ -181,5 +197,41 @@ describe("recommended", () => {
     );
 
     expect(recommended).toEqual(["powens"]);
+  });
+});
+
+const categorisationVariant = (id: string) =>
+  Option.getOrThrow(findVariant(categorisation, id));
+
+const suggestionOf = (variantId: string, key: string): string | undefined =>
+  categorisationVariant(variantId).fields.find((field) => field.key === key)
+    ?.suggestion;
+
+const listed = (selected: string): string[] =>
+  categorisation.variants.flatMap((variant) =>
+    isListedFor(variant, selected) ? [variant.id] : []
+  );
+
+describe("categorisation variants", () => {
+  test("recommends Jev and SubQ Snap and no other model", () => {
+    const recommended = categorisation.variants.flatMap((variant) =>
+      variant.recommended === true ? [variant.id] : []
+    );
+
+    expect(recommended).toEqual(["jev", "subq-snap"]);
+  });
+
+  test("suggests the released SubQ Snap model", () => {
+    expect(suggestionOf("subq-snap", "TRANSACTION_CLASSIFIER_MODEL")).toBe(
+      "subq-snap-1.1"
+    );
+  });
+
+  test("lists Von and Laya only when an instance already uses them", () => {
+    expect(listed("jev")).not.toContain("von");
+    expect(listed("jev")).not.toContain("laya");
+    expect(listed("von")).toContain("von");
+    expect(listed("von")).not.toContain("laya");
+    expect(listed("laya")).toContain("laya");
   });
 });

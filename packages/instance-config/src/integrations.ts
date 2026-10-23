@@ -28,6 +28,7 @@ export interface IntegrationVariant {
   readonly discriminantValue: string | null;
   readonly fields: readonly IntegrationField[];
   readonly presets?: readonly IntegrationPreset[];
+  readonly listedOnlyWhenSelected?: boolean;
   readonly recognisedOnlyWhenRemembered?: boolean;
   readonly recommended?: boolean;
 }
@@ -178,14 +179,25 @@ const categorisationIntegration: Integration = {
       presets: [
         { key: "TRANSACTION_CLASSIFIER_URL", value: TYPESAFE_SYSTEM_ONE_URL },
       ],
+      recommended: true,
     },
     {
       discriminantValue: "system-one",
-      fields: hostedSystemOneFields("subq-snap-preview"),
+      fields: hostedSystemOneFields("subq-snap-1.1"),
       id: "subq-snap",
       presets: [
         { key: "TRANSACTION_CLASSIFIER_URL", value: SUBQ_SYSTEM_ONE_URL },
       ],
+      recommended: true,
+    },
+    {
+      discriminantValue: "llm",
+      fields: selfHostedClassifierFields({
+        model: "qwen3:4b-instruct-2507-q4_K_M",
+        url: "http://ollama:11434/v1",
+      }),
+      id: "ollama",
+      recognisedOnlyWhenRemembered: true,
     },
     {
       discriminantValue: "system-one",
@@ -194,6 +206,7 @@ const categorisationIntegration: Integration = {
         url: "http://von:8000/v1/systemone",
       }),
       id: "von",
+      listedOnlyWhenSelected: true,
       recognisedOnlyWhenRemembered: true,
     },
     {
@@ -203,6 +216,7 @@ const categorisationIntegration: Integration = {
         url: "http://laya:8000/v1/systemone",
       }),
       id: "laya",
+      listedOnlyWhenSelected: true,
       recognisedOnlyWhenRemembered: true,
     },
     {
@@ -342,6 +356,12 @@ export const recogniseVariant = (
       )
   );
 };
+
+export const isListedFor = (
+  variant: IntegrationVariant,
+  selectedVariantId: string
+): boolean =>
+  variant.listedOnlyWhenSelected !== true || variant.id === selectedVariantId;
 
 export const isSecretField = (kind: IntegrationFieldKind): boolean =>
   kind === "secret" || kind === "secret-block";

@@ -27,6 +27,7 @@ export {
   findVariant,
   instanceConfigurableKeys,
   integrations,
+  isListedFor,
   isOffVariant,
   isRequiredForSetup,
   isSecretField,

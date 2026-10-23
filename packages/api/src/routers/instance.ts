@@ -15,6 +15,7 @@ import {
   instanceConfigFault,
   instanceConfigurableKeys,
   integrations,
+  isListedFor,
   isRequiredForSetup,
   isSecretField,
   isShownInSetup,
@@ -186,13 +187,19 @@ const describeIntegration = (
       selectedVariantId,
       (key) => heldValue(key, stored) !== null
     ),
-    variants: integration.variants.map((variant) => ({
-      fields: variant.fields.map((field) =>
-        describeField(field, stored, variant.id === selectedVariantId)
-      ),
-      id: variant.id,
-      recommended: variant.recommended === true,
-    })),
+    variants: integration.variants.flatMap((variant) =>
+      isListedFor(variant, selectedVariantId)
+        ? [
+            {
+              fields: variant.fields.map((field) =>
+                describeField(field, stored, variant.id === selectedVariantId)
+              ),
+              id: variant.id,
+              recommended: variant.recommended === true,
+            },
+          ]
+        : []
+    ),
   };
 };
 

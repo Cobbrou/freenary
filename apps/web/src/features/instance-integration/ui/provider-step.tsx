@@ -8,10 +8,7 @@ import type { SetupFieldDescriptor } from "./setup-field";
 
 const SKIP_VARIANT = "disabled";
 
-const OFF_UNTIL_CHOSEN: ReadonlySet<string> = new Set([
-  "assistant",
-  "categorisation",
-]);
+const OFF_UNTIL_CHOSEN: ReadonlySet<string> = new Set(["assistant"]);
 
 export interface SetupVariantDescriptor {
   fields: SetupFieldDescriptor[];

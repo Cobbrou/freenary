@@ -13,7 +13,7 @@ Freenary ships with no model. Pick one for the assistant and one for categorisat
 
 ## Choose where the values live
 
-As the operator, open Settings, then **Integrations**, and press `Configure` on the `Assistant model` or `Categorisation model` row. Only the operator sees that section. The setup screen also offers the categorisation model on its `Categories` step, which starts on `Skip for now` until you pick one. Values saved in either place stay in the database.
+As the operator, open Settings, then **Integrations**, and press `Configure` on the `Assistant model` or `Categorisation model` row. Only the operator sees that section. The setup screen also offers the categorisation model on its `Categories` step, which starts on `Jev by TypeSafe`. Values saved in either place stay in the database.
 
 Environment variables are the other option, and they win over a saved value: the row then shows `Set by your server`. The variables are in [Assistant](/docs/reference/configuration#assistant) and [Categorisation](/docs/reference/configuration#categorisation). The fallback classifier, its threshold and the temperatures live in the environment alone.
 
@@ -33,27 +33,61 @@ On the same Docker network, use the model server's service name, such as `http:/
 
 ## Categorisation
 
-Every option asks one question per merchant and caches the answer, so a merchant costs one call to this model. Freenary sends the merchant's descriptor, never the exact amount: [Security](/docs/reference/security) lists the fields.
+Every option asks one question per merchant and caches the answer, so a merchant costs one call to this model. Freenary sends the merchant name and description, a rough amount range, currency, country and category code, never the exact amount: [Security](/docs/reference/security) lists the fields.
 
 | Option | Where it runs | What you enter |
 | --- | --- | --- |
-| `Jev by TypeSafe` | TypeSafe's service | A TypeSafe API key |
-| `SubQ Snap` | SubQ's service | A SubQ API key |
-| `Von` | A server you run | Its address |
-| `Laya` | A server you run | Its address |
+| `Jev by TypeSafe`, recommended | TypeSafe's service | A TypeSafe API key |
+| `SubQ Snap`, recommended | SubQ's service | A SubQ API key |
+| `Local model with Ollama` | Ollama on your own machine | The address, if Ollama runs on the host; the model starts filled in |
 | `Another System One server` | Wherever you run it | Its address and model; API key under `More options`, if required |
 | `Language model` | Any OpenAI-compatible endpoint | Its base URL and model; API key under `More options`, if required |
 | `Zero-shot classifier` | A Hugging Face classification server | Its address and model; API key under `More options`, if required |
+
+`Von` and `Laya` appear in the list only on an instance that already uses them.
 
 The `Model` field is part of the cache key. Changing it asks every merchant again. A moving name such as `jev-latest` keeps its answers when the vendor moves it.
 
 ### Jev
 
-Jev is TypeSafe's hosted decision model. Get a key as the [TypeSafe quickstart](https://docs.typesafe.ai/introduction/quickstart) describes, and paste it in `API key`. `Model` starts at `jev-latest`; enter a version such as `jev-1.13.0` to freeze the answers.
+Jev is TypeSafe's hosted decision model. It costs about $0.04 per 1,000 new merchants. It works best in English, and was accurate on French merchants in our test.
+
+Get a key as the [TypeSafe quickstart](https://docs.typesafe.ai/introduction/quickstart) describes, and paste it in `API key`. `Model` starts at `jev-latest`; enter a version such as `jev-1.13.0` to freeze the answers.
 
 ### SubQ Snap
 
-SubQ Snap is SubQ's hosted decision model, in public preview. Get a key as the [SubQ Decisions API quickstart](https://docs.subq.ai/endpoints/decisions-api/) describes, and paste it in `API key`. `Model` starts at `subq-snap-preview`.
+SubQ Snap is SubQ's hosted decision model, in public preview. SubQ keeps requests for up to 60 days unless you ask for zero retention. It costs about $0.02 per 1,000 new merchants.
+
+Get a key as the [SubQ Decisions API quickstart](https://docs.subq.ai/endpoints/decisions-api/) describes, and paste it in `API key`. `Model` starts at `subq-snap-1.1`. An instance that saved `subq-snap-preview` keeps that value and keeps working.
+
+### Local model with Ollama
+
+Pick this to run Qwen3-4B on your own machine, so nothing leaves it. It needs about 5 GB of RAM. It takes several seconds per new merchant, it's less accurate than the hosted options, and it can be confidently wrong. Each request times out after 10 seconds, so on a slow machine some merchants stay uncategorised.
+
+1. Install [Ollama](https://ollama.com) on the host.
+2. Pull the model:
+
+   ```bash
+   ollama pull qwen3:4b-instruct-2507-q4_K_M
+   ```
+
+3. Keep `Endpoint URL` at `http://ollama:11434/v1` if Ollama runs in the same Docker network as the `server` container. For Ollama on the host, enter `http://host.docker.internal:11434/v1`. `localhost` is the `server` container itself.
+
+`Model` starts at `qwen3:4b-instruct-2507-q4_K_M`. Ollama asks for no key, so leave `API key` under `More options` empty.
+
+On Linux, `host.docker.internal` resolves only when the `server` service lists `host.docker.internal:host-gateway` under `extra_hosts`. Ollama on the host also has to listen beyond `127.0.0.1`, for example with `OLLAMA_HOST=0.0.0.0`.
+
+### Another System One server
+
+Pick this for any other server that answers TypeSafe's `POST /v1/systemone` request, such as `Mapika/decider-2b`. OpenJev Verdict ships no server of its own, so it needs one you add in front of it. Enter the full URL of the route and the model name the server expects.
+
+### A language model
+
+Pick this for a chat model behind an OpenAI-compatible endpoint, such as vLLM or a gateway. For Ollama, pick `Local model with Ollama`. Enter the base URL with its version path, such as `http://vllm:8000/v1`. An endpoint that returns no log probabilities still answers, but below the confidence Freenary needs to set a category without asking.
+
+### A zero-shot classifier
+
+Pick this for a Hugging Face zero-shot classification server, such as one running `MoritzLaurer/ModernBERT-large-zeroshot-v2.0`. Enter the URL the request goes to and the model name.
 
 ### Von
 
@@ -62,18 +96,6 @@ SubQ Snap is SubQ's hosted decision model, in public preview. Get a key as the [
 ### Laya
 
 [Laya](https://github.com/NandhaKishorM/laya) is an open-weight decision model under Apache-2.0, served by `laya-serve` on port `8000`. `Endpoint URL` starts at `http://laya:8000/v1/systemone`. `Model` starts at `multilingual`, the checkpoint for text in more than one language; `english` and `typed-decisions` are the others.
-
-### Another System One server
-
-Pick this for any other server that answers TypeSafe's `POST /v1/systemone` request, such as `Mapika/decider-2b`. OpenJev Verdict ships no server of its own, so it needs one you add in front of it. Enter the full URL of the route and the model name the server expects.
-
-### A language model
-
-Pick this for a chat model behind an OpenAI-compatible endpoint, such as Ollama or a gateway. Enter the base URL with its version path, such as `http://ollama:11434/v1`. An endpoint that returns no log probabilities still answers, but below the confidence Freenary needs to set a category without asking.
-
-### A zero-shot classifier
-
-Pick this for a Hugging Face zero-shot classification server, such as one running `MoritzLaurer/ModernBERT-large-zeroshot-v2.0`. Enter the URL the request goes to and the model name.
 
 ## Test and apply
 

@@ -18,6 +18,12 @@ import type { SaveOutcome } from "../model/outcome";
 import type { IntegrationWording } from "../model/wording";
 import { SAVE_LABELS } from "../model/wording";
 import { GuideLink } from "./guide-link";
+import {
+  JevGuide,
+  NoGuideNote,
+  SubqSnapGuide,
+} from "./hosted-classifier-guide";
+import { OllamaGuide, OllamaNote } from "./ollama-guide";
 import { OutcomeNotice } from "./outcome-notice";
 import { PowensGuide, PowensSandboxNote } from "./powens-guide";
 import type { SetupVariantDescriptor } from "./provider-step";
@@ -36,7 +42,10 @@ interface VariantGuide {
 }
 
 const VARIANT_GUIDES: Readonly<Record<string, VariantGuide>> = {
+  jev: { Note: NoGuideNote, Steps: JevGuide },
+  ollama: { Note: OllamaNote, Steps: OllamaGuide },
   powens: { Note: PowensSandboxNote, Steps: PowensGuide },
+  "subq-snap": { Note: NoGuideNote, Steps: SubqSnapGuide },
 };
 
 interface ProviderCredentialsProps {
