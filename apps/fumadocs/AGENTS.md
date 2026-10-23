@@ -62,7 +62,7 @@ index.mdx             what Freenary is, who it is for, two buttons
 get-started/          before-you-install → install → connect-a-bank
 use/                  budget, bank-connections, assistant, account
 run/                  email, sign-in, updates-and-backups, troubleshooting
-reference/            configuration, bank-providers, reverse-proxy, security, scaling,
+reference/            configuration, bank-providers, reverse-proxy, security,
                       from-source, api, procedures, glossary
 contribute.mdx        clone, run, checks, pull request
 ```
