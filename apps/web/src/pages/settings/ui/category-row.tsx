@@ -157,6 +157,7 @@ export const CategoryRow = ({
           )}
           color={entry.color}
           icon={entry.icon}
+          slot={entry.slot}
         />
       </ItemMedia>
 

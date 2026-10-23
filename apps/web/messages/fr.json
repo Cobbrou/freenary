@@ -884,7 +884,7 @@
   "settings_budgeting_save_success": "Profil budgétaire enregistré",
   "settings_budgeting_title": "Profil budgétaire",
   "settings_cancel": "Annuler",
-  "settings_categories_description": "Les catégories sont regroupées et les groupes sont fixes. Une catégorie prend la couleur de son parent. Vos propres catégories peuvent être renommées, réordonnées ou supprimées, et rattachées à un groupe ou à l’une de vos catégories de premier niveau. L’imbrication s’arrête à un niveau.",
+  "settings_categories_description": "Les catégories sont regroupées et les groupes sont fixes. Chaque catégorie prédéfinie a sa propre couleur. Vos propres catégories peuvent être renommées, réordonnées ou supprimées, et rattachées à un groupe ou à l’une de vos catégories de premier niveau. L’imbrication s’arrête à un niveau.",
   "settings_categories_loading": "Chargement de vos catégories",
   "settings_categories_title": "Catégories",
   "settings_category_create": "Créer la catégorie",

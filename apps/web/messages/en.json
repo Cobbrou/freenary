@@ -875,7 +875,7 @@
   "settings_budgeting_save_success": "Budgeting profile saved",
   "settings_budgeting_title": "Budgeting profile",
   "settings_cancel": "Cancel",
-  "settings_categories_description": "Categories are grouped, and the groups are fixed. A category takes the color of its parent. Your own categories can be renamed, reordered or removed, and nested under a group or under one of your top-level categories. Nesting stops at one level.",
+  "settings_categories_description": "Categories are grouped, and the groups are fixed. Each built-in category has its own color. Your own categories can be renamed, reordered or removed, and nested under a group or under one of your top-level categories. Nesting stops at one level.",
   "settings_categories_loading": "Loading your categories",
   "settings_categories_title": "Categories",
   "settings_category_create": "Create category",

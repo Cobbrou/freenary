@@ -224,7 +224,7 @@ The third total is the fallback. A transaction with no `merchantKey`, or one tha
 
 The 3 groups are `income`, `investments` and `spending`. They are sections of the flow of money, and not topics. `income` is what arrives. The other two are the two ways it leaves. `income` holds 7 categories, `investments` holds 4, and `spending` holds 16.
 
-**The set is flat.** A group holds categories and a category holds nothing. An icon belongs to the category, and `categoryIcon` reads `CATEGORY_ICONS`. A colour belongs to the group. `categoryColor` reads `CATEGORY_GROUP_COLORS` through `CATEGORY_GROUP_OF`, so two categories of one group share a colour and differ by glyph. A chart has no glyph, so `categoryChartColor` shades that colour by the place of the category in its group.
+**The set is flat.** A group holds categories and a category holds nothing. An icon belongs to the category, and `categoryIcon` reads `CATEGORY_ICONS`. A category's own colour is a palette slot, and `categoryPaletteSlot` reads `CATEGORY_PALETTE_SLOT_OF`; no two categories of one group share a slot. The group keeps a colour of its own, which `categoryColor` reads from `CATEGORY_GROUP_COLORS` through `CATEGORY_GROUP_OF`.
 
 **Each category names one direction.** `CATEGORY_DIRECTION_OF` holds `in`, `out` or `both`, and `categoriesForDirection` reads it. That gives 10 categories on an incoming transaction, and 20 on an outgoing one. `people`, `cash-withdrawal` and `uncategorised` are the three that carry `both`. The pickers of the web app offer that list, and no procedure checks a direction against an amount.
 
