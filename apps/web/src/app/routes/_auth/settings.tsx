@@ -4,8 +4,8 @@ import { z } from "zod";
 import { SettingsPage } from "@/pages/settings";
 import {
   DEFAULT_SETTINGS_SECTION,
-  isSettingsSection,
   SETTINGS_SECTIONS,
+  settingsSectionOf,
 } from "@/shared/config";
 
 const settingsSearchSchema = z.object({
@@ -20,6 +20,6 @@ export const Route = createFileRoute("/_auth/settings")({
   validateSearch: (search: SettingsSearchInput) =>
     settingsSearchSchema.parse({
       error: search.error,
-      section: isSettingsSection(search.section) ? search.section : undefined,
+      section: settingsSectionOf(search.section),
     }),
 });

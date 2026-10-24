@@ -52,7 +52,7 @@ export const ProviderChoice = ({
     <div className="flex flex-col gap-6">
       <div id={titleId}>
         <WizardStepHeader
-          description={integrationDescription(descriptor.id)}
+          description={integrationDescription(descriptor.id, wording)}
           title={integrationTitle(descriptor.id)}
         />
       </div>

@@ -13,7 +13,7 @@ Freenary ships with no model. Pick one for the assistant and one for categorisat
 
 ## Choose where the values live
 
-As the operator, open Settings, then **Integrations**, and press `Configure` on the `Assistant model` or `Categorisation model` row. Only the operator sees that section. The setup screen also offers the categorisation model on its `Categories` step, which starts on `Jev by TypeSafe`. Values saved in either place stay in the database.
+As the operator, open Settings, then **Connections**, and press `Set up`, or `Change`, on the `Assistant model` or `Categorisation model` row under `Services`. Only the operator sees `Services`. The setup screen also offers the categorisation model on its `Categories` step, which starts on `Jev by TypeSafe`. Values saved in either place stay in the database.
 
 Environment variables are the other option, and they win over a saved value: the row then shows `Set by your server`. The variables are in [Assistant](/docs/reference/configuration#assistant) and [Categorisation](/docs/reference/configuration#categorisation). The fallback classifier, its threshold and the temperatures live in the environment alone.
 
@@ -103,7 +103,7 @@ Pick this for a Hugging Face zero-shot classification server, such as one runnin
 
 The server picks up a saved model when it restarts. In Settings, press `Apply now`, as [Apply a saved change](/docs/run/email#apply-a-saved-change) describes. On the setup screen, `Finish setup` restarts it.
 
-To stop using a model, choose `Off` in `Configure`, press `Continue`, then `Apply now`. [What each model does](#what-each-model-does) says what changes without it.
+To stop using a model, choose `Off` after `Change`, press `Continue`, then `Apply now`. [What each model does](#what-each-model-does) says what changes without it.
 
 <Cards>
   <Card

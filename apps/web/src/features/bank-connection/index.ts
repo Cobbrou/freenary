@@ -7,3 +7,4 @@ export {
   BankLinkingUnavailable,
 } from "./ui/bank-linking-notice";
 export { BankListSkeleton } from "./ui/bank-list-skeleton";
+export { ConnectedBankList } from "./ui/connected-bank-list";

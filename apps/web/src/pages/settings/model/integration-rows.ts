@@ -1,27 +1,23 @@
+import {
+  RiBankLine,
+  RiMailLine,
+  RiPriceTag3Line,
+  RiSparkling2Line,
+} from "@remixicon/react";
+import type { RemixiconComponentType } from "@remixicon/react";
+
 import { m } from "@/paraglide/messages.js";
 
 interface IntegrationRow {
-  description: () => string;
+  icon: RemixiconComponentType;
   id: string;
 }
 
 export const INTEGRATION_ROWS = [
-  {
-    description: m.settings_integrations_banking_description,
-    id: "banking",
-  },
-  {
-    description: m.settings_integrations_categorisation_description,
-    id: "categorisation",
-  },
-  {
-    description: m.settings_integrations_email_description,
-    id: "email",
-  },
-  {
-    description: m.settings_integrations_assistant_description,
-    id: "assistant",
-  },
+  { icon: RiBankLine, id: "banking" },
+  { icon: RiPriceTag3Line, id: "categorisation" },
+  { icon: RiMailLine, id: "email" },
+  { icon: RiSparkling2Line, id: "assistant" },
 ] as const satisfies readonly IntegrationRow[];
 
 const ENVIRONMENT_OWNER = "environment";
@@ -38,6 +34,8 @@ export type IntegrationRowStatus =
   | { kind: "disabled" }
   | { kind: "environment"; variantId: string }
   | { kind: "incomplete" };
+
+export type IntegrationRowAction = "change" | "set-up" | "view";
 
 export interface IntegrationRowEntry<Integration> {
   integration: Integration | undefined;
@@ -73,4 +71,36 @@ export const integrationRowStatus = (
   return integration.state === "disabled"
     ? { kind: "disabled" }
     : { kind: "incomplete" };
+};
+
+const ACTIONS = {
+  configured: "change",
+  disabled: "set-up",
+  environment: "view",
+  incomplete: "set-up",
+} as const satisfies Record<IntegrationRowStatus["kind"], IntegrationRowAction>;
+
+export const integrationRowAction = (
+  status: IntegrationRowStatus
+): IntegrationRowAction => ACTIONS[status.kind];
+
+export const integrationRowStatusText = (
+  status: IntegrationRowStatus,
+  providerLabel: (variantId: string) => string
+): string => {
+  if (status.kind === "configured") {
+    return m.settings_integrations_state_configured({
+      provider: providerLabel(status.variantId),
+    });
+  }
+
+  if (status.kind === "environment") {
+    return m.settings_integrations_state_environment({
+      provider: providerLabel(status.variantId),
+    });
+  }
+
+  return status.kind === "disabled"
+    ? m.settings_integrations_state_off()
+    : m.settings_integrations_state_incomplete();
 };

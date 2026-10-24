@@ -9,24 +9,22 @@ import { m } from "@/paraglide/messages.js";
 import type { SettingsSection } from "@/shared/config";
 import { remixIcon } from "@/shared/lib/remix-icon";
 
-import { settingsNavItemsFor } from "../model/settings-nav-items";
-import type { OperatorStanding } from "../model/settings-nav-items";
+import { SETTINGS_NAV_ITEMS } from "../model/settings-nav-items";
 
 interface SettingsNavProps {
-  section: SettingsSection | null;
-  standing: OperatorStanding;
+  section: SettingsSection;
 }
 
 const RAIL_HOLDS_ITS_PLACE_WHILE_THE_PANE_SCROLLS =
   "lg:sticky lg:top-4 lg:w-48 lg:shrink-0 lg:self-start";
 
-export const SettingsNav = ({ section, standing }: SettingsNavProps) => (
+export const SettingsNav = ({ section }: SettingsNavProps) => (
   <nav
     aria-label={m.settings_nav_label()}
     className={RAIL_HOLDS_ITS_PLACE_WHILE_THE_PANE_SCROLLS}
   >
     <SidebarMenu>
-      {settingsNavItemsFor(standing).map((item) => (
+      {SETTINGS_NAV_ITEMS.map((item) => (
         <SidebarMenuItem key={item.section}>
           <SidebarMenuButton
             icon={remixIcon(item.icon)}

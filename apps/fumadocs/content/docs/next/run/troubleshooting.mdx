@@ -72,7 +72,7 @@ Check `docker compose ps -a` and `docker compose logs server`. If the server kee
 
 ## The server does not restart after setup
 
-**What you see.** After `Finish setup` on the setup screen, or `Apply now` in Settings, under **Integrations**, the page waits, then shows `The server did not restart` and `It did not answer within one minute.`
+**What you see.** After `Finish setup` on the setup screen, or `Apply now` in Settings, under **Connections**, the page waits, then shows `The server did not restart` and `It did not answer within one minute.`
 
 **Why.** `Finish setup` and `Apply now` stop the server so it picks up the new settings at its next start. Something has to start it again. Both compose files tell Docker to, and Coolify does it by default. A server started by hand stays down, and one that fails on startup keeps restarting.
 
@@ -100,7 +100,7 @@ The stored value of EMAIL_PROVIDER does not open with the current BETTER_AUTH_SE
 
 **Why.** Saved values are encrypted with `BETTER_AUTH_SECRET`. The server can't read them under another secret, so it skips them and runs on the environment's values alone.
 
-**Fix.** Put back the secret that was in use when the dump was taken, then run `docker compose up -d`, or redeploy with a panel. If that secret is lost, re-enter the bank values on the setup screen and press `Finish setup`. Re-enter the email and model values in Settings, under **Integrations**, then press `Apply now`. What else a new secret costs, two-factor included, is in [What a rotation costs](/docs/reference/security#what-a-rotation-costs).
+**Fix.** Put back the secret that was in use when the dump was taken, then run `docker compose up -d`, or redeploy with a panel. If that secret is lost, re-enter the bank values on the setup screen and press `Finish setup`. Re-enter the email and model values in Settings, under **Connections**, then press `Apply now`. What else a new secret costs, two-factor included, is in [What a rotation costs](/docs/reference/security#what-a-rotation-costs).
 
 ## The setup screen shows a configuration problem
 
@@ -154,7 +154,7 @@ The stored value of EMAIL_PROVIDER does not open with the current BETTER_AUTH_SE
 
 ## The assistant has no model
 
-Users see `Choose a model`, or `This instance has no model configured`. As the operator, open Settings, then **Integrations**, configure the `Assistant model` row, and press `Apply now`. See [AI models](/docs/run/models#assistant).
+Users see `Choose a model`, or `This instance has no model configured`. As the operator, open Settings, then **Connections**, set up the `Assistant model` row under `Services`, and press `Apply now`. See [AI models](/docs/run/models#assistant).
 
 ## The server ignores the saved categorisation model
 
@@ -162,7 +162,7 @@ Users see `Choose a model`, or `This instance has no model configured`. As the o
 
 **Why.** The saved model and the environment's `TRANSACTION_CLASSIFIER_FALLBACK` can't run together, for example because both name the same protocol and model.
 
-**Fix.** Pick another model in Settings, under **Integrations**, or change the fallback in the environment, then press `Apply now` or run `docker compose up -d`.
+**Fix.** Pick another model in Settings, under **Connections**, or change the fallback in the environment, then press `Apply now` or run `docker compose up -d`.
 
 ## The wrong account became the operator
 

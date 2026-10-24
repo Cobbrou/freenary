@@ -4,6 +4,7 @@ import { docsUrl } from "@/shared/config";
 import type { MessagePart } from "../lib/message-parts";
 import { code, link, messageParts, strong } from "../lib/message-parts";
 import type { FieldProblem } from "./field-rules";
+import type { IntegrationWording } from "./wording";
 
 type Label = () => string;
 
@@ -80,6 +81,18 @@ const INTEGRATION_DESCRIPTIONS = {
   categorisation: m.setup_integration_categorisation_description,
   email: m.setup_integration_email_description,
 } satisfies Record<string, Label>;
+
+const SETTINGS_INTEGRATION_DESCRIPTIONS = {
+  assistant: m.settings_integrations_assistant_description,
+  banking: m.settings_integrations_banking_description,
+  categorisation: m.settings_integrations_categorisation_description,
+  email: m.settings_integrations_email_description,
+} satisfies Record<string, Label>;
+
+const DESCRIPTIONS_BY_WORDING = {
+  settings: SETTINGS_INTEGRATION_DESCRIPTIONS,
+  setup: INTEGRATION_DESCRIPTIONS,
+} satisfies Record<IntegrationWording, Record<string, Label>>;
 
 const STATE_LABELS = {
   configured: m.setup_state_configured,
@@ -159,8 +172,10 @@ export const fieldProblemMessage = (problem: FieldProblem): string =>
 export const integrationTitle = (id: string): string =>
   read(INTEGRATION_TITLES, id);
 
-export const integrationDescription = (id: string): string =>
-  read(INTEGRATION_DESCRIPTIONS, id);
+export const integrationDescription = (
+  id: string,
+  wording: IntegrationWording = "setup"
+): string => read(DESCRIPTIONS_BY_WORDING[wording], id);
 
 export const variantLabel = (id: string): string => read(VARIANT_LABELS, id);
 

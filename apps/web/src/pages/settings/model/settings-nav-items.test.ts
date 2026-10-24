@@ -2,51 +2,32 @@ import { describe, expect, it } from "bun:test";
 
 import {
   operatorStandingOf,
-  settingsNavItemsFor,
-  shownSettingsSection,
+  SETTINGS_NAV_ITEMS,
+  showsServices,
 } from "./settings-nav-items";
 
-const sectionsFor = (standing: Parameters<typeof settingsNavItemsFor>[0]) =>
-  settingsNavItemsFor(standing).map((item) => item.section);
-
-describe("settingsNavItemsFor", () => {
-  it("lists Integrations last for the operator", () => {
-    expect(sectionsFor("operator")).toEqual([
+describe("SETTINGS_NAV_ITEMS", () => {
+  it("lists one Connections item and no Integrations item", () => {
+    expect(SETTINGS_NAV_ITEMS.map((item) => item.section)).toEqual([
       "appearance",
       "connections",
       "budget",
       "security",
-      "integrations",
     ]);
-  });
-
-  it("leaves Integrations out for a member", () => {
-    expect(sectionsFor("member")).not.toContain("integrations");
-  });
-
-  it("leaves Integrations out until the standing is known", () => {
-    expect(sectionsFor("pending")).not.toContain("integrations");
   });
 });
 
-describe("shownSettingsSection", () => {
-  it("shows Integrations to the operator", () => {
-    expect(shownSettingsSection("integrations", "operator")).toBe(
-      "integrations"
-    );
+describe("showsServices", () => {
+  it("shows the services to the operator", () => {
+    expect(showsServices("operator")).toBe(true);
   });
 
-  it("falls back to the default section for a member", () => {
-    expect(shownSettingsSection("integrations", "member")).toBe("appearance");
+  it("never shows them to a member", () => {
+    expect(showsServices("member")).toBe(false);
   });
 
-  it("shows nothing for Integrations while the standing is pending", () => {
-    expect(shownSettingsSection("integrations", "pending")).toBeNull();
-  });
-
-  it("shows any other section to everyone", () => {
-    expect(shownSettingsSection("security", "member")).toBe("security");
-    expect(shownSettingsSection("budget", "pending")).toBe("budget");
+  it("holds them back while the standing is pending", () => {
+    expect(showsServices("pending")).toBe(false);
   });
 });
 

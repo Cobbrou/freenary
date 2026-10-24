@@ -2,7 +2,9 @@ import { describe, expect, it } from "bun:test";
 
 import {
   INTEGRATION_ROWS,
+  integrationRowAction,
   integrationRowStatus,
+  integrationRowStatusText,
   integrationRowsOf,
 } from "./integration-rows";
 
@@ -120,5 +122,57 @@ describe("integrationRowStatus", () => {
         })
       )
     ).toEqual({ kind: "incomplete" });
+  });
+});
+
+const providerLabel = (variantId: string): string =>
+  ({ jev: "Jev by TypeSafe", powens: "Powens" })[variantId] ?? variantId;
+
+describe("integrationRowStatusText", () => {
+  it("names the provider of a configured service", () => {
+    expect(
+      integrationRowStatusText(
+        { kind: "configured", variantId: "powens" },
+        providerLabel
+      )
+    ).toBe("Configured · Powens");
+  });
+
+  it("names the provider the server sets", () => {
+    expect(
+      integrationRowStatusText(
+        { kind: "environment", variantId: "jev" },
+        providerLabel
+      )
+    ).toBe("Set by your server · Jev by TypeSafe");
+  });
+
+  it("reads an off service and one missing a value in words", () => {
+    expect(integrationRowStatusText({ kind: "disabled" }, providerLabel)).toBe(
+      "Off"
+    );
+
+    expect(
+      integrationRowStatusText({ kind: "incomplete" }, providerLabel)
+    ).toBe("Needs setup");
+  });
+});
+
+describe("integrationRowAction", () => {
+  it("offers to change a configured service", () => {
+    expect(
+      integrationRowAction({ kind: "configured", variantId: "smtp" })
+    ).toBe("change");
+  });
+
+  it("offers to set up a service that is off or needs setup", () => {
+    expect(integrationRowAction({ kind: "disabled" })).toBe("set-up");
+    expect(integrationRowAction({ kind: "incomplete" })).toBe("set-up");
+  });
+
+  it("offers to view a service the server sets", () => {
+    expect(
+      integrationRowAction({ kind: "environment", variantId: "powens" })
+    ).toBe("view");
   });
 });

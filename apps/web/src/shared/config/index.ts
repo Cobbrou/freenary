@@ -7,7 +7,7 @@ export {
 } from "./server-url";
 export {
   DEFAULT_SETTINGS_SECTION,
-  isSettingsSection,
   SETTINGS_SECTIONS,
+  settingsSectionOf,
 } from "./settings-sections";
 export type { SettingsSection } from "./settings-sections";

@@ -1,16 +1,18 @@
 import { useQuery } from "@tanstack/react-query";
 
 import {
-  BankConnectionPanel,
   BankLinkingCheckFailed,
   BankLinkingUnavailable,
   BankListSkeleton,
+  ConnectedBankList,
   useBankLinking,
 } from "@/features/bank-connection";
 import { m } from "@/paraglide/messages.js";
 import { orpc } from "@/shared/api";
 
-import { SettingsSection } from "./settings-section";
+import { ConnectBankDialog } from "./connect-bank-dialog";
+import { SettingsListSurface } from "./settings-list-surface";
+import { SettingsSubgroup } from "./settings-subgroup";
 
 const INSTITUTIONS_FOR_THE_USERS_OWN_JURISDICTIONS = {};
 
@@ -24,7 +26,7 @@ export const BankAccountsSection = () => {
     })
   );
 
-  const renderPanel = () => {
+  const renderList = () => {
     if (bankLinking === "pending") {
       return (
         <div aria-busy="true">
@@ -46,23 +48,16 @@ export const BankAccountsSection = () => {
       return <BankLinkingUnavailable />;
     }
 
-    return (
-      <BankConnectionPanel
-        banks={banksQuery.data?.banks ?? []}
-        isBanksError={banksQuery.isError}
-        isBanksPending={banksQuery.isPending}
-        returnTo="settings"
-        unavailableCountries={banksQuery.data?.unavailableCountries ?? []}
-      />
-    );
+    return <ConnectedBankList banks={banksQuery.data?.banks ?? []} />;
   };
 
   return (
-    <SettingsSection
+    <SettingsSubgroup
+      action={bankLinking === "available" ? <ConnectBankDialog /> : null}
       description={m.settings_bank_accounts_description()}
       title={m.settings_bank_accounts_title()}
     >
-      {renderPanel()}
-    </SettingsSection>
+      <SettingsListSurface>{renderList()}</SettingsListSurface>
+    </SettingsSubgroup>
   );
 };

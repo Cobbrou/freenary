@@ -65,7 +65,7 @@ export const EnvironmentSummary = ({
   return (
     <div className="flex flex-col gap-6">
       <WizardStepHeader
-        description={integrationDescription(descriptor.id)}
+        description={integrationDescription(descriptor.id, wording)}
         title={integrationTitle(descriptor.id)}
       />
 
