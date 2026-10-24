@@ -3,13 +3,14 @@ import { describe, expect, it } from "bun:test";
 import { Option, Result } from "effect";
 
 import type { ClassifierChain, ClassifierSlotSettings } from "./registry";
-import { createClassifierChain } from "./registry";
+import { classifierCallBudgetMs, createClassifierChain } from "./registry";
 
 const unset: ClassifierSlotSettings = {
   apiKey: undefined,
   model: undefined,
   protocol: undefined,
   temperature: 1,
+  timeoutMs: 10_000,
   url: undefined,
 };
 
@@ -18,6 +19,7 @@ const decider: ClassifierSlotSettings = {
   model: "decider-2b-v10",
   protocol: "system-one",
   temperature: 1,
+  timeoutMs: 10_000,
   url: "http://decider:8000/v1/systemone",
 };
 
@@ -26,6 +28,7 @@ const ollama: ClassifierSlotSettings = {
   model: "qwen3:8b",
   protocol: "llm",
   temperature: 1,
+  timeoutMs: 10_000,
   url: "http://ollama:11434/v1",
 };
 
@@ -128,6 +131,7 @@ describe("createClassifierChain", () => {
           model: "jev-latest",
           protocol: "system-one",
           temperature: 1,
+          timeoutMs: 10_000,
           url: "https://api.typesafe.ai/v1/systemone",
         },
         primary: decider,
@@ -160,5 +164,15 @@ describe("createClassifierChain", () => {
     expect(failureOf(created)).toMatchObject({
       variable: "TRANSACTION_CLASSIFIER_FALLBACK",
     });
+  });
+});
+
+describe("classifierCallBudgetMs", () => {
+  it("keeps the 15-second budget around the default 10-second request", () => {
+    expect(classifierCallBudgetMs(10_000)).toBe(15_000);
+  });
+
+  it("outlasts a raised request limit, so the request decides", () => {
+    expect(classifierCallBudgetMs(30_000)).toBeGreaterThan(30_000);
   });
 });

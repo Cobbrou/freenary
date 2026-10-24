@@ -73,7 +73,7 @@ To run a model on your own machine with Ollama:
 3. Enter `http://ollama:11434/v1` as `Endpoint URL` if Ollama runs in the same Docker network as the `server` container, or `http://host.docker.internal:11434/v1` for Ollama on the host. `localhost` is the `server` container itself.
 4. Enter `qwen3:4b-instruct-2507-q4_K_M` as `Model`. Ollama asks for no key, so leave `API key` under `More options` empty.
 
-That model needs about 5 GB of RAM. It takes several seconds per new merchant, it's less accurate than the hosted options, and it can be confidently wrong. Each request times out after 10 seconds, so on a slow machine some merchants stay uncategorised.
+That model needs about 5 GB of RAM. It takes several seconds per new merchant, it's less accurate than the hosted options, and it can be confidently wrong. Each request times out after 10 seconds by default, and a merchant that times out stays uncategorised. On a slow machine, raise the limit in the environment with `TRANSACTION_CLASSIFIER_TIMEOUT_MS`, in milliseconds, from `1000` to `120000`, such as `TRANSACTION_CLASSIFIER_TIMEOUT_MS=30000`. It isn't on the setup screen or in Settings. The connection test reports the limit when a request runs out of time.
 
 On Linux, `host.docker.internal` resolves only when the `server` service lists `host.docker.internal:host-gateway` under `extra_hosts`. Ollama on the host also has to listen beyond `127.0.0.1`, for example with `OLLAMA_HOST=0.0.0.0`.
 

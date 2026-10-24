@@ -509,6 +509,21 @@ export const serverEnvSchema = {
         "A value that is not a positive number stops the start. Fit it on merchants your own readers corrected.",
       section: "categorisation",
     }),
+  TRANSACTION_CLASSIFIER_TIMEOUT_MS: z.coerce
+    .number()
+    .int()
+    .min(1000)
+    .max(120_000)
+    .default(10_000)
+    .describe(
+      "How long, in milliseconds, Freenary waits for a classifier to answer before it leaves the transaction uncategorised. It applies to `TRANSACTION_CLASSIFIER` and to `TRANSACTION_CLASSIFIER_FALLBACK`."
+    )
+    .meta({
+      example: "30000",
+      onError:
+        "A value that is not a whole number from 1000 to 120000 stops the start. Raise it for a local model on a slow machine.",
+      section: "categorisation",
+    }),
   TRANSACTION_CLASSIFIER_URL: z
     .url()
     .optional()

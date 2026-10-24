@@ -77,6 +77,23 @@ describe("probeClassifier", () => {
     });
   });
 
+  it("names the time limit and its variable when the endpoint is too slow", async () => {
+    const outcome = await probe(
+      () =>
+        Promise.reject(
+          new DOMException("The operation timed out.", "TimeoutError")
+        ),
+      { ...jevCandidate, TRANSACTION_CLASSIFIER_TIMEOUT_MS: 30_000 }
+    );
+
+    const reason = Result.isFailure(outcome) ? outcome.failure.reason : null;
+
+    expect(reason?.kind).toBe("unreachable");
+    expect(JSON.stringify(reason)).toContain(
+      "no answer within 30 s. Raise TRANSACTION_CLASSIFIER_TIMEOUT_MS to wait longer."
+    );
+  });
+
   it("reports an answer outside the documented shape as invalid", async () => {
     const outcome = await probe(answering(200, { unexpected: true }));
 

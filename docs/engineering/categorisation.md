@@ -334,7 +334,7 @@ A merchant that no rule, no dictionary entry and no correction knows reaches the
 | Grouping | `payloadSignature` hashes the merchant identity: the merchant key or the descriptor, the country, the direction and the merchant category code. Every pending transaction with the same hash becomes one group, so one merchant costs one question whatever the amounts |
 | Signature | `classificationSignature` hashes the same identity behind the protocol, the model and `TAXONOMY_VERSION`. Each classifier of the chain therefore owns its own cache row |
 | Cache | `MerchantClassification` answers first. A stored category applies at stage `cached-model`. A stored abstention is honoured for 30 days, then asked again |
-| Call | Bounded to 4 merchants in flight. A provider aborts its own request after 10 seconds, inside the resolver's 15-second budget |
+| Call | Bounded to 4 merchants in flight. A provider aborts its own request after `TRANSACTION_CLASSIFIER_TIMEOUT_MS` (10 seconds by default), inside a resolver budget 5 seconds longer |
 | Validation | The answer must be a slug of the taxonomy, with a confidence inside `0..1`, and the direction of the transaction must permit it. Anything else is refused, logged and cached nowhere |
 | Store | An accepted category and an explicit abstention are written. A failure is not: a provider rejects on an unreachable endpoint, a refused request and an undecodable answer, which keeps a transient fault out of the 30-day abstention |
 

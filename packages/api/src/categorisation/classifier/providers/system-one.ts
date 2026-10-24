@@ -5,7 +5,7 @@ import {
   concentration,
   NEUTRAL_TEMPERATURE,
 } from "../confidence";
-import { CLASSIFIER_REQUEST_TIMEOUT_MS, endpointHeaders } from "../endpoint";
+import { endpointHeaders, unreachableDetail } from "../endpoint";
 import {
   CATEGORY_QUESTION_ID,
   isOfferedCategory,
@@ -23,6 +23,7 @@ export interface SystemOneSettings {
   apiKey: string | undefined;
   model: string;
   temperature: number;
+  timeoutMs: number;
   url: string;
 }
 
@@ -80,7 +81,10 @@ const readAnswers = Effect.fnUntraced(function* readAnswers(
   const response = yield* Effect.tryPromise({
     catch: (cause) =>
       new SystemOneClassificationFailed({
-        reason: { detail: String(cause), kind: "unreachable" },
+        reason: {
+          detail: unreachableDetail(cause, settings.timeoutMs),
+          kind: "unreachable",
+        },
       }),
     try: () =>
       transport(settings.url, {
@@ -91,7 +95,7 @@ const readAnswers = Effect.fnUntraced(function* readAnswers(
         }),
         headers: endpointHeaders(settings.apiKey),
         method: "POST",
-        signal: AbortSignal.timeout(CLASSIFIER_REQUEST_TIMEOUT_MS),
+        signal: AbortSignal.timeout(settings.timeoutMs),
       }),
   });
 
@@ -99,7 +103,10 @@ const readAnswers = Effect.fnUntraced(function* readAnswers(
     const body = yield* Effect.tryPromise({
       catch: (cause) =>
         new SystemOneClassificationFailed({
-          reason: { detail: String(cause), kind: "unreachable" },
+          reason: {
+            detail: unreachableDetail(cause, settings.timeoutMs),
+            kind: "unreachable",
+          },
         }),
       try: () => response.text(),
     });

@@ -45,7 +45,7 @@ Stored values are encrypted with `BETTER_AUTH_SECRET`. [Security](/docs/referenc
 
 {/* env-sync:start count */}
 
-The API server checks its environment once, at startup. The schema is [`packages/env/src/schema.ts`](https://github.com/suiramdev/freenary/blob/main/packages/env/src/schema.ts). It declares 48 variables with Zod, and `packages/env/src/server.ts` hands them to `@t3-oss/env-core`. The reference below, and `.env.example`, are generated from that one file.
+The API server checks its environment once, at startup. The schema is [`packages/env/src/schema.ts`](https://github.com/suiramdev/freenary/blob/main/packages/env/src/schema.ts). It declares 49 variables with Zod, and `packages/env/src/server.ts` hands them to `@t3-oss/env-core`. The reference below, and `.env.example`, are generated from that one file.
 
 {/* env-sync:end */}
 
@@ -210,6 +210,7 @@ The setup screen or Settings sets the first classifier: see [AI models](/docs/ru
 | `TRANSACTION_CLASSIFIER_FALLBACK_URL` | unset | The URL of the fallback endpoint. The `llm` protocol appends `/chat/completions` to it, and the other two post to it as it is. | A value that is not a URL stops the start. A named fallback with no URL stops it too. |
 | `TRANSACTION_CLASSIFIER_MODEL` | unset | Names the model that endpoint serves. It is part of the cache key, so a change asks every merchant again. | A named classifier with no model stops the start with `TRANSACTION_CLASSIFIER=<protocol> requires TRANSACTION_CLASSIFIER_MODEL to be set.` |
 | `TRANSACTION_CLASSIFIER_TEMPERATURE` | `1` | Sharpens or flattens the answer distribution before the confidence is measured. At 1 a `system-one` endpoint keeps the statistic it reports, and the other two protocols still measure the distribution themselves. | A value that is not a positive number stops the start. Fit it on merchants your own readers corrected. |
+| `TRANSACTION_CLASSIFIER_TIMEOUT_MS` | `10000` | How long, in milliseconds, Freenary waits for a classifier to answer before it leaves the transaction uncategorised. It applies to `TRANSACTION_CLASSIFIER` and to `TRANSACTION_CLASSIFIER_FALLBACK`. | A value that is not a whole number from 1000 to 120000 stops the start. Raise it for a local model on a slow machine. |
 | `TRANSACTION_CLASSIFIER_URL` | unset | The URL of the endpoint the classifier asks. The `llm` protocol appends `/chat/completions` to it, and the other two post to it as it is. It reaches a server you run or one somebody else hosts. | A value that is not a URL stops the start. An `llm` endpoint that returns no `logprobs` leaves every answer a suggestion. |
 
 {/* env-sync:end */}

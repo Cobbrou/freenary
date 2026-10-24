@@ -2,7 +2,7 @@ import { Data, Effect, Match, Schema } from "effect";
 
 import type { SpendingCategory } from "../../../lib/taxonomy";
 import { ACCEPT_CONFIDENCE, concentration } from "../confidence";
-import { CLASSIFIER_REQUEST_TIMEOUT_MS, endpointHeaders } from "../endpoint";
+import { endpointHeaders, unreachableDetail } from "../endpoint";
 import {
   CATEGORY_CRITERIA,
   isOfferedCategory,
@@ -20,6 +20,7 @@ export interface ZeroShotSettings {
   apiKey: string | undefined;
   model: string;
   temperature: number;
+  timeoutMs: number;
   url: string;
 }
 
@@ -119,7 +120,10 @@ const readResponse = Effect.fnUntraced(function* readResponse(
   const response = yield* Effect.tryPromise({
     catch: (cause) =>
       new ZeroShotClassificationFailed({
-        reason: { detail: String(cause), kind: "unreachable" },
+        reason: {
+          detail: unreachableDetail(cause, settings.timeoutMs),
+          kind: "unreachable",
+        },
       }),
     try: () =>
       transport(settings.url, {
@@ -143,7 +147,7 @@ const readResponse = Effect.fnUntraced(function* readResponse(
         }),
         headers: endpointHeaders(settings.apiKey),
         method: "POST",
-        signal: AbortSignal.timeout(CLASSIFIER_REQUEST_TIMEOUT_MS),
+        signal: AbortSignal.timeout(settings.timeoutMs),
       }),
   });
 
@@ -151,7 +155,10 @@ const readResponse = Effect.fnUntraced(function* readResponse(
     const body = yield* Effect.tryPromise({
       catch: (cause) =>
         new ZeroShotClassificationFailed({
-          reason: { detail: String(cause), kind: "unreachable" },
+          reason: {
+            detail: unreachableDetail(cause, settings.timeoutMs),
+            kind: "unreachable",
+          },
         }),
       try: () => response.text(),
     });

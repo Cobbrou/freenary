@@ -45,6 +45,7 @@ const hosted: SystemOneSettings = {
   apiKey: "k",
   model: "decider-2b-v10",
   temperature: 1,
+  timeoutMs: 10_000,
   url: "https://api.typesafe.ai/v1/systemone",
 };
 
@@ -150,6 +151,7 @@ describe("createSystemOneClassifier", () => {
         apiKey: undefined,
         model: "decider-0.8b",
         temperature: 1,
+        timeoutMs: 10_000,
         url: "http://decider:8000/v1/systemone",
       },
       answering({ category: choice("bills-utilities", 0.8) }, calls)

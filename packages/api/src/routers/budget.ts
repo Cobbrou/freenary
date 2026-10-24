@@ -5,6 +5,7 @@ import { Data, Effect, Match } from "effect";
 import { z } from "zod";
 
 import {
+  classifierCallBudget,
   classifierEscalateBelow,
   transactionClassifiers,
 } from "../categorisation/classifier/registry";
@@ -500,6 +501,7 @@ const categoriseUncategorised = async (
     escalateBelow: classifierEscalateBelow,
     onSignatureSettled: reporter.heartbeat,
     store: prismaClassificationStore,
+    timeoutMs: classifierCallBudget,
   });
 
   const resolutions = inputs.flatMap<TransactionResolution>((input, index) => {

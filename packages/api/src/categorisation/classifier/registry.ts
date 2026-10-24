@@ -16,6 +16,7 @@ export interface ClassifierSlotSettings {
   model: string | undefined;
   protocol: ClassifierProtocol | undefined;
   temperature: number;
+  timeoutMs: number;
   url: string | undefined;
 }
 
@@ -68,6 +69,7 @@ const buildClassifier = (
           apiKey: settings.apiKey,
           model,
           temperature: settings.temperature,
+          timeoutMs: settings.timeoutMs,
           url,
         };
 
@@ -137,6 +139,7 @@ export const primarySlotOf = (
   model: settings.TRANSACTION_CLASSIFIER_MODEL,
   protocol: settings.TRANSACTION_CLASSIFIER,
   temperature: settings.TRANSACTION_CLASSIFIER_TEMPERATURE,
+  timeoutMs: settings.TRANSACTION_CLASSIFIER_TIMEOUT_MS,
   url: settings.TRANSACTION_CLASSIFIER_URL,
 });
 
@@ -148,6 +151,7 @@ export const classifierSettingsOf = (
     model: settings.TRANSACTION_CLASSIFIER_FALLBACK_MODEL,
     protocol: settings.TRANSACTION_CLASSIFIER_FALLBACK,
     temperature: settings.TRANSACTION_CLASSIFIER_FALLBACK_TEMPERATURE,
+    timeoutMs: settings.TRANSACTION_CLASSIFIER_TIMEOUT_MS,
     url: settings.TRANSACTION_CLASSIFIER_FALLBACK_URL,
   },
   primary: primarySlotOf(settings),
@@ -164,6 +168,15 @@ const environmentChain = (fault: ClassifierUnavailable) => {
 export const transactionClassifiers = Result.getOrElse(
   createClassifierChain(classifierSettingsOf(instanceSettings)),
   environmentChain
+);
+
+const CALL_BUDGET_MARGIN_MS = 5000;
+
+export const classifierCallBudgetMs = (requestTimeoutMs: number): number =>
+  requestTimeoutMs + CALL_BUDGET_MARGIN_MS;
+
+export const classifierCallBudget = classifierCallBudgetMs(
+  instanceSettings.TRANSACTION_CLASSIFIER_TIMEOUT_MS
 );
 
 export const classifierEscalateBelow =

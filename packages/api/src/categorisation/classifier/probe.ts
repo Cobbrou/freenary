@@ -3,19 +3,10 @@ import type { ProbeFailureReason } from "@freenary/instance-config/probe";
 import { IntegrationProbeFailed } from "@freenary/instance-config/probe";
 import { Effect, Result } from "effect";
 
-import type { ClassifierSlotSettings } from "./registry";
 import { createClassifierChain, primarySlotOf } from "./registry";
 import type { ClassificationInput, ClassifierTransport } from "./types";
 
 const CATEGORISATION_INTEGRATION = "categorisation";
-
-const NO_FALLBACK: ClassifierSlotSettings = {
-  apiKey: undefined,
-  model: undefined,
-  protocol: undefined,
-  temperature: 1,
-  url: undefined,
-};
 
 export const PROBE_TRANSACTION: ClassificationInput = {
   amountBucket: "small",
@@ -88,8 +79,9 @@ export const probeClassifier = (
     candidate: ServerSettings
   ) {
     const recorder = recordingTransport(send);
+    const primary = primarySlotOf(candidate);
     const chain = createClassifierChain(
-      { fallback: NO_FALLBACK, primary: primarySlotOf(candidate) },
+      { fallback: { ...primary, protocol: undefined }, primary },
       recorder.transport
     );
 

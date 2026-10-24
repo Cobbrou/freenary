@@ -8,7 +8,7 @@ import {
   softmax,
   UNDISTRIBUTED_CONFIDENCE,
 } from "../confidence";
-import { CLASSIFIER_REQUEST_TIMEOUT_MS, endpointHeaders } from "../endpoint";
+import { endpointHeaders, unreachableDetail } from "../endpoint";
 import {
   CATEGORY_CRITERIA,
   CATEGORY_INSTRUCTIONS,
@@ -26,6 +26,7 @@ export interface LlmSettings {
   apiKey: string | undefined;
   model: string;
   temperature: number;
+  timeoutMs: number;
   url: string;
 }
 
@@ -225,7 +226,10 @@ const readCompletion = Effect.fnUntraced(function* readCompletion(
   const response = yield* Effect.tryPromise({
     catch: (cause) =>
       new LlmClassificationFailed({
-        reason: { detail: String(cause), kind: "unreachable" },
+        reason: {
+          detail: unreachableDetail(cause, settings.timeoutMs),
+          kind: "unreachable",
+        },
       }),
     try: () =>
       transport(
@@ -244,7 +248,7 @@ const readCompletion = Effect.fnUntraced(function* readCompletion(
           }),
           headers: endpointHeaders(settings.apiKey),
           method: "POST",
-          signal: AbortSignal.timeout(CLASSIFIER_REQUEST_TIMEOUT_MS),
+          signal: AbortSignal.timeout(settings.timeoutMs),
         }
       ),
   });
@@ -253,7 +257,10 @@ const readCompletion = Effect.fnUntraced(function* readCompletion(
     const body = yield* Effect.tryPromise({
       catch: (cause) =>
         new LlmClassificationFailed({
-          reason: { detail: String(cause), kind: "unreachable" },
+          reason: {
+            detail: unreachableDetail(cause, settings.timeoutMs),
+            kind: "unreachable",
+          },
         }),
       try: () => response.text(),
     });

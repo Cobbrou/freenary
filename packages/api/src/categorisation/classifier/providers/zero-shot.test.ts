@@ -26,6 +26,7 @@ const settings: ZeroShotSettings = {
   apiKey: "hf_key",
   model: "MoritzLaurer/ModernBERT-large-zeroshot-v2.0",
   temperature: 1,
+  timeoutMs: 10_000,
   url: "https://o7vf1.eu-west-1.aws.endpoints.huggingface.cloud",
 };
 
