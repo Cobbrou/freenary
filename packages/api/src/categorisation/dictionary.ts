@@ -239,3 +239,11 @@ export const unloadDictionary = (): void => {
     state.loading = null;
   }
 };
+
+export const replaceDictionaryEntries = (
+  entries: ReadonlyMap<string, DictionaryEntry> | null
+): void => {
+  state.entries = entries === null ? null : new Map(entries);
+  state.loadedScope = EVERY_COUNTRY;
+  state.loading = null;
+};

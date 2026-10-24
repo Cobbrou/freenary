@@ -1,6 +1,7 @@
-import { describe, expect, it } from "bun:test";
+import { afterAll, beforeAll, describe, expect, it } from "bun:test";
 
 import { deriveMerchantKey } from "./merchant-key";
+import { replacePlaceTokens } from "./place-tokens";
 import type { MerchantKeyInput } from "./types";
 
 const baseInput: MerchantKeyInput = {
@@ -10,6 +11,14 @@ const baseInput: MerchantKeyInput = {
 };
 
 describe("deriveMerchantKey", () => {
+  beforeAll(() => {
+    replacePlaceTokens(["paris"]);
+  });
+
+  afterAll(() => {
+    replacePlaceTokens(null);
+  });
+
   describe("card path", () => {
     it("derives normalised descriptor as merchant key", () => {
       const derived = deriveMerchantKey(baseInput);

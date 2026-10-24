@@ -1,4 +1,4 @@
-import { describe, expect, it } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 
 import type { SpendingCategory } from "../lib/taxonomy";
 import type {
@@ -11,6 +11,7 @@ import type {
   ClassificationPrediction,
   TransactionClassifier,
 } from "./classifier/types";
+import { replaceDictionaryEntries } from "./dictionary";
 import {
   categoriseBatch,
   categoriseTransaction,
@@ -161,6 +162,21 @@ describe("categoriseTransaction", () => {
   });
 
   describe("direction invariant", () => {
+    beforeEach(() => {
+      replaceDictionaryEntries(
+        new Map([
+          [
+            "carrefour market",
+            { category: "groceries", name: "Carrefour Market" },
+          ],
+        ])
+      );
+    });
+
+    afterEach(() => {
+      replaceDictionaryEntries(null);
+    });
+
     it("refuses an outgoing-only dictionary hit on a credit", async () => {
       const categorised = await categoriseTransaction({
         ...baseInput,
