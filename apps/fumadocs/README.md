@@ -16,7 +16,7 @@ The pages live in [`content/docs/next`](content/docs/next) — one folder per ve
 ```bash
 bun run docs:check    # frontmatter, icons, components, links, anchors, navigation, moved pages
 bun run build         # production build
-bun run types:check   # TypeScript
+bun run check-types   # TypeScript
 ```
 
 `docs:check` is the gate a documentation change must pass. The build catches a missing frontmatter field and an unknown code-fence language. `docs:check` catches what the build lets through. Add `--strict` to fail on warnings too.

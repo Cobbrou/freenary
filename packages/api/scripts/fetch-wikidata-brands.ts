@@ -225,11 +225,16 @@ const fetchEntitiesByType = Effect.fnUntraced(function* fetchEntitiesByType(
     return entries;
   }
 
-  for (const row of rows.value.results.bindings) {
-    const qid = row.item.value.split("/").pop() ?? row.item.value;
-    const label = row.itemLabel.value;
-    const domain = extractDomain(row.website.value);
-    const countryCode = row.countryCode?.value.toUpperCase();
+  for (const { item, itemLabel, website, countryCode: country } of rows.value
+    .results.bindings) {
+    if (!(item && itemLabel && website)) {
+      continue;
+    }
+
+    const qid = item.value.split("/").pop() ?? item.value;
+    const label = itemLabel.value;
+    const domain = extractDomain(website.value);
+    const countryCode = country?.value.toUpperCase();
 
     let entry = entries.get(qid);
 
@@ -394,9 +399,13 @@ const fetchAliasesBatch = Effect.fnUntraced(function* fetchAliasesBatch(
     return aliasesByQid;
   }
 
-  for (const row of rows.value.results.bindings) {
-    const qid = row.item.value.split("/").pop() ?? row.item.value;
-    const aliasStr = row.aliases?.value ?? "";
+  for (const { aliases: aliasList, item } of rows.value.results.bindings) {
+    if (!item) {
+      continue;
+    }
+
+    const qid = item.value.split("/").pop() ?? item.value;
+    const aliasStr = aliasList?.value ?? "";
 
     if (aliasStr.length > 0) {
       const aliases = aliasStr.split("|").flatMap((alias) => {

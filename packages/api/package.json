@@ -11,6 +11,7 @@
     }
   },
   "scripts": {
+    "check-types": "tsc --noEmit",
     "build:data": "bun scripts/download-data.ts || bun run build:data:generate",
     "build:data:generate": "bun scripts/generate-place-tokens.ts && bun scripts/fetch-wikidata-brands.ts && bun scripts/build-merchant-dictionary.ts",
     "build:places": "bun scripts/generate-place-tokens.ts",

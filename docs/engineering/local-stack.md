@@ -301,7 +301,7 @@ The `compose` job needs no Bun and no install. It runs `docker compose config --
 
 That job is the one CI check no root script covers. Reproduce it from `.github/workflows/ci.yml` before you change any of these compose files.
 
-> [!WARNING] `bun run check-types` reaches three workspaces: `apps/server`, `@freenary/ui` and `apps/web`, which checks its test files too. Its check runs after its `build`, because the build generates `src/routeTree.gen.ts` and `src/paraglide/`, so the first run in a fresh checkout takes as long as a web build. `apps/fumadocs` names its own script `types:check`, so `turbo run check-types` skips it. Type-check it by hand before you push.
+> [!WARNING] `bun run check-types` reaches every workspace, `apps/web` included, which checks its test files too. The web check runs after its `build`, because the build generates `src/routeTree.gen.ts` and `src/paraglide/`, so the first run in a fresh checkout takes as long as a web build.
 
 ### Tests run by hand, one file at a time
 

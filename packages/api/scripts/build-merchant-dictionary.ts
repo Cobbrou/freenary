@@ -348,7 +348,7 @@ const isTooWeakToIndex = (
   normalisedName: string,
   isGenericToken: (token: string) => boolean
 ): boolean => {
-  const [firstToken] = normalisedName.split(" ");
+  const [firstToken = ""] = normalisedName.split(" ");
 
   return (
     !normalisedName.includes(" ") &&
@@ -371,9 +371,10 @@ const buildAliases = (
       continue;
     }
 
-    const aliasTokens = normalisedAlias.split(" ");
+    const [firstAliasToken = "", ...otherAliasTokens] =
+      normalisedAlias.split(" ");
 
-    if (aliasTokens.length === 1 && isGenericToken(aliasTokens[0])) {
+    if (otherAliasTokens.length === 0 && isGenericToken(firstAliasToken)) {
       continue;
     }
 
@@ -539,8 +540,8 @@ const mergeWikidataBrands = (
 ) => {
   const byNorm: Record<string, number> = {};
 
-  for (let index = 0; index < merchants.length; index += 1) {
-    byNorm[merchants[index].normalisedName] = index;
+  for (const [index, merchant] of merchants.entries()) {
+    byNorm[merchant.normalisedName] = index;
   }
 
   let wikidataMatched = 0;
@@ -633,8 +634,8 @@ const mergeCuratedSupplement = (
 ) => {
   const nsiByNorm: Record<string, number> = {};
 
-  for (let index = 0; index < nsiMerchants.length; index += 1) {
-    nsiByNorm[nsiMerchants[index].normalisedName] = index;
+  for (const [index, merchant] of nsiMerchants.entries()) {
+    nsiByNorm[merchant.normalisedName] = index;
   }
 
   const canonicalBrandByLabel: Record<string, WikidataBrand> = {};
@@ -690,12 +691,13 @@ const mergeCuratedSupplement = (
     };
 
     const existingIdx = nsiByNorm[normalisedName];
+    const existing =
+      existingIdx === undefined ? undefined : nsiMerchants[existingIdx];
 
-    if (existingIdx === undefined) {
+    if (existingIdx === undefined || existing === undefined) {
       nsiMerchants.push(merchant);
       curatedAdded += 1;
     } else {
-      const existing = nsiMerchants[existingIdx];
       const mergedDomains = [...merchant.domains];
       const domainSet = new Set(mergedDomains);
 

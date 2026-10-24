@@ -5,11 +5,11 @@
   "type": "module",
   "sideEffects": false,
   "scripts": {
+    "check-types": "tsc --noEmit",
     "dev": "vite dev --port=4000",
     "build": "vite build",
     "start": "vite preview",
     "preview": "vite preview",
-    "types:check": "tsc --noEmit",
     "docs:check": "bun scripts/check-docs.ts",
     "docs:snapshot": "bun scripts/snapshot-version.ts",
     "lint": "oxlint",

@@ -123,7 +123,7 @@ Then `bun run dev` and open every page you changed. A green gate proves the page
 - Internal links are absolute site paths with no extension and no version (`/docs/use/budget`). A folder's index page is the folder path itself. The rendered link carries the version of the page it sits on.
 - Routes derive from the docs base route in `src/shared/config/site.ts`. Change it there, not inline, so the `.md` and `llms.txt` endpoints stay consistent.
 - Filenames are `kebab-case`; components are arrow functions assigned to a `const`, declared **before** the `Route` that references them (see the root `AGENTS.md`).
-- `types:check` is this app's TypeScript script. The root `bun run check-types` runs `turbo run check-types` and therefore skips it — run `bun run types:check` here after a change to `src/`. Run `bun run lint:fsd` here too: it is the Feature-Sliced Design gate, and CI runs it as the `Architecture` step.
+- `check-types` is this app's TypeScript script, and the root `bun run check-types` runs it with every other workspace. Run `bun run lint:fsd` here too: it is the Feature-Sliced Design gate, and CI runs it as the `Architecture` step.
 
 ## Endpoints beyond the pages
 
