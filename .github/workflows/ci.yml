@@ -50,6 +50,12 @@ jobs:
       - name: Environment
         run: bun run env:check
 
+      # Runs without the downloaded merchant data: the tests bring their own
+      # dictionary entries and place tokens.
+      - name: API tests
+        run: bun test
+        working-directory: packages/api
+
       - name: Build
         run: bun run build
 

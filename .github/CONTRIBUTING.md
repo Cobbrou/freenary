@@ -32,6 +32,7 @@ bun run check-types   # TypeScript
 bun run check:fsd     # Feature-Sliced Design layers and public APIs
 bun run docs:check    # documentation gate
 bun run env:check     # .env.example and the configuration reference match packages/env
+(cd packages/api && bun test)   # api tests, without the downloaded data
 bun run build         # every app
 ```
 
