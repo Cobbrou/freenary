@@ -3,6 +3,7 @@
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
 import { Button } from "@freenary/ui/components/button";
 import { useIcon } from "@freenary/ui/lib/icon-context";
+import { useUiLabels } from "@freenary/ui/lib/labels";
 import { useShape } from "@freenary/ui/lib/shape-context";
 import { useSize, useSizeVariant } from "@freenary/ui/lib/size-context";
 import { spring } from "@freenary/ui/lib/springs";
@@ -138,6 +139,7 @@ const DialogContent = forwardRef<HTMLDivElement, DialogContentProps>(
     ref
   ) => {
     const XIcon = useIcon("x");
+    const labels = useUiLabels();
     const shape = useShape();
     const substrate = useSurface();
     const dialogLevel = Math.min(substrate + DIALOG_OFFSET, 8);
@@ -251,7 +253,7 @@ const DialogContent = forwardRef<HTMLDivElement, DialogContentProps>(
                           className="absolute top-3 right-3"
                         >
                           <XIcon />
-                          <span className="sr-only">Close</span>
+                          <span className="sr-only">{labels.close}</span>
                         </Button>
                       }
                     />
