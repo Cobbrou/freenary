@@ -33,7 +33,7 @@ On the same Docker network, use the model server's service name, such as `http:/
 
 ## Categorisation
 
-Every option asks one question per merchant and caches the answer, so a merchant costs one call to this model. Freenary sends the merchant name and description, a rough amount range, currency, country and category code, never the exact amount: [Security](/docs/reference/security) lists the fields.
+Every option asks one question per merchant and caches the answer, so a merchant costs one call to this model. Freenary sends the transaction description, the counterparty name, a rough amount range and a few other details such as the currency and country, never the exact amount: [Security](/docs/reference/security) lists every field.
 
 | Option | Where it runs | What you enter |
 | --- | --- | --- |
