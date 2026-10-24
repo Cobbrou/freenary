@@ -1174,7 +1174,7 @@
   "setup_environment_default_provider": "{key} n'est pas défini : {provider} est le choix par défaut.",
   "setup_environment_learn_more": "En savoir plus sur les réglages d'environnement",
   "setup_environment_line": "Défini par les variables d'environnement de votre serveur.",
-  "setup_environment_ready": "{provider} est prêt",
+  "setup_environment_ready": "Connexion à {provider} vérifiée",
   "setup_environment_variables": "Variables : {keys}",
   "setup_error_environment_owned": "L'environnement de votre serveur définit ce fournisseur.",
   "setup_error_invalid": "Une valeur n'a pas le bon format. Vérifiez les champs et réessayez.",
