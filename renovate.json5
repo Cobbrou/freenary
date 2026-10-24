@@ -56,6 +56,21 @@
       automerge: true,
     },
     {
+      description: "The TanStack router and Start packages move in one pull request, so CI builds them together",
+      groupName: "tanstack router",
+      matchPackageNames: [
+        "@tanstack/react-router",
+        "@tanstack/react-router-devtools",
+        "@tanstack/react-router-ssr-query",
+        "@tanstack/react-start",
+      ],
+    },
+    {
+      description: "react-router-ssr-query is pinned at 1.167.2: 1.167.3 needs react-router 1.170.33 and router-core 1.171.28, so a pull request that bumps it waits for review",
+      matchPackageNames: ["@tanstack/react-router-ssr-query"],
+      automerge: false,
+    },
+    {
       description: "A catalog pull request needs the bun.lock job to run on it",
       matchManagers: ["custom.regex"],
       addLabels: ["catalog"],
