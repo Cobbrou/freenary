@@ -1170,6 +1170,7 @@
   "setup_endpoint_classifier_ollama_title": "Vous utilisez Ollama ?",
   "setup_endpoint_classifier_privacy": "Envoie le nom du marchand et le libellé, une tranche de montant et le pays à ce point d'accès, jamais le montant exact.",
   "setup_endpoint_classifier_suggest_only": "Sans probabilités logarithmiques, le point d'accès peut seulement suggérer une catégorie, pas la définir.",
+  "setup_environment_configured": "Configuré par les variables d'environnement",
   "setup_environment_default_provider": "{key} n'est pas défini : {provider} est le choix par défaut.",
   "setup_environment_learn_more": "En savoir plus sur les réglages d'environnement",
   "setup_environment_line": "Défini par les variables d'environnement de votre serveur.",

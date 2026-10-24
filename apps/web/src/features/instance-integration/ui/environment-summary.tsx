@@ -1,7 +1,8 @@
 import { Button } from "@freenary/ui/components/button";
 import { Elevated } from "@freenary/ui/lib/elevated";
 import { useIcon } from "@freenary/ui/lib/icon-context";
-import { RiCheckLine } from "@remixicon/react";
+import { cn } from "@freenary/ui/lib/utils";
+import { RiCheckLine, RiServerLine } from "@remixicon/react";
 
 import { m } from "@/paraglide/messages.js";
 import { remixIcon } from "@/shared/lib/remix-icon";
@@ -25,6 +26,7 @@ const SURFACE_RADIUS = "rounded-xl";
 const SURFACE_STEP = 1;
 const READY_ICON_SIZE = 16;
 const CheckIcon = remixIcon(RiCheckLine);
+const ServerIcon = remixIcon(RiServerLine);
 
 interface EnvironmentSummaryProps {
   descriptor: SetupIntegrationDescriptor;
@@ -52,6 +54,7 @@ export const EnvironmentSummary = ({
   const provider = variantLabel(variantId);
   const variant = descriptor.variants.find((entry) => entry.id === variantId);
   const fields = variant?.fields ?? [];
+  const isVerified = outcome?.outcome === "verified";
   const providerIsDefault =
     descriptor.discriminantSource !== ENVIRONMENT_SOURCE;
 
@@ -72,12 +75,25 @@ export const EnvironmentSummary = ({
       <Elevated className={SURFACE_RADIUS} offset={SURFACE_STEP}>
         <div className="flex flex-col gap-3 p-4">
           <div className="flex items-start gap-3">
-            <span className="bg-primary text-primary-foreground mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full">
-              <CheckIcon size={READY_ICON_SIZE} />
+            <span
+              className={cn(
+                "mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full",
+                isVerified
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-muted text-muted-foreground"
+              )}
+            >
+              {isVerified ? (
+                <CheckIcon size={READY_ICON_SIZE} />
+              ) : (
+                <ServerIcon size={READY_ICON_SIZE} />
+              )}
             </span>
             <div className="flex flex-col gap-1">
               <p className="font-medium">
-                {m.setup_environment_ready({ provider })}
+                {isVerified
+                  ? m.setup_environment_ready({ provider })
+                  : m.setup_environment_configured()}
               </p>
               <p className="text-muted-foreground text-sm">
                 {m.setup_environment_line()}{" "}
