@@ -90,10 +90,10 @@ Three boundaries hold the code apart. Each package states its own rule beside it
 
 | Task | Depends on | Cached | Notes |
 | --- | --- | --- | --- |
-| `build` | `^build` | yes | `inputs`: `$TURBO_DEFAULT$` and `.env*`; `outputs`: `dist/**` |
+| `build` | `^build` | yes | `inputs`: `$TURBO_DEFAULT$` and `.env*`; `outputs`: `dist/**`. `apps/web/turbo.json` sets its own: `.output/**`, `src/paraglide/**` and `src/routeTree.gen.ts` |
 | `build:data` | nothing | **no** | The merchant data artifacts. `@freenary/api` declares it |
 | `lint` | `^lint` | yes | Only `apps/fumadocs` declares the script |
-| `check-types` | `^check-types` | yes | Only `apps/server` and `@freenary/ui` declare the script |
+| `check-types` | `^check-types` | yes | `apps/server`, `@freenary/ui` and `apps/web` declare the script. `apps/web` also depends on its own `build`, which generates the files it type-checks |
 | `docs:check` | nothing | yes | Only `apps/fumadocs` declares it. `inputs`: `content/**`, `scripts/**`, `src/shared/ui/mdx.tsx`, `src/shared/lib/versions.ts` |
 | `lint:fsd` | nothing | yes | `apps/web` and `apps/fumadocs` both declare it. `inputs`: `src/**`, `steiger.config.ts`, `tsconfig.json` |
 | `dev` | nothing | no | `persistent: true`. `web`, `server` and `fumadocs` declare it |

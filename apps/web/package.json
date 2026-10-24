@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "vite build",
+    "check-types": "tsc --noEmit",
     "serve": "vite preview",
     "dev": "paraglide-js compile --project ./project.inlang --outdir ./src/paraglide --output-structure message-modules --strategy cookie preferredLanguage baseLocale --emit-ts-declarations && vite dev",
     "favicon": "bun scripts/generate-favicon.ts",

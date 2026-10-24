@@ -1,0 +1,12 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "extends": ["//"],
+  "tasks": {
+    "build": {
+      "outputs": [".output/**", "src/paraglide/**", "src/routeTree.gen.ts"]
+    },
+    "check-types": {
+      "dependsOn": ["^check-types", "build"]
+    }
+  }
+}

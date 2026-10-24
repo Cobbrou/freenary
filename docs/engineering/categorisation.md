@@ -450,7 +450,7 @@ A new slug needs no more than the tables above. A retired slug needs an entry in
 
 > [!WARNING] **Two failure modes when the taxonomy and the catalogs disagree.**
 >
-> `CATEGORY_MESSAGES` ends with `satisfies Record<SpendingCategory, () => string>`, so a slug with no entry is a TypeScript error. `apps/web` declares no `check-types` script, so `bun run check-types` misses that file.
+> `CATEGORY_MESSAGES` ends with `satisfies Record<SpendingCategory, () => string>`, so a slug with no entry is a TypeScript error, and `bun run check-types` reports it.
 >
 > A key in `en.json` with no twin in `fr.json` is worse. It compiles with no error and no warning. The French branch falls back to the English string, and no build step catches it.
 
