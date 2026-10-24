@@ -23,13 +23,13 @@ import type { SaveOutcome } from "../model/outcome";
 import type { IntegrationWording } from "../model/wording";
 import { SAVE_LABELS } from "../model/wording";
 import { CredentialSequence } from "./credential-sequence";
+import { EndpointClassifierGuide } from "./endpoint-classifier-guide";
 import { GuideLink } from "./guide-link";
 import {
   JevGuide,
   NoGuideNote,
   SubqSnapGuide,
 } from "./hosted-classifier-guide";
-import { OllamaGuide, OllamaNote } from "./ollama-guide";
 import { OutcomeNotice } from "./outcome-notice";
 import type { SetupVariantDescriptor } from "./provider-step";
 import { ServerValueRow } from "./server-value-row";
@@ -47,7 +47,7 @@ interface VariantGuide {
 
 const VARIANT_GUIDES: Readonly<Record<string, VariantGuide>> = {
   jev: { Note: NoGuideNote, Steps: JevGuide },
-  ollama: { Note: OllamaNote, Steps: OllamaGuide },
+  llm: { Note: NoGuideNote, Steps: EndpointClassifierGuide },
   "subq-snap": { Note: NoGuideNote, Steps: SubqSnapGuide },
 };
 

@@ -20,9 +20,6 @@ import type { SetupIntegrationDescriptor } from "./provider-step";
 
 const SKIP_VARIANT = "disabled";
 
-const skipLast = (variantId: string): number =>
-  variantId === SKIP_VARIANT ? 1 : 0;
-
 interface ProviderChoiceProps {
   chosen: string;
   descriptor: SetupIntegrationDescriptor;
@@ -31,6 +28,7 @@ interface ProviderChoiceProps {
   onBack: () => void;
   onChoose: (variantId: string) => void;
   onContinue: () => void;
+  onSkip: (() => void) | null;
   wording: IntegrationWording;
 }
 
@@ -42,11 +40,17 @@ export const ProviderChoice = ({
   onBack,
   onChoose,
   onContinue,
+  onSkip,
   wording,
 }: ProviderChoiceProps) => {
   const ArrowLeftIcon = useIcon("arrow-left");
   const groupName = useId();
   const titleId = useId();
+  const skipNoteId = useId();
+  const skipNote =
+    wording === "setup"
+      ? variantDescription(descriptor.id, SKIP_VARIANT)
+      : null;
 
   return (
     <div className="flex flex-col gap-6">
@@ -58,58 +62,65 @@ export const ProviderChoice = ({
       </div>
 
       <fieldset aria-labelledby={titleId} className="flex flex-col gap-2">
-        {choosableVariants(descriptor)
-          .toSorted((first, second) => skipLast(first.id) - skipLast(second.id))
-          .map((variant) => {
-            const isChosen = variant.id === chosen;
-            const description = variantDescription(descriptor.id, variant.id);
+        {choosableVariants(descriptor).map((variant) => {
+          const isChosen = variant.id === chosen;
+          const description = variantDescription(descriptor.id, variant.id);
 
-            return (
-              <label
+          return (
+            <label
+              className={cn(
+                "flex cursor-pointer gap-3 rounded-xl px-4 py-3 text-sm ring-1 transition-[box-shadow,background-color] duration-150 ease-out",
+                description === null ? "items-center" : "items-start",
+                "has-[:focus-visible]:ring-ring has-[:focus-visible]:ring-2",
+                isChosen
+                  ? "bg-accent ring-primary"
+                  : "ring-border hover:bg-accent/60"
+              )}
+              key={variant.id}
+            >
+              <input
+                checked={isChosen}
                 className={cn(
-                  "flex cursor-pointer gap-3 rounded-xl px-4 py-3 text-sm ring-1 transition-[box-shadow,background-color] duration-150 ease-out",
-                  description === null ? "items-center" : "items-start",
-                  "has-[:focus-visible]:ring-ring has-[:focus-visible]:ring-2",
-                  isChosen
-                    ? "bg-accent ring-primary"
-                    : "ring-border hover:bg-accent/60"
+                  "accent-primary size-4 shrink-0",
+                  description === null ? undefined : "mt-0.5"
                 )}
-                key={variant.id}
-              >
-                <input
-                  checked={isChosen}
-                  className={cn(
-                    "accent-primary size-4 shrink-0",
-                    description === null ? undefined : "mt-0.5"
-                  )}
-                  name={groupName}
-                  onChange={() => onChoose(variant.id)}
-                  type="radio"
-                  value={variant.id}
-                />
-                <span className="flex min-w-0 flex-col gap-0.5">
-                  <span className={isChosen ? "font-medium" : undefined}>
-                    {variant.id === SKIP_VARIANT
-                      ? SKIP_LABELS[wording]()
-                      : variantLabel(variant.id)}
-                    {variant.recommended ? (
-                      <Badge className="ms-2" size="compact">
-                        {m.setup_variant_recommended()}
-                      </Badge>
-                    ) : null}
-                  </span>
-                  {description === null ? null : (
-                    <span className="text-muted-foreground text-xs">
-                      {description}
-                    </span>
-                  )}
+                name={groupName}
+                onChange={() => onChoose(variant.id)}
+                type="radio"
+                value={variant.id}
+              />
+              <span className="flex min-w-0 flex-col gap-0.5">
+                <span className={isChosen ? "font-medium" : undefined}>
+                  {variantLabel(variant.id)}
+                  {variant.recommended ? (
+                    <Badge className="ms-2" size="compact">
+                      {m.setup_variant_recommended()}
+                    </Badge>
+                  ) : null}
+                  {variant.legacy ? (
+                    <Badge className="ms-2" size="compact" variant="dot">
+                      {m.setup_variant_legacy()}
+                    </Badge>
+                  ) : null}
                 </span>
-              </label>
-            );
-          })}
+                {description === null ? null : (
+                  <span className="text-muted-foreground text-xs">
+                    {description}
+                  </span>
+                )}
+              </span>
+            </label>
+          );
+        })}
       </fieldset>
 
-      <div className="flex items-center justify-between gap-3">
+      {onSkip === null || skipNote === null ? null : (
+        <p className="text-muted-foreground text-sm" id={skipNoteId}>
+          {skipNote}
+        </p>
+      )}
+
+      <div className="flex flex-wrap items-center justify-between gap-3">
         {isFirstStep ? (
           <span />
         ) : (
@@ -122,9 +133,22 @@ export const ProviderChoice = ({
             {m.setup_back()}
           </Button>
         )}
-        <Button loading={isBusy} onClick={onContinue} type="button">
-          {m.setup_continue()}
-        </Button>
+        <div className="ms-auto flex items-center gap-2 whitespace-nowrap">
+          {onSkip === null ? null : (
+            <Button
+              aria-describedby={skipNote === null ? undefined : skipNoteId}
+              disabled={isBusy}
+              onClick={onSkip}
+              type="button"
+              variant="secondary"
+            >
+              {SKIP_LABELS[wording]()}
+            </Button>
+          )}
+          <Button loading={isBusy} onClick={onContinue} type="button">
+            {m.setup_continue()}
+          </Button>
+        </div>
       </div>
     </div>
   );

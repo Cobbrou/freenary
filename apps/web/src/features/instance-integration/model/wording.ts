@@ -5,7 +5,7 @@ type Label = () => string;
 export type IntegrationWording = "settings" | "setup";
 
 export const SKIP_LABELS = {
-  settings: m.setup_variant_off,
+  settings: m.setup_turn_off,
   setup: m.setup_variant_disabled,
 } satisfies Record<IntegrationWording, Label>;
 

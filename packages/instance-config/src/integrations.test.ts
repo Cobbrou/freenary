@@ -96,19 +96,31 @@ describe("recogniseVariant", () => {
     ).toBe("llm");
   });
 
-  test("reads the Ollama endpoint as the local model only when remembered", () => {
-    const ollama = {
-      TRANSACTION_CLASSIFIER: "llm",
-      TRANSACTION_CLASSIFIER_URL: "http://ollama:11434/v1",
-    };
-
-    expect(recognised(categorisation, ollama)).toBe("llm");
+  test("reads a choice saved through the former Ollama option as the OpenAI-compatible endpoint", () => {
     expect(
       recognised(categorisation, {
-        ...ollama,
+        TRANSACTION_CLASSIFIER: "llm",
+        TRANSACTION_CLASSIFIER_MODEL: "qwen3:4b-instruct-2507-q4_K_M",
+        TRANSACTION_CLASSIFIER_URL: "http://ollama:11434/v1",
         "variant:categorisation": "ollama",
       })
-    ).toBe("ollama");
+    ).toBe("llm");
+  });
+
+  test("reads the classifiers no longer offered as before", () => {
+    expect(
+      recognised(categorisation, {
+        TRANSACTION_CLASSIFIER: "system-one",
+        TRANSACTION_CLASSIFIER_URL: "http://decider:8000/v1/systemone",
+      })
+    ).toBe("system-one");
+
+    expect(
+      recognised(categorisation, {
+        TRANSACTION_CLASSIFIER: "zero-shot",
+        TRANSACTION_CLASSIFIER_URL: "http://zero-shot:8000",
+      })
+    ).toBe("zero-shot");
   });
 
   test("reads a vendor endpoint as that vendor whatever was remembered", () => {
@@ -227,11 +239,30 @@ describe("categorisation variants", () => {
     );
   });
 
-  test("lists Von and Laya only when an instance already uses them", () => {
-    expect(listed("jev")).not.toContain("von");
-    expect(listed("jev")).not.toContain("laya");
-    expect(listed("von")).toContain("von");
-    expect(listed("von")).not.toContain("laya");
-    expect(listed("laya")).toContain("laya");
+  test("offers Jev, SubQ Snap and an OpenAI-compatible endpoint", () => {
+    expect(listed("jev")).toEqual(["disabled", "jev", "subq-snap", "llm"]);
+    expect(listed("disabled")).toEqual(["disabled", "jev", "subq-snap", "llm"]);
+  });
+
+  test("lists a classifier no longer offered only while it is the one in use", () => {
+    for (const legacy of ["von", "laya", "system-one", "zero-shot"]) {
+      expect(listed("llm")).not.toContain(legacy);
+      expect(listed(legacy)).toEqual([
+        "disabled",
+        "jev",
+        "subq-snap",
+        "llm",
+        legacy,
+      ]);
+    }
+  });
+
+  test("leaves the OpenAI-compatible endpoint empty for any server", () => {
+    expect(suggestionOf("llm", "TRANSACTION_CLASSIFIER_URL")).toBeUndefined();
+    expect(suggestionOf("llm", "TRANSACTION_CLASSIFIER_MODEL")).toBeUndefined();
+  });
+
+  test("no longer defines a separate Ollama option", () => {
+    expect(Option.isNone(findVariant(categorisation, "ollama"))).toBe(true);
   });
 });

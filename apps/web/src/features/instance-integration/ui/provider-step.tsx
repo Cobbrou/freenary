@@ -1,18 +1,16 @@
 import { useState } from "react";
 
 import type { SaveOutcome } from "../model/outcome";
+import { initialChoiceOf, offersSkipButton } from "../model/variant-choice";
 import type { IntegrationWording } from "../model/wording";
 import { ProviderChoice } from "./provider-choice";
 import { ProviderCredentials } from "./provider-credentials";
 import type { SetupFieldDescriptor } from "./setup-field";
 
-const SKIP_VARIANT = "disabled";
-
-const OFF_UNTIL_CHOSEN: ReadonlySet<string> = new Set(["assistant"]);
-
 export interface SetupVariantDescriptor {
   fields: SetupFieldDescriptor[];
   id: string;
+  legacy: boolean;
   recommended: boolean;
 }
 
@@ -44,22 +42,6 @@ interface ProviderStepProps {
   wording?: IntegrationWording;
 }
 
-const defaultChoiceOf = (descriptor: SetupIntegrationDescriptor): string => {
-  if (descriptor.selectedVariantId !== SKIP_VARIANT) {
-    return descriptor.selectedVariantId;
-  }
-
-  if (OFF_UNTIL_CHOSEN.has(descriptor.id)) {
-    return SKIP_VARIANT;
-  }
-
-  const firstProvider = descriptor.variants.find(
-    (variant) => variant.id !== SKIP_VARIANT
-  );
-
-  return firstProvider?.id ?? SKIP_VARIANT;
-};
-
 export const ProviderStep = ({
   descriptor,
   isBusy,
@@ -71,7 +53,7 @@ export const ProviderStep = ({
   outcome,
   wording = "setup",
 }: ProviderStepProps) => {
-  const [chosen, setChosen] = useState(() => defaultChoiceOf(descriptor));
+  const [chosen, setChosen] = useState(() => initialChoiceOf(descriptor));
   const [isConfiguring, setIsConfiguring] = useState(false);
   const variant = descriptor.variants.find((entry) => entry.id === chosen);
 
@@ -100,15 +82,8 @@ export const ProviderStep = ({
       isFirstStep={isFirstStep}
       onBack={onBack}
       onChoose={setChosen}
-      onContinue={() => {
-        if (chosen === SKIP_VARIANT) {
-          onSkip();
-
-          return;
-        }
-
-        setIsConfiguring(true);
-      }}
+      onContinue={() => setIsConfiguring(true)}
+      onSkip={offersSkipButton(descriptor, wording === "setup") ? onSkip : null}
       wording={wording}
     />
   );

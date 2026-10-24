@@ -13,10 +13,25 @@ export const offersSkip = <Variant extends { id: string }>(
 
 export const choosableVariants = <Variant extends { id: string }>(
   integration: ChoosableIntegration<Variant>
-): Variant[] => {
-  const skipListed = offersSkip(integration);
+): Variant[] =>
+  integration.variants.filter((variant) => variant.id !== SKIP_VARIANT);
 
-  return integration.variants.filter(
-    (variant) => skipListed || variant.id !== SKIP_VARIANT
-  );
-};
+interface ChosenIntegration<
+  Variant extends { id: string },
+> extends ChoosableIntegration<Variant> {
+  selectedVariantId: string;
+}
+
+export const initialChoiceOf = <Variant extends { id: string }>(
+  integration: ChosenIntegration<Variant>
+): string =>
+  integration.selectedVariantId === SKIP_VARIANT
+    ? (choosableVariants(integration)[0]?.id ?? SKIP_VARIANT)
+    : integration.selectedVariantId;
+
+export const offersSkipButton = <Variant extends { id: string }>(
+  integration: ChosenIntegration<Variant>,
+  isSetup: boolean
+): boolean =>
+  offersSkip(integration) &&
+  (isSetup || integration.selectedVariantId !== SKIP_VARIANT);

@@ -1,6 +1,11 @@
 import { describe, expect, it } from "bun:test";
 
-import { choosableVariants, offersSkip } from "./variant-choice";
+import {
+  choosableVariants,
+  initialChoiceOf,
+  offersSkip,
+  offersSkipButton,
+} from "./variant-choice";
 
 const bank = {
   requiredForSetup: true,
@@ -36,7 +41,58 @@ describe("choosableVariants", () => {
     expect(choosableIds(bank)).toEqual(["powens", "enable-banking"]);
   });
 
-  it("keeps the disabled variant of an optional integration", () => {
-    expect(choosableIds(categories)).toEqual(["disabled", "llm", "zero-shot"]);
+  it("leaves the disabled variant out of an optional integration", () => {
+    expect(choosableIds(categories)).toEqual(["llm", "zero-shot"]);
+  });
+});
+
+const assistant = {
+  requiredForSetup: false,
+  variants: [{ id: "disabled" }, { id: "openai-compatible" }],
+};
+
+describe("initialChoiceOf", () => {
+  it("preselects the first provider while the integration is off", () => {
+    expect(
+      initialChoiceOf({ ...categories, selectedVariantId: "disabled" })
+    ).toBe("llm");
+
+    expect(
+      initialChoiceOf({ ...assistant, selectedVariantId: "disabled" })
+    ).toBe("openai-compatible");
+  });
+
+  it("keeps the provider in use", () => {
+    expect(
+      initialChoiceOf({ ...categories, selectedVariantId: "zero-shot" })
+    ).toBe("zero-shot");
+  });
+});
+
+describe("offersSkipButton", () => {
+  it("offers a skip in setup whatever is selected", () => {
+    expect(
+      offersSkipButton({ ...categories, selectedVariantId: "disabled" }, true)
+    ).toBe(true);
+  });
+
+  it("offers to turn off in Settings only an integration that is on", () => {
+    expect(
+      offersSkipButton({ ...categories, selectedVariantId: "llm" }, false)
+    ).toBe(true);
+
+    expect(
+      offersSkipButton({ ...categories, selectedVariantId: "disabled" }, false)
+    ).toBe(false);
+  });
+
+  it("never offers to skip or turn off an integration setup requires", () => {
+    expect(
+      offersSkipButton({ ...bank, selectedVariantId: "powens" }, false)
+    ).toBe(false);
+
+    expect(
+      offersSkipButton({ ...bank, selectedVariantId: "powens" }, true)
+    ).toBe(false);
   });
 });

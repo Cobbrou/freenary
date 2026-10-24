@@ -105,9 +105,8 @@ const VARIANT_LABELS = {
   "enable-banking": m.setup_variant_enable_banking,
   jev: m.setup_variant_jev,
   laya: m.setup_variant_laya,
-  llm: m.setup_variant_llm,
+  llm: m.setup_variant_openai_compatible,
   mock: m.setup_variant_mock,
-  ollama: m.setup_variant_ollama,
   "openai-compatible": m.setup_variant_openai_compatible,
   powens: m.setup_variant_powens,
   resend: m.setup_variant_resend,
@@ -119,7 +118,6 @@ const VARIANT_LABELS = {
 } satisfies Record<string, Label>;
 
 const VARIANT_DESCRIPTIONS = {
-  "assistant:disabled": m.setup_variant_assistant_disabled_description,
   "assistant:openai-compatible":
     m.setup_variant_assistant_openai_compatible_description,
   "banking:powens": m.setup_variant_powens_description,
@@ -127,7 +125,6 @@ const VARIANT_DESCRIPTIONS = {
   "categorisation:jev": m.setup_variant_jev_tradeoffs,
   "categorisation:laya": m.setup_variant_laya_description,
   "categorisation:llm": m.setup_variant_llm_description,
-  "categorisation:ollama": m.setup_variant_ollama_tradeoffs,
   "categorisation:subq-snap": m.setup_variant_subq_snap_tradeoffs,
   "categorisation:system-one": m.setup_variant_system_one_description,
   "categorisation:von": m.setup_variant_von_description,
@@ -137,17 +134,16 @@ const VARIANT_DESCRIPTIONS = {
 const VARIANT_GUIDE_PATHS: Record<string, string> = {
   "enable-banking": "/reference/bank-providers#enable-banking",
   jev: "/run/models#jev",
-  laya: "/run/models#laya",
-  llm: "/run/models#a-language-model",
-  ollama: "/run/models#local-model-with-ollama",
+  laya: "/run/models#classifiers-no-longer-offered",
+  llm: "/run/models#an-openai-compatible-endpoint",
   "openai-compatible": "/run/models#assistant",
   powens: "/reference/bank-providers#powens",
   resend: "/run/email#resend",
   smtp: "/run/email#smtp",
   "subq-snap": "/run/models#subq-snap",
-  "system-one": "/run/models#another-system-one-server",
-  von: "/run/models#von",
-  "zero-shot": "/run/models#a-zero-shot-classifier",
+  "system-one": "/run/models#classifiers-no-longer-offered",
+  von: "/run/models#classifiers-no-longer-offered",
+  "zero-shot": "/run/models#classifiers-no-longer-offered",
 };
 
 const read = (table: Record<string, Label>, key: string): string =>

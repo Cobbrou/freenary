@@ -192,12 +192,8 @@ const categorisationIntegration: Integration = {
     },
     {
       discriminantValue: "llm",
-      fields: selfHostedClassifierFields({
-        model: "qwen3:4b-instruct-2507-q4_K_M",
-        url: "http://ollama:11434/v1",
-      }),
-      id: "ollama",
-      recognisedOnlyWhenRemembered: true,
+      fields: selfHostedClassifierFields({}),
+      id: "llm",
     },
     {
       discriminantValue: "system-one",
@@ -223,16 +219,13 @@ const categorisationIntegration: Integration = {
       discriminantValue: "system-one",
       fields: selfHostedClassifierFields({}),
       id: "system-one",
-    },
-    {
-      discriminantValue: "llm",
-      fields: selfHostedClassifierFields({}),
-      id: "llm",
+      listedOnlyWhenSelected: true,
     },
     {
       discriminantValue: "zero-shot",
       fields: selfHostedClassifierFields({}),
       id: "zero-shot",
+      listedOnlyWhenSelected: true,
     },
   ],
 };

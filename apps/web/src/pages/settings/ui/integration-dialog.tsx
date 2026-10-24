@@ -1,9 +1,12 @@
 import { Dialog, DialogContent } from "@freenary/ui/components/dialog";
+import { cn } from "@freenary/ui/lib/utils";
+import { useState } from "react";
 
 import {
   EnvironmentSummary,
   integrationTitle,
   ProviderStep,
+  variantLabel,
 } from "@/features/instance-integration";
 import type {
   SaveOutcome,
@@ -11,11 +14,14 @@ import type {
 } from "@/features/instance-integration";
 
 import { SwitchProviderDialog } from "./switch-provider-dialog";
+import { TurnOffDialog } from "./turn-off-dialog";
 
 const ENVIRONMENT_OWNER = "environment";
 
 const TALLER_THAN_A_SHORT_VIEWPORT =
   "max-h-[calc(100dvh-4rem)] overflow-y-auto";
+
+const TITLE_CLEARS_CLOSE_BUTTON = "[&_h1]:pe-8";
 
 interface IntegrationDialogProps {
   connectionCount: number | undefined;
@@ -56,6 +62,8 @@ export const IntegrationDialog = ({
   outcome,
   stepKey,
 }: IntegrationDialogProps) => {
+  const [isTurnOffPending, setIsTurnOffPending] = useState(false);
+
   const renderStep = (descriptor: SetupIntegrationDescriptor) => {
     if (descriptor.configuredBy === ENVIRONMENT_OWNER) {
       return (
@@ -82,7 +90,7 @@ export const IntegrationDialog = ({
         onBack={onClose}
         onEdit={onEdit}
         onSave={onSave}
-        onSkip={onTurnOff}
+        onSkip={() => setIsTurnOffPending(true)}
         outcome={outcome}
         wording="settings"
       />
@@ -104,7 +112,7 @@ export const IntegrationDialog = ({
             ? undefined
             : integrationTitle(integration.id)
         }
-        className={TALLER_THAN_A_SHORT_VIEWPORT}
+        className={cn(TALLER_THAN_A_SHORT_VIEWPORT, TITLE_CLEARS_CLOSE_BUTTON)}
         size="lg"
       >
         {integration === undefined ? null : renderStep(integration)}
@@ -113,6 +121,19 @@ export const IntegrationDialog = ({
           isOpen={isSwitchPending}
           onCancel={onCancelSwitch}
           onConfirm={onConfirmSwitch}
+        />
+        <TurnOffDialog
+          isOpen={isTurnOffPending}
+          onCancel={() => setIsTurnOffPending(false)}
+          onConfirm={() => {
+            setIsTurnOffPending(false);
+            onTurnOff();
+          }}
+          provider={
+            integration === undefined
+              ? ""
+              : variantLabel(integration.selectedVariantId)
+          }
         />
       </DialogContent>
     </Dialog>

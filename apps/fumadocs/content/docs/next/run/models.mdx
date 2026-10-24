@@ -39,12 +39,9 @@ Every option asks one question per merchant and caches the answer, so a merchant
 | --- | --- | --- |
 | `Jev by TypeSafe`, recommended | TypeSafe's service | A TypeSafe API key |
 | `SubQ Snap`, recommended | SubQ's service | A SubQ API key |
-| `Local model with Ollama` | Ollama on your own machine | The address, if Ollama runs on the host; the model starts filled in |
-| `Another System One server` | Wherever you run it | Its address and model; API key under `More options`, if required |
-| `Language model` | Any OpenAI-compatible endpoint | Its base URL and model; API key under `More options`, if required |
-| `Zero-shot classifier` | A Hugging Face classification server | Its address and model; API key under `More options`, if required |
+| `OpenAI-compatible endpoint` | Any OpenAI-compatible endpoint, such as Ollama or vLLM | Its URL and model; API key under `More options`, if required |
 
-`Von` and `Laya` appear in the list only on an instance that already uses them.
+To set up without a model, press `Skip for now` on the setup screen. In Settings, `Turn off` stops the model in use.
 
 The `Model` field is part of the cache key. Changing it asks every merchant again. A moving name such as `jev-latest` keeps its answers when the vendor moves it.
 
@@ -60,9 +57,11 @@ SubQ Snap is SubQ's hosted decision model, in public preview. SubQ keeps request
 
 Get a key as the [SubQ Decisions API quickstart](https://docs.subq.ai/endpoints/decisions-api/) describes, and paste it in `API key`. `Model` starts at `subq-snap-1.1`. An instance that saved `subq-snap-preview` keeps that value and keeps working.
 
-### Local model with Ollama
+### An OpenAI-compatible endpoint
 
-Pick this to run Qwen3-4B on your own machine, so nothing leaves it. It needs about 5 GB of RAM. It takes several seconds per new merchant, it's less accurate than the hosted options, and it can be confidently wrong. Each request times out after 10 seconds, so on a slow machine some merchants stay uncategorised.
+Pick this for a chat model behind an OpenAI-compatible endpoint, such as Ollama, vLLM or an OpenRouter-style gateway. Enter the URL with its version path, such as `http://vllm:8000/v1`, and the model id as that endpoint names it. Both fields start empty. An endpoint that returns no log probabilities still answers, but below the confidence Freenary needs to set a category without asking.
+
+To run a model on your own machine with Ollama:
 
 1. Install [Ollama](https://ollama.com) on the host.
 2. Pull the model:
@@ -71,31 +70,18 @@ Pick this to run Qwen3-4B on your own machine, so nothing leaves it. It needs ab
    ollama pull qwen3:4b-instruct-2507-q4_K_M
    ```
 
-3. Keep `Endpoint URL` at `http://ollama:11434/v1` if Ollama runs in the same Docker network as the `server` container. For Ollama on the host, enter `http://host.docker.internal:11434/v1`. `localhost` is the `server` container itself.
+3. Enter `http://ollama:11434/v1` as `Endpoint URL` if Ollama runs in the same Docker network as the `server` container, or `http://host.docker.internal:11434/v1` for Ollama on the host. `localhost` is the `server` container itself.
+4. Enter `qwen3:4b-instruct-2507-q4_K_M` as `Model`. Ollama asks for no key, so leave `API key` under `More options` empty.
 
-`Model` starts at `qwen3:4b-instruct-2507-q4_K_M`. Ollama asks for no key, so leave `API key` under `More options` empty.
+That model needs about 5 GB of RAM. It takes several seconds per new merchant, it's less accurate than the hosted options, and it can be confidently wrong. Each request times out after 10 seconds, so on a slow machine some merchants stay uncategorised.
 
 On Linux, `host.docker.internal` resolves only when the `server` service lists `host.docker.internal:host-gateway` under `extra_hosts`. Ollama on the host also has to listen beyond `127.0.0.1`, for example with `OLLAMA_HOST=0.0.0.0`.
 
-### Another System One server
+### Classifiers no longer offered
 
-Pick this for any other server that answers TypeSafe's `POST /v1/systemone` request, such as `Mapika/decider-2b`. OpenJev Verdict ships no server of its own, so it needs one you add in front of it. Enter the full URL of the route and the model name the server expects.
+Von, Laya, another System One server and a zero-shot classifier are no longer offered as a choice. An instance that already uses one keeps it: it shows as a fourth option tagged `Legacy`, with its values, and you can edit it or turn it off. Once you pick another option, it leaves the list. To set one up anew, use the `TRANSACTION_CLASSIFIER` variables in [Categorisation](/docs/reference/configuration#categorisation).
 
-### A language model
-
-Pick this for a chat model behind an OpenAI-compatible endpoint, such as vLLM or a gateway. For Ollama, pick `Local model with Ollama`. Enter the base URL with its version path, such as `http://vllm:8000/v1`. An endpoint that returns no log probabilities still answers, but below the confidence Freenary needs to set a category without asking.
-
-### A zero-shot classifier
-
-Pick this for a Hugging Face zero-shot classification server, such as one running `MoritzLaurer/ModernBERT-large-zeroshot-v2.0`. Enter the URL the request goes to and the model name.
-
-### Von
-
-[Von](https://github.com/wfzyx/von) is an open-weight decision model under Apache-2.0. Its project is archived, so the weights get no more updates, and it reads English only: a French descriptor gets a low-quality answer. Its server answers on port `8000`. `Endpoint URL` starts at `http://von:8000/v1/systemone` and `Model` at `von-latest`. Fill in `API key` under `More options` only if you set `VON_API_KEY` on that server.
-
-### Laya
-
-[Laya](https://github.com/NandhaKishorM/laya) is an open-weight decision model under Apache-2.0, served by `laya-serve` on port `8000`. `Endpoint URL` starts at `http://laya:8000/v1/systemone`. `Model` starts at `multilingual`, the checkpoint for text in more than one language; `english` and `typed-decisions` are the others.
+An instance saved with the former `Local model with Ollama` option shows as `OpenAI-compatible endpoint`, with the same URL, model and key.
 
 ## Test and apply
 
@@ -103,7 +89,7 @@ Pick this for a Hugging Face zero-shot classification server, such as one runnin
 
 The server picks up a saved model when it restarts. In Settings, press `Apply now`, as [Apply a saved change](/docs/run/email#apply-a-saved-change) describes. On the setup screen, `Finish setup` restarts it.
 
-To stop using a model, choose `Off` after `Change`, press `Continue`, then `Apply now`. [What each model does](#what-each-model-does) says what changes without it.
+To stop using a model, press `Change`, then `Turn off`, then `Apply now`. [What each model does](#what-each-model-does) says what changes without it.
 
 <Cards>
   <Card

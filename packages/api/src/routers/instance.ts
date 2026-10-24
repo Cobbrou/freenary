@@ -196,6 +196,7 @@ const describeIntegration = (
                 describeField(field, stored, variant.id === selectedVariantId)
               ),
               id: variant.id,
+              legacy: variant.listedOnlyWhenSelected === true,
               recommended: variant.recommended === true,
             },
           ]

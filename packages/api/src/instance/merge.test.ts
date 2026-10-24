@@ -410,6 +410,51 @@ describe("a classifier with presets", () => {
     expect(writes.get("TRANSACTION_CLASSIFIER_API_KEY")).toBe("subq-key");
   });
 
+  test("keeps an endpoint saved through the former Ollama option as it was", () => {
+    const stored = {
+      TRANSACTION_CLASSIFIER: "llm",
+      TRANSACTION_CLASSIFIER_API_KEY: "ollama-key",
+      TRANSACTION_CLASSIFIER_MODEL: "qwen3:4b-instruct-2507-q4_K_M",
+      TRANSACTION_CLASSIFIER_URL: "http://ollama:11434/v1",
+      "variant:categorisation": "ollama",
+    };
+
+    const recognised = Option.getOrThrow(
+      recogniseVariant(
+        categorisation,
+        heldFrom(stored),
+        stored["variant:categorisation"]
+      )
+    );
+
+    const writes = writesOf(
+      categorisation,
+      candidateOf(
+        categorisation,
+        recognised,
+        {
+          TRANSACTION_CLASSIFIER_MODEL: stored.TRANSACTION_CLASSIFIER_MODEL,
+          TRANSACTION_CLASSIFIER_URL: stored.TRANSACTION_CLASSIFIER_URL,
+        },
+        stored,
+        nothingOwned
+      ),
+      nothingOwned
+    );
+
+    expect(recognised.id).toBe("llm");
+    expect(writes.get("TRANSACTION_CLASSIFIER")).toBe("llm");
+    expect(writes.get("TRANSACTION_CLASSIFIER_URL")).toBe(
+      "http://ollama:11434/v1"
+    );
+
+    expect(writes.get("TRANSACTION_CLASSIFIER_MODEL")).toBe(
+      "qwen3:4b-instruct-2507-q4_K_M"
+    );
+
+    expect(writes.get("TRANSACTION_CLASSIFIER_API_KEY")).toBe("ollama-key");
+  });
+
   test("drops a stored key when the endpoint of the same variant moves", () => {
     const stored = {
       TRANSACTION_CLASSIFIER: "system-one",
@@ -509,5 +554,22 @@ describe("a classifier with presets", () => {
     );
 
     expect(found?.id).toBe("jev");
+  });
+
+  test("finds a classifier no longer offered that the environment configures", () => {
+    const environment: Record<string, string> = {
+      TRANSACTION_CLASSIFIER: "zero-shot",
+      TRANSACTION_CLASSIFIER_MODEL: "modernbert-large-zeroshot",
+      TRANSACTION_CLASSIFIER_URL: "http://zero-shot:8000",
+    };
+
+    const found = environmentVariantOf(
+      categorisation,
+      {},
+      heldFrom(environment),
+      (key) => environment[key] !== undefined
+    );
+
+    expect(found?.id).toBe("zero-shot");
   });
 });

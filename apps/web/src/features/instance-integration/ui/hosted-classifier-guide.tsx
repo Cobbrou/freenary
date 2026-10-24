@@ -10,12 +10,14 @@ const TYPESAFE_QUICKSTART_URL =
 const SUBQ_QUICKSTART_URL = "https://docs.subq.ai/endpoints/decisions-api/";
 
 interface HostedClassifierGuideProps {
+  details?: string;
   keyPageLabel: string;
   keyPageUrl: string;
   tradeoffs: string;
 }
 
 const HostedClassifierGuide = ({
+  details,
   keyPageLabel,
   keyPageUrl,
   tradeoffs,
@@ -30,6 +32,14 @@ const HostedClassifierGuide = ({
         })}
       />
     </p>
+    {details === undefined ? null : (
+      <details>
+        <summary className="hover:text-foreground cursor-pointer select-none">
+          {m.setup_more_details()}
+        </summary>
+        <p className="mt-2">{details}</p>
+      </details>
+    )}
   </div>
 );
 
@@ -43,6 +53,7 @@ export const JevGuide = () => (
 
 export const SubqSnapGuide = () => (
   <HostedClassifierGuide
+    details={m.setup_subq_snap_retention()}
     keyPageLabel={m.setup_subq_snap_guide_quickstart_link()}
     keyPageUrl={SUBQ_QUICKSTART_URL}
     tradeoffs={m.setup_variant_subq_snap_tradeoffs()}
