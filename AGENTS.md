@@ -4,7 +4,7 @@
 
 The rest of this file covers how to get a working stack, what every change owes the docs and the message catalogs, how to write the pull request, and the code-quality standard.
 
-**Contributing:** follow [`.github/CONTRIBUTING.md`](.github/CONTRIBUTING.md). When opening or drafting a pull request, use every section of [`.github/pull_request_template.md`](.github/pull_request_template.md) — Summary, Motivation, Drawbacks, Prior art, Notes — and keep each one short.
+**Contributing:** follow [`.github/CONTRIBUTING.md`](.github/CONTRIBUTING.md). When opening or drafting a pull request, use every section of [`.github/pull_request_template.md`](.github/pull_request_template.md) — Summary, Motivation, Drawbacks, Prior art, Notes, plus the optional Evidence — and keep each one short.
 
 ## Getting a Working Stack
 
@@ -122,12 +122,13 @@ Pull requests target `dev`, the integration branch; `main` holds released code, 
 
 ## Pull Request Descriptions: Complete, Then Brief
 
-- **Reviewers skim.** A description they have to scroll does not get read, so keep the whole body under ~400 words. Fill every section; pad none.
+- **Reviewers skim.** A description they have to scroll does not get read, so keep the whole body under ~400 words; images and video don't count. Fill every section except the optional Evidence; pad none.
 - **Summary:** at most four sentences — what changed, and what to look at first.
 - **Motivation, Drawbacks, Prior art:** at most four short bullets each. Drawbacks and Prior art carry the honest costs and the rejected alternatives, not a sales pitch.
 - **Notes:** one line per fact — `Closes #n`, the visual change (or explicitly none), the tests added, the `apps/fumadocs` pages updated (or explicitly none, and why), and any migration, breaking change, or merge-order constraint.
 - Don't restate the issue, list changed files, narrate the implementation, or paste command output — reviewers open the diff and the linked issue for that.
-- Evidence a reviewer may want but need not read (verification logs, benchmark runs) belongs in a PR comment, not the description.
+- **Evidence:** optional, and expected on a pull request that changes the interface. Drag screenshots or a screen recording into the description so GitHub hosts them; never reference a local file. Fake data only: no real keys, tokens or personal data, and no host or local paths in images or text. Reviewers and QA check it and ask for it when a UI pull request has none. Delete the section when it does not apply; "no visual change" still goes in Notes.
+- Evidence a reviewer may want but need not read (verification logs, benchmark runs) belongs in a PR comment, not the description; the Evidence section links to it.
 - A section that needs a table or a code block is a smell: that detail belongs in the issue, the code, or a comment.
 
 **Review gate.** This rule binds the top-level agent that owns an integration. A subagent returns its result to whoever spawned it and never runs the gate itself; the `reviewer` never invokes another reviewer.

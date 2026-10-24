@@ -223,6 +223,61 @@ describe("templateGaps", () => {
   });
 });
 
+const withEvidence = (body: string): string =>
+  body.replace(/^Optional, .*$/mu, "![Bank step](https://example.com/a.png)");
+
+describe("the optional Evidence section", () => {
+  const filled = TEMPLATE.replaceAll(
+    /^(?:At most|What problem|What are|How have|One line).*$/gmu,
+    "Written by the author."
+  );
+
+  it("is listed in the template as optional", () => {
+    expect(TEMPLATE).toContain("# Evidence");
+    expect(TEMPLATE).toMatch(/^Optional, /mu);
+  });
+
+  it("asks for nothing when the section is deleted", () => {
+    const body = filled.replace(/# Evidence[\s\S]*?(?=# Notes)/u, "");
+
+    expect(body).not.toContain("# Evidence");
+    expect(templateGaps(TEMPLATE, body)).toEqual([]);
+  });
+
+  it("asks for nothing when the section is empty", () => {
+    const body = filled.replace(/^Optional, .*$/mu, "");
+
+    expect(templateGaps(TEMPLATE, body)).toEqual([]);
+  });
+
+  it("keeps the sections around a filled one apart", () => {
+    const priorArtUntouched = TEMPLATE.replaceAll(
+      /^(?:At most|What problem|What are|One line).*$/gmu,
+      "Written by the author."
+    );
+
+    const notesUntouched = TEMPLATE.replaceAll(
+      /^(?:At most|What problem|What are|How have).*$/gmu,
+      "Written by the author."
+    );
+
+    const gapsOf = (body: string): string[] =>
+      templateGaps(TEMPLATE, withEvidence(body)).map((gap) => gap.text);
+
+    expect(gapsOf(filled)).toEqual([]);
+    expect(gapsOf(priorArtUntouched)).toEqual(["Fill the Prior art section."]);
+    expect(gapsOf(notesUntouched)).toEqual(["Fill the Notes section."]);
+  });
+
+  it("still flags another missing section", () => {
+    const body = filled.replace(/# Drawbacks[\s\S]*?(?=# Prior art)/u, "");
+
+    expect(templateGaps(TEMPLATE, body).map((gap) => gap.text)).toEqual([
+      "Fill the Drawbacks section.",
+    ]);
+  });
+});
+
 describe("checkGaps", () => {
   it("waits for a running check and flags a failed one", () => {
     expect(

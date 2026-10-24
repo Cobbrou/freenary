@@ -97,6 +97,8 @@ bun test packages/api/src/categorisation/dictionary.test.ts
 
 Open your pull request against `dev`. `main` holds released code. [`CONTRIBUTING.md`](https://github.com/suiramdev/freenary/blob/dev/.github/CONTRIBUTING.md) has the rules: branch names, the pull request template, signed-off commits, documentation in the same change.
 
+The template's Evidence section is optional. For a change people can see, drag screenshots or a screen recording into it so GitHub hosts them. Use fake data only: no real keys, tokens or personal data, and no file paths from your machine. Reviewers check it on an interface change and ask for it when it's missing; no check fails without it. Delete the section when it doesn't apply, and say "no visual change" in Notes.
+
 Maintainers cut releases from `main` with the `Release` workflow. Don't tag, and don't bump a version.
 
 ## Labels
@@ -113,7 +115,7 @@ For `type:`, `area:` and `impact:`, the workflow applies the model's top answer 
 - A feature or enhancement needs the problem, the expected result, and no open design choice.
 - A documentation issue needs the page and what is wrong on it.
 - A maintenance issue needs what should change and why, and no open design choice.
-- A pull request needs a written Summary, every section of the template filled, and passing `ci` and `compose` checks. When it changes documented behaviour and no page under `content/docs/next`, its Notes must name the pages or say why none needed a change.
+- A pull request needs a written Summary, every section of the template filled except the optional Evidence, and passing `ci` and `compose` checks. When it changes documented behaviour and no page under `content/docs/next`, its Notes must name the pages or say why none needed a change.
 - A question always waits for a maintainer.
 
 `status:blocked` comes first. Something only the author can add gives `status:needs-info`. An open design choice, a possible duplicate or a check still running gives `status:needs-triage`. An item with nothing missing gets `status:ready`. When something is missing, the workflow posts one comment that lists it, for the author and for a maintainer. It updates that comment when the list changes. It deletes the comment once nothing is missing, when the item is blocked, when only a running check is left, or when a maintainer has set the `status:` label. The workflow never replaces a group a maintainer already labelled, and never adds back a label other than `status:` that someone else removed. When the model's top answer is a label someone removed, that group gets no label. It replaces a `status:` label it set itself when its answer changes, and removes it when a maintainer adds another `status:` label. It labels nothing when the repository has no `SUBQ_API_KEY` secret. A maintainer reruns it from the Actions tab with an item number.

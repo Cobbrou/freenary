@@ -202,11 +202,17 @@ export const splitSections = (
 export const sectionGapText = (title: string): string =>
   `Fill the ${title} section.`;
 
+const OPTIONAL_SECTIONS: ReadonlySet<string> = new Set(["Evidence"]);
+
 export const templateGaps = (template: string, body: string): Gap[] => {
   const expected = splitSections(template, null);
   const written = splitSections(body, new Set(expected.keys()));
 
   return [...expected].flatMap(([title, placeholder]) => {
+    if (OPTIONAL_SECTIONS.has(title)) {
+      return [];
+    }
+
     const text = written.get(title);
     const filled = text !== undefined && text !== "" && text !== placeholder;
 

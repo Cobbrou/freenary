@@ -54,10 +54,10 @@ Follow the [pull request template](pull_request_template.md). Each pull request 
 - open against `dev`; `main` holds released code, and a release is cut from `main` after `dev` merges into it
 - explain the user-visible change
 - stay focused on a single topic when possible
-- include screenshots or screen recordings for new UI or behavior changes
+- show new UI or behavior changes in the optional Evidence section: screenshots or a screen recording dragged into the description so GitHub hosts them, with fake data only, no real keys, tokens or personal data, and no file paths from your machine
 - say which `apps/fumadocs` pages it updated, or state that none needed a change
 
-If there is no visual change, say that explicitly in the PR description.
+Evidence is the only optional section; delete it when it does not apply. If there is no visual change, say so in Notes. Reviewers and QA check Evidence on a pull request that changes the interface, and ask for it when it is missing. No check fails without it.
 
 ## Licensing Your Contribution
 

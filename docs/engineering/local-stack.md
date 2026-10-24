@@ -384,7 +384,7 @@ The license text is `LICENSE`, and the notices of the bundled third-party softwa
 
 ### The pull request body
 
-`.github/pull_request_template.md` declares five headings. Fill each one, and keep each one short. The whole body stays near 400 words. The summary stays near four sentences, and the middle three sections near four bullets each.
+`.github/pull_request_template.md` declares six headings. Fill each one except Evidence, which is optional, and keep each one short. The whole body stays near 400 words, not counting images and video. The summary stays near four sentences, and the middle three sections near four bullets each.
 
 | Section | What it carries |
 | --- | --- |
@@ -392,6 +392,7 @@ The license text is `LICENSE`, and the notices of the bundled third-party softwa
 | Motivation | Why the change is worth it. |
 | Drawbacks | The honest costs. |
 | Prior art | The alternatives you rejected. |
+| Evidence | Optional. Screenshots, a screen recording or other proof, uploaded by dragging them into the description. Fake data only, with no keys, tokens, personal data or local paths. Delete it when it does not apply. |
 | Notes | One line per fact: linked issue, visual change, tests, documentation pages, migration, breaking change. |
 
 Never restate the issue in the body, and never paste command output into it.
@@ -401,7 +402,7 @@ Never restate the issue in the body, and never paste command output into it.
 - The pull request opens against `dev`.
 - It explains the user-visible change.
 - It stays on a single topic.
-- It carries screenshots or a screen capture for new interface work. With no visual change, it says so.
+- Its Evidence section carries screenshots or a screen recording for new interface work. A reviewer or QA asks for them when they are missing; no check fails. With no visual change, Notes says so.
 - It names the `apps/fumadocs` pages it updated, or states that none needed a change.
 
 A change to documented behaviour owes a documentation update in the same pull request. A screen, an API route, an environment variable, a `packages/db` enum, a script and a bank provider all count. [Writing documentation](./writing-docs.md) holds the rules for that update.
