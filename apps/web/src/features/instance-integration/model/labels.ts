@@ -2,7 +2,7 @@ import { m } from "@/paraglide/messages.js";
 import { docsUrl } from "@/shared/config";
 
 import type { MessagePart } from "../lib/message-parts";
-import { code, messageParts, strong } from "../lib/message-parts";
+import { code, link, messageParts, strong } from "../lib/message-parts";
 import type { FieldProblem } from "./field-rules";
 
 type Label = () => string;
@@ -30,23 +30,41 @@ const FIELD_LABELS = {
   TRANSACTION_CLASSIFIER_URL: m.setup_field_classifier_url,
 } satisfies Record<string, Label>;
 
-const powensClientHelp = (): MessagePart[] =>
-  messageParts(m.setup_field_powens_client_help, {
-    section: strong(POWENS_CLIENT_APPLICATIONS),
-  });
+const POWENS_REGISTER_URL = "https://console.powens.com/auth/register";
+const ENABLE_BANKING_PANEL_URL = "https://enablebanking.com/sign-in/";
 
 const FIELD_HELP: Readonly<Record<string, () => MessagePart[]>> = {
-  POWENS_CLIENT_ID: powensClientHelp,
-  POWENS_CLIENT_SECRET: powensClientHelp,
+  ENABLE_BANKING_APP_ID: () =>
+    messageParts(m.setup_field_enable_banking_app_id_help, {
+      panel: link(
+        m.setup_enable_banking_panel_link(),
+        ENABLE_BANKING_PANEL_URL
+      ),
+    }),
+  ENABLE_BANKING_PRIVATE_KEY: () =>
+    messageParts(m.setup_field_enable_banking_private_key_help, {}),
+  POWENS_CLIENT_ID: () => messageParts(m.setup_field_powens_client_help, {}),
+  POWENS_CLIENT_SECRET: () =>
+    messageParts(m.setup_field_powens_client_secret_help, {}),
   POWENS_DOMAIN: () =>
     messageParts(m.setup_field_powens_domain_help, {
+      console: link(m.setup_powens_guide_console_link(), POWENS_REGISTER_URL),
       example: code("acme-sandbox"),
-      scheme: code("https://"),
+    }),
+};
+
+const REDIRECT_HELP: Readonly<Record<string, () => MessagePart[]>> = {
+  "enable-banking": () =>
+    messageParts(m.setup_redirect_enable_banking_help, {}),
+  powens: () =>
+    messageParts(m.setup_redirect_powens_help, {
+      section: strong(POWENS_CLIENT_APPLICATIONS),
     }),
 };
 
 const FIELD_PROBLEMS = {
   "domain-has-scheme": m.setup_field_powens_domain_has_scheme,
+  empty: m.setup_field_empty,
 } satisfies Record<FieldProblem, Label>;
 
 const INTEGRATION_TITLES = {
@@ -131,6 +149,9 @@ export const fieldLabel = (key: string): string => read(FIELD_LABELS, key);
 
 export const fieldHelp = (key: string): MessagePart[] | null =>
   FIELD_HELP[key]?.() ?? null;
+
+export const redirectHelp = (variantId: string): MessagePart[] | null =>
+  REDIRECT_HELP[variantId]?.() ?? null;
 
 export const fieldProblemMessage = (problem: FieldProblem): string =>
   FIELD_PROBLEMS[problem]();

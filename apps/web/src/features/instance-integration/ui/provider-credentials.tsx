@@ -7,6 +7,11 @@ import { useState } from "react";
 import { m } from "@/paraglide/messages.js";
 import { WizardStepHeader } from "@/shared/ui/wizard-step-header";
 
+import {
+  credentialStepsOf,
+  filledValuesOf,
+  isFromServer,
+} from "../model/credential-steps";
 import type { FieldProblem } from "../model/field-rules";
 import { fieldProblem } from "../model/field-rules";
 import {
@@ -17,6 +22,7 @@ import {
 import type { SaveOutcome } from "../model/outcome";
 import type { IntegrationWording } from "../model/wording";
 import { SAVE_LABELS } from "../model/wording";
+import { CredentialSequence } from "./credential-sequence";
 import { GuideLink } from "./guide-link";
 import {
   JevGuide,
@@ -25,13 +31,11 @@ import {
 } from "./hosted-classifier-guide";
 import { OllamaGuide, OllamaNote } from "./ollama-guide";
 import { OutcomeNotice } from "./outcome-notice";
-import { PowensGuide, PowensSandboxNote } from "./powens-guide";
 import type { SetupVariantDescriptor } from "./provider-step";
 import { ServerValueRow } from "./server-value-row";
 import type { SetupFieldDescriptor } from "./setup-field";
 import { SetupField } from "./setup-field";
 
-const ENVIRONMENT_SOURCE = "environment";
 const SURFACE_RADIUS = "rounded-xl";
 const SURFACE_STEP = 1;
 const PROBE_FAILED = "probe-failed";
@@ -44,7 +48,6 @@ interface VariantGuide {
 const VARIANT_GUIDES: Readonly<Record<string, VariantGuide>> = {
   jev: { Note: NoGuideNote, Steps: JevGuide },
   ollama: { Note: OllamaNote, Steps: OllamaGuide },
-  powens: { Note: PowensSandboxNote, Steps: PowensGuide },
   "subq-snap": { Note: NoGuideNote, Steps: SubqSnapGuide },
 };
 
@@ -57,22 +60,6 @@ interface ProviderCredentialsProps {
   variant: SetupVariantDescriptor;
   wording: IntegrationWording;
 }
-
-const isFromServer = (field: SetupFieldDescriptor): boolean =>
-  field.source === ENVIRONMENT_SOURCE;
-
-const filledValuesOf = (
-  fields: readonly SetupFieldDescriptor[]
-): Record<string, string> =>
-  Object.fromEntries(
-    fields.flatMap((field) => {
-      const starting = field.value ?? field.suggestion;
-
-      return starting === null || isFromServer(field)
-        ? []
-        : [[field.key, starting]];
-    })
-  );
 
 const withoutKey = <Value,>(
   record: Record<string, Value>,
@@ -92,7 +79,7 @@ const problemsOf = (
     })
   );
 
-export const ProviderCredentials = ({
+const SingleScreenCredentials = ({
   isBusy,
   onBack,
   onEdit,
@@ -222,5 +209,15 @@ export const ProviderCredentials = ({
         </div>
       </div>
     </div>
+  );
+};
+
+export const ProviderCredentials = (props: ProviderCredentialsProps) => {
+  const steps = credentialStepsOf(props.variant.id, props.variant.fields);
+
+  return steps === null ? (
+    <SingleScreenCredentials {...props} />
+  ) : (
+    <CredentialSequence {...props} steps={steps} />
   );
 };

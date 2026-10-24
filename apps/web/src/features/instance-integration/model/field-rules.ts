@@ -1,6 +1,6 @@
 const URL_SCHEME = /^https?:\/\//iu;
 
-export type FieldProblem = "domain-has-scheme";
+export type FieldProblem = "domain-has-scheme" | "empty";
 
 const FIELD_RULES: Readonly<
   Record<string, (value: string) => FieldProblem | null>

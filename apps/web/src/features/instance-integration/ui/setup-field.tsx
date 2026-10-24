@@ -89,6 +89,11 @@ export const SetupField = ({
   return (
     <Field data-invalid={isInvalid || undefined}>
       <FieldLabel htmlFor={inputId}>{fieldLabel(descriptor.key)}</FieldLabel>
+      {help === null ? null : (
+        <FieldDescription className="text-sm" id={helpId}>
+          <RichText parts={help} />
+        </FieldDescription>
+      )}
       {descriptor.kind === "secret-block" ? (
         <Textarea
           aria-describedby={describedBy}
@@ -97,6 +102,7 @@ export const SetupField = ({
           onChange={(event) => onChange(descriptor.key, event.target.value)}
           placeholder={secretPlaceholder}
           rows={SECRET_ROWS}
+          spellCheck={false}
           value={value ?? ""}
         />
       ) : (
@@ -109,11 +115,6 @@ export const SetupField = ({
           type={inputType(descriptor.kind)}
           value={secret ? (value ?? "") : held}
         />
-      )}
-      {help === null ? null : (
-        <FieldDescription id={helpId}>
-          <RichText parts={help} />
-        </FieldDescription>
       )}
       {isInvalid ? <FieldError id={errorId}>{error}</FieldError> : null}
     </Field>

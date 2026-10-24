@@ -43,7 +43,7 @@ The console walkthrough (account, sandbox domain, client application, redirect U
 1. In the [Enable Banking control panel](https://enablebanking.com/sign-in/), register an application and note its application ID.
 2. Download the application's private key.
 3. Register the redirect URI `https://<your domain>/callback/enable-banking`.
-4. On the setup screen, pick Enable Banking and fill in the application ID and the private key.
+4. On the setup screen, pick Enable Banking. Freenary asks for the application ID, shows the redirect URI with a **Copy** button, then asks for the private key.
 
 In an environment file, the key fits on one line with literal `\n` sequences, which Freenary turns back into newlines. A multi-line PEM also works. A key protected by a passphrase doesn't.
 

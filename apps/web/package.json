@@ -54,6 +54,7 @@
   "devDependencies": {
     "@feature-sliced/steiger-plugin": "^0.7.0",
     "@freenary/config": "workspace:*",
+    "@freenary/instance-config": "workspace:*",
     "@tanstack/react-query-devtools": "^5.101.4",
     "@tanstack/react-router-devtools": "^1.167.0",
     "@testing-library/dom": "^10.4.1",
