@@ -41,7 +41,7 @@ npx --yes --package renovate@latest renovate-config-validator renovate.json5
 
 A security advisory ignores the schedule and the three-day wait. Those pull requests carry the `security` label.
 
-> [!WARNING] CI runs no tests, so a green `ci` check proves that the repository compiles, not that it works. Automerge rests on the build and on the three-day wait alone. Read the dependency dashboard each week.
+> [!WARNING] CI runs only the `packages/api` tests, so a green `ci` check proves that the repository builds and the API tests pass. It proves nothing about the tests in `apps/web`, the other packages and `scripts/`. Automerge rests on that check and on the three-day wait alone. Read the dependency dashboard each week.
 
 A package pinned to a prerelease never automerges. `effect` sits at `4.0.0-rc.115`, and Renovate reads `rc.115` to `rc.116` as a patch. The update type alone would let an unstable version of a core library into `dev`.
 

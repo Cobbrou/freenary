@@ -294,7 +294,7 @@ describe("createSystemOneClassifier", () => {
     );
 
     await expect(classifier.classify(payload)).rejects.toThrow(
-      /outside the documented shape: .*JSON Parse error/u
+      /outside the documented shape: SyntaxError/u
     );
   });
 

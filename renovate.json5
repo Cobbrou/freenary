@@ -103,8 +103,9 @@
     },
     {
       // effect sits at 4.0.0-rc.115, and Renovate reads rc.115 to rc.116 as a
-      // patch. CI runs no tests, so an unstable version of a library the API is
-      // built on must not reach dev on the build alone.
+      // patch. CI runs only the packages/api tests, so an unstable version of a
+      // library the API is built on must not reach dev on the build and those
+      // tests alone.
       description: "A package pinned to a prerelease stays under review, whatever the update type says",
       matchDatasources: ["npm"],
       matchCurrentValue: "/-(?:alpha|beta|canary|dev|next|nightly|pre|rc)\\b/",

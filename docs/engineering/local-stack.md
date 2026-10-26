@@ -231,7 +231,7 @@ Read the code in that inbox, then type it in the form. The local path sets no em
 
 | Tool | Version | Why you need it |
 | --- | --- | --- |
-| Bun | `1.3.14` | The runtime, the package manager and the test runner. `packageManager` in the root `package.json` pins it locally. CI installs `bun-version: latest` instead. |
+| Bun | `1.3.14` | The runtime, the package manager and the test runner. `packageManager` in the root `package.json` pins it, and CI and the Docker images use the same version. |
 | Docker | Any current release | Both stack paths run PostgreSQL in a container. |
 | Port `80` | Free, or held by a Traefik on the `devproxy` network | The containerised path only. One shared proxy on that port serves every stack. |
 | PostgreSQL | `18` | The image `bun run db:start` starts for you. You install nothing by hand. |
@@ -303,9 +303,9 @@ That job is the one CI check no root script covers. Reproduce it from `.github/w
 
 > [!WARNING] `bun run check-types` reaches every workspace, `apps/web` included, which checks its test files too. The web check runs after its `build`, because the build generates `src/routeTree.gen.ts` and `src/paraglide/`, so the first run in a fresh checkout takes as long as a web build.
 
-### Tests run by hand, one file at a time
+### Tests: the API tests in CI, the rest by hand
 
-CI runs no tests. No `package.json` in the repository declares a `test` script, and `turbo.json` declares no `test` task. Run the files your change touches:
+CI runs `bun test` in `packages/api`, and no other test file; [Contribute](../../apps/fumadocs/content/docs/next/contribute.mdx#tests) has the details. No `package.json` in the repository declares a `test` script, and `turbo.json` declares no `test` task. Run the files your change touches:
 
 ```bash
 bun test scripts/dev-identity.test.ts
