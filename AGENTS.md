@@ -273,7 +273,7 @@ Where it does not:
 - Avoid done callbacks in async tests - use async/await instead
 - Don't use `.only` or `.skip` in committed code
 - Keep test suites reasonably flat - avoid excessive `describe` nesting
-- Tests run with `bun test <path>`. There is no root `test` script and CI runs no tests, so run the files your change touches by hand.
+- Tests run with `bun test <path>`. There is no root `test` script, and CI runs only the `packages/api` tests, so run the other files your change touches by hand.
 
 ## When Oxlint + Oxfmt Can't Help
 

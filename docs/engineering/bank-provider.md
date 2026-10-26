@@ -299,7 +299,7 @@ docker compose up -d --wait postgres
 bun test packages/api/src/providers
 ```
 
-The migration reads `DATABASE_URL` from `apps/server/.env`; [Local development stack](./local-stack.md) shows how to write it, and covers both database paths. CI runs no tests, so run each file by hand.
+The migration reads `DATABASE_URL` from `apps/server/.env`; [Local development stack](./local-stack.md) shows how to write it, and covers both database paths. CI runs the `packages/api` tests but starts no database, so run a test that needs one by hand.
 
 ### What a stub cannot prove
 

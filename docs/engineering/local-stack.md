@@ -303,9 +303,9 @@ That job is the one CI check no root script covers. Reproduce it from `.github/w
 
 > [!WARNING] `bun run check-types` reaches every workspace, `apps/web` included, which checks its test files too. The web check runs after its `build`, because the build generates `src/routeTree.gen.ts` and `src/paraglide/`, so the first run in a fresh checkout takes as long as a web build.
 
-### Tests run by hand, one file at a time
+### Tests: the API tests in CI, the rest by hand
 
-CI runs no tests. No `package.json` in the repository declares a `test` script, and `turbo.json` declares no `test` task. Run the files your change touches:
+CI runs `bun test` in `packages/api`, and no other test file; [Contribute](../../apps/fumadocs/content/docs/next/contribute.mdx#tests) has the details. No `package.json` in the repository declares a `test` script, and `turbo.json` declares no `test` task. Run the files your change touches:
 
 ```bash
 bun test scripts/dev-identity.test.ts

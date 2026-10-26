@@ -88,10 +88,10 @@ On each commit, lefthook runs three jobs on the staged files:
 
 ## Tests
 
-CI runs no tests, and there's no root `test` script. Run the files your change touches:
+CI runs the `packages/api` tests, the **API tests** step above, and no other test file. There's no root `test` script. Run the other files your change touches, in `apps/web`, the other packages and `scripts/`:
 
 ```bash
-bun test packages/api/src/categorisation/dictionary.test.ts
+bun test scripts/dev-identity.test.ts
 ```
 
 ## Pull requests

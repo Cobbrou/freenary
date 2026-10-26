@@ -40,7 +40,7 @@ Most lint/format issues are auto-fixable with `bun run fix`.
 
 CI's `compose` job has no root script. It parses `docker-compose.dev.yml` (alone and with `docker-compose.mail.yml`), `docker-compose.proxy.yml`, `docker-compose.yml`, `deploy/docker-compose.yml` and `deploy/coolify.yml` with `docker compose config --quiet`. It also asserts that `docker-compose.yml` refuses an empty `POSTGRES_PASSWORD` and `BETTER_AUTH_SECRET`, and that `deploy/docker-compose.yml` refuses an empty `FREENARY_URL`, `POSTGRES_PASSWORD` and `BETTER_AUTH_SECRET`. Reproduce it from [`.github/workflows/ci.yml`](workflows/ci.yml) before you change any of these files.
 
-CI runs no tests, and there is no root `test` script. Run the test files your change touches by hand with `bun test <path>`.
+CI runs the `packages/api` tests and no other test file, and there is no root `test` script. Run the other test files your change touches by hand with `bun test <path>`. [Contribute](../apps/fumadocs/content/docs/next/contribute.mdx#tests) has the details.
 
 `apps/web` and `apps/fumadocs` follow [Feature-Sliced Design](https://fsd.how): a module imports only from a lower layer, a slice is entered through its `index.ts`, and code starts in the page that uses it rather than in a speculative `features/` or `entities/` slice. `bun run check:fsd` is that rule set, and CI runs it as the **Architecture** step. The layout and the import forms are in the [repository guide](../AGENTS.md#frontend-architecture-feature-sliced-design).
 
