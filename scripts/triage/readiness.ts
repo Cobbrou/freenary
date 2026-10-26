@@ -113,7 +113,6 @@ const CRITERIA: Readonly<
 const CHECKLIST_BY_TYPE: Readonly<Record<string, Checklist>> = {
   [TYPE_LABELS.bug]: "bug",
   [TYPE_LABELS.documentation]: "documentation",
-  [TYPE_LABELS.enhancement]: "request",
   [TYPE_LABELS.feature]: "request",
   [TYPE_LABELS.maintenance]: "maintenance",
 };
@@ -221,6 +220,63 @@ export const templateGaps = (template: string, body: string): Gap[] => {
       : [{ owner: "author" as const, text: sectionGapText(title) }];
   });
 };
+
+const STILL_TO_DEFINE_TITLE = "still to define";
+const UNCHECKED_ITEM = /^[ \t]*[-*+][ \t]+\[ \][ \t]*(?<text>\S.*)$/u;
+const ANY_CHECKBOX = /^[ \t]*[-*+][ \t]+\[[ xX]\]/u;
+
+const NOTHING_LEFT: ReadonlySet<string> = new Set([
+  "",
+  "-",
+  "_no response_",
+  "n/a",
+  "nothing",
+  "nothing left",
+  "none",
+]);
+
+export const STILL_TO_DEFINE_GAP_TEXT =
+  "Settle the open items under Still to define, and tick or remove each one.";
+
+export const openItemsToDefine = (body: string): string[] => {
+  const blanked = blankFences(body);
+  const raw = [...blanked.matchAll(TEMPLATE_HEADING)].find(
+    (heading) =>
+      heading.groups?.title?.trim().toLowerCase() === STILL_TO_DEFINE_TITLE
+  );
+
+  if (raw === undefined) {
+    return [];
+  }
+
+  const start = (raw.index ?? 0) + raw[0].length;
+  const rest = blanked.slice(start);
+  const next = rest.search(/^#{1,6}[ \t]+/mu);
+  const section = (next === -1 ? rest : rest.slice(0, next))
+    .replace(HTML_COMMENT, "")
+    .replace(LINK_DEFINITION, "");
+
+  const lines = section.split("\n").filter((line) => line.trim() !== "");
+  const unchecked = lines.flatMap((line) => {
+    const text = UNCHECKED_ITEM.exec(line)?.groups?.text?.trim();
+
+    return text === undefined ? [] : [text];
+  });
+
+  if (unchecked.length > 0) {
+    return unchecked;
+  }
+
+  const hasCheckboxes = lines.some((line) => ANY_CHECKBOX.test(line));
+  const prose = lines.join(" ").replace(WHITESPACE_RUN, " ").trim();
+
+  return hasCheckboxes || NOTHING_LEFT.has(prose.toLowerCase()) ? [] : [prose];
+};
+
+export const stillToDefineGaps = (body: string): Gap[] =>
+  openItemsToDefine(body).length > 0
+    ? [{ owner: "maintainer", text: STILL_TO_DEFINE_GAP_TEXT }]
+    : [];
 
 export const REQUIRED_CHECKS = ["ci", "compose"] as const;
 

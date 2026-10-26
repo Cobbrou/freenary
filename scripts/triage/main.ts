@@ -3,7 +3,6 @@ import { appendFile, readFile, writeFile } from "node:fs/promises";
 
 import { Data, Effect } from "effect";
 
-import { areasForPaths } from "./areas";
 import { planCommentAction, renderGapComment } from "./comment";
 import {
   addLabels,
@@ -31,12 +30,13 @@ import {
   checklistFor,
   checklistQuestions,
   docsExpected,
+  stillToDefineGaps,
   templateGaps,
 } from "./readiness";
 import type { Gap } from "./readiness";
 import { decide } from "./subq";
 import type { Answers, DecisionState } from "./subq";
-import { GROUP_PREFIXES, SIGNAL_LABELS, STATUS_LABELS } from "./taxonomy";
+import { GOOD_FIRST_ISSUE_LABEL, GROUP_PREFIXES } from "./taxonomy";
 
 const MAX_BODY_CHARACTERS = 8000;
 const MAX_REPLY_CHARACTERS = 4000;
@@ -127,7 +127,7 @@ interface TriageRecord {
   readonly existingLabels: readonly string[];
   readonly labels: readonly string[];
   readonly removed: readonly string[];
-  readonly status: string | undefined;
+  readonly status: string;
   readonly gaps: readonly Gap[];
   readonly notes: readonly string[];
 }
@@ -141,8 +141,13 @@ const writeRecord = (record: TriageRecord) =>
     try: () => writeFile(RECORD_FILE, JSON.stringify(record, null, 2)),
   });
 
-const commentBodyFor = (kind: SubjectKind, plan: Plan): string | undefined =>
-  plan.status === undefined || plan.status === STATUS_LABELS.blocked
+const commentBodyFor = (
+  kind: SubjectKind,
+  plan: Plan,
+  maintainerSetPriority: boolean
+): string | undefined =>
+  plan.status === "blocked" ||
+  (maintainerSetPriority && !plan.stillToDefineOpen)
     ? undefined
     : renderGapComment(kind, plan.gaps);
 
@@ -162,14 +167,10 @@ const readOwnership = Effect.fnUntraced(function* readOwnership(
     refusedLabels: events
       ? labelsRemovedByOthers(events, existingLabels, WORKFLOW_ACTOR)
       : [],
+    workflowGoodFirstIssue: ownedByWorkflow(GOOD_FIRST_ISSUE_LABEL),
     workflowPriorities: existingLabels.filter(
       (label) =>
         label.startsWith(GROUP_PREFIXES.priority) && ownedByWorkflow(label)
-    ),
-    workflowReproduction: ownedByWorkflow(SIGNAL_LABELS.needsReproduction),
-    workflowStatuses: existingLabels.filter(
-      (label) =>
-        label.startsWith(GROUP_PREFIXES.status) && ownedByWorkflow(label)
     ),
   };
 });
@@ -260,22 +261,20 @@ const triage = Effect.fnUntraced(function* triage() {
         ...templateGaps(yield* readTemplate, body),
         ...checkGaps(yield* listCheckRuns(client, pull.head.sha)),
       ]
-    : [];
+    : stillToDefineGaps(body);
 
   const answers = { ...classification, ...checklistAnswers };
 
   const plan = planLabels({
     answers,
-    areasFromPaths: areasForPaths(files),
     checklist,
     docsExpected: docsExpected(files),
     existingLabels,
     kind,
     refusedLabels: ownership.refusedLabels,
     ruleGaps,
+    workflowGoodFirstIssue: ownership.workflowGoodFirstIssue,
     workflowPriorities: ownership.workflowPriorities,
-    workflowReproduction: ownership.workflowReproduction,
-    workflowStatuses: ownership.workflowStatuses,
   });
 
   for (const label of plan.removed) {
@@ -286,7 +285,20 @@ const triage = Effect.fnUntraced(function* triage() {
     yield* addLabels(client, number, plan.labels);
   }
 
-  yield* syncGapComment(client, number, comments, commentBodyFor(kind, plan));
+  yield* syncGapComment(
+    client,
+    number,
+    comments,
+    commentBodyFor(
+      kind,
+      plan,
+      existingLabels.some(
+        (label) =>
+          label.startsWith(GROUP_PREFIXES.priority) &&
+          !ownership.workflowPriorities.includes(label)
+      )
+    )
+  );
 
   yield* writeRecord({
     answers,

@@ -3,12 +3,7 @@ import { Effect } from "effect";
 
 import { createLabel, listRepositoryLabels, updateLabel } from "./github";
 import type { GitHubClient } from "./github";
-import { LABELS, LEGACY_LABEL_RENAMES } from "./taxonomy";
-
-const legacyNameFor = (name: string): string | undefined =>
-  Object.entries(LEGACY_LABEL_RENAMES).find(
-    ([, renamed]) => renamed === name
-  )?.[0];
+import { LABELS } from "./taxonomy";
 
 const syncLabels = Effect.fnUntraced(function* syncLabels(
   client: GitHubClient
@@ -18,19 +13,9 @@ const syncLabels = Effect.fnUntraced(function* syncLabels(
   );
 
   for (const label of LABELS) {
-    const legacyName = legacyNameFor(label.name);
-    const renameFrom =
-      !present.has(label.name) && legacyName && present.has(legacyName)
-        ? legacyName
-        : undefined;
-
-    if (present.has(label.name) || renameFrom) {
-      yield* updateLabel(client, renameFrom ?? label.name, label);
-      console.log(
-        renameFrom
-          ? `renamed ${renameFrom} to ${label.name}`
-          : `updated ${label.name}`
-      );
+    if (present.has(label.name)) {
+      yield* updateLabel(client, label.name, label);
+      console.log(`updated ${label.name}`);
     } else {
       yield* createLabel(client, label);
       console.log(`created ${label.name}`);

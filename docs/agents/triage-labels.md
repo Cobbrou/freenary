@@ -1,15 +1,15 @@
 # Triage Labels
 
-The skills speak in terms of five canonical triage roles. This file maps those roles to the actual label strings used in this repo's issue tracker.
+The skills speak in terms of five canonical triage roles. This repo no longer uses status labels, so this file maps each role to what the tracker does instead. The label set and the rules behind it are in [`docs/engineering/triage.md`](../engineering/triage.md).
 
-| Label in mattpocock/skills | Label in our tracker | Meaning |
+| Role in mattpocock/skills | In our tracker | Meaning |
 | --- | --- | --- |
-| `needs-triage` | `status:needs-triage` | Maintainer needs to evaluate this issue |
-| `needs-info` | `status:needs-info` | Waiting on reporter for more information |
-| `ready-for-agent` | `status:ready` | Fully specified and ready for work. The tracker has one ready label for agents and people alike; the `Triage` workflow sets it, and the assignee decides who picks it up |
-| `ready-for-human` | `status:ready` | Same label as `ready-for-agent`: the tracker does not separate agent work from human work |
-| `wontfix` | `wontfix` | Will not be actioned |
+| `needs-triage` | No label. An issue with no `impact:` and no `priority:` label | A maintainer needs to evaluate this issue |
+| `needs-info` | No label. The `Triage` workflow's gap comment lists what the author owes | Waiting on the reporter for more information |
+| `ready-for-agent` | `help wanted`, or an assignee. The spec is complete: nothing under **Still to define** | Fully specified and ready for work. The tracker does not separate agent work from human work |
+| `ready-for-human` | Same as `ready-for-agent` | Same as `ready-for-agent` |
+| `wontfix` | No label. Close the issue with a comment that says why | Will not be actioned |
 
-When a skill mentions a role (e.g. "apply the AFK-ready triage label"), use the corresponding label string from this table.
+The labels this repo uses are `type: bug`, `type: feature`, `type: documentation`, `type: maintenance`, `impact: high`, `impact: medium`, `impact: low`, `priority: high`, `priority: medium`, `priority: low`, `good first issue` and `help wanted`. A skill that mentions another label has no counterpart here: skip that step.
 
-Edit the right-hand column to match whatever vocabulary you actually use.
+`good first issue` and `help wanted` mean the spec is complete. Never apply either while the issue has an open item under **Still to define**.

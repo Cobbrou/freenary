@@ -1,0 +1,59 @@
+name: Specified task
+description: A piece of work with a complete spec, ready for someone to build
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form when you can say exactly what should be built. A complete spec lets a contributor start without asking questions, and only a complete spec can be marked `good first issue` or `help wanted`.
+
+        Not sure about every detail? Fill what you know and list the rest under **Still to define**.
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: What is the situation today, and why does this matter? Link the issues, pull requests or pages it relates to.
+      placeholder: The budget screen shows every category, including the ones with no transactions this month.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What should happen once this is done? Describe what a user sees or what the code does.
+      placeholder: Categories with no transactions in the selected month are hidden unless the user turns on "Show empty categories".
+    validations:
+      required: true
+
+  - type: textarea
+    id: criteria
+    attributes:
+      label: Acceptance criteria
+      description: A checklist a reviewer can tick. Each item is observable and either true or false.
+      value: |
+        - [ ]
+        - [ ]
+    validations:
+      required: true
+
+  - type: textarea
+    id: files
+    attributes:
+      label: Relevant files
+      description: Where to start. Paths, modules or pages, with a line on why each matters.
+      placeholder: |
+        - `apps/web/src/pages/budget/ui/page.tsx`: renders the category list
+        - `apps/fumadocs/content/docs/next/use/budget.mdx`: documents the screen
+    validations:
+      required: true
+
+  - type: textarea
+    id: still-to-define
+    attributes:
+      label: Still to define
+      description: Optional. Questions that are still open, one checklist item each. Tick or remove an item once it is settled. While an item is open, the issue stays closed to claims and does not carry `good first issue` or `help wanted`. Leave this empty when the spec is complete.
+      placeholder: |
+        - [ ] Whether the toggle is remembered between visits
+    validations:
+      required: false

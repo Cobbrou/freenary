@@ -2,13 +2,12 @@ import { afterEach, describe, expect, it, mock, spyOn } from "bun:test";
 
 import { Effect } from "effect";
 
-import { areasForPaths } from "./areas";
 import { renderGapComment } from "./comment";
 import {
-  AREA_TIE_ORDER,
   derivePriority,
   IMPACT_TIE_ORDER,
   MIN_GOOD_FIRST_ISSUE_PROBABILITY,
+  MIN_IMPACT_CONFIDENCE,
   MIN_SIGNAL_PROBABILITY,
   planLabels,
   TYPE_TIE_ORDER,
@@ -20,13 +19,12 @@ import type { Answers } from "./subq";
 import { LABELS } from "./taxonomy";
 
 const confidentBug: Answers = {
-  area: { choice: "frontend", confidence: 0.9, type: "choice" },
   blocked: { noul: 0.05, type: "noul" },
   check_environment: { noul: 0.9, type: "noul" },
   check_expected_actual: { noul: 0.9, type: "noul" },
   check_steps: { noul: 0.9, type: "noul" },
-  impact: { confidence: 0.8, score: 2.2, type: "score" },
-  regression: { noul: 0.95, type: "noul" },
+  impact: { confidence: 0.85, score: 1.8, type: "score" },
+  regression: { noul: 0.1, type: "noul" },
   security: { noul: 0.2, type: "noul" },
   type: { choice: "bug", confidence: 0.95, type: "choice" },
 };
@@ -34,38 +32,41 @@ const confidentBug: Answers = {
 const planFor = (overrides: Partial<PlanInput>) =>
   planLabels({
     answers: confidentBug,
-    areasFromPaths: [],
     checklist: "bug",
     docsExpected: false,
     existingLabels: [],
     kind: "issue",
     refusedLabels: [],
     ruleGaps: [],
+    workflowGoodFirstIssue: false,
     workflowPriorities: [],
-    workflowReproduction: false,
-    workflowStatuses: [],
     ...overrides,
   });
 
+const startsWithAny = (label: string, prefixes: readonly string[]): boolean =>
+  prefixes.some((prefix) => label.startsWith(prefix));
+
 describe("planLabels", () => {
-  it("labels every group of a confident answer set", () => {
+  it("labels the type, impact and priority of a confident answer set", () => {
+    expect(planFor({}).labels.toSorted()).toEqual(
+      ["impact: high", "priority: high", "type: bug"].toSorted()
+    );
+  });
+
+  it("never adds a status, area or signal label", () => {
     const plan = planFor({
-      answers: confidentBug,
-      areasFromPaths: [],
-      existingLabels: [],
-      workflowStatuses: [],
+      answers: {
+        ...confidentBug,
+        regression: { noul: 0.95, type: "noul" },
+        security: { noul: 0.95, type: "noul" },
+      },
     });
 
-    expect(plan.labels.toSorted()).toEqual(
-      [
-        "area:frontend",
-        "impact:high",
-        "priority:p1",
-        "regression",
-        "status:ready",
-        "type:bug",
-      ].toSorted()
-    );
+    expect(
+      plan.labels.some((label) =>
+        startsWithAny(label, ["status:", "area:", "security", "regression"])
+      )
+    ).toBe(false);
   });
 
   it("applies a narrow top type and notes its runner-up", () => {
@@ -75,72 +76,42 @@ describe("planLabels", () => {
         type: {
           choice: "feature",
           confidence: 0.49,
-          probabilities: { bug: 0.05, enhancement: 0.46, feature: 0.49 },
+          probabilities: { bug: 0.05, documentation: 0.46, feature: 0.49 },
           type: "choice",
         },
       },
       checklist: undefined,
     });
 
-    expect(plan.labels).toContain("type:feature");
-    expect(plan.notes).toContain("type: feature (0.49; next enhancement 0.46)");
+    expect(plan.labels).toContain("type: feature");
+    expect(plan.notes).toContain(
+      "type: feature (0.49; next documentation 0.46)"
+    );
   });
 
   it("never overrides a group a maintainer already labelled", () => {
     const plan = planFor({
-      answers: confidentBug,
-      areasFromPaths: [],
-      existingLabels: ["type:feature", "status:blocked"],
-      workflowStatuses: [],
+      existingLabels: ["type: feature", "impact: low", "priority: low"],
     });
 
-    expect(plan.labels).not.toContain("type:bug");
-    expect(plan.labels.some((label) => label.startsWith("status:"))).toBe(
-      false
-    );
+    expect(plan.labels).toEqual([]);
+    expect(plan.removed).toEqual([]);
   });
 
-  it("prefers the areas of changed files over the model", () => {
-    const plan = planFor({
-      answers: confidentBug,
-      areasFromPaths: ["database", "docs"],
-      existingLabels: [],
-      workflowStatuses: [],
-    });
-
-    expect(plan.labels).toContain("area:database");
-    expect(plan.labels).toContain("area:docs");
-    expect(plan.labels).not.toContain("area:frontend");
-  });
-
-  it("flags a confident duplicate", () => {
+  it("flags a confident duplicate without a label", () => {
     const plan = planFor({
       answers: {
         ...confidentBug,
         duplicate: { choice: "item-14", confidence: 0.9, type: "choice" },
       },
-      areasFromPaths: [],
-      existingLabels: [],
-      workflowStatuses: [],
     });
 
     expect(plan.duplicateOf).toBe(14);
-    expect(plan.labels).toContain("duplicate");
-  });
-
-  it("puts needs-reproduction on a bug with no steps", () => {
-    const noSteps: Answers = {
-      ...confidentBug,
-      check_steps: { noul: 0.2, type: "noul" },
-    };
-
-    expect(planFor({ answers: noSteps }).labels).toContain(
-      "needs-reproduction"
-    );
-
-    expect(
-      planFor({ answers: noSteps, checklist: "request" }).labels
-    ).not.toContain("needs-reproduction");
+    expect(plan.labels).not.toContain("duplicate");
+    expect(plan.gaps).toContainEqual({
+      owner: "maintainer",
+      text: "Check whether this duplicates #14.",
+    });
   });
 
   it("counts a group a maintainer labelled as settled", () => {
@@ -149,27 +120,10 @@ describe("planLabels", () => {
         ...confidentBug,
         type: { choice: "bug", confidence: 0.3, type: "choice" },
       },
-      areasFromPaths: [],
-      existingLabels: ["type:feature"],
-      workflowStatuses: [],
+      existingLabels: ["type: feature"],
     });
 
-    expect(plan.labels).toContain("status:ready");
-  });
-});
-
-describe("areasForPaths", () => {
-  it("maps repository paths to areas", () => {
-    expect(
-      areasForPaths([
-        "apps/web/src/pages/budget/ui/page.tsx",
-        "packages/api/src/routers/budget.ts",
-        "packages/db/prisma/schema.prisma",
-        ".github/workflows/ci.yml",
-        "apps/fumadocs/content/docs/next/index.mdx",
-        "README.md",
-      ])
-    ).toEqual(["api", "ci-cd", "database", "docs", "frontend"]);
+    expect(plan.status).toBe("ready");
   });
 });
 
@@ -180,279 +134,263 @@ describe("buildQuestions", () => {
     expect(Object.keys(questions).length).toBeLessThanOrEqual(16);
   });
 
-  it("asks pull requests about their description, not newcomers", () => {
+  it("asks pull requests about their description, not newcomers or impact", () => {
     const questions = buildQuestions("pull-request", []);
 
     expect(questions.good_first_issue).toBeUndefined();
+    expect(questions.impact).toBeUndefined();
+    expect(questions.area).toBeUndefined();
     expect(questions.pr_summary).toBeDefined();
     expect(questions.pr_docs).toBeDefined();
+  });
+
+  it("asks for three impact levels", () => {
+    expect(buildQuestions("issue", []).impact?.criteria).toHaveLength(3);
   });
 });
 
 describe("taxonomy", () => {
-  it("defines every label once", () => {
+  it("defines the twelve labels once", () => {
     const names = LABELS.map((label) => label.name);
 
     expect(new Set(names).size).toBe(names.length);
-    expect(names).toHaveLength(33);
+    expect(names.toSorted()).toEqual(
+      [
+        "good first issue",
+        "help wanted",
+        "impact: high",
+        "impact: low",
+        "impact: medium",
+        "priority: high",
+        "priority: low",
+        "priority: medium",
+        "type: bug",
+        "type: documentation",
+        "type: feature",
+        "type: maintenance",
+      ].toSorted()
+    );
   });
 });
 
 const goodFirstIssueLabelsAt = (noul: number) =>
   planFor({
-    answers: { ...confidentBug, good_first_issue: { noul, type: "noul" } },
-    areasFromPaths: [],
-    existingLabels: [],
-    workflowStatuses: [],
+    answers: {
+      ...confidentBug,
+      good_first_issue: { noul, type: "noul" },
+    },
   }).labels;
 
-describe("good-first-issue", () => {
+describe("good first issue", () => {
   it("needs a stricter probability than the other signals", () => {
     expect(goodFirstIssueLabelsAt(MIN_SIGNAL_PROBABILITY)).not.toContain(
-      "good-first-issue"
+      "good first issue"
     );
 
     expect(
       goodFirstIssueLabelsAt(MIN_GOOD_FIRST_ISSUE_PROBABILITY - 0.01)
-    ).not.toContain("good-first-issue");
+    ).not.toContain("good first issue");
 
     expect(goodFirstIssueLabelsAt(MIN_GOOD_FIRST_ISSUE_PROBABILITY)).toContain(
-      "good-first-issue"
+      "good first issue"
     );
   });
 });
 
 describe("derivePriority", () => {
   it("maps impact to priority", () => {
-    expect(derivePriority("impact:critical", [])).toBe("priority:p0");
-    expect(derivePriority("impact:high", [])).toBe("priority:p1");
-    expect(derivePriority("impact:medium", [])).toBe("priority:p2");
-    expect(derivePriority("impact:low", [])).toBe("priority:p3");
+    expect(derivePriority("impact: high", [])).toBe("priority: high");
+    expect(derivePriority("impact: medium", [])).toBe("priority: medium");
+    expect(derivePriority("impact: low", [])).toBe("priority: low");
     expect(derivePriority(undefined, [])).toBeUndefined();
   });
 
-  it("raises priority for security and regressions, not breaking changes", () => {
-    expect(derivePriority("impact:low", ["security"])).toBe("priority:p0");
-    expect(derivePriority(undefined, ["regression"])).toBe("priority:p1");
-    expect(derivePriority("impact:low", ["breaking-change"])).toBe(
-      "priority:p3"
+  it("gives a security risk priority high, with or without an impact", () => {
+    expect(derivePriority("impact: low", ["security"])).toBe("priority: high");
+    expect(derivePriority(undefined, ["security"])).toBe("priority: high");
+  });
+
+  it("raises the priority of an impact by one level for a regression", () => {
+    expect(derivePriority("impact: low", ["regression"])).toBe(
+      "priority: medium"
     );
 
-    expect(derivePriority("impact:critical", ["regression"])).toBe(
-      "priority:p0"
+    expect(derivePriority("impact: medium", ["regression"])).toBe(
+      "priority: high"
     );
+
+    expect(derivePriority("impact: high", ["regression"])).toBe(
+      "priority: high"
+    );
+  });
+
+  it("gives a regression with no impact no priority", () => {
+    expect(derivePriority(undefined, ["regression"])).toBeUndefined();
+  });
+});
+
+const impactAt = (confidence: number, score = 2) =>
+  planFor({
+    answers: {
+      ...confidentBug,
+      impact: { confidence, score, type: "score" },
+    },
+  });
+
+describe("impact and priority are never guessed", () => {
+  it("applies neither below the confidence threshold", () => {
+    const plan = impactAt(MIN_IMPACT_CONFIDENCE - 0.01);
+
+    expect(
+      plan.labels.some((label) =>
+        startsWithAny(label, ["impact:", "priority:"])
+      )
+    ).toBe(false);
+
+    expect(plan.notes.some((note) => note.startsWith("impact: none"))).toBe(
+      true
+    );
+  });
+
+  it("applies both at the threshold", () => {
+    const plan = impactAt(MIN_IMPACT_CONFIDENCE);
+
+    expect(plan.labels).toContain("impact: high");
+    expect(plan.labels).toContain("priority: high");
+  });
+
+  it("applies neither without an impact answer", () => {
+    const { impact: _impact, ...withoutImpact } = confidentBug;
+    const plan = planFor({ answers: withoutImpact });
+
+    expect(
+      plan.labels.some((label) =>
+        startsWithAny(label, ["impact:", "priority:"])
+      )
+    ).toBe(false);
+  });
+
+  it("applies neither to a pull request", () => {
+    const plan = planFor({
+      answers: {
+        ...confidentBug,
+        pr_docs: { noul: 0.9, type: "noul" },
+        pr_summary: { noul: 0.9, type: "noul" },
+      },
+      checklist: undefined,
+      kind: "pull-request",
+    });
+
+    expect(
+      plan.labels.some((label) =>
+        startsWithAny(label, ["impact:", "priority:"])
+      )
+    ).toBe(false);
+  });
+
+  it("rounds a score exactly halfway up", () => {
+    expect(impactAt(0.9, 0.5).labels).toContain("impact: medium");
+    expect(impactAt(0.9, 0.5).labels).toContain("priority: medium");
+    expect(impactAt(0.9, 1.5).labels).toContain("impact: high");
+  });
+
+  it("raises the priority of a confident security signal", () => {
+    const plan = planFor({
+      answers: {
+        ...confidentBug,
+        impact: { confidence: 0.9, score: 0, type: "score" },
+        security: { noul: 0.9, type: "noul" },
+      },
+    });
+
+    expect(plan.labels).toContain("impact: low");
+    expect(plan.labels).toContain("priority: high");
+  });
+
+  it("ignores a security or regression signal below the threshold", () => {
+    const plan = planFor({
+      answers: {
+        ...confidentBug,
+        impact: { confidence: 0.9, score: 0, type: "score" },
+        regression: { noul: MIN_SIGNAL_PROBABILITY - 0.01, type: "noul" },
+        security: { noul: 0.5, type: "noul" },
+      },
+    });
+
+    expect(plan.labels).toContain("priority: low");
   });
 });
 
 describe("planLabels priority", () => {
-  const lowConfidenceImpact: Answers = {
-    ...confidentBug,
-    impact: { confidence: 0.3, score: 0, type: "score" },
-    regression: { noul: 0.1, type: "noul" },
-  };
-
   it("derives priority from an impact label a maintainer set", () => {
     const plan = planFor({
-      answers: lowConfidenceImpact,
-      areasFromPaths: [],
-      existingLabels: ["impact:critical"],
-      workflowStatuses: [],
+      answers: {
+        ...confidentBug,
+        impact: { confidence: 0.3, score: 0, type: "score" },
+      },
+      existingLabels: ["impact: medium"],
     });
 
-    expect(plan.labels).toContain("priority:p0");
-  });
-
-  it("derives priority from an existing security label", () => {
-    const plan = planFor({
-      answers: lowConfidenceImpact,
-      areasFromPaths: [],
-      existingLabels: ["security"],
-      workflowStatuses: [],
-    });
-
-    expect(plan.labels).toContain("priority:p0");
+    expect(plan.labels).toContain("priority: medium");
   });
 
   it("keeps a priority a maintainer set", () => {
-    const plan = planFor({
-      answers: confidentBug,
-      areasFromPaths: [],
-      existingLabels: ["priority:p3"],
-      workflowStatuses: [],
-    });
+    const plan = planFor({ existingLabels: ["priority: low"] });
 
     expect(plan.labels.some((label) => label.startsWith("priority:"))).toBe(
       false
     );
-  });
-
-  it("maps a maintainer impact without a regression", () => {
-    const plan = planFor({
-      answers: { ...confidentBug, regression: { noul: 0.1, type: "noul" } },
-      areasFromPaths: [],
-      existingLabels: ["impact:low"],
-      workflowStatuses: [],
-    });
-
-    expect(plan.labels).toContain("priority:p3");
-  });
-
-  it("derives priority from an existing regression label", () => {
-    const plan = planFor({
-      answers: lowConfidenceImpact,
-      areasFromPaths: [],
-      existingLabels: ["regression"],
-      workflowStatuses: [],
-    });
-
-    expect(plan.labels).toContain("priority:p1");
-  });
-});
-
-describe("workflow status", () => {
-  it("replaces a status the workflow set when the answer changes", () => {
-    const plan = planFor({
-      answers: confidentBug,
-      areasFromPaths: [],
-      existingLabels: ["status:needs-triage"],
-      workflowStatuses: ["status:needs-triage"],
-    });
-
-    expect(plan.labels).toContain("status:ready");
-    expect(plan.removed).toEqual(["status:needs-triage"]);
-  });
-
-  it("keeps a status the workflow set when the answer is the same", () => {
-    const plan = planFor({
-      answers: confidentBug,
-      areasFromPaths: [],
-      existingLabels: ["status:ready"],
-      workflowStatuses: ["status:ready"],
-    });
-
-    expect(plan.labels).not.toContain("status:ready");
-    expect(plan.removed).toEqual([]);
-  });
-
-  it("never replaces a status a maintainer set", () => {
-    const plan = planFor({
-      answers: confidentBug,
-      areasFromPaths: [],
-      existingLabels: ["status:blocked"],
-      workflowStatuses: [],
-    });
-
-    expect(plan.removed).toEqual([]);
-    expect(plan.labels.some((label) => label.startsWith("status:"))).toBe(
-      false
-    );
-  });
-
-  it("removes its own status once a maintainer sets one", () => {
-    for (const existingLabels of [
-      ["status:needs-triage", "status:blocked"],
-      ["status:blocked", "status:needs-triage"],
-    ]) {
-      const plan = planFor({
-        answers: confidentBug,
-        areasFromPaths: [],
-        existingLabels,
-        workflowStatuses: ["status:needs-triage"],
-      });
-
-      expect(plan.removed).toEqual(["status:needs-triage"]);
-      expect(plan.labels.some((label) => label.startsWith("status:"))).toBe(
-        false
-      );
-    }
-  });
-
-  it("removes every extra status it owns", () => {
-    const plan = planFor({
-      answers: confidentBug,
-      areasFromPaths: [],
-      existingLabels: ["status:needs-info", "status:needs-triage"],
-      workflowStatuses: ["status:needs-info", "status:needs-triage"],
-    });
-
-    expect(plan.labels).toContain("status:ready");
-    expect(plan.removed.toSorted()).toEqual([
-      "status:needs-info",
-      "status:needs-triage",
-    ]);
-  });
-
-  it("keeps a workflow ready status on a low-confidence answer", () => {
-    const plan = planFor({
-      answers: {
-        ...confidentBug,
-        type: { choice: "bug", confidence: 0.3, type: "choice" },
-      },
-      areasFromPaths: [],
-      existingLabels: ["status:ready"],
-      workflowStatuses: ["status:ready"],
-    });
-
-    expect(plan.labels).toContain("type:bug");
-    expect(plan.labels).not.toContain("status:needs-triage");
-    expect(plan.removed).toEqual([]);
   });
 });
 
 describe("workflow priority", () => {
   it("recomputes its own priority after a maintainer changes impact", () => {
     const plan = planFor({
-      answers: { ...confidentBug, regression: { noul: 0.1, type: "noul" } },
-      existingLabels: ["impact:critical", "priority:p3", "status:ready"],
-      workflowPriorities: ["priority:p3"],
+      existingLabels: ["impact: low", "priority: high", "type: bug"],
+      workflowPriorities: ["priority: high"],
     });
 
-    expect(plan.labels).toContain("priority:p0");
-    expect(plan.removed).toContain("priority:p3");
+    expect(plan.labels).toContain("priority: low");
+    expect(plan.removed).toContain("priority: high");
   });
 
   it("removes its own priority once a maintainer sets one", () => {
     const plan = planFor({
-      existingLabels: ["priority:p3", "priority:p1"],
-      workflowPriorities: ["priority:p3"],
+      existingLabels: ["priority: low", "priority: high"],
+      workflowPriorities: ["priority: low"],
     });
 
-    expect(plan.removed).toContain("priority:p3");
+    expect(plan.removed).toContain("priority: low");
     expect(plan.labels.some((label) => label.startsWith("priority:"))).toBe(
       false
     );
   });
 });
 
-const CONFIDENCE_RANGE = [0, 0.1, 0.34, 0.59, 0.6, 1];
-
-const answersAt = (confidence: number): Answers => ({
-  ...confidentBug,
-  area: { choice: "backend", confidence, type: "choice" },
-  impact: { confidence, score: 3, type: "score" },
-  type: { choice: "maintenance", confidence, type: "choice" },
-});
-
 describe("top label wins", () => {
-  it("plans the top type, area and impact at any confidence", () => {
-    for (const confidence of CONFIDENCE_RANGE) {
-      const plan = planFor({ answers: answersAt(confidence) });
+  it("applies the top type at any confidence", () => {
+    for (const confidence of [0, 0.1, 0.34, 0.59, 0.6, 1]) {
+      const plan = planFor({
+        answers: {
+          ...confidentBug,
+          type: { choice: "maintenance", confidence, type: "choice" },
+        },
+      });
 
-      expect(plan.labels).toContain("type:maintenance");
-      expect(plan.labels).toContain("area:backend");
-      expect(plan.labels).toContain("impact:critical");
-      expect(plan.labels).toContain("priority:p0");
+      expect(plan.labels).toContain("type: maintenance");
     }
   });
 
-  it("raises no gap, status or comment for a low-confidence pick", () => {
-    const plan = planFor({ answers: answersAt(0.1) });
+  it("raises no gap for a low-confidence type", () => {
+    const plan = planFor({
+      answers: {
+        ...confidentBug,
+        type: { choice: "bug", confidence: 0.1, type: "choice" },
+      },
+    });
 
-    expect(plan.gaps.some((gap) => gap.text.startsWith("Pick the"))).toBe(
-      false
-    );
-
-    expect(plan.status).toBe("status:ready");
+    expect(plan.gaps).toEqual([]);
+    expect(plan.status).toBe("ready");
     expect(renderGapComment("issue", plan.gaps)).toBeUndefined();
   });
 
@@ -463,28 +401,19 @@ describe("top label wins", () => {
         type: {
           choice: "feature",
           confidence: 0.34,
-          probabilities: { bug: 0.33, enhancement: 0.33, feature: 0.34 },
+          probabilities: { bug: 0.33, documentation: 0.33, feature: 0.34 },
           type: "choice",
         },
       },
       checklist: undefined,
     });
 
-    expect(plan.labels).toContain("type:feature");
+    expect(plan.labels).toContain("type: feature");
   });
 });
 
-const impactAt = (score: number) =>
-  planFor({
-    answers: {
-      ...confidentBug,
-      impact: { confidence: 0.5, score, type: "score" },
-      regression: { noul: 0.1, type: "noul" },
-    },
-  }).labels;
-
 describe("tie order", () => {
-  it("follows the option order of the type and area questions", () => {
+  it("follows the option order of the type question", () => {
     const issue = buildQuestions("issue", []);
     const pullRequest = buildQuestions("pull-request", []);
 
@@ -492,19 +421,14 @@ describe("tie order", () => {
       ...TYPE_TIE_ORDER,
     ]);
 
-    expect(Object.keys(pullRequest.type?.criteria ?? {})).toEqual(
-      TYPE_TIE_ORDER.filter((option) => option !== "question")
-    );
-
-    expect(Object.keys(issue.area?.criteria ?? {})).toEqual([
-      ...AREA_TIE_ORDER,
+    expect(Object.keys(pullRequest.type?.criteria ?? {})).toEqual([
+      ...TYPE_TIE_ORDER,
     ]);
 
     expect(IMPACT_TIE_ORDER).toEqual([
-      "impact:critical",
-      "impact:high",
-      "impact:medium",
-      "impact:low",
+      "impact: high",
+      "impact: medium",
+      "impact: low",
     ]);
   });
 
@@ -514,7 +438,7 @@ describe("tie order", () => {
       type: {
         choice: "feature",
         confidence: 0.4,
-        probabilities: { bug: 0.4, enhancement: 0.2, feature: 0.4 },
+        probabilities: { bug: 0.4, documentation: 0.2, feature: 0.4 },
         type: "choice",
       },
     };
@@ -525,31 +449,7 @@ describe("tie order", () => {
       )
     );
 
-    expect(runs).toEqual([["type:bug"], ["type:bug"], ["type:bug"]]);
-  });
-
-  it("breaks an exact area tie by question order", () => {
-    const plan = planFor({
-      answers: {
-        ...confidentBug,
-        area: {
-          choice: "infra",
-          confidence: 0.45,
-          probabilities: { "ci-cd": 0.1, docs: 0.45, infra: 0.45 },
-          type: "choice",
-        },
-      },
-    });
-
-    expect(plan.labels).toContain("area:docs");
-    expect(plan.labels).not.toContain("area:infra");
-  });
-
-  it("rounds an impact score exactly halfway up", () => {
-    expect(impactAt(0.5)).toContain("impact:medium");
-    expect(impactAt(1.5)).toContain("impact:high");
-    expect(impactAt(1.5)).toContain("priority:p1");
-    expect(impactAt(2.5)).toContain("impact:critical");
+    expect(runs).toEqual([["type: bug"], ["type: bug"], ["type: bug"]]);
   });
 });
 
@@ -558,17 +458,24 @@ describe("unusable answers", () => {
     const plan = planFor({
       answers: {
         ...confidentBug,
-        area: {
-          choice: "mobile",
+        type: {
+          choice: "question",
           confidence: 0.7,
-          probabilities: { auth: 0.2, database: 0.5, mobile: 0.7 },
+          probabilities: {
+            documentation: 0.2,
+            feature: 0.5,
+            question: 0.7,
+          },
           type: "choice",
         },
       },
+      checklist: undefined,
     });
 
-    expect(plan.labels).toContain("area:database");
-    expect(plan.notes).toContain("area: database (0.50; next auth 0.20)");
+    expect(plan.labels).toContain("type: feature");
+    expect(plan.notes).toContain(
+      "type: feature (0.50; next documentation 0.20)"
+    );
   });
 
   it("labels nothing and asks nothing for a missing type answer", () => {
@@ -577,45 +484,18 @@ describe("unusable answers", () => {
 
     expect(plan.labels.some((label) => label.startsWith("type:"))).toBe(false);
     expect(plan.gaps).toEqual([]);
-    expect(plan.status).toBe("status:ready");
+    expect(plan.status).toBe("ready");
     expect(plan.notes).toContain("type: no answer");
   });
 
-  it("notes no answer for a wrong answer type or an unknown choice", () => {
+  it("notes no answer for a wrong answer type", () => {
     const plan = planFor({
-      answers: {
-        ...confidentBug,
-        area: { choice: "mobile", confidence: 0.9, type: "choice" },
-        impact: { noul: 0.9, type: "noul" },
-      },
+      answers: { ...confidentBug, impact: { noul: 0.9, type: "noul" } },
     });
 
-    expect(plan.notes).toContain("area: no answer");
     expect(plan.notes).toContain("impact: no answer");
-    expect(
-      plan.labels.some(
-        (label) => label.startsWith("area:") || label.startsWith("impact:")
-      )
-    ).toBe(false);
-
-    expect(plan.gaps).toEqual([]);
-  });
-
-  it("notes the impact pick with its runner-up", () => {
-    const plan = planFor({
-      answers: {
-        ...confidentBug,
-        impact: {
-          confidence: 0.4,
-          probabilities: { "0": 0.1, "1": 0.45, "2": 0.45, "3": 0 },
-          score: 1.5,
-          type: "score",
-        },
-      },
-    });
-
-    expect(plan.notes).toContain(
-      "impact: impact:high (score 1.50, 0.40; next impact:medium 0.45)"
+    expect(plan.labels.some((label) => label.startsWith("impact:"))).toBe(
+      false
     );
   });
 });
@@ -623,68 +503,20 @@ describe("unusable answers", () => {
 describe("existing and refused labels", () => {
   it("never adds a pick over an existing group label and removes nothing", () => {
     const plan = planFor({
-      answers: answersAt(0.2),
-      existingLabels: ["type:bug", "area:frontend", "impact:low"],
+      existingLabels: ["type: bug", "impact: low"],
     });
 
     expect(
-      plan.labels.filter(
-        (label) =>
-          label.startsWith("type:") ||
-          label.startsWith("area:") ||
-          label.startsWith("impact:")
-      )
+      plan.labels.filter((label) => startsWithAny(label, ["type:", "impact:"]))
     ).toEqual([]);
 
     expect(plan.removed).toEqual([]);
   });
 
-  it("adds no other area once a maintainer removed the top one", () => {
-    const plan = planFor({
-      answers: {
-        ...confidentBug,
-        area: {
-          choice: "frontend",
-          confidence: 0.5,
-          probabilities: { backend: 0.4, frontend: 0.5 },
-          type: "choice",
-        },
-      },
-      refusedLabels: ["area:frontend"],
-    });
+  it("adds nothing for a label a maintainer removed", () => {
+    const plan = planFor({ refusedLabels: ["impact: high", "priority: high"] });
 
-    expect(plan.labels.some((label) => label.startsWith("area:"))).toBe(false);
-    expect(plan.gaps).toEqual([]);
-    expect(plan.status).toBe("status:ready");
-  });
-
-  it("takes pull request areas from paths over the model's top area", () => {
-    const plan = planFor({
-      answers: {
-        ...confidentBug,
-        area: { choice: "backend", confidence: 0.99, type: "choice" },
-      },
-      areasFromPaths: areasForPaths(["apps/web/src/app/router.tsx"]),
-      checklist: undefined,
-      kind: "pull-request",
-    });
-
-    expect(plan.labels).toContain("area:frontend");
-    expect(plan.labels).not.toContain("area:backend");
-  });
-
-  it("raises the priority of a low-confidence impact for security", () => {
-    const plan = planFor({
-      answers: {
-        ...confidentBug,
-        impact: { confidence: 0.2, score: 0, type: "score" },
-        regression: { noul: 0.1, type: "noul" },
-        security: { noul: 0.9, type: "noul" },
-      },
-    });
-
-    expect(plan.labels).toContain("impact:low");
-    expect(plan.labels).toContain("priority:p0");
+    expect(plan.labels).toEqual(["type: bug"]);
   });
 });
 

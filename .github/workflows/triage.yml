@@ -38,7 +38,7 @@ jobs:
         !github.event.pull_request.draft &&
         (github.event_name != 'issue_comment' || github.event.comment.user.login == github.event.issue.user.login) &&
         (github.event.action != 'edited' || github.event.changes.body || github.event.changes.title) &&
-        (github.event.action != 'labeled' || startsWith(github.event.label.name, 'type:') || startsWith(github.event.label.name, 'area:') || startsWith(github.event.label.name, 'impact:') || startsWith(github.event.label.name, 'status:') || startsWith(github.event.label.name, 'priority:') || github.event.label.name == 'security' || github.event.label.name == 'regression') &&
+        (github.event.action != 'labeled' || startsWith(github.event.label.name, 'type:') || startsWith(github.event.label.name, 'impact:') || startsWith(github.event.label.name, 'priority:') || github.event.label.name == 'help wanted' || github.event.label.name == 'good first issue') &&
         (github.event_name != 'workflow_run' || (github.event.workflow_run.pull_requests[0] && github.event.workflow_run.conclusion != 'cancelled'))
       }}
     runs-on: ubuntu-latest

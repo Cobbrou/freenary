@@ -32,4 +32,4 @@ Optional, and strongly recommended for any change a user can see: screens, copy,
 
 [notes]: #notes
 
-One line per fact: `Closes #n`; the visual change, or "no visual change"; the tests added; the `apps/fumadocs` pages updated, or "none" and why; any migration, breaking change or merge-order constraint.
+One line per fact: `Closes #n`, the issue whose acceptance criteria this meets; the visual change, or "no visual change"; the tests added; the `apps/fumadocs` pages updated, or "none" and why; any migration, breaking change or merge-order constraint.

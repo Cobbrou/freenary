@@ -1,7 +1,6 @@
-import { SIGNAL_BY_QUESTION } from "./plan";
 import type { Answers } from "./subq";
 import {
-  AREA_LABELS,
+  GOOD_FIRST_ISSUE_LABEL,
   GROUP_PREFIXES,
   IMPACT_LEVELS,
   TYPE_LABELS,
@@ -32,38 +31,34 @@ export const THRESHOLDS = [0.5, 0.6, 0.7, 0.8, 0.85, 0.9, 0.95] as const;
 
 export interface ReviewedItem {
   readonly labels: readonly string[];
-  readonly withArea: boolean;
 }
+
+const SIGNAL_BY_QUESTION = {
+  good_first_issue: GOOD_FIRST_ISSUE_LABEL,
+} as const satisfies Record<string, string>;
 
 const groupLabel = (
   labels: readonly string[],
   prefix: string
 ): string | undefined => labels.find((label) => label.startsWith(prefix));
 
-const choiceSample = (
-  answers: Answers,
-  question: "type" | "area",
-  labels: readonly string[]
-): Sample[] => {
-  const answer = answers[question];
-  const table: Readonly<Record<string, string>> =
-    question === "type" ? TYPE_LABELS : AREA_LABELS;
+const typeSample = (answers: Answers, labels: readonly string[]): Sample[] => {
+  const answer = answers.type;
 
-  const prefix =
-    question === "type" ? GROUP_PREFIXES.type : GROUP_PREFIXES.area;
-
-  if (answer?.type !== "choice" || !groupLabel(labels, prefix)) {
+  if (answer?.type !== "choice" || !groupLabel(labels, GROUP_PREFIXES.type)) {
     return [];
   }
 
-  const predicted = table[answer.choice];
+  const predicted: string | undefined = Object.entries(TYPE_LABELS).find(
+    ([key]) => key === answer.choice
+  )?.[1];
 
   return [
     {
       confidence: answer.confidence,
       kind: "label",
       matches: predicted !== undefined && labels.includes(predicted),
-      question,
+      question: "type",
     },
   ];
 };
@@ -111,8 +106,7 @@ const signalSamples = (answers: Answers, item: ReviewedItem): Sample[] =>
   });
 
 export const samplesFor = (answers: Answers, item: ReviewedItem): Sample[] => [
-  ...choiceSample(answers, "type", item.labels),
-  ...(item.withArea ? choiceSample(answers, "area", item.labels) : []),
+  ...typeSample(answers, item.labels),
   ...impactSample(answers, item.labels),
   ...signalSamples(answers, item),
 ];
@@ -173,7 +167,6 @@ export interface RecordedRun {
 }
 
 const PREFIX_BY_QUESTION: Readonly<Record<string, string>> = {
-  area: GROUP_PREFIXES.area,
   impact: GROUP_PREFIXES.impact,
   type: GROUP_PREFIXES.type,
 };

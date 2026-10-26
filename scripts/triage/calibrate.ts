@@ -71,8 +71,8 @@ const reviewedLabels = Effect.fnUntraced(function* reviewedLabels(
 ) {
   const issue = yield* getIssue(client, record.number);
   const labels = issue.labels.map((label) => label.name);
-  const status = labels.find((label) =>
-    label.startsWith(GROUP_PREFIXES.status)
+  const priority = labels.find((label) =>
+    label.startsWith(GROUP_PREFIXES.priority)
   );
 
   const events = yield* listLabelEvents(client, record.number);
@@ -81,8 +81,8 @@ const reviewedLabels = Effect.fnUntraced(function* reviewedLabels(
     return;
   }
 
-  const statusSetter = status
-    ? lastActor(events, "labeled", status)
+  const prioritySetter = priority
+    ? lastActor(events, "labeled", priority)
     : undefined;
 
   const closer = events.findLast((event) => event.event === "closed")?.actor
@@ -96,16 +96,11 @@ const reviewedLabels = Effect.fnUntraced(function* reviewedLabels(
 
   const reviewed =
     closedByMaintainer ||
-    (statusSetter !== undefined &&
-      statusSetter !== WORKFLOW_ACTOR &&
-      statusSetter !== issue.user?.login);
+    (prioritySetter !== undefined &&
+      prioritySetter !== WORKFLOW_ACTOR &&
+      prioritySetter !== issue.user?.login);
 
-  return reviewed
-    ? {
-        labels,
-        withArea: record.kind === "issue",
-      }
-    : undefined;
+  return reviewed ? { labels } : undefined;
 });
 
 const calibrate = Effect.fnUntraced(function* calibrate() {
