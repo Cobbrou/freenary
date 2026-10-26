@@ -40,6 +40,16 @@ export const isMultiMonth = (range: TimeRange) => range !== "1M";
 
 export const rangeMonths = (range: TimeRange): number => MONTHS_IN_RANGE[range];
 
+export const localDayOfBankDate = (dateStr: string): Date => {
+  const bankDate = new Date(dateStr);
+
+  return new Date(
+    bankDate.getUTCFullYear(),
+    bankDate.getUTCMonth(),
+    bankDate.getUTCDate()
+  );
+};
+
 export const formatMonthYear = (date: Date, locale: Locale): string =>
   date.toLocaleDateString(locale, {
     month: "long",

@@ -23,6 +23,7 @@ import { m } from "@/paraglide/messages.js";
 import { getLocale } from "@/paraglide/runtime.js";
 import { formatCurrency } from "@/shared/lib/format-currency";
 
+import { localDayOfBankDate } from "../model/period";
 import {
   frequencyLabel,
   relativeDayLabel,
@@ -89,7 +90,7 @@ const RecurringTableHead = () => (
 const ItemRow = ({ asOf, item }: { asOf: Date; item: RecurringItem }) => {
   const { controlHeight } = useSize();
   const amount = formatCurrency(item.typicalAmountMinor, item.currency);
-  const next = new Date(item.nextExpected);
+  const next = localDayOfBankDate(item.nextExpected);
   const daysAway = dayDelta(asOf, next);
   const isWithinUpcomingHorizon =
     daysAway >= 0 && daysAway <= UPCOMING_HORIZON_DAYS;

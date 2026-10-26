@@ -2,6 +2,8 @@ import type { SpendingCategory } from "@freenary/api/lib/taxonomy";
 
 import type { Locale } from "@/paraglide/runtime.js";
 
+import { localDayOfBankDate } from "./period";
+
 export type RecurrenceConfidence = (typeof RECURRENCE_CONFIDENCES)[number];
 
 export type RecurrenceFrequency = (typeof RECURRENCE_FREQUENCIES)[number];
@@ -212,7 +214,7 @@ export const upcomingPayments = (
 
   for (const item of items) {
     const cadenceDays = usableCadenceDays(item);
-    const expected = new Date(item.nextExpected);
+    const expected = localDayOfBankDate(item.nextExpected);
 
     if (cadenceDays === NO_USABLE_CADENCE || Number.isNaN(expected.getTime())) {
       continue;
