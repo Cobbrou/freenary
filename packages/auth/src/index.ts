@@ -35,6 +35,7 @@ import {
   REAUTH_WINDOW_SECONDS,
   SESSION_EXPIRY_SECONDS,
   TRUSTED_DEVICE_SECONDS,
+  USER_ADDITIONAL_FIELDS,
 } from "./policy";
 import {
   appleTrustedOrigins,
@@ -222,16 +223,7 @@ export const createAuth = () => {
     trustedOrigins: [env.CORS_ORIGIN, ...appleTrustedOrigins],
 
     user: {
-      additionalFields: {
-        onboardingCompletedAt: {
-          required: false,
-          type: "date",
-        },
-        taxCountries: {
-          required: false,
-          type: "string[]",
-        },
-      },
+      additionalFields: USER_ADDITIONAL_FIELDS,
     },
   });
 };
