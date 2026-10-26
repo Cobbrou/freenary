@@ -231,7 +231,7 @@ Read the code in that inbox, then type it in the form. The local path sets no em
 
 | Tool | Version | Why you need it |
 | --- | --- | --- |
-| Bun | `1.3.14` | The runtime, the package manager and the test runner. `packageManager` in the root `package.json` pins it locally. CI installs `bun-version: latest` instead. |
+| Bun | `1.3.14` | The runtime, the package manager and the test runner. `packageManager` in the root `package.json` pins it, and CI and the Docker images use the same version. |
 | Docker | Any current release | Both stack paths run PostgreSQL in a container. |
 | Port `80` | Free, or held by a Traefik on the `devproxy` network | The containerised path only. One shared proxy on that port serves every stack. |
 | PostgreSQL | `18` | The image `bun run db:start` starts for you. You install nothing by hand. |
