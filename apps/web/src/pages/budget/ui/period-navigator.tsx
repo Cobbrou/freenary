@@ -67,7 +67,7 @@ const PeriodLabelHoldingTheWidestMonthOfTheYear = ({
           className="invisible col-start-1 row-start-1"
           key={month}
         >
-          {formatMonthYear(new Date(anchorYear, month, 1), locale)}
+          {formatMonthYear(new Date(Date.UTC(anchorYear, month, 1)), locale)}
         </span>
       ))}
     </span>
@@ -200,8 +200,13 @@ export const PeriodNavigator = ({
 }) => {
   const [popoverOpen, setPopoverOpen] = useState(false);
 
-  const anchorMonth = to.getMonth();
-  const anchorYear = to.getFullYear();
+  const anchorMonth = to.getUTCMonth();
+  const anchorYear = to.getUTCFullYear();
+  const lastDayOfAnchorMonth = new Date(anchorYear, anchorMonth + 1, 0);
+  const lastDataDay = lastMonth
+    ? new Date(lastMonth.getFullYear(), lastMonth.getMonth() + 1, 0)
+    : undefined;
+
   const step = rangeMonths(range);
 
   const navigate = (direction: number) => {
@@ -259,11 +264,11 @@ export const PeriodNavigator = ({
             ) : (
               <Calendar
                 mode="single"
-                defaultMonth={to}
-                selected={to}
+                defaultMonth={lastDayOfAnchorMonth}
+                selected={lastDayOfAnchorMonth}
                 disabled={[
                   ...(firstMonth ? [{ before: firstMonth }] : []),
-                  ...(lastMonth ? [{ after: lastMonth }] : []),
+                  ...(lastDataDay ? [{ after: lastDataDay }] : []),
                 ]}
                 onSelect={(date) => {
                   if (date) {

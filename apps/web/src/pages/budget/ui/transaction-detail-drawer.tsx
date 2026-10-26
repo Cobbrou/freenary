@@ -42,6 +42,7 @@ const TransactionDetails = ({ transaction }: { transaction: Transaction }) => {
     {
       day: "numeric",
       month: "long",
+      timeZone: "UTC",
       weekday: "short",
       year: "numeric",
     }
