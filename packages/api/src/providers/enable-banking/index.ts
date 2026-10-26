@@ -64,7 +64,7 @@ const fetchTransactions = Effect.fn("enableBanking.fetchTransactions")(
       request.dateTo
     );
 
-    return mapEBTransactions(raw, request.dateFrom);
+    return mapEBTransactions(raw, request.dateTo);
   }
 );
 

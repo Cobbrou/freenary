@@ -32,6 +32,46 @@ describe("mapEBTransactions", () => {
     expect(mapped?.providerTransactionId).toBe("entry-123");
   });
 
+  test("dates a transaction with no booking date on its transaction date", () => {
+    const [mapped] = mapEBTransactions(
+      [
+        {
+          ...transaction("pending"),
+          booking_date: undefined,
+          transaction_date: "2026-08-25",
+          value_date: "2026-08-26",
+        },
+      ],
+      "2026-08-27"
+    );
+
+    expect(mapped?.bookingDate).toBe("2026-08-25");
+  });
+
+  test("dates a transaction with no booking or transaction date on its value date", () => {
+    const [mapped] = mapEBTransactions(
+      [
+        {
+          ...transaction("pending"),
+          booking_date: undefined,
+          value_date: "2026-08-26",
+        },
+      ],
+      "2026-08-27"
+    );
+
+    expect(mapped?.bookingDate).toBe("2026-08-26");
+  });
+
+  test("dates a transaction with no bank date on the fallback date", () => {
+    const [mapped] = mapEBTransactions(
+      [{ ...transaction("pending"), booking_date: undefined }],
+      "2026-08-27"
+    );
+
+    expect(mapped?.bookingDate).toBe("2026-08-27");
+  });
+
   test("does not include transaction_id in a derived identity", () => {
     const [first] = mapEBTransactions([transaction("first")], "2026-01-01");
     const [second] = mapEBTransactions([transaction("second")], "2026-01-01");

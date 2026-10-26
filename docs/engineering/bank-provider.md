@@ -241,6 +241,7 @@ The payload is a JSON object with the keys `institution` (its `country`, `id` an
 | Quantities are decimal strings | `quantity`, `unitCost` and `unitValue` travel as strings, because units can be fractional and must not pass through a float |
 | Holdings are a snapshot | `syncHoldings` deletes the holdings the provider no longer reports, then upserts the rest. A sold position disappears |
 | Transactions deduplicate on the provider id | The unique key is the pair of account and `providerTransactionId`. That id must be stable across syncs and never random |
+| A booking date is always set | When an Enable Banking transaction carries no `booking_date`, the adapter takes `transaction_date`, then `value_date`, then `dateTo`, never `dateFrom` |
 | An unknown kind is `UNKNOWN` | Map an unrecognised account kind to `UNKNOWN` rather than guess |
 
 > [!WARNING] PostgreSQL treats `NULL` as distinct inside a unique index. An empty `providerTransactionId` therefore defeats deduplication, so the same movement inserts again on every sync.
