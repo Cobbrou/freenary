@@ -219,7 +219,7 @@ The **Adapter** column marks the hops your code answers.
 | 11 | The provider completes | The adapter reads the callback parameters and finishes the consent | `completeConnection` |
 | 12 | The API stores the result | One Prisma transaction: the connection row, then a `createMany` of the account rows | — |
 | 13 | Sync starts later | **The callback triggers no sync.** No scheduler, no cron and no webhook receiver exists. Sync runs from the budget page | — |
-| 14 | The sync body | Per connection: refresh the accounts, then per account fetch and upsert the transactions, then fetch the holdings of an investment account, then set `lastSyncedAt` | `fetchAccounts`, `fetchTransactions`, `fetchHoldings` |
+| 14 | The sync body | Per connection: refresh the accounts, then per account fetch and upsert the transactions, then fetch the holdings of an investment account, then set `lastSyncedAt` if every account imported | `fetchAccounts`, `fetchTransactions`, `fetchHoldings` |
 | 15 | The passes after sync | The internal-transfer pass, then the categorisation pass | — |
 
 The sync window is 90 days. `dateFrom` is `lastSyncedAt`, or 90 days back on a first or forced sync, and `dateTo` is today. Both arrive as `YYYY-MM-DD`.
@@ -253,7 +253,7 @@ The payload is a JSON object with the keys `institution` (its `country`, `id` an
 
 | Where the throw lands | What happens to it |
 | --- | --- |
-| Inside a sync, per account | The message joins the error list as `Account <providerAccountId>: <message>`. The other accounts still sync |
+| Inside a sync, per account | The message joins the error list as `Account <providerAccountId>: <message>`. The other accounts still sync, but `lastSyncedAt` does not advance, so the next window starts where this one did |
 | Inside a sync, at connection level | The message joins as `Connection <institutionName>: <message>`. No account of that connection syncs, and `lastSyncedAt` does not advance |
 | In the connect flow | The router maps the failure to an oRPC error, and the callback route toasts one failure message |
 
