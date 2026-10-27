@@ -6,6 +6,7 @@ import { m } from "@/paraglide/messages.js";
 import { orpc } from "@/shared/api";
 import { SyncButton } from "@/shared/ui/sync-button";
 
+import { LoadError } from "./load-error";
 import { NoBankAccount } from "./no-bank-account";
 
 export const BudgetArea = () => {
@@ -16,6 +17,18 @@ export const BudgetArea = () => {
 
   if (isAccountGateUndecided) {
     return null;
+  }
+
+  if (accountsQuery.isError) {
+    return (
+      <LoadError
+        isRetrying={accountsQuery.isFetching}
+        onRetry={() => {
+          void accountsQuery.refetch();
+        }}
+        title={m.budget_load_error_title()}
+      />
+    );
   }
 
   if (!accountsQuery.data?.hasAccounts) {

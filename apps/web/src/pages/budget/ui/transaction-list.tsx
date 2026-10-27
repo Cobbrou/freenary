@@ -42,6 +42,9 @@ export const TransactionList = ({
   hasMore,
   onLoadMore,
   isLoading,
+  isError,
+  isRetrying,
+  onRetry,
   isStale,
   onTransactionClick,
   range,
@@ -67,6 +70,9 @@ export const TransactionList = ({
   hasMore: boolean;
   onLoadMore: () => void;
   isLoading: boolean;
+  isError: boolean;
+  isRetrying: boolean;
+  onRetry: () => void;
   isStale: boolean;
   onTransactionClick: (tx: Transaction) => void;
   range: TimeRange;
@@ -77,13 +83,17 @@ export const TransactionList = ({
   const handleDirectionChange = (value: string) =>
     onDirectionChange(value as TransactionDirection);
 
-  const outgoingLabel = m.budget_tab_outgoing({
-    amount: formatCurrency(Math.abs(totals.outgoing), "EUR"),
-  });
+  const outgoingLabel = isError
+    ? m.budget_tab_outgoing_unknown()
+    : m.budget_tab_outgoing({
+        amount: formatCurrency(Math.abs(totals.outgoing), "EUR"),
+      });
 
-  const incomingLabel = m.budget_tab_incoming({
-    amount: formatCurrency(totals.incoming, "EUR"),
-  });
+  const incomingLabel = isError
+    ? m.budget_tab_incoming_unknown()
+    : m.budget_tab_incoming({
+        amount: formatCurrency(totals.incoming, "EUR"),
+      });
 
   return (
     <div className="flex flex-1 flex-col gap-3">
@@ -142,6 +152,9 @@ export const TransactionList = ({
             hasMore={hasMore}
             onLoadMore={onLoadMore}
             isLoading={isLoading}
+            isError={isError}
+            isRetrying={isRetrying}
+            onRetry={onRetry}
             isIncoming={false}
             isStale={isStale}
             onTransactionClick={onTransactionClick}
@@ -154,6 +167,9 @@ export const TransactionList = ({
             hasMore={hasMore}
             onLoadMore={onLoadMore}
             isLoading={isLoading}
+            isError={isError}
+            isRetrying={isRetrying}
+            onRetry={onRetry}
             isIncoming={true}
             isStale={isStale}
             onTransactionClick={onTransactionClick}

@@ -60,6 +60,7 @@ interface BudgetPaneProps {
 }
 
 interface SettingsContentProps extends SecurityPaneProps {
+  budgetLoadError: ReactNode;
   categories: CategoryEntry[];
   isCategoriesPending: boolean;
   isPending: boolean;
@@ -159,6 +160,7 @@ const SecurityPane = ({
 
 const SettingsContent = ({
   accounts,
+  budgetLoadError,
   categories,
   isAccountsPending,
   isCategoriesPending,
@@ -173,7 +175,7 @@ const SettingsContent = ({
 
   const panes = {
     appearance: <AppearancePane />,
-    budget: (
+    budget: budgetLoadError ?? (
       <BudgetPane
         categories={categories}
         editor={editor}
@@ -216,20 +218,18 @@ export const SettingsPage = () => {
   const sessionsQuery = useQuery(authSessionsQueryOptions());
   const accountsQuery = useQuery(authAccountsQueryOptions());
 
-  if (categoriesQuery.isError || profileQuery.isError) {
-    const isRetrying = categoriesQuery.isFetching || profileQuery.isFetching;
-
-    return (
+  const budgetLoadError =
+    categoriesQuery.isError || profileQuery.isError ? (
       <Empty>
         <EmptyHeader>
           <EmptyMedia variant="icon">
             <RiErrorWarningLine />
           </EmptyMedia>
-          <EmptyTitle>{m.settings_load_error_title()}</EmptyTitle>
+          <EmptyTitle>{m.settings_budget_load_error_title()}</EmptyTitle>
         </EmptyHeader>
         <EmptyContent>
           <Button
-            loading={isRetrying}
+            loading={categoriesQuery.isFetching || profileQuery.isFetching}
             onClick={() => {
               void categoriesQuery.refetch();
               void profileQuery.refetch();
@@ -240,12 +240,12 @@ export const SettingsPage = () => {
           </Button>
         </EmptyContent>
       </Empty>
-    );
-  }
+    ) : null;
 
   return (
     <SettingsContent
       accounts={accountsQuery.data}
+      budgetLoadError={budgetLoadError}
       categories={categoriesQuery.data?.categories ?? []}
       isAccountsPending={accountsQuery.isPending || capabilitiesQuery.isPending}
       isCategoriesPending={categoriesQuery.isPending}
