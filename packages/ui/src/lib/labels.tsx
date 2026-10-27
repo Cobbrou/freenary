@@ -32,6 +32,12 @@ export interface UiLabels {
   open: string;
   /** Edge strip that floats a collapsed sidebar out without pinning it. */
   peekSidebar: string;
+  /** Sidebar rail tooltip, one line per gesture: the verb, set in semibold,
+   *  then the rest of the line. */
+  railClick: string;
+  railClickHint: string;
+  railDrag: string;
+  railDragHint: string;
   /** Prefix of a chip's remove control, followed by the chip's own label. */
   remove: string;
   /** Grab strip on a sidebar's inner edge. */
@@ -65,6 +71,10 @@ const DEFAULT_UI_LABELS: UiLabels = {
   more: "More",
   open: "Open",
   peekSidebar: "Peek sidebar",
+  railClick: "Click",
+  railClickHint: "to collapse",
+  railDrag: "Drag",
+  railDragHint: "to resize",
   remove: "Remove",
   resizeSidebar: "Resize or collapse sidebar",
   run: "Run",

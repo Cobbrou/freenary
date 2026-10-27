@@ -1129,11 +1129,13 @@ const SidebarRail = forwardRef<HTMLButtonElement, SidebarRailProps>(
           // lopsided padding.
           <span className="flex flex-col items-start gap-2">
             <span className="[text-box:trim-both_cap_alphabetic]">
-              <span style={semibold}>Drag</span> to resize
+              <span style={semibold}>{labels.railDrag}</span>{" "}
+              {labels.railDragHint}
             </span>
             <span className="flex items-center gap-1.5">
               <span className="[text-box:trim-both_cap_alphabetic]">
-                <span style={semibold}>Click</span> to collapse
+                <span style={semibold}>{labels.railClick}</span>{" "}
+                {labels.railClickHint}
               </span>
               <ShortcutKbd>{shortcutKey}</ShortcutKbd>
             </span>
