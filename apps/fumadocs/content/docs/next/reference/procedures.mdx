@@ -146,7 +146,7 @@ A caller with no session gets a `guest` answer, not a 401.
 
 ### bankConnection.exchangeCode
 
-**Input**: `params` is the raw callback query and must hold a `state` key. `providerId` is `powens`, `enable-banking` or, outside production, `mock`.
+**Input**: `params` is the raw callback query and must hold a `state` key. It takes at most 20 keys, each key at most 100 characters and each value at most 4096. `providerId` is `powens`, `enable-banking` or, outside production, `mock`.
 
 **Output**: `{ accounts, connectionId, institutionName, returnTo, sessionId }`. `accounts` lists `{ iban?, name?, uid }` as the provider returned them. `returnTo` is `onboarding` or `settings`, as signed into the state. `sessionId` is the provider's session id.
 
@@ -221,7 +221,7 @@ With `average` or `median`, `planned` is the monthly plan. With `total`, it's th
 
 ### budget.getMerchants
 
-**Input**: `search` is matched with SQL `ILIKE`, so `%` and `_` in it act as wildcards.
+**Input**: `search` is at most 200 characters and matches the counterparty name, or the descriptor when there is none, as a plain substring, without case. `%` and `_` in it are literal.
 
 **Output**: `{ merchants }` of `{ count, name, totalMinor }`, highest count first, then by name. `totalMinor` sums absolute amounts.
 
@@ -285,7 +285,7 @@ The one paged procedure: pass `nextCursor` back as `cursor`.
 
 **Input**
 
-- `limit`: send a whole number. The schema also accepts a fraction.
+- `limit` is a whole number from 1 to 100.
 - `amountMin` and `amountMax` compare the absolute amount. Setting either excludes zero-amount transactions.
 - `filters` holds up to 20 filters, and a transaction must match all of them, and every other input too. A filter is `{ field, operator, values }` for `field` `company` or `category`, and `{ field: "amount", operator, value }` for an amount.
   - `company` and `category` take `operator` `is`, `isNot` or `isAnyOf`. `is` and `isNot` take exactly one value, `isAnyOf` up to 50.
@@ -293,8 +293,8 @@ The one paged procedure: pass `nextCursor` back as `cursor`.
   - A `category` value is a category slug or a group slug, and a group stands for every category in it. A transaction no step has categorised counts as `uncategorised`, here and in `categories`.
   - `amount` takes `operator` `gt`, `lt` or `eq`, and compares `value`, in minor units, with the absolute amount. `gt` and `lt` are strict, and `eq` matches exactly.
 - `groups`: each group adds every category in it to `categories`.
-- `merchants` takes names as `getMerchants` returns them, matched without case.
-- `search` matches the description or the counterparty name as a plain substring, without case. Unlike `getMerchants`, `%` and `_` are literal.
+- `merchants` takes up to 50 names of at most 200 characters, as `getMerchants` returns them, matched without case.
+- `search` is at most 200 characters and matches the description or the counterparty name as a plain substring, without case.
 - `sort: "amount"` puts the largest first: descending for `direction: "incoming"`, most negative first otherwise.
 
 **Output**: `{ nextCursor, totals, transactions }`. `nextCursor` is `null` on the last page. `totals` is `{ incoming, outgoing }` over the whole filter, not the page, both positive.

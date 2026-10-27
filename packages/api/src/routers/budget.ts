@@ -37,6 +37,7 @@ import {
   plannedByCategory,
 } from "../lib/budget-planned";
 import { budgetLineKindOf } from "../lib/budget-profile";
+import { escapeLikePattern } from "../lib/like-pattern";
 import {
   claimSyncRun,
   createSyncReporter,
@@ -53,7 +54,12 @@ import {
   effectiveCategory,
   pipelineCategory,
 } from "../lib/transaction-category";
-import { transactionFiltersSchema } from "../lib/transaction-filters";
+import {
+  MAX_COMPANY_NAME_LENGTH,
+  MAX_FILTER_VALUES,
+  MAX_SEARCH_TEXT_LENGTH,
+  transactionFiltersSchema,
+} from "../lib/transaction-filters";
 import { getProvider } from "../providers/registry";
 import { incomeNodesOf, incomeSourceOf } from "./income-nodes";
 import { savedFilterProcedures } from "./saved-filters";
@@ -869,7 +875,7 @@ export const budgetRouter = {
         direction: z.enum(["incoming", "outgoing"]).optional(),
         from: z.coerce.date(),
         limit: z.number().int().min(1).max(100).default(30),
-        search: z.string().optional(),
+        search: z.string().max(MAX_SEARCH_TEXT_LENGTH).optional(),
         to: z.coerce.date(),
       })
     )
@@ -895,7 +901,14 @@ export const budgetRouter = {
 
       const rows = await prisma.$queryRawUnsafe<
         { count: bigint; name: string; total: bigint }[]
-      >(sql, context.session.user.id, from, to, search ?? null, limit);
+      >(
+        sql,
+        context.session.user.id,
+        from,
+        to,
+        search === undefined ? null : escapeLikePattern(search),
+        limit
+      );
 
       return {
         merchants: rows.map((row) => ({
@@ -1205,9 +1218,12 @@ export const budgetRouter = {
         filters: transactionFiltersSchema.optional(),
         from: z.coerce.date(),
         groups: z.array(z.enum(CATEGORY_GROUPS)).optional(),
-        limit: z.number().min(1).max(100).default(50),
-        merchants: z.array(z.string().min(1)).optional(),
-        search: z.string().optional(),
+        limit: z.number().int().min(1).max(100).default(50),
+        merchants: z
+          .array(z.string().min(1).max(MAX_COMPANY_NAME_LENGTH))
+          .max(MAX_FILTER_VALUES)
+          .optional(),
+        search: z.string().max(MAX_SEARCH_TEXT_LENGTH).optional(),
         sort: z.enum(["date", "amount"]).default("date"),
         to: z.coerce.date(),
       })

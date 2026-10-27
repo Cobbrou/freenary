@@ -31,6 +31,10 @@ const decodeConnectionState = Option.liftThrowable(parseBankConnectionState);
 
 const LIST_INSTITUTIONS_CONCURRENCY = 3;
 
+const MAX_CALLBACK_PARAMS = 20;
+const MAX_CALLBACK_PARAM_KEY_LENGTH = 100;
+const MAX_CALLBACK_PARAM_VALUE_LENGTH = 4096;
+
 const resolveProvider = (providerId: string): BankingProvider =>
   Option.getOrThrowWith(
     providerById(providerId),
@@ -142,7 +146,15 @@ export const bankConnectionRouter = {
   exchangeCode: protectedProcedure
     .input(
       z.object({
-        params: z.record(z.string(), z.string()),
+        params: z
+          .record(
+            z.string().max(MAX_CALLBACK_PARAM_KEY_LENGTH),
+            z.string().max(MAX_CALLBACK_PARAM_VALUE_LENGTH)
+          )
+          .refine(
+            (params) => Object.keys(params).length <= MAX_CALLBACK_PARAMS,
+            { message: `At most ${MAX_CALLBACK_PARAMS} callback parameters` }
+          ),
         providerId: z.string(),
       })
     )
