@@ -1,0 +1,95 @@
+name: OpenBot review
+
+# Tells an OpenBot webhook routine that a pull request changed or finished CI,
+# so it can review it. It sends a small signed JSON body and nothing else.
+on:
+  # pull_request_target runs the base branch's workflow with secrets, so a
+  # pull request from a fork is announced too. The job never checks out the head.
+  pull_request_target:
+    branches: [dev]
+    types: [opened, reopened, synchronize, ready_for_review]
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+
+permissions: {}
+
+jobs:
+  notify:
+    if: >-
+      ${{
+        github.actor != 'github-actions[bot]' &&
+        github.actor != 'openbotgit[bot]' &&
+        !github.event.pull_request.draft &&
+        (github.event_name != 'workflow_run' || (
+          github.event.workflow_run.event == 'pull_request' &&
+          github.event.workflow_run.conclusion != 'cancelled' &&
+          github.event.workflow_run.pull_requests[0] &&
+          github.event.workflow_run.pull_requests[0].base.ref == 'dev'
+        ))
+      }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    concurrency:
+      group: openbot-review-${{ github.event.pull_request.number || github.event.workflow_run.pull_requests[0].number }}
+      cancel-in-progress: true
+    steps:
+      - name: Notify OpenBot
+        env:
+          WEBHOOK_URL: ${{ secrets.OPENBOT_WEBHOOK_URL }}
+          WEBHOOK_SECRET: ${{ secrets.OPENBOT_WEBHOOK_SECRET }}
+          REPOSITORY: ${{ github.repository }}
+          NUMBER: ${{ github.event.pull_request.number || github.event.workflow_run.pull_requests[0].number }}
+          ACTION: ${{ github.event_name == 'workflow_run' && 'ci_completed' || github.event.action }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.event.workflow_run.head_sha }}
+          CI_CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+          DELIVERY_ID: gh-${{ github.repository_id }}-${{ github.run_id }}-${{ github.run_attempt }}
+        run: |
+          if [ -z "$WEBHOOK_URL" ] || [ -z "$WEBHOOK_SECRET" ]; then
+            echo "::notice::OPENBOT_WEBHOOK_URL or OPENBOT_WEBHOOK_SECRET is not set; OpenBot was not notified."
+            exit 0
+          fi
+
+          body_file="$RUNNER_TEMP/openbot-body.json"
+          jq -n -c \
+            --arg occurredAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --arg repository "$REPOSITORY" \
+            --argjson number "$NUMBER" \
+            --arg action "$ACTION" \
+            --arg head_sha "$HEAD_SHA" \
+            --arg ci_conclusion "$CI_CONCLUSION" \
+            '{type: "pull_request", occurredAt: $occurredAt, data: {repository: $repository, number: $number, action: $action, head_sha: $head_sha, ci_conclusion: (if $ci_conclusion == "" then null else $ci_conclusion end)}}' \
+            | tr -d '\n' > "$body_file"
+
+          for attempt in 1 2 3 4; do
+            timestamp="$(date +%s)"
+            signature="$( { printf '%s.%s.' "$timestamp" "$DELIVERY_ID"; cat "$body_file"; } \
+              | python3 -I -c 'import hashlib, hmac, os, sys; print(hmac.new(os.environb[b"WEBHOOK_SECRET"], sys.stdin.buffer.read(), hashlib.sha256).hexdigest())')"
+
+            status="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' \
+              --max-time 30 \
+              --request POST \
+              --header 'Content-Type: application/json' \
+              --header "x-openbot-timestamp: $timestamp" \
+              --header "x-openbot-delivery-id: $DELIVERY_ID" \
+              --header "x-openbot-signature: sha256=$signature" \
+              --data-binary "@$body_file" \
+              "$WEBHOOK_URL" 2>/dev/null || true)"
+
+            case "$status" in
+              200|202)
+                echo "OpenBot accepted delivery $DELIVERY_ID ($status)."
+                exit 0 ;;
+              503|000)
+                if [ "$attempt" -lt 4 ]; then
+                  echo "OpenBot answered $status; retrying in $((attempt * 10)) seconds."
+                  sleep "$((attempt * 10))"
+                  continue
+                fi
+                echo "::warning::OpenBot was unreachable for delivery $DELIVERY_ID (last status $status); it was not notified."
+                exit 0 ;;
+            esac
+
+            echo "::error::OpenBot refused delivery $DELIVERY_ID with status $status."
+            exit 1
+          done
