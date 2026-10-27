@@ -242,7 +242,7 @@ const scanSorted = async (contentDir: string, pattern: string) => {
   const found: string[] = [];
 
   for await (const match of new Glob(pattern).scan({ cwd: contentDir })) {
-    found.push(match);
+    found.push(match.replaceAll("\\", "/"));
   }
 
   found.sort();

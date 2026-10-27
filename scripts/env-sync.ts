@@ -55,7 +55,7 @@ const SOURCE_GLOBS = [
 ];
 
 const SOURCE_EXCLUDED =
-  /\/(?:node_modules|dist|paraglide|routeTree\.gen)\/|\.test\.tsx?\/$/u;
+  /\/(?:node_modules|dist|paraglide)\/|(?:\.test\.tsx?|routeTree\.gen\.ts)\/$/u;
 
 const ENV_READ =
   /(?:process|Bun)\.env(?:\.(?<dot>[A-Z][A-Z0-9_]*)|\[["'](?<bracket>[A-Z][A-Z0-9_]*)["']\])/gu;
@@ -600,7 +600,9 @@ const readSources = async (): Promise<Map<string, string>> => {
   const paths = new Set(COMPOSE_FILES);
 
   for (const pattern of SOURCE_GLOBS) {
-    for (const file of new Glob(pattern).scanSync(".")) {
+    for (const match of new Glob(pattern).scanSync(".")) {
+      const file = match.replaceAll("\\", "/");
+
       if (!(SOURCE_EXCLUDED.test(`/${file}/`) || file === GENERATOR_FILE)) {
         paths.add(file);
       }
