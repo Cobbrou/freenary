@@ -41,6 +41,7 @@
   "assistant_error_browser_model": "The model on this device could not answer. Try again, or pick a different model.",
   "assistant_error_generic": "The assistant could not answer. Try again.",
   "assistant_error_rate_limited": "Too many questions in a row. Wait a moment and try again.",
+  "assistant_error_unavailable": "The assistant is unavailable right now. Try again later.",
   "assistant_loading_transcript": "Loading your conversation",
   "assistant_model_catalog_failed": "The list of models could not be loaded.",
   "assistant_model_choose": "Choose a model",

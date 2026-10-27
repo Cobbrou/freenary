@@ -151,6 +151,7 @@ Refusals are plain text, checked in this order:
 | 401 | `unauthorized` | No session |
 | 503 | `unconfigured` | The instance has no model. See [Configuration](/docs/reference/configuration#assistant) |
 | 429 | `rate_limited` | Over the limit |
+| 503 | `unavailable` | The limit could not be checked, for example because the database is down |
 | 400 | `bad_request` | Not JSON, not a text-only user message, or a question over 8000 characters |
 
 The limit is charged before the body is read, so a malformed request still counts.

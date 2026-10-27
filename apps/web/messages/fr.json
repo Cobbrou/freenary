@@ -41,6 +41,7 @@
   "assistant_error_browser_model": "Le modèle sur cet appareil n’a pas pu répondre. Réessayez, ou choisissez un autre modèle.",
   "assistant_error_generic": "L’assistant n’a pas pu répondre. Réessayez.",
   "assistant_error_rate_limited": "Trop de questions d’affilée. Patientez un instant et réessayez.",
+  "assistant_error_unavailable": "L’assistant est indisponible pour le moment. Réessayez plus tard.",
   "assistant_loading_transcript": "Chargement de votre conversation",
   "assistant_model_catalog_failed": "La liste des modèles n’a pas pu être chargée.",
   "assistant_model_choose": "Choisir un modèle",

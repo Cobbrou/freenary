@@ -1,6 +1,6 @@
 import { auth } from "@freenary/auth";
 import { AI_CHAT_RATE_LIMIT } from "@freenary/auth/policy";
-import { createRouterClient } from "@orpc/server";
+import { createRouterClient, ORPCError } from "@orpc/server";
 import type { UIMessage } from "ai";
 import { convertToModelMessages, stepCountIs, streamText } from "ai";
 import { Data, Effect, Match } from "effect";
@@ -35,6 +35,7 @@ export interface AssistantChatOptions {
 
 type ChatRefusalReason =
   | { readonly kind: "rate-limited"; readonly cause: unknown }
+  | { readonly kind: "rate-limit-unavailable"; readonly cause: unknown }
   | { readonly kind: "malformed-body"; readonly cause: unknown }
   | { readonly kind: "question-too-long"; readonly chars: number };
 
@@ -57,10 +58,17 @@ const chatRequestSchema = z.object({
 
 const REGENERATE_TRIGGER = "regenerate-message";
 
-const refusalResponse = Match.type<ChatRefusalReason>().pipe(
+export const rateLimitRefusal = (cause: unknown): ChatRefusalReason =>
+  cause instanceof ORPCError && cause.code === "TOO_MANY_REQUESTS"
+    ? { cause, kind: "rate-limited" }
+    : { cause, kind: "rate-limit-unavailable" };
+
+export const refusalResponse = Match.type<ChatRefusalReason>().pipe(
   Match.discriminatorsExhaustive("kind")({
     "malformed-body": () => new Response("bad_request", { status: 400 }),
     "question-too-long": () => new Response("bad_request", { status: 400 }),
+    "rate-limit-unavailable": () =>
+      new Response("unavailable", { status: 503 }),
     "rate-limited": () => new Response("rate_limited", { status: 429 }),
   })
 );
@@ -72,7 +80,7 @@ const admitChatRequest = Effect.fnUntraced(
   function* admit(request: Request, userId: string) {
     yield* Effect.tryPromise({
       catch: (cause) =>
-        new ChatRequestRefused({ reason: { cause, kind: "rate-limited" } }),
+        new ChatRequestRefused({ reason: rateLimitRefusal(cause) }),
       try: () => consumeRateLimit(`ai-chat:${userId}`, AI_CHAT_RATE_LIMIT),
     });
 
