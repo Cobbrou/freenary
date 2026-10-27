@@ -236,9 +236,9 @@ The rules behind `confidence` and `kind` are in [`docs/engineering/categorisatio
 | `asOf` | When the detection ran. Every projection counts from here |
 | `availableBalanceMinor` | The sum of account balances, or `null` when no account reports one |
 | `currency` | The most common account currency, else `EUR` |
-| `items` | One detected pattern per entry |
+| `items` | One detected pattern per entry, without the ones whose last charge is older than their band's longest gap |
 | `monthly` | The trailing 12 calendar months, oldest first, zero-filled: `{ month, fixedMinor, behavioralMinor, discretionaryMinor }`, `month` as `YYYY-MM` |
-| `monthlyIncomeMinor` | Money in over the window, divided by the months since the first incoming transaction, or `null` |
+| `monthlyIncomeMinor` | Money in over the 365 days before `asOf`, divided by the months since the first incoming transaction, or `null` |
 | `plannedOutgoingMinor` | The monthly sum of outgoing budget lines, or `null` with no plan |
 
 | Field of one item | Note |
@@ -252,12 +252,12 @@ The rules behind `confidence` and `kind` are in [`docs/engineering/categorisatio
 | `kind` | `fixed` or `behavioral` |
 | `lastSeen`, `nextExpected` | ISO 8601 date-times |
 | `merchantKey`, `merchantName` | The merchant lookup key, and the latest counterparty name or `null` |
-| `occurrences` | Transactions in the year before `asOf` |
+| `occurrences` | Transactions in the 790 days before `asOf` |
 | `typicalAmountMinor` | Positive |
 
 ### budget.getRecurringExpenses
 
-**Output**: `{ expenses }`, largest typical amount first. Each entry has the fields of a `getRecurring` item except `amountSpread`, `confidence` and `kind`. `occurrences` counts inside a 365-day window.
+**Output**: `{ expenses }`, largest typical amount first. Each entry has the fields of a `getRecurring` item except `amountSpread`, `confidence` and `kind`. `occurrences` counts inside a 790-day window.
 
 ### budget.getSankeyData
 

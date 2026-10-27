@@ -9,6 +9,9 @@ import {
   classifyRecurrence,
   recurringInWindow,
   recurringMonthsInWindow,
+  stillRecurring,
+  trailingCadence,
+  trailingYear,
 } from "./recurrence";
 
 describe("RecurringExpense", () => {
@@ -127,6 +130,81 @@ describe("cadenceWindow", () => {
 });
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+
+const yearly = (date: Date): RecurrenceTransaction => ({
+  amount: -6990,
+  category: null,
+  counterpartyName: "AMAZON PRIME",
+  currency: "EUR",
+  date,
+  merchantKey: "amazon prime",
+  resolvedCategory: null,
+});
+
+describe("trailingCadence", () => {
+  const asOf = new Date("2026-10-26T12:00:00Z");
+  const payments = [
+    yearly(new Date("2025-10-20T00:00:00Z")),
+    yearly(new Date("2026-10-20T00:00:00Z")),
+  ];
+
+  it("detects a yearly payment the trailing year cuts in half", () => {
+    expect(recurringInWindow(payments, trailingYear(asOf))).toHaveLength(0);
+
+    const detected = recurringInWindow(payments, trailingCadence(asOf));
+
+    expect(detected.map((e) => e.frequency)).toEqual(["annual"]);
+  });
+
+  it("reaches back two of the widest annual gaps", () => {
+    const window = trailingCadence(asOf);
+
+    expect(window.to).toBe(asOf);
+    expect(window.from.getTime()).toBe(asOf.getTime() - 790 * DAY_MS);
+  });
+
+  it("keeps a yearly payment listed until its next renewal is due", () => {
+    const beforeRenewal = new Date("2027-10-01T12:00:00Z");
+
+    const detected = recurringInWindow(
+      payments,
+      trailingCadence(beforeRenewal)
+    );
+
+    expect(detected.map((e) => e.frequency)).toEqual(["annual"]);
+    expect(detected.map((e) => stillRecurring(e, beforeRenewal))).toEqual([
+      true,
+    ]);
+  });
+
+  it("drops a yearly payment once its renewal is missed", () => {
+    const missedRenewal = new Date("2027-11-25T12:00:00Z");
+
+    const detected = recurringInWindow(
+      payments,
+      trailingCadence(missedRenewal)
+    );
+
+    expect(detected.map((e) => stillRecurring(e, missedRenewal))).toEqual([
+      false,
+    ]);
+  });
+});
+
+describe("stillRecurring", () => {
+  const [gym] = recurringInWindow(
+    monthlySeries("gym", new Date(2026, 0, 5), 6),
+    trailingCadence(new Date(2026, 5, 30))
+  );
+
+  it("keeps a monthly payment within a month of its last charge", () => {
+    expect(gym && stillRecurring(gym, new Date(2026, 5, 30))).toBe(true);
+  });
+
+  it("drops a monthly payment that stopped", () => {
+    expect(gym && stillRecurring(gym, new Date(2026, 8, 15))).toBe(false);
+  });
+});
 
 const monthlyAmounts = (
   merchantKey: string,

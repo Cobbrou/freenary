@@ -197,12 +197,15 @@ Every other group is `behavioral`. The confidence follows from the kind:
 
 The third total is the fallback. A transaction with no `merchantKey`, or one that no detected pattern claims, is discretionary. The split takes the detected expenses rather than a second detection pass, so the two aggregates always agree. It returns the months it saw, and a caller that wants a fixed span fills the gaps itself.
 
-### The two windows
+### The three windows
 
 | Helper | Window | What it means |
 | --- | --- | --- |
 | `cadenceWindow(from, to)` | The period widened by one year on each side | A cadence belongs to the merchant, not to where the reader stands, so the same rent never reads fixed in one month and variable in the month before it |
-| `trailingYear(to)` | The year that ends at `to` | The window a forward-looking commitment list means |
+| `trailingCadence(to)` | The 790 days that end at `to`, twice the `annual` band's longest gap | The window a forward-looking commitment list detects over: it holds two yearly charges until the next one is late |
+| `trailingYear(to)` | The year that ends at `to` | The window `budget.getRecurring` averages income over |
+
+`stillRecurring(expense, asOf)` is true while the last charge is no older than the `maxDays` of the expense's band, or `IRREGULAR_MAX_DAYS` for `irregular`. `budget.getRecurring` and `budget.getRecurringExpenses` list only those expenses. The month totals still take every detected expense, so a charge stays `fixed` in the month it was paid.
 
 `detectRecurringExpenses(userId, window)` keeps its old signature and its old behaviour. It is a projection of `detectRecurring` on the `expenses` field.
 

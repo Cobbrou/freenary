@@ -17,6 +17,8 @@ import {
   cadenceWindow,
   detectRecurring,
   detectRecurringExpenses,
+  stillRecurring,
+  trailingCadence,
   trailingYear,
 } from "../categorisation/recurrence";
 import { categoriseBatch } from "../categorisation/resolve";
@@ -910,7 +912,7 @@ export const budgetRouter = {
     const observed = trailingYear(asOf);
 
     const [detected, lines, incoming, accounts] = await Promise.all([
-      detectRecurring(userId, observed),
+      detectRecurring(userId, trailingCadence(asOf)),
       prisma.budgetLine.findMany({
         select: {
           amount: true,
@@ -952,12 +954,15 @@ export const budgetRouter = {
         : Math.round(incomingTotal / monthsCarryingIncome);
 
     const { availableBalanceMinor, currency } = accountsSummary(accounts);
+    const live = detected.expenses.filter((expense) =>
+      stillRecurring(expense, asOf)
+    );
 
     return {
       asOf: asOf.toISOString(),
       availableBalanceMinor,
       currency,
-      items: detected.expenses.map((expense) => ({
+      items: live.map((expense) => ({
         amountSpread: expense.amountSpread,
         category: expense.category,
         confidence: expense.confidence,
@@ -983,10 +988,16 @@ export const budgetRouter = {
 
   getRecurringExpenses: protectedProcedure.handler(async ({ context }) => {
     const userId = context.session.user.id;
-    const expenses = await detectRecurringExpenses(userId, trailingYear());
+    const asOf = new Date();
+    const detected = await detectRecurringExpenses(
+      userId,
+      trailingCadence(asOf)
+    );
+
+    const live = detected.filter((e) => stillRecurring(e, asOf));
 
     return {
-      expenses: expenses.map((e) => ({
+      expenses: live.map((e) => ({
         category: e.category,
         currency: e.currency,
         frequency: e.frequency,
