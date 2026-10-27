@@ -36,7 +36,7 @@ interface SyncWindow {
   dateTo: string;
 }
 
-interface ConnectionSyncContext {
+export interface ConnectionSyncContext {
   connection: ConnectionWithAccounts;
   provider: BankingProvider;
   reporter: SyncReporter;
@@ -350,25 +350,27 @@ const importAccount = async (context: AccountSyncContext): Promise<void> => {
   }
 };
 
-const importAccountsInSeries = (
+export const importAccountsInSeries = (
   context: ConnectionSyncContext,
   accounts: readonly SyncAccount[],
   errors: string[]
-): Effect.Effect<void> =>
-  Effect.forEach(
-    accounts,
-    (account) =>
+): Effect.Effect<boolean> =>
+  Effect.all(
+    accounts.map((account) =>
       Effect.tryPromise({
         catch: accountFailure(account),
         try: () => importAccount({ ...context, account }),
       }).pipe(
-        Effect.catchTag("BankSyncFailed", recordFailure(errors)),
-        Effect.flatMap(() =>
+        Effect.as(true),
+        Effect.catchTag("BankSyncFailed", (failure) =>
+          recordFailure(errors)(failure).pipe(Effect.as(false))
+        ),
+        Effect.tap(() =>
           Effect.promise(() => context.reporter.accountFinished())
         )
-      ),
-    { discard: true }
-  );
+      )
+    )
+  ).pipe(Effect.map((imported) => imported.every(Boolean)));
 
 const connectionSteps = Effect.fnUntraced(function* connectionSteps(
   connection: ConnectionWithAccounts,
@@ -393,11 +395,15 @@ const connectionSteps = Effect.fnUntraced(function* connectionSteps(
 
   yield* Effect.promise(() => reporter.accountsDiscovered(accounts.length));
 
-  yield* importAccountsInSeries(
+  const everyAccountImported = yield* importAccountsInSeries(
     { connection, provider, reporter, user, window },
     accounts,
     errors
   );
+
+  if (!everyAccountImported) {
+    return;
+  }
 
   yield* Effect.tryPromise({
     catch: failed,
