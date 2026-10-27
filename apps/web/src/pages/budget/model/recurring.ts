@@ -167,8 +167,12 @@ export const dayDelta = (from: Date, to: Date): number =>
     (startOfDay(to).getTime() - startOfDay(from).getTime()) / MS_PER_DAY
   );
 
-const addDays = (date: Date, days: number): Date =>
-  new Date(date.getTime() + days * MS_PER_DAY);
+const addDays = (date: Date, days: number): Date => {
+  const shifted = new Date(date);
+  shifted.setDate(shifted.getDate() + days);
+
+  return shifted;
+};
 
 export const monthlyEquivalentMinor = (item: RecurringItem): number => {
   const days = usableCadenceDays(item);

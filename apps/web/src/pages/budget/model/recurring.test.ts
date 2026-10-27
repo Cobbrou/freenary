@@ -437,4 +437,23 @@ describe("bank dates west and east of UTC", () => {
       expect(upcomingPayments([dueToday], new Date(asOf))[0]?.daysAway).toBe(0);
     }
   );
+
+  it("keeps a weekly payment on its weekday across the switch to summer time", () => {
+    process.env.TZ = "Europe/Paris";
+    const weekly = item({
+      frequency: "weekly",
+      intervalDays: 7,
+      nextExpected: "2026-03-26T00:00:00.000Z",
+    });
+
+    const upcoming = upcomingPayments([weekly], new Date(2026, 2, 26), 14);
+
+    expect(upcoming.map((p) => p.date)).toEqual([
+      new Date(2026, 2, 26),
+      new Date(2026, 3, 2),
+      new Date(2026, 3, 9),
+    ]);
+
+    expect(upcoming.map((p) => p.daysAway)).toEqual([0, 7, 14]);
+  });
 });
