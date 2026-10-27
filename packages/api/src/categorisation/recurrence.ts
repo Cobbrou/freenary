@@ -83,11 +83,20 @@ const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 const OBSERVATION_WINDOW_MS = 365 * MS_PER_DAY;
 
+const ANNUAL_MAX_DAYS = 395;
+
+const CADENCE_LOOKBACK_MS = 2 * ANNUAL_MAX_DAYS * MS_PER_DAY;
+
 const FREQUENCY_BANDS: readonly FrequencyBand[] = [
   { label: "weekly", maxDays: 9, minDays: 5, minOccurrences: 4 },
   { label: "monthly", maxDays: 35, minDays: 25, minOccurrences: 3 },
   { label: "quarterly", maxDays: 100, minDays: 80, minOccurrences: 2 },
-  { label: "annual", maxDays: 395, minDays: 340, minOccurrences: 2 },
+  {
+    label: "annual",
+    maxDays: ANNUAL_MAX_DAYS,
+    minDays: 340,
+    minOccurrences: 2,
+  },
 ];
 
 const IRREGULAR_MIN_OCCURRENCES = 4;
@@ -326,6 +335,22 @@ export const trailingYear = (to: Date = new Date()): RecurrenceWindow => ({
   from: new Date(to.getTime() - OBSERVATION_WINDOW_MS),
   to,
 });
+
+export const trailingCadence = (to: Date = new Date()): RecurrenceWindow => ({
+  from: new Date(to.getTime() - CADENCE_LOOKBACK_MS),
+  to,
+});
+
+const longestGapDays = (frequency: RecurrenceFrequency): number =>
+  FREQUENCY_BANDS.find((band) => band.label === frequency)?.maxDays ??
+  IRREGULAR_MAX_DAYS;
+
+export const stillRecurring = (
+  expense: RecurringExpense,
+  asOf: Date
+): boolean =>
+  asOf.getTime() - expense.lastSeen.getTime() <=
+  longestGapDays(expense.frequency) * MS_PER_DAY;
 
 export const recurringMonthsInWindow = (
   transactions: RecurrenceTransaction[],
