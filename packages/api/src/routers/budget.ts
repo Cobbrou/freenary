@@ -61,6 +61,7 @@ import {
   expandCategoryValues,
   transactionFilterConditions,
 } from "./transaction-filter-conditions";
+import { transactionPage } from "./transaction-page";
 
 interface OutgoingRow {
   amount: number;
@@ -1333,7 +1334,7 @@ export const budgetRouter = {
         findManyOpts.skip = 1;
       }
 
-      const [transactions, incomingTotal, outgoingTotal] = await Promise.all([
+      const [fetched, incomingTotal, outgoingTotal] = await Promise.all([
         prisma.transaction.findMany(findManyOpts),
         prisma.transaction.aggregate({
           _sum: { amount: true },
@@ -1345,12 +1346,7 @@ export const budgetRouter = {
         }),
       ]);
 
-      let nextCursor: string | null = null;
-
-      if (transactions.length > limit) {
-        const last = transactions.pop();
-        nextCursor = last?.id ?? null;
-      }
+      const { nextCursor, transactions } = transactionPage(fetched, limit);
 
       return {
         nextCursor,
