@@ -134,7 +134,8 @@ const mapEBTransaction = (
   bankTransactionDescription: tx.bank_transaction_code?.description,
   bankTransactionFamilyCode: tx.bank_transaction_code?.code,
   bankTransactionSubCode: tx.bank_transaction_code?.sub_code,
-  bookingDate: tx.booking_date ?? fallbackDate,
+  bookingDate:
+    tx.booking_date ?? tx.transaction_date ?? tx.value_date ?? fallbackDate,
   debtorIban: tx.debtor_account?.iban,
   debtorName: tx.debtor?.name,
   merchantCategoryCode: tx.merchant_category_code,
