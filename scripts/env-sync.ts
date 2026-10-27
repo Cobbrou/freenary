@@ -54,7 +54,8 @@ const SOURCE_GLOBS = [
   "scripts/**/*.ts",
 ];
 
-const SOURCE_EXCLUDED = /\/(?:node_modules|dist|paraglide|routeTree\.gen)\//u;
+const SOURCE_EXCLUDED =
+  /\/(?:node_modules|dist|paraglide|routeTree\.gen)\/|\.test\.tsx?\/$/u;
 
 const ENV_READ =
   /(?:process|Bun)\.env(?:\.(?<dot>[A-Z][A-Z0-9_]*)|\[["'](?<bracket>[A-Z][A-Z0-9_]*)["']\])/gu;

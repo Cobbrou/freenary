@@ -15,7 +15,7 @@ export interface BudgetPeriodPatch {
 const CALENDAR_YEAR_END_MONTH = 11;
 
 const startOfMonth = (date: Date) =>
-  new Date(date.getFullYear(), date.getMonth(), 1);
+  new Date(date.getUTCFullYear(), date.getUTCMonth(), 1);
 
 export const useBudgetPeriod = ({
   aggregation = BUDGET_SEARCH_DEFAULTS.agg,
@@ -33,15 +33,19 @@ export const useBudgetPeriod = ({
   year?: number;
 }) => {
   const lastDataDate = dateBounds?.last;
+  const lastMonth = useMemo(
+    () => (lastDataDate ? startOfMonth(lastDataDate) : undefined),
+    [lastDataDate]
+  );
 
   const anchor = useMemo(() => {
-    const fallback = lastDataDate ?? new Date();
+    const fallback = lastMonth ?? new Date();
 
     return {
       month: month ?? fallback.getMonth(),
       year: year ?? fallback.getFullYear(),
     };
-  }, [lastDataDate, month, year]);
+  }, [lastMonth, month, year]);
 
   const rangePatch = useCallback(
     (next: TimeRange): BudgetPeriodPatch => {
@@ -54,22 +58,22 @@ export const useBudgetPeriod = ({
       if (next === "1Y") {
         patch.month = CALENDAR_YEAR_END_MONTH;
         patch.year = anchor.year;
-      } else if (lastDataDate) {
-        const lastMonth = lastDataDate.getMonth();
-        const lastYear = lastDataDate.getFullYear();
+      } else if (lastMonth) {
+        const lastMonthIndex = lastMonth.getMonth();
+        const lastYear = lastMonth.getFullYear();
         const isAnchorBeyondData =
           anchor.year > lastYear ||
-          (anchor.year === lastYear && anchor.month > lastMonth);
+          (anchor.year === lastYear && anchor.month > lastMonthIndex);
 
         if (isAnchorBeyondData) {
-          patch.month = lastMonth;
+          patch.month = lastMonthIndex;
           patch.year = lastYear;
         }
       }
 
       return patch;
     },
-    [anchor, lastDataDate]
+    [anchor, lastMonth]
   );
 
   const changeRange = useCallback(
@@ -109,7 +113,7 @@ export const useBudgetPeriod = ({
     aggregation,
     firstMonth: dateBounds?.first ? startOfMonth(dateBounds.first) : undefined,
     from,
-    lastMonth: dateBounds?.last ? startOfMonth(dateBounds.last) : undefined,
+    lastMonth,
     previewMonth: (nextYear: number, nextMonth: number) =>
       periodForPatch({ month: nextMonth, year: nextYear }),
     previewRange: (next: TimeRange) => periodForPatch(rangePatch(next)),

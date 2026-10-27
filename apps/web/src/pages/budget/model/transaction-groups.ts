@@ -19,16 +19,26 @@ export type VirtualItem =
 export const HEADER_HEIGHT = 40;
 export const ROW_HEIGHT = 56;
 
-const ISO_DATE_LENGTH = 10;
 const SUNDAY = 0;
 const MONDAY = 1;
 const DAYS_BEFORE_SUNDAY_OF_THE_SAME_WEEK = 6;
 const DAYS_PER_WEEK = 7;
 const TWO_DIGITS = 2;
 
-const isoDay = (date: Date) => date.toISOString().slice(0, ISO_DATE_LENGTH);
-
 const padded = (value: number) => String(value).padStart(TWO_DIGITS, "0");
+
+const isoDay = (date: Date) =>
+  `${date.getFullYear()}-${padded(date.getMonth() + 1)}-${padded(date.getDate())}`;
+
+const localDayOfBankDate = (dateStr: string): Date => {
+  const bankDate = new Date(dateStr);
+
+  return new Date(
+    bankDate.getUTCFullYear(),
+    bankDate.getUTCMonth(),
+    bankDate.getUTCDate()
+  );
+};
 
 const mondayOfWeek = (date: Date): Date => {
   const weekday = date.getDay();
@@ -62,7 +72,7 @@ const weekKey = (date: Date) => {
 };
 
 export const groupKey = (dateStr: string, range: TimeRange): string => {
-  const date = new Date(dateStr);
+  const date = localDayOfBankDate(dateStr);
 
   if (range === "1Y") {
     return monthKey(date);
