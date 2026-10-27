@@ -1,5 +1,6 @@
-import { describe, expect, it } from "bun:test";
+import { afterAll, describe, expect, it } from "bun:test";
 
+import { localDayOfBankDate } from "./period";
 import {
   annualCostMinor,
   forecastSeries,
@@ -409,4 +410,31 @@ describe("recurringInsights", () => {
   it("says nothing it cannot measure", () => {
     expect(recurringInsights(recurringData(), asOf)).toEqual([]);
   });
+});
+
+describe("bank dates west and east of UTC", () => {
+  const HOST_TZ = process.env.TZ;
+  const dueToday = item({ nextExpected: "2026-09-08T00:00:00.000Z" });
+
+  afterAll(() => {
+    if (HOST_TZ === undefined) {
+      delete process.env.TZ;
+    } else {
+      process.env.TZ = HOST_TZ;
+    }
+  });
+
+  it.each([
+    ["America/Martinique", "2026-09-08T14:00:00.000Z", 240],
+    ["Europe/Paris", "2026-09-08T08:00:00.000Z", -120],
+  ])(
+    "counts a payment due today as zero days away in %s",
+    (timeZone, asOf, offsetMinutes) => {
+      process.env.TZ = timeZone;
+
+      expect(new Date(asOf).getTimezoneOffset()).toBe(offsetMinutes);
+      expect(localDayOfBankDate(dueToday.nextExpected).getDate()).toBe(8);
+      expect(upcomingPayments([dueToday], new Date(asOf))[0]?.daysAway).toBe(0);
+    }
+  );
 });

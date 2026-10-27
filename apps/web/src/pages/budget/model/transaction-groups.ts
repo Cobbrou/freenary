@@ -1,6 +1,7 @@
 import { m } from "@/paraglide/messages.js";
 import type { Locale } from "@/paraglide/runtime.js";
 
+import { localDayOfBankDate } from "./period";
 import type { TimeRange } from "./period";
 import type { Transaction } from "./transaction";
 
@@ -29,16 +30,6 @@ const padded = (value: number) => String(value).padStart(TWO_DIGITS, "0");
 
 const isoDay = (date: Date) =>
   `${date.getFullYear()}-${padded(date.getMonth() + 1)}-${padded(date.getDate())}`;
-
-const localDayOfBankDate = (dateStr: string): Date => {
-  const bankDate = new Date(dateStr);
-
-  return new Date(
-    bankDate.getUTCFullYear(),
-    bankDate.getUTCMonth(),
-    bankDate.getUTCDate()
-  );
-};
 
 const mondayOfWeek = (date: Date): Date => {
   const weekday = date.getDay();
