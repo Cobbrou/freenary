@@ -40,6 +40,7 @@ export interface ReviewedItem {
 }
 
 const GOOD_FIRST_ISSUE_QUESTION = "good_first_issue";
+const LEGACY_GOOD_FIRST_ISSUE_QUESTION = "good_first_issue (noul)";
 
 const groupLabel = (
   labels: readonly string[],
@@ -101,7 +102,7 @@ const goodFirstIssueSample = (
         kind: "signal",
         present,
         probability: answer.noul,
-        question: GOOD_FIRST_ISSUE_QUESTION,
+        question: LEGACY_GOOD_FIRST_ISSUE_QUESTION,
       },
     ];
   }
@@ -200,7 +201,8 @@ const inputCarriedAnswer = (
   }
 
   return (
-    question === GOOD_FIRST_ISSUE_QUESTION &&
+    (question === GOOD_FIRST_ISSUE_QUESTION ||
+      question === LEGACY_GOOD_FIRST_ISSUE_QUESTION) &&
     existingLabels.includes(GOOD_FIRST_ISSUE_LABEL)
   );
 };

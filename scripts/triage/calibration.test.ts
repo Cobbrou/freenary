@@ -8,7 +8,7 @@ import {
 } from "./calibration";
 
 describe("samplesFor", () => {
-  it("compares each answer with the labels a maintainer kept", () => {
+  it("compares each answer with the labels a maintainer kept, naming a legacy noul apart", () => {
     const samples = samplesFor(
       {
         good_first_issue: { noul: 0.1, type: "noul" },
@@ -27,7 +27,7 @@ describe("samplesFor", () => {
         kind: "signal",
         present: false,
         probability: 0.1,
-        question: "good_first_issue",
+        question: "good_first_issue (noul)",
       },
     ]);
   });
