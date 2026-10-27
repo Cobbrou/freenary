@@ -20,7 +20,7 @@ import { apportion } from "@/shared/lib/sankey";
 import type { SankeyFlow, SankeyLink, SankeyNode } from "@/shared/lib/sankey";
 
 export interface IncomeSource {
-  name: string;
+  name: string | null;
   value: number;
 }
 
@@ -46,6 +46,7 @@ const GROUP_PREFIX = "group:";
 const CATEGORY_PREFIX = "category:";
 const INCOME_PREFIX = "income:";
 const MONEY_LEFT_ID = `${GROUP_PREFIX}money-left`;
+const OTHER_INCOME_ID = "other-income";
 
 const SALARY = /salary|lön|wage|payroll/u;
 const DIVIDEND = /dividend|divi/u;
@@ -54,7 +55,11 @@ const REFUND = /refund|return/u;
 
 const DEFAULT_INCOME_COLOR: CategoryColor = "green";
 
-const incomeColorOfCounterpartyName = (name: string): CategoryColor => {
+const incomeColorOfCounterpartyName = (name: string | null): CategoryColor => {
+  if (name === null) {
+    return DEFAULT_INCOME_COLOR;
+  }
+
   const lower = name.toLowerCase();
 
   if (DIVIDEND.test(lower)) {
@@ -76,7 +81,9 @@ const incomeColorOfCounterpartyName = (name: string): CategoryColor => {
   return DEFAULT_INCOME_COLOR;
 };
 
-const incomeNodeId = (name: string) => `${INCOME_PREFIX}${name}`;
+const incomeNodeId = (name: string | null) =>
+  name === null ? OTHER_INCOME_ID : `${INCOME_PREFIX}${name}`;
+
 const groupNodeId = (group: CategoryGroup) => `${GROUP_PREFIX}${group}`;
 
 const categoryNodeId = (category: SpendingCategory) =>
@@ -151,7 +158,7 @@ export const toCashFlowSankey = ({
       incomeNodes.map((node) => ({
         color: CHART_COLOR_VARS[incomeColorOfCounterpartyName(node.name)],
         id: incomeNodeId(node.name),
-        label: node.name,
+        label: node.name ?? m.category_other_income(),
         value: node.value,
       })),
       groupNodes,

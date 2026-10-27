@@ -263,7 +263,7 @@ The rules behind `confidence` and `kind` are in [`docs/engineering/categorisatio
 **Output**: `{ groups, incomeNodes, moneyLeft, totalExpenses, totalIncome }`.
 
 - `groups` holds `{ categories, group, value }`, with `{ category, value }` rows in `categories`.
-- `incomeNodes` holds `{ name, value }`: the 10 largest sources by counterparty name, then `Other Income`. Money in with no counterparty name joins `Other Income` before the top 10 are picked, so `Other Income` can rank among them.
+- `incomeNodes` holds `{ name, value }`: the 10 largest sources by counterparty name, then one node with `name: null` for the rest. Money in with no counterparty name joins that `null` node before the top 10 are picked, so it can rank among them.
 - `moneyLeft` is `totalIncome` minus `totalExpenses`, never below 0.
 
 Internal transfers count as income and as spending.

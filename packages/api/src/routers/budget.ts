@@ -52,6 +52,7 @@ import {
 } from "../lib/transaction-category";
 import { transactionFiltersSchema } from "../lib/transaction-filters";
 import { getProvider } from "../providers/registry";
+import { incomeNodesOf, incomeSourceOf } from "./income-nodes";
 import { savedFilterProcedures } from "./saved-filters";
 import { amountBoundsCondition } from "./transaction-amount-bounds";
 import {
@@ -124,10 +125,6 @@ const AMOUNT_SIGN_PREDICATE = {
   incoming: 'AND t."amount" > 0',
   outgoing: 'AND t."amount" < 0',
 } as const;
-
-const TOP_INCOME_SOURCES = 10;
-
-const OTHER_INCOME_LABEL = "Other Income";
 
 const RECURRING_MONTHS = 12;
 
@@ -1027,7 +1024,7 @@ export const budgetRouter = {
         },
       });
 
-      let incomeSources: Map<string, number>;
+      let incomeSources: Map<string | null, number>;
       let expenseCategories: Map<SpendingCategory, number>;
 
       if (aggregation === "total") {
@@ -1036,7 +1033,7 @@ export const budgetRouter = {
 
         for (const tx of transactions) {
           if (tx.amount > 0) {
-            const source = tx.counterpartyName ?? OTHER_INCOME_LABEL;
+            const source = incomeSourceOf(tx);
             incomeSources.set(
               source,
               (incomeSources.get(source) ?? 0) + tx.amount
@@ -1052,7 +1049,7 @@ export const budgetRouter = {
         }
       } else {
         const monthsWithTransactions = new Set<string>();
-        const monthlyIncome = new Map<string, Map<string, number>>();
+        const monthlyIncome = new Map<string | null, Map<string, number>>();
         const monthlyExpense = new Map<SpendingCategory, Map<string, number>>();
 
         for (const tx of transactions) {
@@ -1060,7 +1057,7 @@ export const budgetRouter = {
           monthsWithTransactions.add(month);
 
           if (tx.amount > 0) {
-            const source = tx.counterpartyName ?? OTHER_INCOME_LABEL;
+            const source = incomeSourceOf(tx);
             let srcMonths = monthlyIncome.get(source);
 
             if (!srcMonths) {
@@ -1100,30 +1097,7 @@ export const budgetRouter = {
         );
       }
 
-      const incomeByDescendingValue = [...incomeSources.entries()].toSorted(
-        (a, b) => b[1] - a[1]
-      );
-
-      const incomeNodes = incomeByDescendingValue
-        .slice(0, TOP_INCOME_SOURCES)
-        .map(([name, value]) => ({ name, value }));
-
-      const incomeBeyondTopSources = incomeByDescendingValue
-        .slice(TOP_INCOME_SOURCES)
-        .reduce((sum, [, value]) => sum + value, 0);
-
-      if (incomeBeyondTopSources > 0) {
-        const existing = incomeNodes.find((n) => n.name === OTHER_INCOME_LABEL);
-
-        if (existing) {
-          existing.value += incomeBeyondTopSources;
-        } else {
-          incomeNodes.push({
-            name: OTHER_INCOME_LABEL,
-            value: incomeBeyondTopSources,
-          });
-        }
-      }
+      const incomeNodes = incomeNodesOf(incomeSources);
 
       const byGroup = new Map<
         CategoryGroup,
