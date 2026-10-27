@@ -1,6 +1,7 @@
 import { cors } from "@elysiajs/cors";
 import { handleAssistantChat } from "@freenary/api/assistant/handler";
 import { createContext } from "@freenary/api/context";
+import { updateCheck } from "@freenary/api/instance/update-check";
 import {
   handleMockConsent,
   MOCK_CONSENT_PATH,
@@ -155,6 +156,8 @@ new Elysia()
   .listen(env.PORT, () => {
     console.log(`Server is running on ${env.BETTER_AUTH_URL}`);
   });
+
+updateCheck.start();
 
 const setupState = await Effect.runPromise(readSetupState());
 

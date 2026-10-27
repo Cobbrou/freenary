@@ -37,7 +37,12 @@ import {
   classifierSettingsOf,
   createClassifierChain,
 } from "../categorisation/classifier/registry";
-import { isOperator, operatorProcedure, publicProcedure } from "../index";
+import {
+  isOperator,
+  operatorProcedure,
+  protectedProcedure,
+  publicProcedure,
+} from "../index";
 import { maskEnvironmentValue } from "../instance/mask";
 import {
   candidateOf,
@@ -48,11 +53,13 @@ import {
   writesOf,
 } from "../instance/merge";
 import { findProbe } from "../instance/probes";
+import { visibleTo } from "../instance/release";
 import {
   DISABLED_VARIANT,
   integrationStateOf,
   missingForSetup,
 } from "../instance/setup";
+import { updateCheck } from "../instance/update-check";
 import { bankConnectionCount } from "./bank-connection-count";
 
 const RESTART_GRACE_MS = 250;
@@ -419,4 +426,8 @@ export const instanceRouter = {
 
     return { ...state, isOperator: operator };
   }),
+
+  update: protectedProcedure.handler(async ({ context }) =>
+    visibleTo(updateCheck.status(), await isOperator(context.session.user.id))
+  ),
 };

@@ -45,7 +45,7 @@ Stored values are encrypted with `BETTER_AUTH_SECRET`. [Security](/docs/referenc
 
 {/* env-sync:start count */}
 
-The API server checks its environment once, at startup. The schema is [`packages/env/src/schema.ts`](https://github.com/suiramdev/freenary/blob/main/packages/env/src/schema.ts). It declares 49 variables with Zod, and `packages/env/src/server.ts` hands them to `@t3-oss/env-core`. The reference below, and `.env.example`, are generated from that one file.
+The API server checks its environment once, at startup. The schema is [`packages/env/src/schema.ts`](https://github.com/suiramdev/freenary/blob/main/packages/env/src/schema.ts). It declares 51 variables with Zod, and `packages/env/src/server.ts` hands them to `@t3-oss/env-core`. The reference below, and `.env.example`, are generated from that one file.
 
 {/* env-sync:end */}
 
@@ -77,6 +77,8 @@ Never set `SKIP_ENV_VALIDATION` at runtime. Any non-empty value turns the whole 
 | Variable | Default | What it does | Absent or wrong |
 | --- | --- | --- | --- |
 | `BETTER_AUTH_SECRET` | `dev_secret_change_me_at_least_32chars` outside production, required in production | Signs session cookies, encrypts two-factor secrets and backup codes, and signs the bank connection state. | Under 32 characters stops the start. The development default applies outside production alone, so a production start with no value stops. |
+| `FREENARY_BUILD_VERSION` | unset | The release the server image was built from. The image bakes it from the `FREENARY_VERSION` build argument, and an operator never sets it. | Empty, or a value that is not `X.Y.Z` such as `dev`, `main` or `sha-*`, turns the update check off. |
+| `FREENARY_UPDATE_CHECK` | `true` | `true` asks GitHub once a day for the newest Freenary release, and the account menu of the operator says when it is newer than the running one. | `false` sends no request and shows no notice. A value that is not a boolean string stops the start. |
 | `NODE_ENV` | `development` | Picks the runtime mode: `development`, `production` or `test`. | `production` drops the log file drain and turns the cookie warning into a refusal. `test` turns the sign-in rate limits off. Compose always sets `production`. |
 | `PORT` | `3000` | The port the API server listens on. It also fills the `BETTER_AUTH_URL` default. | A non-digit character stops the start. In the Docker stack it must stay `3000`, because the healthcheck fetches port 3000 inside the container. Never put it in the root `.env` file, which the `server` service loads whole. |
 

@@ -222,6 +222,31 @@ export const serverEnvSchema = {
       secret: true,
       section: "bank",
     }),
+  FREENARY_BUILD_VERSION: z
+    .string()
+    .optional()
+    .describe(
+      "The release the server image was built from. The image bakes it from the `FREENARY_VERSION` build argument, and an operator never sets it."
+    )
+    .meta({
+      envFile: "none",
+      example: "1.2.0",
+      onError:
+        "Empty, or a value that is not `X.Y.Z` such as `dev`, `main` or `sha-*`, turns the update check off.",
+      section: "core",
+    }),
+  FREENARY_UPDATE_CHECK: z
+    .stringbool()
+    .default(true)
+    .describe(
+      "`true` asks GitHub once a day for the newest Freenary release, and the account menu of the operator says when it is newer than the running one."
+    )
+    .meta({
+      example: "true",
+      onError:
+        "`false` sends no request and shows no notice. A value that is not a boolean string stops the start.",
+      section: "core",
+    }),
   GOOGLE_CLIENT_ID: z
     .string()
     .optional()

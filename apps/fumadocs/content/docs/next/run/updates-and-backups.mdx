@@ -49,6 +49,14 @@ Also retain the dump's `POSTGRES_PASSWORD`. Coolify calls it `SERVICE_PASSWORD_P
 
 Use a complete version such as `1.2.0` when you want updates only after an explicit change.
 
+## Update notice
+
+When a newer stable release exists, the account menu of the operator shows **Update available: v1.3.0**, with **Release notes** and **How to update**, which opens this page for that release. A dot on your avatar marks the menu until you update. Freenary never updates itself.
+
+The API server asks GitHub for its releases once at startup, then once a day, and keeps the answer in memory. The request is an unauthenticated `GET` to `api.github.com` with a `freenary/<version>` user agent, and it carries no user or financial data. Only `vX.Y.Z` releases count, so the weekly merchant data releases and pre-releases never trigger the notice. A failed request shows nothing and is tried again the next day.
+
+A build that is not a release, such as `main`, `dev` or `sha-1a2b3c4`, never sends the request. To turn the check off, set `FREENARY_UPDATE_CHECK=false`; see [Configuration](/docs/reference/configuration#core-and-secrets).
+
 ## Deploy an update
 
 Create a backup before moving forward. Database migrations aren't designed to run backward.
