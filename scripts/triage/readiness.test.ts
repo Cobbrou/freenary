@@ -36,6 +36,7 @@ const planFor = (overrides: Partial<PlanInput>) =>
     answers: { ...settled, ...requestMet },
     checklist: "request",
     docsExpected: false,
+    duplicateCandidates: [9, 14],
     existingLabels: [],
     kind: "issue",
     refusedLabels: [],
@@ -100,7 +101,7 @@ describe("issue readiness", () => {
     expect(plan.gaps).toEqual([]);
   });
 
-  it("applies no impact or priority for an unsure score", () => {
+  it("applies the top impact and its priority for a low-confidence answer", () => {
     const plan = planFor({
       answers: {
         ...settled,
@@ -114,16 +115,12 @@ describe("issue readiness", () => {
       },
     });
 
-    expect(plan.labels.some((label) => label.startsWith("impact:"))).toBe(
-      false
-    );
+    expect(plan.labels).toContain("impact: low");
 
-    expect(plan.labels.some((label) => label.startsWith("priority:"))).toBe(
-      false
-    );
+    expect(plan.labels).toContain("priority: low");
 
-    expect(plan.notes.some((note) => note.startsWith("impact: none"))).toBe(
-      true
+    expect(plan.notes).toContain(
+      "impact: impact: low (score 0.55, 0.50; next impact: medium 0.45)"
     );
 
     expect(plan.status).toBe("ready");
@@ -666,7 +663,11 @@ describe("good first issue", () => {
   const wantsIt: Answers = {
     ...settled,
     ...requestMet,
-    good_first_issue: { noul: 0.99, type: "noul" },
+    good_first_issue: {
+      choice: "good_first_issue",
+      confidence: 0.99,
+      type: "choice",
+    },
   };
 
   it("is applied to a ready issue", () => {
@@ -764,7 +765,11 @@ describe("help wanted", () => {
       answers: {
         ...settled,
         ...requestMet,
-        good_first_issue: { noul: 0.99, type: "noul" },
+        good_first_issue: {
+          choice: "good_first_issue",
+          confidence: 0.99,
+          type: "choice",
+        },
       },
     });
 

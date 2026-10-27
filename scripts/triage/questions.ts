@@ -23,11 +23,15 @@ export interface DuplicateCandidate {
 }
 
 export const NO_DUPLICATE = "none";
+
+export const NO_GOOD_FIRST_ISSUE = "none";
+export const GOOD_FIRST_ISSUE_CHOICE = "good_first_issue";
+
 const DUPLICATE_KEY_PREFIX = "item-";
 const MAX_CANDIDATE_TITLE_LENGTH = 200;
 
-export const duplicateKey = (candidate: DuplicateCandidate): string =>
-  `${DUPLICATE_KEY_PREFIX}${candidate.number}`;
+export const duplicateKey = (number: number): string =>
+  `${DUPLICATE_KEY_PREFIX}${number}`;
 
 export const candidateNumber = (key: string): number | undefined =>
   key.startsWith(DUPLICATE_KEY_PREFIX)
@@ -104,12 +108,13 @@ const SECURITY_QUESTION: Question = {
 
 const GOOD_FIRST_ISSUE_QUESTION: Question = {
   criteria: {
-    false: "Large, vague, or needs deep knowledge of the architecture",
-    true: "Small, well scoped, and touches few files",
+    [GOOD_FIRST_ISSUE_CHOICE]: "Small, well scoped, and touches few files",
+    [NO_GOOD_FIRST_ISSUE]:
+      "Large, vague, needs deep knowledge of the architecture, or too little is said to judge",
   },
   instructions:
     "Could a newcomer to the codebase complete this without deep knowledge of its architecture?",
-  type: "noul",
+  type: "choice",
 };
 
 const PULL_REQUEST_SUMMARY_QUESTION: Question = {
@@ -141,7 +146,7 @@ const duplicateQuestion = (
       "None of them describes the same problem, request or change",
     ],
     ...candidates.map((candidate) => [
-      duplicateKey(candidate),
+      duplicateKey(candidate.number),
       candidate.title.slice(0, MAX_CANDIDATE_TITLE_LENGTH),
     ]),
   ]),

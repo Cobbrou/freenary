@@ -1,8 +1,14 @@
+import {
+  GOOD_FIRST_ISSUE_TIE_ORDER,
+  rankedImpact,
+  rankedTop,
+  TYPE_TIE_ORDER,
+} from "./plan";
+import { GOOD_FIRST_ISSUE_CHOICE } from "./questions";
 import type { Answers } from "./subq";
 import {
   GOOD_FIRST_ISSUE_LABEL,
   GROUP_PREFIXES,
-  IMPACT_LEVELS,
   TYPE_LABELS,
 } from "./taxonomy";
 
@@ -33,9 +39,7 @@ export interface ReviewedItem {
   readonly labels: readonly string[];
 }
 
-const SIGNAL_BY_QUESTION = {
-  good_first_issue: GOOD_FIRST_ISSUE_LABEL,
-} as const satisfies Record<string, string>;
+const GOOD_FIRST_ISSUE_QUESTION = "good_first_issue";
 
 const groupLabel = (
   labels: readonly string[],
@@ -49,18 +53,18 @@ const typeSample = (answers: Answers, labels: readonly string[]): Sample[] => {
     return [];
   }
 
-  const predicted: string | undefined = Object.entries(TYPE_LABELS).find(
-    ([key]) => key === answer.choice
-  )?.[1];
+  const selection = rankedTop(answer, TYPE_TIE_ORDER);
 
-  return [
-    {
-      confidence: answer.confidence,
-      kind: "label",
-      matches: predicted !== undefined && labels.includes(predicted),
-      question: "type",
-    },
-  ];
+  return selection
+    ? [
+        {
+          confidence: selection.probability,
+          kind: "label",
+          matches: labels.includes(TYPE_LABELS[selection.top]),
+          question: "type",
+        },
+      ]
+    : [];
 };
 
 const impactSample = (
@@ -69,46 +73,60 @@ const impactSample = (
 ): Sample[] => {
   const answer = answers.impact;
   const actual = groupLabel(labels, GROUP_PREFIXES.impact);
+  const selection =
+    answer?.type === "score" && actual ? rankedImpact(answer) : undefined;
 
-  if (answer?.type !== "score" || !actual) {
-    return [];
-  }
-
-  const index = Math.min(
-    Math.max(Math.round(answer.score), 0),
-    IMPACT_LEVELS.length - 1
-  );
-
-  return [
-    {
-      confidence: answer.confidence,
-      kind: "label",
-      matches: IMPACT_LEVELS[index] === actual,
-      question: "impact",
-    },
-  ];
+  return selection
+    ? [
+        {
+          confidence: selection.probability,
+          kind: "label",
+          matches: selection.top === actual,
+          question: "impact",
+        },
+      ]
+    : [];
 };
 
-const signalSamples = (answers: Answers, item: ReviewedItem): Sample[] =>
-  Object.entries(SIGNAL_BY_QUESTION).flatMap(([question, label]) => {
-    const answer = answers[question];
+const goodFirstIssueSample = (
+  answers: Answers,
+  labels: readonly string[]
+): Sample[] => {
+  const answer = answers[GOOD_FIRST_ISSUE_QUESTION];
+  const present = labels.includes(GOOD_FIRST_ISSUE_LABEL);
 
-    return answer?.type === "noul"
-      ? [
-          {
-            kind: "signal" as const,
-            present: item.labels.includes(label),
-            probability: answer.noul,
-            question,
-          },
-        ]
-      : [];
-  });
+  if (answer?.type === "noul") {
+    return [
+      {
+        kind: "signal",
+        present,
+        probability: answer.noul,
+        question: GOOD_FIRST_ISSUE_QUESTION,
+      },
+    ];
+  }
+
+  const selection =
+    answer?.type === "choice"
+      ? rankedTop(answer, GOOD_FIRST_ISSUE_TIE_ORDER)
+      : undefined;
+
+  return selection
+    ? [
+        {
+          confidence: selection.probability,
+          kind: "label",
+          matches: (selection.top === GOOD_FIRST_ISSUE_CHOICE) === present,
+          question: GOOD_FIRST_ISSUE_QUESTION,
+        },
+      ]
+    : [];
+};
 
 export const samplesFor = (answers: Answers, item: ReviewedItem): Sample[] => [
   ...typeSample(answers, item.labels),
   ...impactSample(answers, item.labels),
-  ...signalSamples(answers, item),
+  ...goodFirstIssueSample(answers, item.labels),
 ];
 
 const rowFor = (
@@ -181,9 +199,9 @@ const inputCarriedAnswer = (
     return existingLabels.some((label) => label.startsWith(prefix));
   }
 
-  return Object.entries(SIGNAL_BY_QUESTION).some(
-    ([signalQuestion, label]) =>
-      signalQuestion === question && existingLabels.includes(label)
+  return (
+    question === GOOD_FIRST_ISSUE_QUESTION &&
+    existingLabels.includes(GOOD_FIRST_ISSUE_LABEL)
   );
 };
 

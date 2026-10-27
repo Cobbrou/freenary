@@ -32,6 +32,65 @@ describe("samplesFor", () => {
     ]);
   });
 
+  it("measures the option the plan applies", () => {
+    const samples = samplesFor(
+      {
+        good_first_issue: {
+          choice: "none",
+          confidence: 0.4,
+          probabilities: { good_first_issue: 0.6, none: 0.4 },
+          type: "choice",
+        },
+        impact: {
+          confidence: 0.3,
+          probabilities: { "0": 0.1, "1": 0.2, "2": 0.7 },
+          score: 0.4,
+          type: "score",
+        },
+        type: {
+          choice: "feature",
+          confidence: 0.4,
+          probabilities: { bug: 0.6, feature: 0.4 },
+          type: "choice",
+        },
+      },
+      { labels: ["type: bug", "impact: high"] }
+    );
+
+    expect(samples).toEqual([
+      { confidence: 0.6, kind: "label", matches: true, question: "type" },
+      { confidence: 0.7, kind: "label", matches: true, question: "impact" },
+      {
+        confidence: 0.6,
+        kind: "label",
+        matches: false,
+        question: "good_first_issue",
+      },
+    ]);
+  });
+
+  it("counts a good first issue answer of none as agreeing with no label", () => {
+    expect(
+      samplesFor(
+        {
+          good_first_issue: {
+            choice: "none",
+            confidence: 0.55,
+            type: "choice",
+          },
+        },
+        { labels: [] }
+      )
+    ).toEqual([
+      {
+        confidence: 0.55,
+        kind: "label",
+        matches: true,
+        question: "good_first_issue",
+      },
+    ]);
+  });
+
   it("skips a group the maintainer left empty", () => {
     expect(
       samplesFor(

@@ -269,6 +269,7 @@ const triage = Effect.fnUntraced(function* triage() {
     answers,
     checklist,
     docsExpected: docsExpected(files),
+    duplicateCandidates: candidates.map((candidate) => candidate.number),
     existingLabels,
     kind,
     refusedLabels: ownership.refusedLabels,
