@@ -24,6 +24,7 @@ export const parseMinorUnits = (
   amount: string,
   creditDebitIndicator: string = CREDIT_INDICATOR
 ): number => {
+  const isSigned = LEADING_MINUS.test(amount);
   const unsigned = amount.replace(LEADING_MINUS, "");
   const [units = "0", rawFraction = ""] = unsigned.split(".");
   const fraction = rawFraction
@@ -31,7 +32,8 @@ export const parseMinorUnits = (
     .slice(0, MINOR_UNIT_DIGITS);
 
   const magnitude = Math.trunc(Number(`${units}${fraction}`));
-  const sign = creditDebitIndicator === DEBIT_INDICATOR ? -1 : 1;
+  const isDebit = isSigned || creditDebitIndicator === DEBIT_INDICATOR;
+  const sign = isDebit ? -1 : 1;
 
   return magnitude * sign;
 };
