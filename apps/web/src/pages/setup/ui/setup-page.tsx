@@ -21,6 +21,7 @@ import { WizardStepper } from "@/shared/ui/wizard-stepper";
 import { completionFailureMessage, stepLabel } from "../model/labels";
 import { FINISH_STEP, setupIntegrationsOf } from "../model/setup-steps";
 import { useSetup } from "../model/use-setup";
+import { ClaimStep } from "./claim-step";
 import { FaultNotice } from "./fault-notice";
 import { FinishStep } from "./finish-step";
 import { SetupWizardSkeleton } from "./setup-wizard-skeleton";
@@ -92,6 +93,16 @@ export const SetupPage = () => {
             {m.setup_try_again()}
           </Button>
         </Empty>
+      );
+    }
+
+    if (!setup.isOperator && setup.isUnclaimed) {
+      return (
+        <ClaimStep
+          error={setup.claimError}
+          isClaiming={setup.claim.isPending}
+          onClaim={(token) => setup.claim.mutate({ token })}
+        />
       );
     }
 
