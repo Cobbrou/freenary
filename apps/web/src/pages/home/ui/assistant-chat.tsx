@@ -70,6 +70,10 @@ const errorMessageOf = (message: string): string => {
     return m.assistant_error_rate_limited();
   }
 
+  if (message.includes("unavailable")) {
+    return m.assistant_error_unavailable();
+  }
+
   if (message.includes("unconfigured")) {
     return m.assistant_unavailable_description();
   }
