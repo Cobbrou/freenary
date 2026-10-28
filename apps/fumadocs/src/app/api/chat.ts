@@ -13,6 +13,8 @@ import { z } from "zod";
 import { listVersions, newestRelease, source } from "@/shared/content";
 import { ChatUIMessage, SearchTool } from "@/shared/ui/ai-search";
 
+import { guardChatRequest } from "./chat-guard";
+
 interface CustomDocument extends DocumentData {
   url: string;
   title: string;
@@ -24,13 +26,9 @@ const INDEXING_CHUNK_SIZE = 50;
 
 const MAX_TOOL_STEPS = 5;
 
-const DEFAULT_MODEL = "anthropic/claude-3.5-sonnet";
+const MAX_OUTPUT_TOKENS = 1024;
 
-const chatRequestBody = z
-  .object({
-    version: z.string().optional(),
-  })
-  .catch({});
+const DEFAULT_MODEL = "anthropic/claude-3.5-sonnet";
 
 const indexByVersion = new Map<string, Promise<Document<CustomDocument>>>();
 
@@ -64,9 +62,11 @@ const searchTool = (version: string) =>
   }) satisfies SearchTool;
 
 export const chatHandler = async (ctx: { request: Request }) => {
-  const req = ctx.request;
-  const reqJson = await req.json();
-  const requestedVersion = chatRequestBody.parse(reqJson).version;
+  const chatRequest = await guardChatRequest(ctx.request);
+
+  if (chatRequest instanceof Response) return chatRequest;
+
+  const requestedVersion = chatRequest.version;
   const version =
     requestedVersion !== undefined && listVersions().includes(requestedVersion)
       ? requestedVersion
@@ -75,12 +75,13 @@ export const chatHandler = async (ctx: { request: Request }) => {
   const stream = streamText({
     model: openrouter.chat(process.env.OPENROUTER_MODEL ?? DEFAULT_MODEL),
     stopWhen: stepCountIs(MAX_TOOL_STEPS),
+    maxOutputTokens: MAX_OUTPUT_TOKENS,
     tools: {
       search: searchTool(version),
     },
     messages: [
       { role: "system", content: systemPrompt },
-      ...(await convertToModelMessages<ChatUIMessage>(reqJson.messages ?? [], {
+      ...(await convertToModelMessages<ChatUIMessage>(chatRequest.messages, {
         convertDataPart(part) {
           if (part.type === "data-client")
             return {
