@@ -8,6 +8,7 @@ import type { RequestLogger } from "evlog";
 import { createAILogger } from "evlog/ai";
 import { z } from "zod";
 
+import { isJsonRequest } from "../lib/json-request";
 import { consumeRateLimit } from "../lib/rate-limit";
 import { appRouter } from "../routers/index";
 import {
@@ -20,7 +21,6 @@ import { assistantModel } from "./provider";
 import { assistantTools } from "./tools";
 import {
   answerableParts,
-  isJsonRequest,
   isoDay,
   isStorableOutcome,
   LOCALE,

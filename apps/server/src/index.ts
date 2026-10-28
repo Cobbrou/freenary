@@ -2,6 +2,7 @@ import { cors } from "@elysiajs/cors";
 import { handleAssistantChat } from "@freenary/api/assistant/handler";
 import { createContext } from "@freenary/api/context";
 import { updateCheck } from "@freenary/api/instance/update-check";
+import { isJsonRequest } from "@freenary/api/lib/json-request";
 import {
   handleMockConsent,
   MOCK_CONSENT_PATH,
@@ -133,6 +134,16 @@ new Elysia()
   .all(
     "/api-reference*",
     async (context) => {
+      if (
+        context.request.method === "POST" &&
+        !isJsonRequest(context.request)
+      ) {
+        return copyResponseStatusOntoWideEvent(
+          context.set,
+          new Response("unsupported_media_type", { status: 415 })
+        );
+      }
+
       const { pathname, search } = new URL(context.request.url);
       const publicRequest = new Request(
         new URL(`${pathname}${search}`, env.BETTER_AUTH_URL).href,
