@@ -9,6 +9,8 @@ export const declaredPort = process.env.PORT || DEFAULT_PORT;
 
 const isProduction = process.env.NODE_ENV === "production";
 
+const DEVELOPMENT_AUTH_SECRET = "dev_secret_change_me_at_least_32chars";
+
 const devDefault = <Schema extends z.ZodType>(
   schema: Schema,
   value: z.core.util.NoUndefined<z.output<Schema>>
@@ -114,17 +116,26 @@ export const serverEnvSchema = {
       section: "bank",
     }),
   BETTER_AUTH_SECRET: devDefault(
-    z.string().min(32),
-    "dev_secret_change_me_at_least_32chars"
+    z
+      .string()
+      .min(32)
+      .refine(
+        (secret) => !(isProduction && secret === DEVELOPMENT_AUTH_SECRET),
+        {
+          error:
+            "the development secret is public and is refused in production; generate one with `openssl rand -hex 32`",
+        }
+      ),
+    DEVELOPMENT_AUTH_SECRET
   )
     .describe(
       "Signs session cookies, encrypts two-factor secrets and backup codes, and signs the bank connection state."
     )
     .meta({
       envFile: "required",
-      example: "dev_secret_change_me_at_least_32chars",
+      example: "",
       onError:
-        "Under 32 characters stops the start. The development default applies outside production alone, so a production start with no value stops.",
+        "Under 32 characters stops the start. The development default applies outside production alone, so a production start with no value, or with that default, stops.",
       productionRequired: true,
       secret: true,
       section: "core",
@@ -274,7 +285,7 @@ export const serverEnvSchema = {
       envFile: "none",
       example: "production",
       onError:
-        "`production` drops the log file drain and turns the cookie warning into a refusal. `test` turns the sign-in rate limits off. Compose always sets `production`.",
+        "`production` drops the log file drain and turns the cookie warning into a refusal. `test` turns the sign-in rate limits off. The production Compose files and `bun run start` always set `production`.",
       section: "core",
     }),
   OIDC_CLIENT_ID: z

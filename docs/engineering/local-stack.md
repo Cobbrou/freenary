@@ -128,7 +128,7 @@ The paraglide ignore prevents one exact failure. Both sides compile that directo
 ## The local path
 
 ```bash
-cp .env.example .env
+sed "s/^BETTER_AUTH_SECRET=$/BETTER_AUTH_SECRET=$(openssl rand -hex 32)/" .env.example > .env
 echo 'DATABASE_URL=postgresql://postgres:password@localhost:5432/freenary' > apps/server/.env
 docker compose up -d --wait postgres
 (cd packages/db && bun run db:migrate:deploy)

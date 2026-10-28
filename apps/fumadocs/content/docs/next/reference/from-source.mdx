@@ -47,11 +47,11 @@ A local build targets the Docker daemon's platform. Release CI builds `linux/amd
 
 You need PostgreSQL, Bun `1.3.14`, and Node `^20.19`, `^22.12` or `>=24.0`. Node runs Prisma's install check; the applications run on Bun.
 
-Create a PostgreSQL role and database that match `DATABASE_URL`. The migration creates tables, not the role or the database. Then create `apps/server/.env`:
+Create a PostgreSQL role and database that match `DATABASE_URL`. The migration creates tables, not the role or the database. Then create `apps/server/.env`, with the output of `openssl rand -hex 32` as `BETTER_AUTH_SECRET`:
 
 ```dotenv
 DATABASE_URL=postgresql://freenary:password@127.0.0.1:5432/freenary
-BETTER_AUTH_SECRET=replace-with-at-least-32-characters
+BETTER_AUTH_SECRET=
 BETTER_AUTH_URL=https://freenary.example.com
 CORS_ORIGIN=https://freenary.example.com
 NODE_ENV=production

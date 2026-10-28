@@ -28,3 +28,40 @@ describe("TRANSACTION_CLASSIFIER_TIMEOUT_MS", () => {
     }
   });
 });
+
+const DEVELOPMENT_AUTH_SECRET = "dev_secret_change_me_at_least_32chars";
+
+const outputOf = ({ stdout, stderr }: Bun.SyncSubprocess) =>
+  `${stdout.toString().trim()}${stderr.toString().trim()}`;
+
+const parseSecretUnder = (nodeEnv: string, secret: string) =>
+  outputOf(
+    Bun.spawnSync(
+      [
+        process.execPath,
+        "-e",
+        `const { serverEnvSchema } = await import("./schema.ts");
+       const result = serverEnvSchema.BETTER_AUTH_SECRET.safeParse(${JSON.stringify(secret)});
+       console.log(result.success ? "accepted" : result.error.issues[0].message);`,
+      ],
+      { cwd: import.meta.dir, env: { ...process.env, NODE_ENV: nodeEnv } }
+    )
+  );
+
+describe("BETTER_AUTH_SECRET", () => {
+  it("refuses the development secret in production", () => {
+    expect(parseSecretUnder("production", DEVELOPMENT_AUTH_SECRET)).toContain(
+      "the development secret is public and is refused in production"
+    );
+  });
+
+  it("accepts a generated secret in production", () => {
+    expect(parseSecretUnder("production", "a".repeat(64))).toBe("accepted");
+  });
+
+  it("keeps the development secret outside production", () => {
+    expect(parseSecretUnder("development", DEVELOPMENT_AUTH_SECRET)).toBe(
+      "accepted"
+    );
+  });
+});
