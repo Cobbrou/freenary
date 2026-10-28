@@ -2,6 +2,7 @@ import {
   CATEGORY_COLOR_VALUES,
   CATEGORY_ICON_NAMES,
 } from "@freenary/api/lib/taxonomy";
+import { ORPCError } from "@orpc/client";
 import { useForm } from "@tanstack/react-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -66,8 +67,15 @@ export const useCustomCategoryForm = ({
 
       return key;
     },
-    onError: (error: Error) => {
-      toast.error(error.message);
+    onError: (error) => {
+      const isNameTaken =
+        error instanceof ORPCError && error.code === "CONFLICT";
+
+      toast.error(
+        isNameTaken
+          ? m.settings_category_name_taken()
+          : m.settings_category_save_error()
+      );
     },
     onSuccess: async (key) => {
       await queryClient.invalidateQueries({

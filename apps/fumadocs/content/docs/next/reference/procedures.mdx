@@ -331,7 +331,7 @@ Saving under a name the caller already uses, compared without case, replaces tha
 
 **Input**: send `{}` to sync every `ACTIVE` connection of the caller. `connectionId` narrows it to one; an id that isn't the caller's or isn't `ACTIVE` syncs nothing and still answers `success: true`. `force: true` reads the whole 90-day provider window again.
 
-**Output**: `{ categorised, error, started, success, warning }`. `success` is `false` when at least one connection failed, and `error` joins the provider failures. `warning` carries a categorisation failure. `started: false` means another run holds the user and nothing ran.
+**Output**: `{ categorised, failures, started, success }`. `failures` lists what went wrong: `{ kind: "connection-sync", connectionId, institutionName }` for each connection that failed, and `{ kind: "categorisation" }` when sorting the transactions failed. `success` is `false` when at least one connection failed. `started: false` means another run holds the user and nothing ran.
 
 <Callout type="warn">
 

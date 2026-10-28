@@ -176,8 +176,8 @@ export const useBudgetProfileEditor = (
   const saveMutation = useMutation({
     mutationFn: (submitted: EditorLine[]) =>
       client.settings.saveBudgetProfile({ lines: submitted.map(toPayload) }),
-    onError: (error: Error) => {
-      toast.error(error.message || m.settings_budgeting_save_error());
+    onError: () => {
+      toast.error(m.settings_budgeting_save_error());
     },
     onMutate: () => ({ draftEditCount: draftEditCount.current }),
     onSuccess: async (_saved, _submitted, context) => {

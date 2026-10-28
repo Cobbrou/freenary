@@ -250,7 +250,7 @@ The payload is a JSON object with the keys `institution` (its `country`, `id` an
 
 ## Errors
 
-**Throw a plain `Error` with a message an operator can read.** No adapter throws an oRPC error. The routers own the translation to an error code, and the sync path owns the collection into one string.
+**Throw a plain `Error` with a message an operator can read.** No adapter throws an oRPC error. The routers own the translation to an error code, and the sync path owns the collection into a list.
 
 | Where the throw lands | What happens to it |
 | --- | --- |
@@ -258,7 +258,7 @@ The payload is a JSON object with the keys `institution` (its `country`, `id` an
 | Inside a sync, at connection level | The message joins as `Connection <institutionName>: <message>`. No account of that connection syncs, and `lastSyncedAt` does not advance |
 | In the connect flow | The router maps the failure to an oRPC error, and the callback route toasts one failure message |
 
-`syncAccounts` joins the collected messages and returns them in the response body. No screen renders that string: both callers toast one fixed catalog message. So keep the message short and free of secrets.
+`syncAccounts` logs the collected messages on the server and returns one `{ kind: "connection-sync", connectionId, institutionName }` entry per failed connection in `failures`. The messages never reach the response; the web toasts a catalog message that names the bank. They do reach the server log, so keep them short and free of secrets.
 
 Two rules the Powens and Enable Banking adapters follow:
 

@@ -35,8 +35,8 @@ export const useBankConnections = ({
   const disconnectMutation = useMutation({
     mutationFn: (connectionId: string) =>
       client.bankConnection.disconnect({ connectionId }),
-    onError: (error) => {
-      toast.error(error.message);
+    onError: () => {
+      toast.error(m.bank_disconnect_error());
     },
     onSuccess: async ({
       accountsRemoved,
@@ -94,8 +94,16 @@ export const useBankConnections = ({
         invalidateBudgetData(queryClient),
       ]);
 
+      if (sync.failures.some((failure) => failure.kind === "categorisation")) {
+        toast.warning(m.budget_sync_categorisation_error());
+      }
+
       if (!sync.success) {
-        toast.error(m.budget_sync_error());
+        toast.error(
+          m.budget_sync_connection_error({
+            institutions: connection.institutionName,
+          })
+        );
 
         return;
       }
