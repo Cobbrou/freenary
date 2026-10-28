@@ -10,18 +10,16 @@ Freenary serves plain HTTP; your proxy adds HTTPS and the hostname. Use one host
 
 Send your hostname to the web app on port `3001`. The web app forwards four path prefixes to the API server over the Docker network: `/api/auth`, `/rpc`, `/ai/chat` and `/api-reference`. It forwards only when `SERVER_URL` is set, which both Compose files do.
 
-The forwarded request keeps its method, body and headers, `X-Forwarded-For` included, minus `Host` and the hop-by-hop headers. Redirects come back unchanged. The API server must start answering within the [9-second limit](/docs/reference/api#base-url).
+The forwarded request keeps its method, body and headers, minus `Host` and the hop-by-hop headers. The web app replaces `X-Forwarded-For` with the caller address it resolves: see [Trusted proxies](#trusted-proxies). Redirects come back unchanged. The API server must start answering within the [9-second limit](/docs/reference/api#base-url).
 
-With the root `docker-compose.yml`, set both URLs to your address, and bind both ports to the loopback interface so only the proxy reaches them:
+The API server publishes no port, so every API call goes through the web app. With the root `docker-compose.yml`, set both URLs to your address, bind the web port to the loopback interface so only the proxy reaches it, and [trust your proxy](#trusted-proxies):
 
 ```dotenv
 BETTER_AUTH_URL=https://freenary.example.com
 CORS_ORIGIN=https://freenary.example.com
-SERVER_PORT=127.0.0.1:3000
 WEB_PORT=127.0.0.1:3001
+TRUSTED_PROXIES=172.18.0.0/16
 ```
-
-Without `127.0.0.1`, both ports listen on every interface, and a direct caller can send any `X-Forwarded-For` to dodge the rate limits.
 
 Caddy gets its certificate itself:
 
@@ -53,14 +51,14 @@ A proxy container on a Docker network can run `deploy/docker-compose.yml` instea
 
 ## Two subdomains
 
-Send each hostname to its port, for example `app.example.com` to `3001` and `api.example.com` to `3000`:
+Send both hostnames to the web app on port `3001`, for example `app.example.com` and `api.example.com`. The web app forwards the API paths of either one to the server:
 
 ```dotenv
 BETTER_AUTH_URL=https://api.example.com
 CORS_ORIGIN=https://app.example.com
 AUTH_COOKIE_DOMAIN=.example.com
-SERVER_PORT=127.0.0.1:3000
 WEB_PORT=127.0.0.1:3001
+TRUSTED_PROXIES=172.18.0.0/16
 ```
 
 `CORS_ORIGIN` must match the web app's address exactly. `AUTH_COOKIE_DOMAIN` keeps the session cookie at `SameSite=Lax` on both hostnames. Without it the cookie falls back to `SameSite=None`, which browsers that block third-party cookies drop.
@@ -74,18 +72,26 @@ A public suffix such as `.co.uk` isn't detected: name a domain you own.
 
 ## Trusted proxies
 
-Rate limits count per caller address, read from `X-Forwarded-For`.
+Rate limits count per caller address. The web app works it out from the connection it receives, and sends only that address to the API server:
 
-- **One address in the header:** Freenary uses it. A single proxy that replaces the header, such as nginx with `$remote_addr`, needs no setting.
-- **Several addresses:** Freenary ignores the header unless you list your proxies. Every such caller then shares one bucket, so one visitor can use up everyone's sign-in attempts.
+- **The connection comes from an address in `TRUSTED_PROXIES`:** the web app reads `X-Forwarded-For` from the right and takes the first address that isn't listed.
+- **Any other connection:** the web app takes the connection's own address and ignores the header, so a caller can't pick its address.
 
-List each proxy as an address or CIDR range, comma-separated:
+Leave `TRUSTED_PROXIES` unset only when visitors reach the web app with no proxy in front. Behind an unlisted proxy, every visitor counts as the proxy's address and shares one limit, so one visitor can use up everyone's sign-in attempts. The `server` container logs a warning at start while `TRUSTED_PROXIES` is unset.
 
-```dotenv
-TRUSTED_PROXIES=10.0.0.0/24,192.0.2.10
+List the addresses your proxy uses to reach the web container, as addresses or CIDR ranges, comma-separated. A proxy on the host reaches it from the Compose network. Print that network's range:
+
+```bash
+docker network inspect freenary_default --format '{{range .IPAM.Config}}{{.Subnet}}{{end}}'
 ```
 
-Freenary reads the chain from the right and takes the first address that isn't listed. Write IPv4 in IPv4 form: `::ffff:10.0.0.1` stops the start. Behind a CDN, list its published ranges, and make your proxy keep the CDN's `X-Forwarded-For` instead of replacing it.
+On Dokploy or Coolify, inspect the panel's proxy network instead: `dokploy-network` or `coolify`. Put the range in `.env` or the panel's environment, then run `docker compose up -d` or redeploy:
+
+```dotenv
+TRUSTED_PROXIES=172.18.0.0/16
+```
+
+Write IPv4 in IPv4 form: `::ffff:10.0.0.1` stops the start. Behind a CDN, also list its published ranges, and make your proxy keep the CDN's `X-Forwarded-For` instead of replacing it.
 
 ## Check it
 
@@ -94,7 +100,7 @@ curl -L -o /dev/null -w '%{http_code} %{url_effective}\n' https://freenary.examp
 curl https://freenary.example.com/api/auth/ok
 ```
 
-The first prints `200 https://freenary.example.com/login`, the second `{"ok":true}`. With two subdomains, `curl https://api.example.com/` prints `OK`.
+The first prints `200 https://freenary.example.com/login`, the second `{"ok":true}`. With two subdomains, `curl https://api.example.com/api/auth/ok` prints `{"ok":true}`.
 
 A `502` with the body `Bad Gateway` means the web app didn't reach the API server: read `docker compose logs server`.
 

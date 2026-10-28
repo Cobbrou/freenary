@@ -1,6 +1,8 @@
 import { afterAll, describe, expect, it, spyOn } from "bun:test";
 import { gzipSync } from "node:zlib";
 
+import { z } from "zod";
+
 import { forwardApiRequest, isForwardedPath } from "./forward-api-request";
 
 const WEB_ORIGIN = "https://app.example.com";
@@ -113,6 +115,46 @@ const captureConsole = async <T>(
   return { logged, outcome };
 };
 
+const forwardedForSent = async ({
+  forwardedFor,
+  peer,
+  trustedProxies,
+}: {
+  forwardedFor: string;
+  peer: string | undefined;
+  trustedProxies: string | undefined;
+}): Promise<string | null> => {
+  const request = new Request(`${WEB_ORIGIN}/api/auth/sign-in/email`, {
+    headers: { "X-Forwarded-For": forwardedFor },
+  });
+
+  Object.defineProperty(request, "ip", { value: peer });
+
+  const previous = process.env.TRUSTED_PROXIES;
+
+  if (trustedProxies === undefined) {
+    delete process.env.TRUSTED_PROXIES;
+  } else {
+    process.env.TRUSTED_PROXIES = trustedProxies;
+  }
+
+  const response = await withServerUrl(echoServer.url.origin, () =>
+    forwardApiRequest(request)
+  );
+
+  if (previous === undefined) {
+    delete process.env.TRUSTED_PROXIES;
+  } else {
+    process.env.TRUSTED_PROXIES = previous;
+  }
+
+  const echoed = z
+    .object({ forwardedFor: z.string().nullable() })
+    .parse(await response?.json());
+
+  return echoed.forwardedFor;
+};
+
 describe("isForwardedPath", () => {
   it("matches every API server route and its subpaths", () => {
     expect(isForwardedPath("/rpc")).toBe(true);
@@ -149,15 +191,12 @@ describe("forwardApiRequest", () => {
     expect(forwarded).toBeUndefined();
   });
 
-  it("forwards the path, query, method, body, cookie and forwarded-for chain", async () => {
+  it("forwards the path, query, method, body and cookie", async () => {
     const response = await withServerUrl(`${echoServer.url.origin}/`, () =>
       forwardApiRequest(
         new Request(`${WEB_ORIGIN}/rpc/budget/list?month=2026-10`, {
           body: JSON.stringify({ json: { month: "2026-10" } }),
-          headers: {
-            Cookie: "better-auth.session_token=abc",
-            "X-Forwarded-For": "203.0.113.7",
-          },
+          headers: { Cookie: "better-auth.session_token=abc" },
           method: "POST",
         })
       )
@@ -168,10 +207,45 @@ describe("forwardApiRequest", () => {
     expect(await response?.json()).toMatchObject({
       body: JSON.stringify({ json: { month: "2026-10" } }),
       cookie: "better-auth.session_token=abc",
-      forwardedFor: "203.0.113.7",
       method: "POST",
       path: "/rpc/budget/list?month=2026-10",
     });
+  });
+
+  it.each([
+    ["no proxy is trusted", undefined, "198.51.100.9"],
+    ["the peer is not a trusted proxy", "10.0.0.0/8", "198.51.100.9"],
+  ])(
+    "replaces a forged X-Forwarded-For with the peer address when %s",
+    async (_case, trustedProxies, peer) => {
+      const forwardedFor = await forwardedForSent({
+        forwardedFor: "203.0.113.7",
+        peer,
+        trustedProxies,
+      });
+
+      expect(forwardedFor).toBe(peer);
+    }
+  );
+
+  it("takes the caller address a trusted proxy appended, not the forged one", async () => {
+    const forwardedFor = await forwardedForSent({
+      forwardedFor: "203.0.113.7, 198.51.100.9",
+      peer: "172.18.0.1",
+      trustedProxies: "172.16.0.0/12",
+    });
+
+    expect(forwardedFor).toBe("198.51.100.9");
+  });
+
+  it("sends no X-Forwarded-For when the peer address is unknown", async () => {
+    const forwardedFor = await forwardedForSent({
+      forwardedFor: "203.0.113.7",
+      peer: undefined,
+      trustedProxies: undefined,
+    });
+
+    expect(forwardedFor).toBeNull();
   });
 
   it("drops the hop headers, asks for an uncompressed answer and targets the API host", async () => {

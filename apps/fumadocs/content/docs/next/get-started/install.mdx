@@ -80,7 +80,6 @@ Use this tab when you run your own reverse proxy on the server, such as Caddy or
    BETTER_AUTH_SECRET=$(openssl rand -hex 32)
    BETTER_AUTH_URL=https://freenary.example.com
    CORS_ORIGIN=https://freenary.example.com
-   SERVER_PORT=127.0.0.1:3000
    WEB_PORT=127.0.0.1:3001
    EOF
    ```
@@ -94,10 +93,18 @@ Use this tab when you run your own reverse proxy on the server, such as Caddy or
    ```
 
 4. Point your proxy at `127.0.0.1:3001`.
+5. Trust your proxy, so each visitor gets their own sign-in limit. Add the Compose network's range to `.env`, then start again:
+
+   ```bash
+   echo "TRUSTED_PROXIES=$(docker network inspect freenary_default --format '{{range .IPAM.Config}}{{.Subnet}}{{end}}')" >> .env
+   docker compose up -d
+   ```
 
 </Tab>
 
 </Tabs>
+
+On Dokploy or Coolify, also set `TRUSTED_PROXIES` to the range of the panel's proxy network, so each visitor gets their own sign-in limit. [Trusted proxies](/docs/reference/reverse-proxy#trusted-proxies) shows how to find it.
 
 `FREENARY_VERSION=latest` follows each new release. To stay on one version, see [Updates and backups](/docs/run/updates-and-backups).
 

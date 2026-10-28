@@ -84,7 +84,7 @@ Never set `SKIP_ENV_VALIDATION` at runtime. Any non-empty value turns the whole 
 
 {/* env-sync:end */}
 
-To change the host port, set `SERVER_PORT`, never `PORT`.
+The API server publishes no host port: the web app forwards to it.
 
 ## Public URLs and cookies
 
@@ -95,7 +95,7 @@ To change the host port, set `SERVER_PORT`, never `PORT`.
 | `AUTH_COOKIE_DOMAIN` | unset | The parent domain the API server and the web app share, for example `.example.com`. It keeps the session cookie at `SameSite=Lax` and adds `Domain`. | Three shapes stop the start: a trailing dot, a single label, and a domain that is not a parent of both hostnames. Unset with two hostnames drops the cookie to `SameSite=None`. |
 | `BETTER_AUTH_URL` | `http://localhost:3000` outside production, required in production | The public origin of the API server. It builds the sign-in callback URLs and decides the cookie `Secure` flag. | A value that is not a URL stops the start. A wrong origin breaks every sign-in callback. |
 | `CORS_ORIGIN` | `http://localhost:3001` outside production, required in production | The public origin of the web app. It sets the CORS allow-list, the passkey relying party and the cookie same-site test. | A wrong value makes the browser report a CORS failure, and it binds passkeys to the wrong relying party. |
-| `TRUSTED_PROXIES` | unset | The addresses or CIDR ranges of the proxies in front of the API server. Rate limits key on the caller address behind them. | A malformed entry stops the start. Unset behind a multi-hop proxy makes every caller share one rate-limit bucket. |
+| `TRUSTED_PROXIES` | unset | The addresses or CIDR ranges of the proxies in front of the web app, as the web container sees them. The web app replaces `X-Forwarded-For` with the caller address behind them, and rate limits key on it. Compose hands it to the `web` service too. | A malformed entry stops the start. Unset behind a proxy makes every caller share the proxy address and one rate-limit bucket, and the server logs a warning at start. |
 
 {/* env-sync:end */}
 
@@ -266,7 +266,6 @@ Only Compose reads these.
 | `POSTGRES_PASSWORD` | none | The database password. It fills both the container password and the `DATABASE_URL` of `migrate` and `server`. | Compose refuses an unset or empty value. |
 | `FREENARY_VERSION` | `latest` | The tag of both published images. | An unset value falls back to `latest`, the newest release. A value that names no tag fails the pull with `not found`. The tags are `X.Y.Z`, `X.Y`, `X`, `latest`, `main`, `dev` and `sha-<7 characters>`. |
 | `FREENARY_URL` | none | The public URL of the web app in `deploy/docker-compose.yml`, the stack for a hosting panel. It fills `BETTER_AUTH_URL`, `CORS_ORIGIN` and `PUBLIC_SERVER_URL`, so the API server shares the web app origin. | `deploy/docker-compose.yml` refuses an unset or empty value. A value that differs from the browser origin makes every sign-in fail. |
-| `SERVER_PORT` | `3000` | The host port of the API server. | — |
 | `WEB_PORT` | `3001` | The host port of the web app. | — |
 | `POSTGRES_PORT` | `5432` | The host port of PostgreSQL. Compose publishes `127.0.0.1:<POSTGRES_PORT>:5432`, so the loopback interface alone gets it. | — |
 

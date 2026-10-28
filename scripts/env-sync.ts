@@ -189,15 +189,6 @@ const EXTERNAL: ExternalVariable[] = [
       "`deploy/docker-compose.yml` refuses an unset or empty value. A value that differs from the browser origin makes every sign-in fail.",
   },
   {
-    default: "`3000`",
-    description: "The host port of the API server.",
-    envFile: "commented",
-    envFileSection: "images",
-    example: "3000",
-    kind: "compose",
-    name: "SERVER_PORT",
-  },
-  {
     default: "`3001`",
     description: "The host port of the web app.",
     envFile: "commented",

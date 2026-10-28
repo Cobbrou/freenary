@@ -172,6 +172,15 @@ new Elysia()
 
 updateCheck.start();
 
+if (
+  process.env.NODE_ENV === "production" &&
+  (env.TRUSTED_PROXIES ?? []).length === 0
+) {
+  console.warn(
+    "TRUSTED_PROXIES is not set. If a reverse proxy sits in front of the web app, every visitor counts as the proxy's address and shares one sign-in rate limit: set TRUSTED_PROXIES to the proxy's address or range."
+  );
+}
+
 const setupState = await Effect.runPromise(readSetupState());
 
 if (!setupState.claimed) {

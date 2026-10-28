@@ -50,7 +50,7 @@ FREENARY_URL=https://freenary.example.com
 
 - **Dokploy:** the template starts with `http://`. Change it to `https://` once HTTPS is on for your domain.
 - **Coolify:** there's no `FREENARY_URL`. Set the `web` service's domain with `https://` and redeploy.
-- **Root `docker-compose.yml`:** it has no `FREENARY_URL`. Set `BETTER_AUTH_URL` and `CORS_ORIGIN` instead: both to the same address with one hostname, or to the API's and the web app's addresses with two. If they're unset, they default to `http://localhost:3000` and `http://localhost:3001`. That works in a browser on the server itself, and fails from every other machine.
+- **Root `docker-compose.yml`:** it has no `FREENARY_URL`. Set `BETTER_AUTH_URL` and `CORS_ORIGIN` instead: both to the same address with one hostname, or to the API's and the web app's addresses with two. If they're unset, both default to `http://localhost:3001`. That works in a browser on the server itself, and fails from every other machine.
 
 Then redeploy, or run `docker compose up -d`. A `restart` isn't enough: it keeps the old values.
 
@@ -60,7 +60,7 @@ A new hostname also breaks existing passkeys: see [Passkeys and your hostname](/
 
 **Freenary is still starting.** On the first start, the database, `migrate`, `server` and `web` start in turn. Wait a minute and reload.
 
-**Your proxy or panel points at the wrong place.** Your proxy shows its own 502 page and the sign-in screen never loads. With one address, your domain goes to the `web` service on port `3001`; the web app forwards the rest to the server. With two addresses, the web app's goes to `web` on `3001` and the API's to `server` on `3000`. See [Reverse proxy](/docs/reference/reverse-proxy#two-subdomains).
+**Your proxy or panel points at the wrong place.** Your proxy shows its own 502 page and the sign-in screen never loads. Every address goes to the `web` service on port `3001`, and the web app forwards the API paths to the server. With two addresses, the API's goes to `web` too, never to `server`. See [Reverse proxy](/docs/reference/reverse-proxy#two-subdomains).
 
 **The server is down.** The page loads, but signing in or loading data fails, and those requests answer `502` with the body `Bad Gateway`. The web app got no answer from the server within its [forwarding limit](/docs/reference/api#base-url). `docker compose logs web` shows the reason:
 
@@ -140,9 +140,9 @@ The stored value of EMAIL_PROVIDER does not open with the current BETTER_AUTH_SE
 
 **What you see.** Users get `Too many attempts. Wait a moment and try again.` when signing in, after only a few tries of their own.
 
-**Why.** Sign-in attempts are limited per caller address. When requests pass through more than one proxy and `TRUSTED_PROXIES` doesn't list them, every visitor counts as one caller and shares one limit.
+**Why.** Sign-in attempts are limited per caller address. When a proxy forwards requests and `TRUSTED_PROXIES` doesn't list it, every visitor counts as the proxy and shares one limit. `docker compose logs server` shows `TRUSTED_PROXIES is not set` at start.
 
-**Fix.** List your proxies in `TRUSTED_PROXIES`, then run `docker compose up -d` or redeploy. See [Trusted proxies](/docs/reference/reverse-proxy#trusted-proxies).
+**Fix.** List your proxy's network range in `TRUSTED_PROXIES`, then run `docker compose up -d` or redeploy. See [Trusted proxies](/docs/reference/reverse-proxy#trusted-proxies).
 
 ## Settings asks you to sign in again
 

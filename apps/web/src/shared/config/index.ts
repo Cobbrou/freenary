@@ -11,3 +11,4 @@ export {
   settingsSectionOf,
 } from "./settings-sections";
 export type { SettingsSection } from "./settings-sections";
+export { getTrustedProxies } from "./trusted-proxies";

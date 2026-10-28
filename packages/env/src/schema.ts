@@ -584,12 +584,12 @@ export const serverEnvSchema = {
         .optional()
     )
     .describe(
-      "The addresses or CIDR ranges of the proxies in front of the API server. Rate limits key on the caller address behind them."
+      "The addresses or CIDR ranges of the proxies in front of the web app, as the web container sees them. The web app replaces `X-Forwarded-For` with the caller address behind them, and rate limits key on it. Compose hands it to the `web` service too."
     )
     .meta({
-      example: "10.0.0.0/24,192.0.2.10",
+      example: "172.18.0.0/16",
       onError:
-        "A malformed entry stops the start. Unset behind a multi-hop proxy makes every caller share one rate-limit bucket.",
+        "A malformed entry stops the start. Unset behind a proxy makes every caller share the proxy address and one rate-limit bucket, and the server logs a warning at start.",
       section: "origins",
     }),
 } as const;

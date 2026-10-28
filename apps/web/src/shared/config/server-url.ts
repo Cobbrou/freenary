@@ -1,15 +1,11 @@
 import { env } from "@freenary/env/web";
 
 import { isServer } from "../lib/is-server";
+import { processEnv } from "./process-env";
 
 const SERVER_URL_GLOBAL = "__FREENARY_SERVER_URL__";
 const VERCEL_PRODUCTION = "production";
 const LOCAL_SERVER_ORIGIN = "http://localhost:3000";
-
-// SAFETY: globalThis may carry a Node-style process.env; the cast only widens it to that optional shape
-const processEnv = (
-  globalThis as { process?: { env?: Record<string, string | undefined> } }
-).process?.env;
 
 const stripTrailingSlash = (url: string) =>
   url.endsWith("/") ? url.slice(0, -1) : url;

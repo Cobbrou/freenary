@@ -98,7 +98,7 @@ AUTH_PASSWORD_BREACH_CHECK=false
 
 ## Rate limits
 
-Sign-in, sign-up and code requests are limited per caller address; [API](/docs/reference/api#rate-limits) lists each limit. When more than one proxy forwards requests, add them to `TRUSTED_PROXIES`, or visitors share one caller address and one limit. See [Trusted proxies](/docs/reference/reverse-proxy#trusted-proxies).
+Sign-in, sign-up and code requests are limited per caller address; [API](/docs/reference/api#rate-limits) lists each limit. When a proxy forwards requests, add it to `TRUSTED_PROXIES`, or visitors share one caller address and one limit. See [Trusted proxies](/docs/reference/reverse-proxy#trusted-proxies).
 
 <Cards>
   <Card
