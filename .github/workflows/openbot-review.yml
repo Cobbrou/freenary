@@ -24,14 +24,13 @@ jobs:
         (github.event_name != 'workflow_run' || (
           github.event.workflow_run.event == 'pull_request' &&
           github.event.workflow_run.conclusion != 'cancelled' &&
-          github.event.workflow_run.pull_requests[0] &&
-          github.event.workflow_run.pull_requests[0].base.ref == 'dev'
+          (!github.event.workflow_run.pull_requests[0] || github.event.workflow_run.pull_requests[0].base.ref == 'dev')
         ))
       }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     concurrency:
-      group: openbot-review-${{ github.event.pull_request.number || github.event.workflow_run.pull_requests[0].number }}
+      group: openbot-review-${{ github.event.pull_request.number || github.event.workflow_run.pull_requests[0].number || github.event.workflow_run.head_sha }}
       cancel-in-progress: true
     steps:
       - name: Notify OpenBot
@@ -42,6 +41,8 @@ jobs:
           NUMBER: ${{ github.event.pull_request.number || github.event.workflow_run.pull_requests[0].number }}
           ACTION: ${{ github.event_name == 'workflow_run' && 'ci_completed' || github.event.action }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha || github.event.workflow_run.head_sha }}
+          HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name || github.event.workflow_run.head_repository.full_name }}
+          HEAD_BRANCH: ${{ github.event.pull_request.head.ref || github.event.workflow_run.head_branch }}
           CI_CONCLUSION: ${{ github.event.workflow_run.conclusion }}
           DELIVERY_ID: gh-${{ github.repository_id }}-${{ github.run_id }}-${{ github.run_attempt }}
         run: |
@@ -54,11 +55,13 @@ jobs:
           jq -n -c \
             --arg occurredAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
             --arg repository "$REPOSITORY" \
-            --argjson number "$NUMBER" \
+            --arg number "$NUMBER" \
             --arg action "$ACTION" \
             --arg head_sha "$HEAD_SHA" \
+            --arg head_repository "$HEAD_REPOSITORY" \
+            --arg head_branch "$HEAD_BRANCH" \
             --arg ci_conclusion "$CI_CONCLUSION" \
-            '{type: "pull_request", occurredAt: $occurredAt, data: {repository: $repository, number: $number, action: $action, head_sha: $head_sha, ci_conclusion: (if $ci_conclusion == "" then null else $ci_conclusion end)}}' \
+            '{type: "pull_request", occurredAt: $occurredAt, data: {repository: $repository, number: (if $number == "" then null else ($number | tonumber) end), action: $action, head_sha: $head_sha, head_repository: $head_repository, head_branch: $head_branch, ci_conclusion: (if $ci_conclusion == "" then null else $ci_conclusion end)}}' \
             | tr -d '\n' > "$body_file"
 
           for attempt in 1 2 3 4; do
