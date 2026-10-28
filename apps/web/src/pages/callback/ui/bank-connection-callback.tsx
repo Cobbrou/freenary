@@ -4,8 +4,9 @@ import { useNavigate, useRouteContext } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { toast } from "sonner";
 
+import { invalidateBudgetData } from "@/entities/budget";
 import { m } from "@/paraglide/messages.js";
-import { invalidateBudgetData, orpc } from "@/shared/api";
+import { orpc } from "@/shared/api";
 
 export const ConnectingBank = () => (
   <div

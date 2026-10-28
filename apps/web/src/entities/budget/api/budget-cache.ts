@@ -1,6 +1,6 @@
 import type { QueryClient } from "@tanstack/react-query";
 
-import { orpc } from "./orpc";
+import { orpc } from "@/shared/api";
 
 export const TRANSACTIONS_QUERY_KEY = ["budget", "getTransactions"] as const;
 

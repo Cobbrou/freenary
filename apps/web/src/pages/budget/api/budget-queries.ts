@@ -2,6 +2,7 @@ import type { TransactionFilter } from "@freenary/api/lib/transaction-filters";
 import type { QueryClient } from "@tanstack/react-query";
 import { infiniteQueryOptions, keepPreviousData } from "@tanstack/react-query";
 
+import { TRANSACTIONS_QUERY_KEY } from "@/entities/budget";
 import { client, orpc } from "@/shared/api";
 
 import type { AggregationMode } from "../model/period";
@@ -21,8 +22,6 @@ export interface TransactionsInput {
   sort: SortMode;
   to: Date;
 }
-
-export const TRANSACTIONS_QUERY_KEY = ["budget", "getTransactions"] as const;
 
 const PAGE_SIZE = 50;
 

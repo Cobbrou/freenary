@@ -4,8 +4,9 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
 
+import { invalidateBudgetData } from "@/entities/budget";
 import { m } from "@/paraglide/messages.js";
-import { client, invalidateBudgetData, orpc } from "@/shared/api";
+import { client, orpc } from "@/shared/api";
 
 import { institutionKey } from "./bank-rows";
 

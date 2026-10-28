@@ -1,8 +1,9 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
 
+import { invalidateBudgetData } from "@/entities/budget";
 import { useSyncAccounts } from "@/features/account-sync";
-import { invalidateBudgetData, orpc } from "@/shared/api";
+import { orpc } from "@/shared/api";
 import { authClient } from "@/shared/auth";
 
 const SYNC_POLL_INTERVAL_MS = 1500;

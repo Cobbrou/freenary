@@ -13,4 +13,5 @@ export {
   categoryLabel,
 } from "./model/taxonomy-labels";
 export { CategoryIcon, SWATCH_BY_COLOR } from "./ui/category-icon";
+export { categoryChartColor } from "./model/chart-color";
 export { categoryMenuIcon } from "./ui/category-menu-icon";

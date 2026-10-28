@@ -12,9 +12,8 @@ import { motion } from "motion/react";
 import { useRef } from "react";
 
 import type { CategorySelection } from "@/entities/category";
-import { categoryLabel } from "@/entities/category";
+import { categoryChartColor, categoryLabel } from "@/entities/category";
 import { m } from "@/paraglide/messages.js";
-import { categoryChartColor } from "@/shared/lib/chart-colors";
 import { formatCurrency } from "@/shared/lib/format-currency";
 
 import { PRESS_MOTION } from "./list-controls";

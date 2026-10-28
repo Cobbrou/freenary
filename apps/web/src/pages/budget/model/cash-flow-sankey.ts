@@ -9,13 +9,14 @@ import type {
   SpendingCategory,
 } from "@freenary/api/lib/taxonomy";
 
-import { categoryGroupLabel, categoryLabel } from "@/entities/category";
-import type { CategorySelection } from "@/entities/category";
-import { m } from "@/paraglide/messages.js";
 import {
   categoryChartColor,
-  CHART_COLOR_VARS,
-} from "@/shared/lib/chart-colors";
+  categoryGroupLabel,
+  categoryLabel,
+} from "@/entities/category";
+import type { CategorySelection } from "@/entities/category";
+import { m } from "@/paraglide/messages.js";
+import { CHART_COLOR_VARS } from "@/shared/lib/chart-colors";
 import { apportion } from "@/shared/lib/sankey";
 import type { SankeyFlow, SankeyLink, SankeyNode } from "@/shared/lib/sankey";
 
