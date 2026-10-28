@@ -88,6 +88,18 @@ export const serverEnvSchema = {
         "Three shapes stop the start: a trailing dot, a single label, and a domain that is not a parent of both hostnames. Unset with two hostnames drops the cookie to `SameSite=None`.",
       section: "origins",
     }),
+  AUTH_DISABLE_SIGN_UP: z
+    .stringbool()
+    .default(false)
+    .describe(
+      "`true` refuses every new account, by password, email code or single sign-on. Existing accounts still sign in."
+    )
+    .meta({
+      example: "false",
+      onError:
+        "A value that is not a boolean string stops the start. Create your own account before you set it to `true`.",
+      section: "sign-in",
+    }),
   AUTH_PASSWORD_BREACH_CHECK: z
     .stringbool()
     .default(true)

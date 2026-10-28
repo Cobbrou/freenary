@@ -10,7 +10,7 @@ import {
 import { appRouter } from "@freenary/api/routers/index";
 import { auth } from "@freenary/auth";
 import { env } from "@freenary/env/server";
-import { readSetupState } from "@freenary/instance-config";
+import { readSetupState, setupTokenOf } from "@freenary/instance-config";
 import { OpenAPIHandler } from "@orpc/openapi/fetch";
 import { OpenAPIReferencePlugin } from "@orpc/openapi/plugins";
 import { ORPCError, onError } from "@orpc/server";
@@ -176,6 +176,6 @@ const setupState = await Effect.runPromise(readSetupState());
 
 if (!setupState.claimed) {
   console.log(
-    `This instance has no operator yet. The first account to sign in at ${env.CORS_ORIGIN} becomes the operator.`
+    `This instance has no operator yet. Sign in at ${env.CORS_ORIGIN} and enter this setup token to become the operator: ${setupTokenOf(env.BETTER_AUTH_SECRET)}`
   );
 }

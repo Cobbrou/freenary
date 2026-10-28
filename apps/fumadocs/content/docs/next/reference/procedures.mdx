@@ -355,7 +355,13 @@ The procedures behind the setup screen and Settings, under **Connections** › `
 
 ### instance.status
 
-**Output**: `{ claimed, completed, isOperator }`. `claimed` is `true` once an operator exists, `completed` once the operator pressed `Finish setup`.
+**Output**: `{ claimed, completed, isOperator }`. `claimed` is `true` once an operator exists, and `null` for a signed-out caller. `completed` is `true` once the operator pressed `Finish setup`.
+
+### instance.claim
+
+**Input**: `{ token }`, the setup token from the server logs. Needs a session.
+
+**Output**: `{ outcome }`: `claimed` makes the caller the operator, `refused` means the token is wrong, and `already-claimed` means an operator exists.
 
 ### instance.describe
 

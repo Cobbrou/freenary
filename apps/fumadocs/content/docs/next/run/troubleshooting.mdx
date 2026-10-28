@@ -166,13 +166,13 @@ Users see `Choose a model`, or `This instance has no model configured`. As the o
 
 ## The wrong account became the operator
 
-The first account to sign in becomes the operator. If you created both accounts, move the role to yours. Replace `you@example.com`, and check the address first: a typo leaves the instance with no operator.
+The operator is the account that entered the setup token. If you created both accounts, move the role to yours. Replace `you@example.com`, and check the address first: a typo leaves the instance with no operator.
 
 ```bash
 docker compose exec -T postgres psql -U postgres -d freenary -c "UPDATE \"user\" SET role = CASE WHEN lower(email) = lower('you@example.com') THEN 'OPERATOR'::\"UserRole\" ELSE 'MEMBER'::\"UserRole\" END;"
 ```
 
-If a stranger signed in first, treat the instance as compromised: remove it together with its database volume, and install again.
+If a stranger claimed it, your setup token leaked with your logs or your `BETTER_AUTH_SECRET`: treat the instance as compromised, remove it together with its database volume, and install again with a new secret.
 
 ## Read the logs
 

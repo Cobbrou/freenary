@@ -5,9 +5,9 @@ export type {
   StoredSettings,
 } from "./candidate";
 export { environmentOwns, validateSettings } from "./candidate";
-export type { SetupState } from "./claim";
+export type { ClaimOutcome, SetupState } from "./claim";
 export {
-  claimForFirstSession,
+  claimWithSetupToken,
   InstanceSetupUnavailable,
   markSetupComplete,
   readSetupState,
@@ -39,6 +39,7 @@ export {
   setupIntegrations,
 } from "./integrations";
 export { instanceConfigFault, settings, storedSettingsAtBoot } from "./resolve";
+export { setupTokenOf } from "./setup-token";
 export {
   InstanceStoreUnavailable,
   readStoredSettings,

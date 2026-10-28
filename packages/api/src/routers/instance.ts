@@ -9,6 +9,7 @@ import type {
   StoredSettings,
 } from "@freenary/instance-config";
 import {
+  claimWithSetupToken,
   environmentOwns,
   findIntegration,
   findVariant,
@@ -63,6 +64,7 @@ import { updateCheck } from "../instance/update-check";
 import { bankConnectionCount } from "./bank-connection-count";
 
 const RESTART_GRACE_MS = 250;
+const SETUP_TOKEN_MAX_LENGTH = 256;
 
 const readCurrentSettings = (): Promise<StoredSettings> =>
   Effect.runPromise(readStoredSettings(settings.BETTER_AUTH_SECRET));
@@ -347,7 +349,17 @@ export const instanceRouter = {
 
       return { outcome: "verified" as const };
     }),
-
+  claim: protectedProcedure
+    .input(z.object({ token: z.string().max(SETUP_TOKEN_MAX_LENGTH) }))
+    .handler(async ({ context, input }) => ({
+      outcome: await Effect.runPromise(
+        claimWithSetupToken(
+          settings.BETTER_AUTH_SECRET,
+          context.session.user.id,
+          input.token
+        )
+      ),
+    })),
   complete: operatorProcedure.handler(async () => {
     const stored = await readCurrentSettings();
     const missing = missingForSetup(
@@ -373,7 +385,6 @@ export const instanceRouter = {
 
     return { completed: true as const, restarting };
   }),
-
   describe: operatorProcedure.handler(async () => {
     const stored = await readCurrentSettings();
 
@@ -388,7 +399,6 @@ export const instanceRouter = {
       restartRequired: hasUnappliedChange(stored),
     };
   }),
-
   save: operatorProcedure
     .input(integrationInput)
     .handler(async ({ context, input }) => {
@@ -418,15 +428,16 @@ export const instanceRouter = {
 
       return { outcome: "saved" as const, restartRequired: true };
     }),
-
   status: publicProcedure.handler(async ({ context }) => {
-    const state = await Effect.runPromise(readSetupState());
+    const { claimed, completed } = await Effect.runPromise(readSetupState());
     const userId = context.session?.user.id;
-    const operator = userId === undefined ? false : await isOperator(userId);
 
-    return { ...state, isOperator: operator };
+    if (userId === undefined) {
+      return { claimed: null, completed, isOperator: false };
+    }
+
+    return { claimed, completed, isOperator: await isOperator(userId) };
   }),
-
   update: protectedProcedure.handler(async ({ context }) =>
     visibleTo(updateCheck.status(), await isOperator(context.session.user.id))
   ),

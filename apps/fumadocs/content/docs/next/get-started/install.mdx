@@ -114,16 +114,19 @@ Then open `https://freenary.example.com`. You should see the **Welcome to Freena
 
 ## Create your account now
 
-<Callout type="warn" title="The first account to get a session becomes the operator">
+The operator is the only account that can change the instance's settings. Claiming the role takes the setup token the server prints at start:
 
-The operator is the only account that can change the instance's settings. Until someone claims it, anyone who reaches your address can, so create your account right away. When email is configured, the role goes to the first account that enters its emailed code.
-
-</Callout>
+```bash
+docker compose logs server | grep "setup token"
+```
 
 1. Type your email address. Freenary shows a **Name** and a **Password** field.
 2. Fill them in and press **Create account**.
+3. On **Claim this instance**, paste the token and press **Become the operator**.
 
-If someone else got there first, see [The wrong account became the operator](/docs/run/troubleshooting#the-wrong-account-became-the-operator).
+Every account created without the token is a regular user. To refuse new accounts once yours exists, set `AUTH_DISABLE_SIGN_UP=true`: see [Close sign-up](/docs/run/sign-in#close-sign-up).
+
+If someone else claimed it, see [The wrong account became the operator](/docs/run/troubleshooting#the-wrong-account-became-the-operator).
 
 ## The setup screen
 

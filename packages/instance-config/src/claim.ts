@@ -1,6 +1,8 @@
 import prisma from "@freenary/db";
 import { Data, Effect } from "effect";
 
+import { isSetupToken } from "./setup-token";
+
 const SETUP_ROW_ID = "singleton";
 const OPERATOR_ROLE = "OPERATOR";
 
@@ -41,19 +43,25 @@ export const readSetupState = Effect.fn("instanceConfig.readSetupState")(
   }
 );
 
-export const claimForFirstSession = Effect.fn(
-  "instanceConfig.claimForFirstSession"
-)(function* claimForFirstSession(userId: string) {
+export type ClaimOutcome = "already-claimed" | "claimed" | "refused";
+
+export const claimWithSetupToken = Effect.fn(
+  "instanceConfig.claimWithSetupToken"
+)(function* claimWithSetupToken(secret: string, userId: string, token: string) {
   const { claimed } = yield* readSetupState();
 
   if (claimed) {
-    return false;
+    return "already-claimed" satisfies ClaimOutcome;
+  }
+
+  if (!isSetupToken(secret, token)) {
+    return "refused" satisfies ClaimOutcome;
   }
 
   return yield* Effect.tryPromise({
     catch: unavailable("claimed"),
     try: () =>
-      prisma.$transaction(async (tx) => {
+      prisma.$transaction(async (tx): Promise<ClaimOutcome> => {
         await tx.instanceSetup.createMany({
           data: [{ id: SETUP_ROW_ID }],
           skipDuplicates: true,
@@ -65,7 +73,7 @@ export const claimForFirstSession = Effect.fn(
         });
 
         if (taken.count === 0) {
-          return false;
+          return "already-claimed";
         }
 
         await tx.user.update({
@@ -73,7 +81,7 @@ export const claimForFirstSession = Effect.fn(
           where: { id: userId },
         });
 
-        return true;
+        return "claimed";
       }),
   });
 });

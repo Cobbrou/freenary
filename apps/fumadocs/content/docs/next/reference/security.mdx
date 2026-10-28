@@ -52,7 +52,7 @@ Every setup value sealed under the old secret is skipped, with one warning per v
 
 ## Operator boundary
 
-The first account to create a session wins the operator claim. No later sign-in changes it.
+An account becomes the operator by entering the setup token the server prints at start while the instance has no operator. The token is derived from `BETTER_AUTH_SECRET`, so only someone who can read the server logs or the secret can claim the instance. Once claimed, no later sign-in changes it, and `instance.status` does not tell a signed-out visitor whether an operator exists.
 
 The operator can inspect, test, save and finish instance setup. The role grants no access to another user's finances or conversations. Freenary has no in-app role transfer.
 

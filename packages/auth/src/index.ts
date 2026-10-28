@@ -2,7 +2,6 @@ import { passkey } from "@better-auth/passkey";
 import { createPrismaClient } from "@freenary/db";
 import { isEmailEnabled } from "@freenary/email";
 import { env } from "@freenary/env/server";
-import { claimForFirstSession } from "@freenary/instance-config";
 import type { BetterAuthPlugin } from "better-auth";
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
@@ -17,7 +16,6 @@ import {
   haveIBeenPwned,
   twoFactor,
 } from "better-auth/plugins";
-import { Effect } from "effect";
 
 import { sendOtpEmail } from "./emails";
 import {
@@ -129,6 +127,17 @@ const enforceAuthPolicy = createAuthMiddleware(async (ctx) => {
   }
 });
 
+const refuseClosedSignUp = () => {
+  if (env.AUTH_DISABLE_SIGN_UP) {
+    throw APIError.from("BAD_REQUEST", {
+      code: "SIGN_UP_DISABLED",
+      message: "Sign-up is disabled",
+    });
+  }
+
+  return Promise.resolve();
+};
+
 export const createAuth = () => {
   const prisma = createPrismaClient();
 
@@ -159,17 +168,9 @@ export const createAuth = () => {
     }),
 
     databaseHooks: {
-      session: {
+      user: {
         create: {
-          after: async (session) => {
-            await Effect.runPromise(
-              claimForFirstSession(session.userId).pipe(
-                Effect.catchTag("InstanceSetupUnavailable", (claimFailure) =>
-                  Effect.logWarning(claimFailure.message)
-                )
-              )
-            );
-          },
+          before: refuseClosedSignUp,
         },
       },
     },

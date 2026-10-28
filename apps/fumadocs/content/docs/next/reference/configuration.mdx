@@ -45,7 +45,7 @@ Stored values are encrypted with `BETTER_AUTH_SECRET`. [Security](/docs/referenc
 
 {/* env-sync:start count */}
 
-The API server checks its environment once, at startup. The schema is [`packages/env/src/schema.ts`](https://github.com/suiramdev/freenary/blob/main/packages/env/src/schema.ts). It declares 51 variables with Zod, and `packages/env/src/server.ts` hands them to `@t3-oss/env-core`. The reference below, and `.env.example`, are generated from that one file.
+The API server checks its environment once, at startup. The schema is [`packages/env/src/schema.ts`](https://github.com/suiramdev/freenary/blob/main/packages/env/src/schema.ts). It declares 52 variables with Zod, and `packages/env/src/server.ts` hands them to `@t3-oss/env-core`. The reference below, and `.env.example`, are generated from that one file.
 
 {/* env-sync:end */}
 
@@ -141,6 +141,7 @@ See [Sign-in](/docs/run/sign-in) for redirect URLs.
 | `APPLE_APP_BUNDLE_IDENTIFIER` | unset | Sets the Apple identity-token audience. | Alone it does nothing, because it is a field of the Apple provider. |
 | `APPLE_CLIENT_ID` | unset | With `APPLE_CLIENT_SECRET`, it adds the Apple button. | Alone it adds nothing. |
 | `APPLE_CLIENT_SECRET` | unset | With `APPLE_CLIENT_ID`, it adds the Apple button. | Alone it adds nothing. |
+| `AUTH_DISABLE_SIGN_UP` | `false` | `true` refuses every new account, by password, email code or single sign-on. Existing accounts still sign in. | A value that is not a boolean string stops the start. Create your own account before you set it to `true`. |
 | `AUTH_PASSWORD_BREACH_CHECK` | `true` | `true` checks each new password against Have I Been Pwned. | `false` drops the check. A value that is not a boolean string stops the start. |
 | `GOOGLE_CLIENT_ID` | unset | With `GOOGLE_CLIENT_SECRET`, it adds the Google button. | Alone it adds nothing. |
 | `GOOGLE_CLIENT_SECRET` | unset | With `GOOGLE_CLIENT_ID`, it adds the Google button. | Alone it adds nothing. |

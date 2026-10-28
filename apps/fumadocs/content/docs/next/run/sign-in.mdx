@@ -16,6 +16,16 @@ Every instance supports these methods:
 - **Passkey:** a device uses its fingerprint, face or PIN.
 - **Two-factor authentication:** an authenticator-app code after password sign-in.
 
+## Close sign-up
+
+Anyone who reaches your address can create an account. To refuse new accounts, create yours first, then set:
+
+```dotenv
+AUTH_DISABLE_SIGN_UP=true
+```
+
+Password, one-time code and provider sign-up all stop, and the sign-in screen shows `This instance does not accept new accounts.` Existing accounts still sign in.
+
 ## Sessions
 
 A session expires after 7 days. Using it after one day renews that period, so inactivity signs a user out after about 6 to 7 days.

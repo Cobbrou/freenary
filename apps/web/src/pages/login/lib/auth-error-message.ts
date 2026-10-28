@@ -21,6 +21,7 @@ const MESSAGE_BY_CODE = {
   INVALID_TWO_FACTOR_COOKIE: m.auth_error_two_factor_expired,
   OTP_EXPIRED: m.auth_error_otp_expired,
   PASSWORD_COMPROMISED: m.auth_error_password_compromised,
+  SIGN_UP_DISABLED: m.auth_error_sign_up_disabled,
   TOO_MANY_ATTEMPTS: m.auth_error_too_many_attempts,
   TOO_MANY_ATTEMPTS_REQUEST_NEW_CODE: m.auth_error_two_factor_expired,
 } satisfies Record<string, () => string>;
