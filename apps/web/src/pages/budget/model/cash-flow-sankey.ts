@@ -48,7 +48,6 @@ const INCOME_PREFIX = "income:";
 const MONEY_LEFT_ID = `${GROUP_PREFIX}money-left`;
 const OTHER_INCOME_ID = "other-income";
 
-const SALARY = /salary|lön|wage|payroll/u;
 const DIVIDEND = /dividend|divi/u;
 const INTEREST = /interest|ränta/u;
 const REFUND = /refund|return/u;
@@ -72,10 +71,6 @@ const incomeColorOfCounterpartyName = (name: string | null): CategoryColor => {
 
   if (REFUND.test(lower)) {
     return "orange";
-  }
-
-  if (SALARY.test(lower)) {
-    return "green";
   }
 
   return DEFAULT_INCOME_COLOR;
