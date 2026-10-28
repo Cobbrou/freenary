@@ -19,6 +19,7 @@ export interface ClassificationRecord {
 }
 
 export interface ClassificationStore {
+  failedAt: Map<string, number>;
   find: (signature: string) => Promise<CachedClassification | null>;
   save: (signature: string, record: ClassificationRecord) => Promise<void>;
 }
@@ -72,6 +73,7 @@ const saveClassification = async (
 };
 
 export const prismaClassificationStore: ClassificationStore = {
+  failedAt: new Map(),
   find: findClassification,
   save: saveClassification,
 };

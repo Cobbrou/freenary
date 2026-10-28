@@ -33,7 +33,7 @@ On the same Docker network, use the model server's service name, such as `http:/
 
 ## Categorisation
 
-Every option asks one question per merchant and caches the answer, so a merchant costs one call to this model. Freenary sends the transaction description, the counterparty name, a rough amount range and a few other details such as the currency and country, never the exact amount: [Security](/docs/reference/security) lists every field.
+Every option asks one question per merchant and caches the answer, so a merchant costs one call to this model. A sync, or a recategorisation, asks at most 200 questions and stops after 5 failures in a row. A merchant whose question failed waits one hour before it is asked again. The merchants left out are asked at the next sync. Freenary sends the transaction description, the counterparty name, a rough amount range and a few other details such as the currency and country, never the exact amount: [Security](/docs/reference/security) lists every field.
 
 | Option | Where it runs | What you enter |
 | --- | --- | --- |

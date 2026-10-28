@@ -219,6 +219,7 @@ const memoryStore = (): ClassificationStore & {
   const times = new Map<string, Date>();
 
   return {
+    failedAt: new Map(),
     find: (signature) => {
       const row = rows.get(signature);
 
@@ -674,6 +675,69 @@ describe("categoriseBatch", () => {
       band: "suggest",
       category: "groceries",
     });
+  });
+
+  it("waits an hour before asking again about a merchant that failed", async () => {
+    const store = memoryStore();
+    const failing = scriptedClassifier(() =>
+      Promise.reject(new Error("provider down"))
+    );
+
+    const options = { classifiers: [failing], countries: undefined, store };
+
+    await categoriseBatch([unresolved], options);
+    await categoriseBatch([unresolved], options);
+
+    expect(failing.calls).toBe(1);
+
+    for (const signature of store.failedAt.keys()) {
+      store.failedAt.set(signature, Date.now() - 2 * 60 * 60 * 1000);
+    }
+
+    await categoriseBatch([unresolved], options);
+
+    expect(failing.calls).toBe(2);
+  });
+
+  it("never asks more questions in one run than the cap", async () => {
+    const classifier = scriptedClassifier(strong);
+    const merchants = ["alpha", "bravo", "charlie"].map((name) => ({
+      ...unresolved,
+      merchantKey: name,
+      normalisedDescriptor: name,
+    }));
+
+    const results = await categoriseBatch(merchants, {
+      classifiers: [classifier],
+      countries: undefined,
+      maxCalls: 2,
+      store: memoryStore(),
+    });
+
+    expect(classifier.calls).toBe(2);
+    expect(
+      results.filter((resolution) => resolution.stage === "none")
+    ).toHaveLength(1);
+  });
+
+  it("stops asking once the classifier keeps failing", async () => {
+    const failing = scriptedClassifier(() =>
+      Promise.reject(new Error("provider down"))
+    );
+
+    const merchants = Array.from({ length: 20 }, (_, index) => ({
+      ...unresolved,
+      merchantKey: `merchant ${index}`,
+      normalisedDescriptor: `merchant ${index}`,
+    }));
+
+    await categoriseBatch(merchants, {
+      classifiers: [failing],
+      countries: undefined,
+      store: memoryStore(),
+    });
+
+    expect(failing.calls).toBeLessThan(merchants.length);
   });
 });
 

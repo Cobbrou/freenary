@@ -59,10 +59,17 @@ interface PendingGroup {
   indices: number[];
 }
 
+interface ClassificationRun {
+  callsLeft: number;
+  consecutiveFailures: number;
+  skipped: number;
+}
+
 interface ClassificationPhase {
   classifiers: readonly TransactionClassifier[];
   escalateBelow: number;
   onSignatureSettled: () => Promise<void>;
+  run: ClassificationRun;
   store: ClassificationStore;
   timeoutMs: number;
 }
@@ -79,6 +86,7 @@ export interface CategoriseBatchOptions {
   countries: Iso3166Alpha2Country[] | undefined;
   classifiers: readonly TransactionClassifier[];
   escalateBelow?: number;
+  maxCalls?: number;
   onSignatureSettled?: () => Promise<void>;
   store: ClassificationStore;
   timeoutMs?: number;
@@ -302,6 +310,9 @@ const categoriseInOrder = async (
 const CLASSIFIER_CONCURRENCY = 4;
 const CLASSIFIER_TIMEOUT_MS = 15_000;
 const ABSTENTION_RETRY_AFTER_MS = 30 * 24 * 60 * 60 * 1000;
+const FAILURE_RETRY_AFTER_MS = 60 * 60 * 1000;
+const MAX_CLASSIFIER_CALLS_PER_RUN = 200;
+const BREAKER_CONSECUTIVE_FAILURES = 5;
 
 const noProgress = (): Promise<void> => Promise.resolve();
 
@@ -444,6 +455,9 @@ const askClassifier = Effect.fnUntraced(function* askClassifier(
     : null;
 });
 
+const mayCall = (run: ClassificationRun): boolean =>
+  run.callsLeft > 0 && run.consecutiveFailures < BREAKER_CONSECUTIVE_FAILURES;
+
 const consultClassifier = Effect.fnUntraced(function* consultClassifier(
   phase: ClassificationPhase,
   classifier: TransactionClassifier,
@@ -471,6 +485,22 @@ const consultClassifier = Effect.fnUntraced(function* consultClassifier(
     return { kind: "silent" } satisfies ProviderOutcome;
   }
 
+  const failedAt = phase.store.failedAt.get(signature);
+  const failedRecently =
+    failedAt !== undefined && Date.now() - failedAt < FAILURE_RETRY_AFTER_MS;
+
+  if (failedRecently) {
+    return { kind: "silent" } satisfies ProviderOutcome;
+  }
+
+  if (!mayCall(phase.run)) {
+    phase.run.skipped += 1;
+
+    return { kind: "silent" } satisfies ProviderOutcome;
+  }
+
+  phase.run.callsLeft -= 1;
+
   const prediction = yield* askClassifier(
     classifier,
     phase.timeoutMs,
@@ -479,6 +509,8 @@ const consultClassifier = Effect.fnUntraced(function* consultClassifier(
     Effect.match({
       onFailure: (failure: ClassificationCallFailed) => {
         console.warn(`[categorisation] ${failure.message}`);
+        phase.store.failedAt.set(signature, Date.now());
+        phase.run.consecutiveFailures += 1;
 
         return Option.none<ClassificationPrediction | null>();
       },
@@ -491,6 +523,9 @@ const consultClassifier = Effect.fnUntraced(function* consultClassifier(
   }
 
   const answer = prediction.value;
+
+  phase.store.failedAt.delete(signature);
+  phase.run.consecutiveFailures = 0;
 
   yield* Effect.promise(() =>
     phase.store.save(signature, {
@@ -571,6 +606,12 @@ const classifyPending = Effect.fnUntraced(function* classifyPending(
       return Effect.void;
     })
   );
+
+  if (phase.run.skipped > 0) {
+    console.warn(
+      `[categorisation] classifier phase skipped ${phase.run.skipped} questions: ${phase.run.callsLeft} calls left, ${phase.run.consecutiveFailures} failures in a row`
+    );
+  }
 });
 
 const categoriseAll = async (
@@ -589,6 +630,11 @@ const categoriseAll = async (
         classifiers: options.classifiers,
         escalateBelow: options.escalateBelow ?? AUTO_BAND_MIN_CONFIDENCE,
         onSignatureSettled: options.onSignatureSettled ?? noProgress,
+        run: {
+          callsLeft: options.maxCalls ?? MAX_CLASSIFIER_CALLS_PER_RUN,
+          consecutiveFailures: 0,
+          skipped: 0,
+        },
         store: options.store,
         timeoutMs: options.timeoutMs ?? CLASSIFIER_TIMEOUT_MS,
       },
