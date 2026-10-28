@@ -5,6 +5,14 @@ import { Effect, Option } from "effect";
 import { z } from "zod";
 
 import { protectedProcedure } from "../index";
+import type { BankConnectionState } from "../lib/bank-connection-state";
+import {
+  BANK_CONNECTION_RETURN_TARGETS,
+  encodeBankConnectionState,
+  findInstitution,
+  parseBankConnectionState,
+  verifyBankConnectionState,
+} from "../lib/bank-connection-state";
 import {
   findProviderUser,
   ensureProviderUser,
@@ -16,14 +24,6 @@ import {
 } from "../lib/country-code";
 import { getDefaultProvider, getProvider } from "../providers/registry";
 import type { BankingProvider, ProviderInstitution } from "../providers/types";
-import type { BankConnectionState } from "./bank-connection-state";
-import {
-  BANK_CONNECTION_RETURN_TARGETS,
-  encodeBankConnectionState,
-  findInstitution,
-  parseBankConnectionState,
-  verifyBankConnectionState,
-} from "./bank-connection-state";
 
 const providerById = Option.liftThrowable(getProvider);
 

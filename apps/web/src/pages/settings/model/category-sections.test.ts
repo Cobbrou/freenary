@@ -123,10 +123,7 @@ describe("toCategorySections", () => {
   it("drops headings left with nothing under them", () => {
     const sections = toCategorySections(listCategories([]), "rent");
 
-    expect(sections.map((s) => s.heading?.label)).toEqual([
-      "Income",
-      "Spending",
-    ]);
+    expect(sections.map((s) => s.heading?.key)).toEqual(["income", "spending"]);
 
     expect(keysOf(sections)).toEqual(["rental-income", "rent-mortgage"]);
   });

@@ -1,8 +1,8 @@
 import type { Prisma } from "@freenary/db";
 import { Match } from "effect";
 
-import { categoriesInGroup, isCategoryGroup } from "../lib/taxonomy";
-import type { SpendingCategory } from "../lib/taxonomy";
+import { categoriesInGroup, isCategoryGroup } from "./taxonomy";
+import type { SpendingCategory } from "./taxonomy";
 import type {
   AmountFilterOperator,
   AmountTransactionFilter,
@@ -10,7 +10,7 @@ import type {
   CategoryTransactionFilter,
   CompanyTransactionFilter,
   TransactionFilter,
-} from "../lib/transaction-filters";
+} from "./transaction-filters";
 
 type Condition = Prisma.TransactionWhereInput;
 

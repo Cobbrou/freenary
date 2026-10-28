@@ -38,7 +38,7 @@ export const editedOf = (entry: CategoryEntry): EditedCustomCategory => ({
   color: entry.pickedColor ?? entry.color,
   icon: entry.icon,
   id: entry.key.split(":")[1] ?? "",
-  label: entry.label,
+  label: categoryEntryLabel(entry),
   parentKey: entry.parentKey,
 });
 

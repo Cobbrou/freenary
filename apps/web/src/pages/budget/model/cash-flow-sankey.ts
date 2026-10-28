@@ -9,13 +9,14 @@ import type {
   SpendingCategory,
 } from "@freenary/api/lib/taxonomy";
 
-import { categoryGroupLabel, categoryLabel } from "@/entities/category";
-import type { CategorySelection } from "@/entities/category";
-import { m } from "@/paraglide/messages.js";
 import {
   categoryChartColor,
-  CHART_COLOR_VARS,
-} from "@/shared/lib/chart-colors";
+  categoryGroupLabel,
+  categoryLabel,
+} from "@/entities/category";
+import type { CategorySelection } from "@/entities/category";
+import { m } from "@/paraglide/messages.js";
+import { CHART_COLOR_VARS } from "@/shared/lib/chart-colors";
 import { apportion } from "@/shared/lib/sankey";
 import type { SankeyFlow, SankeyLink, SankeyNode } from "@/shared/lib/sankey";
 
@@ -48,7 +49,6 @@ const INCOME_PREFIX = "income:";
 const MONEY_LEFT_ID = `${GROUP_PREFIX}money-left`;
 const OTHER_INCOME_ID = "other-income";
 
-const SALARY = /salary|lön|wage|payroll/u;
 const DIVIDEND = /dividend|divi/u;
 const INTEREST = /interest|ränta/u;
 const REFUND = /refund|return/u;
@@ -72,10 +72,6 @@ const incomeColorOfCounterpartyName = (name: string | null): CategoryColor => {
 
   if (REFUND.test(lower)) {
     return "orange";
-  }
-
-  if (SALARY.test(lower)) {
-    return "green";
   }
 
   return DEFAULT_INCOME_COLOR;

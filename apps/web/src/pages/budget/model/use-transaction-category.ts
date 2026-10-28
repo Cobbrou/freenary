@@ -2,8 +2,9 @@ import type { SpendingCategory } from "@freenary/api/lib/taxonomy";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
+import { TRANSACTIONS_QUERY_KEY } from "@/entities/budget";
 import { m } from "@/paraglide/messages.js";
-import { client, TRANSACTIONS_QUERY_KEY } from "@/shared/api";
+import { client } from "@/shared/api";
 
 import type { Transaction } from "./transaction";
 

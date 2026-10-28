@@ -1,8 +1,7 @@
 import { ScrollArea } from "@freenary/ui/components/scroll-area";
 
-import { categoryLabel } from "@/entities/category";
+import { categoryChartColor, categoryLabel } from "@/entities/category";
 import { m } from "@/paraglide/messages.js";
-import { categoryChartColor } from "@/shared/lib/chart-colors";
 import { formatCurrency } from "@/shared/lib/format-currency";
 
 import type { RecurringCategoryRow } from "../model/recurring";

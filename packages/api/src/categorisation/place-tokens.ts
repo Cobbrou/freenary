@@ -32,8 +32,6 @@ const ensureLoaded = (): Set<string> => {
 export const isPlaceToken = (token: string): boolean =>
   ensureLoaded().has(token);
 
-export const getPlaceTokens = (): ReadonlySet<string> => ensureLoaded();
-
 export const replacePlaceTokens = (tokens: Iterable<string> | null): void => {
   state.tokens = tokens === null ? null : new Set(tokens);
 };

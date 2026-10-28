@@ -1,22 +1,24 @@
 import { assistantUiPrompt } from "./ui";
 
-export interface AssistantPromptContext {
-  locale: string;
-  today: string;
-  firstTransactionDate: string | null;
-  lastTransactionDate: string | null;
+export interface AssistantPromptAccounts {
+  firstTransactionDate: Date | string | null;
+  lastTransactionDate: Date | string | null;
   hasAccounts: boolean;
 }
 
 const DATA_RANGE_UNAVAILABLE = "No bank account is connected yet.";
 
-export const assistantSystemPrompt = ({
-  firstTransactionDate,
-  hasAccounts,
-  lastTransactionDate,
-  locale,
-  today,
-}: AssistantPromptContext): string => {
+const isoDay = (date: Date | string | null): string | null =>
+  date === null ? null : new Date(date).toISOString().slice(0, 10);
+
+export const assistantSystemPrompt = (
+  accounts: AssistantPromptAccounts,
+  locale: string
+): string => {
+  const { hasAccounts } = accounts;
+  const firstTransactionDate = isoDay(accounts.firstTransactionDate);
+  const lastTransactionDate = isoDay(accounts.lastTransactionDate);
+  const today = new Date().toISOString().slice(0, 10);
   const range =
     hasAccounts && firstTransactionDate && lastTransactionDate
       ? `Transaction data covers ${firstTransactionDate} to ${lastTransactionDate}; refuse periods outside it instead of extrapolating.`

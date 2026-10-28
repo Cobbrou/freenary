@@ -54,10 +54,10 @@ export const categoryLabel = (category: SpendingCategory): string =>
 export const categoryEntryLabel = (entry: {
   isCustom: boolean;
   key: string;
-  label: string;
+  label?: string;
 }): string => {
   if (entry.isCustom) {
-    return entry.label;
+    return entry.label ?? entry.key;
   }
 
   if (isCategoryGroup(entry.key)) {
@@ -68,5 +68,5 @@ export const categoryEntryLabel = (entry: {
     return categoryLabel(entry.key);
   }
 
-  return entry.label;
+  return entry.label ?? entry.key;
 };

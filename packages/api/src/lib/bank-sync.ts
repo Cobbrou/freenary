@@ -71,13 +71,6 @@ const failureLine = (failure: BankSyncFailed): string =>
     })
   );
 
-const recordFailure =
-  (errors: string[]) =>
-  (failure: BankSyncFailed): Effect.Effect<void> =>
-    Effect.sync(() => {
-      errors.push(failureLine(failure));
-    });
-
 const accountFailure =
   (account: SyncAccount) =>
   (cause: unknown): BankSyncFailed =>
@@ -352,29 +345,27 @@ const importAccount = async (context: AccountSyncContext): Promise<void> => {
 
 export const importAccountsInSeries = (
   context: ConnectionSyncContext,
-  accounts: readonly SyncAccount[],
-  errors: string[]
-): Effect.Effect<boolean> =>
+  accounts: readonly SyncAccount[]
+): Effect.Effect<string[]> =>
   Effect.all(
     accounts.map((account) =>
       Effect.tryPromise({
         catch: accountFailure(account),
         try: () => importAccount({ ...context, account }),
       }).pipe(
-        Effect.as(true),
+        Effect.as([]),
         Effect.catchTag("BankSyncFailed", (failure) =>
-          recordFailure(errors)(failure).pipe(Effect.as(false))
+          Effect.succeed([failureLine(failure)])
         ),
         Effect.tap(() =>
           Effect.promise(() => context.reporter.accountFinished())
         )
       )
     )
-  ).pipe(Effect.map((imported) => imported.every(Boolean)));
+  ).pipe(Effect.map((failures) => failures.flat()));
 
 const connectionSteps = Effect.fnUntraced(function* connectionSteps(
   connection: ConnectionWithAccounts,
-  errors: string[],
   user: ProviderUserSession | null,
   reporter: SyncReporter,
   reReadFullWindow: boolean
@@ -395,14 +386,13 @@ const connectionSteps = Effect.fnUntraced(function* connectionSteps(
 
   yield* Effect.promise(() => reporter.accountsDiscovered(accounts.length));
 
-  const everyAccountImported = yield* importAccountsInSeries(
+  const accountFailures = yield* importAccountsInSeries(
     { connection, provider, reporter, user, window },
-    accounts,
-    errors
+    accounts
   );
 
-  if (!everyAccountImported) {
-    return;
+  if (accountFailures.length > 0) {
+    return accountFailures;
   }
 
   yield* Effect.tryPromise({
@@ -413,18 +403,20 @@ const connectionSteps = Effect.fnUntraced(function* connectionSteps(
         where: { id: connection.id },
       }),
   });
+
+  return [];
 });
 
-export const syncConnection = async (
+export const syncConnection = (
   connection: ConnectionWithAccounts,
-  errors: string[],
   user: ProviderUserSession | null,
   reporter: SyncReporter,
   force = false
-): Promise<void> => {
-  await Effect.runPromise(
-    connectionSteps(connection, errors, user, reporter, force).pipe(
-      Effect.catchTag("BankSyncFailed", recordFailure(errors))
+): Promise<string[]> =>
+  Effect.runPromise(
+    connectionSteps(connection, user, reporter, force).pipe(
+      Effect.catchTag("BankSyncFailed", (failure) =>
+        Effect.succeed([failureLine(failure)])
+      )
     )
   );
-};

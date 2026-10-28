@@ -2,8 +2,8 @@ import { describe, expect, test } from "bun:test";
 
 import { z } from "zod";
 
-import type { TransactionFilter } from "../lib/transaction-filters";
 import { transactionFilterConditions } from "./transaction-filter-conditions";
+import type { TransactionFilter } from "./transaction-filters";
 
 const ROW_COLUMNS = [
   "amount",

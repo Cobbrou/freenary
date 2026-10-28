@@ -118,12 +118,6 @@ export type SpendingCategory = (typeof SPENDING_CATEGORIES)[number];
 
 export const TAXONOMY_VERSION = 2;
 
-export const CATEGORY_GROUP_LABELS = {
-  income: "Income",
-  investments: "Savings & investment",
-  spending: "Spending",
-} as const satisfies Record<CategoryGroup, string>;
-
 export const CATEGORY_GROUP_COLORS = {
   income: "green",
   investments: "purple",
@@ -165,36 +159,6 @@ export const CATEGORY_GROUP_OF = {
   "transport-travel": "spending",
   uncategorised: "spending",
 } as const satisfies Record<SpendingCategory, CategoryGroup>;
-
-export const CATEGORY_LABELS = {
-  benefits: "Benefits & pension",
-  "bills-utilities": "Bills & utilities",
-  "car-fuel": "Car & fuel",
-  "cash-withdrawal": "Cash withdrawal",
-  crypto: "Crypto",
-  entertainment: "Entertainment & leisure",
-  "family-education": "Family & education",
-  groceries: "Groceries",
-  health: "Health & medical",
-  "investment-income": "Investment income",
-  "loans-bank-fees": "Loans & bank fees",
-  "other-income": "Other income",
-  people: "People",
-  refunds: "Refunds & reimbursements",
-  "rent-mortgage": "Rent & mortgage",
-  "rental-income": "Rental income",
-  restaurants: "Restaurants & going out",
-  retirement: "Retirement & long-term savings",
-  salary: "Salary & wages",
-  savings: "Savings",
-  securities: "Investments",
-  "self-employment": "Self-employment & business income",
-  shopping: "Shopping",
-  subscriptions: "Subscriptions",
-  taxes: "Taxes",
-  "transport-travel": "Transport & travel",
-  uncategorised: "Uncategorised",
-} as const satisfies Record<SpendingCategory, string>;
 
 export const CATEGORY_DIRECTION_OF = {
   benefits: "in",
@@ -383,10 +347,10 @@ export const LEGACY_CATEGORY_GROUPS = {
 } as const satisfies Record<string, CategoryGroup>;
 
 export const isSpendingCategory = (value: string): value is SpendingCategory =>
-  Object.hasOwn(CATEGORY_LABELS, value);
+  Object.hasOwn(CATEGORY_GROUP_OF, value);
 
 export const isCategoryGroup = (value: string): value is CategoryGroup =>
-  Object.hasOwn(CATEGORY_GROUP_LABELS, value);
+  Object.hasOwn(CATEGORY_GROUP_COLORS, value);
 
 export const isCategoryColor = (value: string): value is CategoryColor =>
   CATEGORY_COLOR_VALUES.some((color) => color === value);

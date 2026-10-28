@@ -2,7 +2,6 @@ import { assistantSystemPrompt } from "@freenary/api/assistant/prompt";
 import { assistantTools } from "@freenary/api/assistant/tools";
 import {
   answerableParts,
-  isoDay,
   isStorableOutcome,
   isStoredPart,
   MAX_QUESTION_CHARS,
@@ -103,13 +102,7 @@ export const createBrowserChatTransport = ({
 
     const accounts = await client.budget.getAccounts();
     const tools = assistantTools(client);
-    const instructions = assistantSystemPrompt({
-      firstTransactionDate: isoDay(accounts.firstTransactionDate),
-      hasAccounts: accounts.hasAccounts,
-      lastTransactionDate: isoDay(accounts.lastTransactionDate),
-      locale: locale(),
-      today: new Date().toISOString().slice(0, 10),
-    });
+    const instructions = assistantSystemPrompt(accounts, locale());
 
     const replayable = messages.slice(0, -1).map((message) => ({
       ...message,

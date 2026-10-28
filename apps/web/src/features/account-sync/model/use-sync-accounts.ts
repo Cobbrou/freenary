@@ -6,8 +6,9 @@ import {
 } from "@tanstack/react-query";
 import { toast } from "sonner";
 
+import { invalidateBudgetData } from "@/entities/budget";
 import { m } from "@/paraglide/messages.js";
-import { client, invalidateBudgetData, orpc } from "@/shared/api";
+import { client, orpc } from "@/shared/api";
 
 interface SyncVariables {
   force?: boolean;

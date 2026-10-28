@@ -226,7 +226,7 @@ The sync window is 90 days. `dateFrom` is `lastSyncedAt`, or 90 days back on a f
 
 ### The signed state parameter
 
-`packages/api/src/routers/bank-connection-state.ts` builds the `state` value that round-trips through the provider. Your adapter passes it through untouched.
+`packages/api/src/lib/bank-connection-state.ts` builds the `state` value that round-trips through the provider. Your adapter passes it through untouched.
 
 The payload is a JSON object with the keys `institution` (its `country`, `id` and `name`), `original`, `providerId` and `returnTo`. The return target is `onboarding` or `settings`. The HMAC is SHA-256 over the user id joined to the serialised payload, keyed by `BETTER_AUTH_SECRET`. It binds three things: the payload, the secret, and the session that started the flow. Verification strips the HMAC, recomputes it over the re-serialised payload, checks the length, then compares with `timingSafeEqual`.
 

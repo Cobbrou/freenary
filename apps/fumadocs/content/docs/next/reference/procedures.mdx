@@ -453,7 +453,7 @@ Deletes the category and its subcategories, and moves their budget lines to one 
 | Field | Note |
 | --- | --- |
 | `key`, `parentKey` | The entry's key, and its group slug, `custom:<id>` parent, or `null` at top level |
-| `label` | An English display name |
+| `label` | Custom categories only: the name the user gave it. A built-in entry carries no label: map its `key` to a display name |
 | `icon` | An icon name |
 | `color` | What the entry shows. Under a parent, the parent's colour. A built-in category shows `slot` instead |
 | `slot` | Built-in categories only: the category's own palette slot, such as `teal` or `orange-alt` |
