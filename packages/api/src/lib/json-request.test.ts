@@ -1,9 +1,9 @@
 import { describe, expect, it } from "bun:test";
 
-import { isJsonRequest } from "./turn";
+import { isJsonRequest } from "./json-request";
 
 const postedAs = (contentType: string) =>
-  new Request("http://localhost/ai/chat", {
+  new Request("http://localhost/api-reference/settings/createCustomCategory", {
     body: "{}",
     headers: { "content-type": contentType },
     method: "POST",

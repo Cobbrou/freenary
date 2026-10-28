@@ -67,7 +67,7 @@ This forwarding lets one public origin serve both apps. `scripts/deploy-template
 | `/api/auth/*` | Better Auth. Any method but `POST` and `GET` answers 405 |
 | `/rpc*` | The `RPCHandler` with the prefix `/rpc`, the path of the eleven hops above |
 | `POST /ai/chat` | The assistant token stream, also `parse: "none"`, handled by `handleAssistantChat`. A comment states the reason: a token stream does not fit a unary oRPC procedure |
-| `/api-reference*` | The OpenAPI handler, with `OpenAPIReferencePlugin` and `ZodToJsonSchemaConverter` |
+| `/api-reference*` | The OpenAPI handler, with `OpenAPIReferencePlugin` and `ZodToJsonSchemaConverter`. A `POST` that isn't `application/json` gets `415` first, because the handler would decode a form post that no preflight guards |
 | `GET /` | The literal string `OK`, which every compose file uses as the health probe |
 
 The listener takes `env.PORT`, default `3000`. A new top-level route also goes into `FORWARDED_PATH_PREFIXES` of the web app. [API](../../apps/fumadocs/content/docs/next/reference/api.mdx) documents these routes for a caller, and [Procedure reference](../../apps/fumadocs/content/docs/next/reference/procedures.mdx) documents each procedure.

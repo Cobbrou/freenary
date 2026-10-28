@@ -34,7 +34,7 @@ There's no version prefix. `budget.getTransactions` is `/api-reference/budget/ge
 - `/api/auth/*` takes `GET` and `POST`; other methods get `405 Method Not Allowed`.
 - `/rpc` refuses `GET` with `405` and the code `METHOD_NOT_SUPPORTED`.
 - `/rpc` needs the header `X-CSRF-Token: orpc`. Without it, a call gets `403` with the code `CSRF_TOKEN_MISMATCH`. `/api-reference` doesn't need it.
-- `/api-reference/<procedure>` takes `POST` only; other methods get `404 Not Found`.
+- `/api-reference/<procedure>` takes `POST` only; other methods get `404 Not Found`. A body whose `Content-Type` isn't `application/json` gets `415` with the text `unsupported_media_type`.
 - `OPTIONS` gets `204` on any path. An unknown path gets `404` with the text `NOT_FOUND`. An unknown procedure under `/rpc` or `/api-reference` gets `404` with the text `Not Found`, not the JSON error body.
 
 ## CORS
