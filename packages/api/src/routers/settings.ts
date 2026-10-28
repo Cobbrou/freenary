@@ -33,6 +33,7 @@ import {
   resolveCategoryGroup,
 } from "../lib/taxonomy";
 import type { CategoryIconName } from "../lib/taxonomy";
+import { userCurrency } from "../lib/user-currency";
 
 const customCategoryFields = {
   color: z.enum(CATEGORY_COLOR_VALUES),
@@ -257,19 +258,23 @@ export const settingsRouter = {
   getBudgetProfile: protectedProcedure.handler(async ({ context }) => {
     const userId = context.session.user.id;
 
-    const lines = await prisma.budgetLine.findMany({
-      orderBy: { sortOrder: "asc" },
-      select: {
-        amount: true,
-        categoryId: true,
-        categorySlug: true,
-        id: true,
-        label: true,
-      },
-      where: { userId },
-    });
+    const [lines, currency] = await Promise.all([
+      prisma.budgetLine.findMany({
+        orderBy: { sortOrder: "asc" },
+        select: {
+          amount: true,
+          categoryId: true,
+          categorySlug: true,
+          id: true,
+          label: true,
+        },
+        where: { userId },
+      }),
+      userCurrency(userId),
+    ]);
 
     return {
+      currency,
       lines: lines.map((line) => ({
         amount: line.amount,
         categoryKey: line.categoryId

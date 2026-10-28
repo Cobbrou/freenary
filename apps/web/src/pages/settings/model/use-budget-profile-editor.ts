@@ -3,6 +3,7 @@ import {
   MAX_BUDGET_LINE_LABEL_LENGTH,
 } from "@freenary/api/lib/budget-profile";
 import type { CategoryEntry } from "@freenary/api/lib/categories";
+import { toMinor } from "@freenary/api/lib/money";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -10,6 +11,7 @@ import { z } from "zod";
 
 import { m } from "@/paraglide/messages.js";
 import { client, orpc } from "@/shared/api";
+import { formatAmountInput } from "@/shared/lib/format-currency";
 
 import { useUnsavedChangesWarning } from "../lib/use-unsaved-changes-warning";
 
@@ -27,9 +29,15 @@ export interface ServerBudgetLine {
   label: string | null;
 }
 
+export interface ServerBudgetProfile {
+  currency: string;
+  lines: ServerBudgetLine[];
+}
+
 export interface BudgetProfileEditor {
   addLine: () => void;
   changeCount: number;
+  currency: string | undefined;
   errors: Map<string, string>;
   isDirty: boolean;
   isSaving: boolean;
@@ -42,7 +50,6 @@ export interface BudgetProfileEditor {
   updateLine: (id: string, patch: Partial<EditorLine>) => void;
 }
 
-const MINOR_UNITS_PER_MAJOR = 100;
 const NO_CATEGORY_CHOSEN = "";
 const A_PURE_REORDER_IS_ONE_CHANGE = 1;
 
@@ -64,46 +71,53 @@ const lineSchema = z.object({
     }),
 });
 
-export const amountOf = (amountInput: string): number => {
+export const amountOf = (
+  amountInput: string,
+  currency: string | undefined
+): number => {
   const trimmed = amountInput.trim();
 
-  if (trimmed === "") {
+  if (trimmed === "" || currency === undefined) {
     return Number.NaN;
   }
 
   const major = Number(trimmed.replace(",", "."));
 
-  return Number.isFinite(major)
-    ? Math.round(major * MINOR_UNITS_PER_MAJOR)
-    : Number.NaN;
+  return Number.isFinite(major) ? toMinor(major, currency) : Number.NaN;
 };
 
-const toPayload = (line: EditorLine) => ({
-  amount: amountOf(line.amountInput),
+const toPayload = (line: EditorLine, currency: string | undefined) => ({
+  amount: amountOf(line.amountInput, currency),
   categoryKey: line.categoryKey,
   label: line.label.trim(),
 });
 
-const toEditorLines = (serverLines: ServerBudgetLine[]): EditorLine[] =>
-  serverLines.map((line) => ({
-    amountInput: (line.amount / MINOR_UNITS_PER_MAJOR).toString(),
-    categoryKey: line.categoryKey,
-    id: line.id,
-    label: line.label ?? "",
-  }));
+const toEditorLines = (
+  profile: ServerBudgetProfile | undefined
+): EditorLine[] =>
+  profile === undefined
+    ? []
+    : profile.lines.map((line) => ({
+        amountInput: formatAmountInput(line.amount, profile.currency),
+        categoryKey: line.categoryKey,
+        id: line.id,
+        label: line.label ?? "",
+      }));
 
 const signatureOf = (serverLines: ServerBudgetLine[] | undefined) =>
   JSON.stringify(serverLines ?? []);
 
 export const useBudgetProfileEditor = (
-  serverLines: ServerBudgetLine[] | undefined,
+  serverProfile: ServerBudgetProfile | undefined,
   categories: CategoryEntry[]
 ): BudgetProfileEditor => {
   const queryClient = useQueryClient();
   const [isDirty, setIsDirty] = useState(false);
   const draftEditCount = useRef(0);
+  const currency = serverProfile?.currency;
+  const serverLines = serverProfile?.lines;
   const [lines, setLines] = useState<EditorLine[]>(() =>
-    toEditorLines(serverLines ?? [])
+    toEditorLines(serverProfile)
   );
 
   const [hydratedSignature, setHydratedSignature] = useState(() =>
@@ -115,7 +129,7 @@ export const useBudgetProfileEditor = (
 
   if (shouldFollowServer) {
     setHydratedSignature(signature);
-    setLines(toEditorLines(serverLines ?? []));
+    setLines(toEditorLines(serverProfile));
   }
 
   useUnsavedChangesWarning(isDirty);
@@ -125,7 +139,7 @@ export const useBudgetProfileEditor = (
     const found = new Map<string, string>();
 
     for (const line of lines) {
-      const parsed = lineSchema.safeParse(toPayload(line));
+      const parsed = lineSchema.safeParse(toPayload(line, currency));
       const isCategoryStillAvailable = knownKeys.has(line.categoryKey);
       const message = isCategoryStillAvailable
         ? parsed.error?.issues[0]?.message
@@ -137,10 +151,10 @@ export const useBudgetProfileEditor = (
     }
 
     return found;
-  }, [categories, lines]);
+  }, [categories, currency, lines]);
 
   const changeCount = useMemo(() => {
-    const original = toEditorLines(serverLines ?? []);
+    const original = toEditorLines(serverProfile);
     const originalById = new Map(original.map((line) => [line.id, line]));
     let count = 0;
     const seen = new Set<string>();
@@ -171,11 +185,13 @@ export const useBudgetProfileEditor = (
     );
 
     return count === 0 && isReordered ? A_PURE_REORDER_IS_ONE_CHANGE : count;
-  }, [lines, serverLines]);
+  }, [lines, serverProfile]);
 
   const saveMutation = useMutation({
     mutationFn: (submitted: EditorLine[]) =>
-      client.settings.saveBudgetProfile({ lines: submitted.map(toPayload) }),
+      client.settings.saveBudgetProfile({
+        lines: submitted.map((line) => toPayload(line, currency)),
+      }),
     onError: (error: Error) => {
       toast.error(error.message || m.settings_budgeting_save_error());
     },
@@ -260,8 +276,8 @@ export const useBudgetProfileEditor = (
   const reset = useCallback(() => {
     draftEditCount.current = 0;
     setIsDirty(false);
-    setLines(toEditorLines(serverLines ?? []));
-  }, [serverLines]);
+    setLines(toEditorLines(serverProfile));
+  }, [serverProfile]);
 
   const save = useCallback(() => {
     saveMutation.mutate(lines);
@@ -270,6 +286,7 @@ export const useBudgetProfileEditor = (
   return {
     addLine,
     changeCount,
+    currency,
     errors,
     isDirty,
     isSaving: saveMutation.isPending,

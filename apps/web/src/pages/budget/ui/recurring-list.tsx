@@ -8,7 +8,10 @@ import { RiCoinsLine, RiRepeatLine } from "@remixicon/react";
 
 import type { CategoryFilter } from "@/entities/category";
 import { m } from "@/paraglide/messages.js";
-import { formatCurrency } from "@/shared/lib/format-currency";
+import {
+  formatCurrency,
+  formatDecimalCurrency,
+} from "@/shared/lib/format-currency";
 
 import {
   confidenceLabel,
@@ -73,9 +76,9 @@ const SORT_OPTIONS = [
   value: RecurringSortMode;
 }[];
 
-const amountLabel = (amount: AmountRange): string => {
-  const max = formatCurrency(Math.round(amount.max * 100));
-  const min = formatCurrency(Math.round(amount.min * 100));
+const amountLabel = (amount: AmountRange, currency: string): string => {
+  const max = formatDecimalCurrency(amount.max, currency);
+  const min = formatDecimalCurrency(amount.min, currency);
 
   if (amount.min > 0 && amount.max > 0) {
     return m.budget_filter_amount_between({ max, min });
@@ -138,6 +141,7 @@ export const RecurringList = ({
           value={sort}
         />
         <AmountFilterMenu
+          currency={currency}
           hint={m.budget_recurring_filter_cost_hint()}
           label={m.budget_recurring_filter_cost()}
           onRangeChange={onAmountChange}
@@ -187,7 +191,7 @@ export const RecurringList = ({
               {hasAmountBound && (
                 <ListFilterChip
                   icon={<RiCoinsLine className="size-3.5" />}
-                  label={amountLabel(filter.amount)}
+                  label={amountLabel(filter.amount, currency)}
                   onRemove={() => onAmountChange(EMPTY_AMOUNT_RANGE)}
                   position={position(
                     filter.frequencies.length + filter.confidences.length

@@ -23,7 +23,6 @@ import {
 
 import { getLocale } from "@/paraglide/runtime.js";
 import { CHART_COLOR_VARS } from "@/shared/lib/chart-colors";
-import { formatDecimalCurrency } from "@/shared/lib/format-currency";
 import { ChartTooltipCard } from "@/shared/ui/chart-tooltip";
 
 interface Series {
@@ -48,11 +47,19 @@ const PALETTE = [
   CHART_COLOR_VARS.grey,
 ];
 
-const DEFAULT_CURRENCY = "EUR";
 const ISO_CURRENCY_CODE = /^[A-Z]{3}$/u;
 
-const currencyOf = (code: string | undefined): string =>
-  code !== undefined && ISO_CURRENCY_CODE.test(code) ? code : DEFAULT_CURRENCY;
+const currencyOf = (code: string | undefined): string | undefined =>
+  code !== undefined && ISO_CURRENCY_CODE.test(code) ? code : undefined;
+
+const currencyStyle = (currency: string | undefined) =>
+  currency === undefined ? {} : { currency, style: "currency" as const };
+
+const formatDecimalCurrency = (
+  value: number,
+  currency: string | undefined
+): string =>
+  new Intl.NumberFormat(getLocale(), currencyStyle(currency)).format(value);
 
 const CHART_HEIGHT_CLASS = "aspect-auto h-56 w-full";
 
@@ -77,12 +84,11 @@ const seriesConfig = (series: Series[]): ChartConfig =>
     ])
   );
 
-const compactCurrency = (value: number, currency: string): string =>
+const compactCurrency = (value: number, currency: string | undefined): string =>
   new Intl.NumberFormat(getLocale(), {
-    currency,
+    ...currencyStyle(currency),
     maximumFractionDigits: 1,
     notation: "compact",
-    style: "currency",
   }).format(value);
 
 const SeriesTooltip = ({
@@ -94,7 +100,7 @@ const SeriesTooltip = ({
 }: {
   active?: boolean;
   config: ChartConfig;
-  currency: string;
+  currency: string | undefined;
   label?: string;
   payload?: TooltipItem[];
 }) => {
@@ -143,7 +149,7 @@ const SliceTooltip = ({
   total,
 }: {
   active?: boolean;
-  currency: string;
+  currency: string | undefined;
   payload?: TooltipItem[];
   total: number;
 }) => {

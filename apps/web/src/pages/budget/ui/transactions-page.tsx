@@ -23,6 +23,7 @@ import {
   selectChartCategory,
 } from "../model/filter-tokens";
 import type { SortMode, TransactionDirection } from "../model/search";
+import { useBudgetCurrency } from "../model/use-budget-currency";
 import { useBudgetView } from "../model/use-budget-view";
 import { useSyncProgress } from "../model/use-sync-progress";
 import { BudgetCharts } from "./budget-charts";
@@ -33,6 +34,7 @@ import { TransactionList } from "./transaction-list";
 
 export const TransactionsPage = () => {
   const accountsQuery = useQuery(orpc.budget.getAccounts.queryOptions());
+  const currency = useBudgetCurrency();
   const {
     applyPatch,
     companion,
@@ -213,6 +215,7 @@ export const TransactionsPage = () => {
 
       <BudgetKpiStrip
         aggregation={aggregation}
+        currency={currency}
         isError={sankeyQuery.isError}
         isPending={isFilling(sankeyQuery.isLoading)}
         isStale={isStaleView(sankeyQuery)}
@@ -224,7 +227,7 @@ export const TransactionsPage = () => {
         activeCategories={chartCategories}
         aggregation={aggregation}
         breakdown={{
-          data: breakdownQuery.data?.categories,
+          data: breakdownQuery.data,
           isError: breakdownQuery.isError,
           isPending: isFilling(breakdownQuery.isLoading),
           isStale: isStaleView(breakdownQuery),
@@ -256,6 +259,7 @@ export const TransactionsPage = () => {
 
       <TransactionList
         transactions={allTransactions}
+        currency={currency}
         totals={totals}
         direction={direction}
         onDirectionChange={(dir) => applyPatch({ dir })}

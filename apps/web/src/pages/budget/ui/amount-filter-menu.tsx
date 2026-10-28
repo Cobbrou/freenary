@@ -17,7 +17,7 @@ import { useEffect, useId, useRef, useState } from "react";
 
 import { m } from "@/paraglide/messages.js";
 import { getLocale } from "@/paraglide/runtime.js";
-import { currencySymbol } from "@/shared/lib/format-currency";
+import { currencyAffix } from "@/shared/lib/format-currency";
 import { remixIcon } from "@/shared/lib/remix-icon";
 import { useDebouncedValue } from "@/shared/lib/use-debounced-value";
 
@@ -28,6 +28,7 @@ import {
 import type { AmountRange } from "../model/transaction-filters";
 
 interface AmountFilterMenuProps {
+  currency: string;
   hint: string;
   label: string;
   onRangeChange: (range: AmountRange) => void;
@@ -44,6 +45,7 @@ const draftOf = (range: AmountRange) => ({
 });
 
 export const AmountFilterMenu = ({
+  currency,
   hint,
   label,
   onRangeChange,
@@ -73,7 +75,7 @@ export const AmountFilterMenu = ({
   const hasFloorAboveCeiling =
     range.min > NO_BOUND && range.max > NO_BOUND && range.min > range.max;
 
-  const symbol = currencySymbol();
+  const { align, symbol } = currencyAffix(currency);
 
   const resyncDraftFromRange = () => {
     applied.current = range;
@@ -109,7 +111,7 @@ export const AmountFilterMenu = ({
               {m.budget_filter_amount_min()}
             </FieldLabel>
             <InputGroup>
-              <InputGroupAddon>{symbol}</InputGroupAddon>
+              <InputGroupAddon align={align}>{symbol}</InputGroupAddon>
               <InputGroupInput
                 aria-invalid={hasFloorAboveCeiling}
                 id={`${fieldId}-min`}
@@ -130,7 +132,7 @@ export const AmountFilterMenu = ({
               {m.budget_filter_amount_max()}
             </FieldLabel>
             <InputGroup>
-              <InputGroupAddon>{symbol}</InputGroupAddon>
+              <InputGroupAddon align={align}>{symbol}</InputGroupAddon>
               <InputGroupInput
                 aria-invalid={hasFloorAboveCeiling}
                 id={`${fieldId}-max`}

@@ -69,6 +69,7 @@ import {
   transactionFiltersSchema,
 } from "../lib/transaction-filters";
 import { transactionPage } from "../lib/transaction-page";
+import { mostFrequentCurrency, userCurrency } from "../lib/user-currency";
 import { getProvider } from "../providers/registry";
 import { savedFilterProcedures } from "./saved-filters";
 
@@ -137,8 +138,6 @@ const AMOUNT_SIGN_PREDICATE = {
 } as const;
 
 const RECURRING_MONTHS = 12;
-
-const FALLBACK_CURRENCY = "EUR";
 
 const cashFlowGrainFor = (spanDays: number): CashFlowGrain => {
   if (spanDays <= DAILY_GRAIN_MAX_DAYS) {
@@ -567,22 +566,6 @@ const zeroFilledMonths = (
   );
 };
 
-const mostFrequentCurrency = (currencyCounts: Map<string, number>): string => {
-  let currency = FALLBACK_CURRENCY;
-  let bestCount = 0;
-
-  for (const [code, count] of currencyCounts) {
-    const tieBrokenByCode = count === bestCount && code < currency;
-
-    if (count > bestCount || tieBrokenByCode) {
-      currency = code;
-      bestCount = count;
-    }
-  }
-
-  return currency;
-};
-
 const accountsSummary = (
   accounts: { balanceMinor: number | null; currency: string | null }[]
 ): AccountsSummary => {
@@ -730,9 +713,11 @@ export const budgetRouter = {
 
     const accounts = await prisma.bankAccount.findMany({
       select: {
+        balanceMinor: true,
         connection: {
           select: { institutionName: true },
         },
+        currency: true,
         iban: true,
         id: true,
         name: true,
@@ -755,6 +740,7 @@ export const budgetRouter = {
         institutionName: a.connection.institutionName,
         name: a.name,
       })),
+      currency: accountsSummary(accounts).currency,
       firstTransactionDate: transactionDateBounds._min.date,
       hasAccounts: accounts.length > 0,
       lastTransactionDate: transactionDateBounds._max.date,
@@ -773,7 +759,7 @@ export const budgetRouter = {
       const userId = context.session.user.id;
       const { aggregation, from, to } = input;
 
-      const [lines, actualByCategory] = await Promise.all([
+      const [lines, actualByCategory, currency] = await Promise.all([
         prisma.budgetLine.findMany({
           select: {
             amount: true,
@@ -783,6 +769,7 @@ export const budgetRouter = {
           where: { userId },
         }),
         userOutgoingByCategory(userId, aggregation, from, to),
+        userCurrency(userId),
       ]);
 
       const outgoings = outgoingBudgetLines(lines);
@@ -802,6 +789,7 @@ export const budgetRouter = {
 
       return {
         categories,
+        currency,
         hasPlan: outgoings.length > 0,
       };
     }),
@@ -823,11 +811,15 @@ export const budgetRouter = {
 
       const sql = cashFlowQuery(cashFlowGrainFor(spanDays));
 
-      const periods = await prisma.$queryRawUnsafe<
-        { incoming: bigint; label: string; outgoing: bigint }[]
-      >(sql, userId, from, to);
+      const [periods, currency] = await Promise.all([
+        prisma.$queryRawUnsafe<
+          { incoming: bigint; label: string; outgoing: bigint }[]
+        >(sql, userId, from, to),
+        userCurrency(userId),
+      ]);
 
       return {
+        currency,
         periods: periods.map((p) => ({
           incoming: Number(p.incoming),
           label: p.label,
@@ -848,9 +840,10 @@ export const budgetRouter = {
       const userId = context.session.user.id;
       const { aggregation, from, to } = input;
 
-      const [rows, recurring] = await Promise.all([
+      const [rows, recurring, currency] = await Promise.all([
         outgoingRows(userId, from, to),
         detectRecurringExpenses(userId, cadenceWindow(from, to)),
+        userCurrency(userId),
       ]);
 
       const byCategory = outgoingByCategory(rows, aggregation, from, to);
@@ -867,7 +860,7 @@ export const budgetRouter = {
         total += amount;
       }
 
-      return { fixed, variable: total - fixed };
+      return { currency, fixed, variable: total - fixed };
     }),
 
   getMerchants: protectedProcedure
@@ -1038,19 +1031,22 @@ export const budgetRouter = {
       const userId = context.session.user.id;
       const { aggregation, from, to } = input;
 
-      const transactions = await prisma.transaction.findMany({
-        select: {
-          amount: true,
-          category: true,
-          counterpartyName: true,
-          date: true,
-          resolvedCategory: true,
-        },
-        where: {
-          account: { connection: { userId } },
-          date: { gte: from, lte: to },
-        },
-      });
+      const [transactions, currency] = await Promise.all([
+        prisma.transaction.findMany({
+          select: {
+            amount: true,
+            category: true,
+            counterpartyName: true,
+            date: true,
+            resolvedCategory: true,
+          },
+          where: {
+            account: { connection: { userId } },
+            date: { gte: from, lte: to },
+          },
+        }),
+        userCurrency(userId),
+      ]);
 
       let incomeSources: Map<string | null, number>;
       let expenseCategories: Map<SpendingCategory, number>;
@@ -1170,6 +1166,7 @@ export const budgetRouter = {
       const totalExpenses = groups.reduce((s, g) => s + g.value, 0);
 
       return {
+        currency,
         groups,
         incomeNodes,
         moneyLeft: Math.max(0, totalIncome - totalExpenses),
@@ -1187,12 +1184,15 @@ export const budgetRouter = {
       })
     )
     .handler(async ({ context, input }) => {
-      const categoryAmounts = await userOutgoingByCategory(
-        context.session.user.id,
-        input.aggregation,
-        input.from,
-        input.to
-      );
+      const [categoryAmounts, currency] = await Promise.all([
+        userOutgoingByCategory(
+          context.session.user.id,
+          input.aggregation,
+          input.from,
+          input.to
+        ),
+        userCurrency(context.session.user.id),
+      ]);
 
       const categories = [...categoryAmounts.entries()]
         .map(([category, amount]) => ({
@@ -1201,7 +1201,7 @@ export const budgetRouter = {
         }))
         .toSorted((a, b) => b.amount - a.amount);
 
-      return { categories };
+      return { categories, currency };
     }),
 
   getSyncStatus: protectedProcedure.handler(({ context }) =>
@@ -1336,21 +1336,24 @@ export const budgetRouter = {
         findManyOpts.skip = 1;
       }
 
-      const [fetched, incomingTotal, outgoingTotal] = await Promise.all([
-        prisma.transaction.findMany(findManyOpts),
-        prisma.transaction.aggregate({
-          _sum: { amount: true },
-          where: { ...baseWhere, amount: { gt: 0 } },
-        }),
-        prisma.transaction.aggregate({
-          _sum: { amount: true },
-          where: { ...baseWhere, amount: { lt: 0 } },
-        }),
-      ]);
+      const [fetched, incomingTotal, outgoingTotal, currency] =
+        await Promise.all([
+          prisma.transaction.findMany(findManyOpts),
+          prisma.transaction.aggregate({
+            _sum: { amount: true },
+            where: { ...baseWhere, amount: { gt: 0 } },
+          }),
+          prisma.transaction.aggregate({
+            _sum: { amount: true },
+            where: { ...baseWhere, amount: { lt: 0 } },
+          }),
+          userCurrency(userId),
+        ]);
 
       const { nextCursor, transactions } = transactionPage(fetched, limit);
 
       return {
+        currency,
         nextCursor,
         totals: {
           incoming: incomingTotal._sum.amount ?? 0,

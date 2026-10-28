@@ -27,6 +27,7 @@ interface PlannedCategory {
 interface BudgetVsActualChartProps {
   activeCategories: SpendingCategory[];
   categories: PlannedCategory[];
+  currency: string;
   hasPlan: boolean;
   onSelect: (selection: CategorySelection) => void;
 }
@@ -53,6 +54,7 @@ const PlanTrack = ({
 );
 
 const PlannedRow = ({
+  currency,
   entry,
   index,
   isSelected,
@@ -60,6 +62,7 @@ const PlannedRow = ({
   registerItem,
   scale,
 }: {
+  currency: string;
   entry: PlannedCategory;
   index: number;
   isSelected: boolean;
@@ -95,23 +98,23 @@ const PlannedRow = ({
         >
           {isOverPlan &&
             m.budget_planned_over({
-              amount: formatCurrency(entry.actual - entry.planned),
+              amount: formatCurrency(entry.actual - entry.planned, currency),
             })}
           {hasPlanForCategory &&
             !isOverPlan &&
             m.budget_planned_under({
-              amount: formatCurrency(entry.planned - entry.actual),
+              amount: formatCurrency(entry.planned - entry.actual, currency),
             })}
           {!hasPlanForCategory && m.budget_planned_unplanned()}
         </span>
         <span className="ms-auto shrink-0 font-mono text-[11px] tabular-nums">
           <span className={isOverPlan ? "text-destructive" : "text-foreground"}>
-            {formatCurrency(entry.actual)}
+            {formatCurrency(entry.actual, currency)}
           </span>
           {hasPlanForCategory && (
             <span className="text-muted-foreground">
               {" / "}
-              {formatCurrency(entry.planned)}
+              {formatCurrency(entry.planned, currency)}
             </span>
           )}
         </span>
@@ -130,6 +133,7 @@ const PlannedRow = ({
 export const BudgetVsActualChart = ({
   activeCategories,
   categories,
+  currency,
   hasPlan,
   onSelect,
 }: BudgetVsActualChartProps) => {
@@ -183,6 +187,7 @@ export const BudgetVsActualChart = ({
           {categories.map((entry, index) => (
             <li key={entry.category}>
               <PlannedRow
+                currency={currency}
                 entry={entry}
                 index={index}
                 isSelected={activeCategories.includes(entry.category)}

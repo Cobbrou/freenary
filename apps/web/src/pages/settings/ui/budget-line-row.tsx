@@ -18,12 +18,14 @@ import { useState } from "react";
 
 import { categoryEntryLabel } from "@/entities/category";
 import { m } from "@/paraglide/messages.js";
+import { currencyAffix } from "@/shared/lib/format-currency";
 
 import type { EditorLine } from "../model/use-budget-profile-editor";
 import { CategoryPicker } from "./category-picker";
 
 interface BudgetLineRowProps {
   categories: CategoryEntry[];
+  currency: string;
   error: string | undefined;
   line: EditorLine;
   onCreateCategory: (lineId: string) => void;
@@ -34,6 +36,7 @@ interface BudgetLineRowProps {
 
 export const BudgetLineRow = ({
   categories,
+  currency,
   error,
   line,
   onCreateCategory,
@@ -47,6 +50,7 @@ export const BudgetLineRow = ({
   const selected = categories.find((entry) => entry.key === line.categoryKey);
   const categoryLabel = selected ? categoryEntryLabel(selected) : "";
   const displayName = line.label.trim() || categoryLabel;
+  const { align, symbol } = currencyAffix(currency);
 
   const handleKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
     if (event.key !== "ArrowUp" && event.key !== "ArrowDown") {
@@ -98,7 +102,7 @@ export const BudgetLineRow = ({
           />
 
           <InputGroup className="w-28 shrink-0">
-            <InputGroupAddon>€</InputGroupAddon>
+            <InputGroupAddon align={align}>{symbol}</InputGroupAddon>
             <InputGroupInput
               aria-label={m.settings_line_amount_label()}
               inputMode="decimal"

@@ -21,6 +21,7 @@ import type {
 import { groupRecurringItems } from "../model/recurring-filters";
 import { BUDGET_SEARCH_DEFAULTS } from "../model/search";
 import type { AmountRange } from "../model/transaction-filters";
+import { useBudgetCurrency } from "../model/use-budget-currency";
 import { useRecurringView } from "../model/use-recurring-view";
 import { useSyncProgress } from "../model/use-sync-progress";
 import { RecurringCharts } from "./recurring-charts";
@@ -107,7 +108,7 @@ export const RecurringPage = () => {
     [applyPatch]
   );
 
-  const currency = recurring?.currency ?? "EUR";
+  const currency = useBudgetCurrency();
 
   if (
     recurring !== undefined &&
