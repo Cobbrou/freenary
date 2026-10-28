@@ -26,9 +26,9 @@ You need HTTPS to link a bank: the bank provider only sends you back to an `http
 
 You can run Freenary on `localhost` to look around. Follow the **Docker Compose** tab of [Install Freenary](/docs/get-started/install), with these changes to `.env`:
 
-- Leave out the `BETTER_AUTH_URL` and `CORS_ORIGIN` lines. Their defaults, `http://localhost:3000` and `http://localhost:3001`, match the default ports.
-- Keep `SERVER_PORT=127.0.0.1:3000` and `WEB_PORT=127.0.0.1:3001`, so only your computer reaches the instance.
-- If another program holds one of those ports, or PostgreSQL's `5432`, pick free ones. For the web or API port, also set `BETTER_AUTH_URL` and `CORS_ORIGIN` to `http://localhost:<web port>`. For PostgreSQL, set `POSTGRES_PORT`.
+- Leave out the `BETTER_AUTH_URL` and `CORS_ORIGIN` lines. Both default to `http://localhost:3001`, which matches the default port.
+- Keep `WEB_PORT=127.0.0.1:3001`, so only your computer reaches the instance. Skip the `TRUSTED_PROXIES` step: there is no proxy.
+- If another program holds port `3001` or PostgreSQL's `5432`, pick a free one. For the web port, also set `BETTER_AUTH_URL` and `CORS_ORIGIN` to `http://localhost:<web port>`. For PostgreSQL, set `POSTGRES_PORT`.
 
 Then open `http://localhost:3001`. You can't link a bank there, because the address isn't HTTPS.
 

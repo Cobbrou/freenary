@@ -41,6 +41,7 @@ services:
       - BETTER_AUTH_URL=${SERVICE_URL_WEB}
       - CORS_ORIGIN=${SERVICE_URL_WEB}
       - NODE_ENV=production
+      - TRUSTED_PROXIES=${TRUSTED_PROXIES}
     healthcheck:
       test:
         [
@@ -66,6 +67,7 @@ services:
       - SERVICE_URL_WEB_3001
       - SERVER_URL=http://server:3000
       - PUBLIC_SERVER_URL=${SERVICE_URL_WEB}
+      - TRUSTED_PROXIES=${TRUSTED_PROXIES}
     healthcheck:
       test:
         [

@@ -147,7 +147,6 @@ export const createAuth = () => {
           ? undefined
           : { domain: env.AUTH_COOKIE_DOMAIN, enabled: true },
       defaultCookieAttributes: cookiePolicy,
-      ipAddress: { trustedProxies: env.TRUSTED_PROXIES },
     },
 
     appName: APP_NAME,

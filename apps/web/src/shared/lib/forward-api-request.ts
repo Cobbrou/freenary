@@ -1,8 +1,9 @@
+import { getIPFromHeader } from "@better-auth/core/utils/ip";
 import { Data, Effect } from "effect";
 import type { Duration } from "effect";
 import { z } from "zod";
 
-import { getInternalServerUrl } from "@/shared/config";
+import { getInternalServerUrl, getTrustedProxies } from "@/shared/config";
 
 export const FORWARDED_PATH_PREFIXES = [
   "/api/auth",
@@ -20,6 +21,7 @@ const DROPPED_REQUEST_HEADERS = [
   "trailer",
   "transfer-encoding",
   "upgrade",
+  "x-forwarded-for",
 ] as const;
 
 const HEADERS_FETCH_INVALIDATES = ["content-encoding", "content-length"];
@@ -41,6 +43,28 @@ export const isForwardedPath = (pathname: string): boolean =>
     (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
   );
 
+const peerAddressShape = z.object({ ip: z.string().min(1) });
+
+const resolveCallerAddress = (request: Request): string | null => {
+  const peer = peerAddressShape.safeParse(request);
+
+  if (!peer.success) {
+    return null;
+  }
+
+  const trustedProxies = getTrustedProxies();
+
+  if (trustedProxies.length === 0) {
+    return peer.data.ip;
+  }
+
+  const chain = [request.headers.get("x-forwarded-for"), peer.data.ip]
+    .filter(Boolean)
+    .join(",");
+
+  return getIPFromHeader(chain, { trustedProxies });
+};
+
 const buildForwardedRequestInit = (
   request: Request,
   signal: AbortSignal
@@ -49,6 +73,12 @@ const buildForwardedRequestInit = (
 
   for (const name of DROPPED_REQUEST_HEADERS) {
     headers.delete(name);
+  }
+
+  const callerAddress = resolveCallerAddress(request);
+
+  if (callerAddress) {
+    headers.set("x-forwarded-for", callerAddress);
   }
 
   headers.set("accept-encoding", "identity");

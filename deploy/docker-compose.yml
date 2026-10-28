@@ -83,6 +83,7 @@ services:
     environment:
       SERVER_URL: http://server:3000
       PUBLIC_SERVER_URL: *public-url
+      TRUSTED_PROXIES: ${TRUSTED_PROXIES:-}
     healthcheck:
       test:
         [

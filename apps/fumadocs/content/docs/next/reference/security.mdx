@@ -8,16 +8,17 @@ Use these boundaries to deploy Freenary safely. Start with HTTPS, private databa
 
 ## Network edge
 
-The root `docker-compose.yml` publishes the API on port 3000 and the web app on 3001, on every host interface by default. PostgreSQL binds to `127.0.0.1` only.
+The root `docker-compose.yml` publishes the web app on port 3001, on every host interface by default. The API server publishes no port: the web app forwards the API paths to it over the Docker network. PostgreSQL binds to `127.0.0.1` only.
 
 The panel-oriented `deploy/docker-compose.yml` publishes no host ports. Its proxy routes one hostname to the web container on port 3001.
 
-If a proxy runs on the host with the root compose file, bind the public services to loopback:
+If a proxy runs on the host with the root compose file, bind the web app to loopback:
 
 ```dotenv
-SERVER_PORT=127.0.0.1:3000
 WEB_PORT=127.0.0.1:3001
 ```
+
+Never publish the API server's port 3000 yourself. It trusts the `X-Forwarded-For` the web app sends, so a direct caller could pick its own address and dodge the rate limits.
 
 Don't publish PostgreSQL publicly. Docker-published ports can bypass host firewall rules, so verify the listening addresses after deployment changes.
 

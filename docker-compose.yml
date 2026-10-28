@@ -44,13 +44,11 @@ services:
   server:
     image: *server-image
     init: true
-    ports:
-      - "${SERVER_PORT:-3000}:3000"
     env_file: .env
     environment:
       DATABASE_URL: *database-url
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?Set BETTER_AUTH_SECRET in .env}
-      BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://localhost:3000}
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://localhost:3001}
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3001}
       NODE_ENV: production
     healthcheck:
@@ -81,7 +79,8 @@ services:
       # What the web app's own server calls while rendering a page.
       SERVER_URL: http://server:3000
       # What the browser calls: the public API origin, same as BETTER_AUTH_URL.
-      PUBLIC_SERVER_URL: ${BETTER_AUTH_URL:-http://localhost:3000}
+      PUBLIC_SERVER_URL: ${BETTER_AUTH_URL:-http://localhost:3001}
+      TRUSTED_PROXIES: ${TRUSTED_PROXIES:-}
     healthcheck:
       test:
         [
