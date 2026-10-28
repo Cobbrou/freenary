@@ -21,7 +21,6 @@ import { assistantModel } from "./provider";
 import { assistantTools } from "./tools";
 import {
   answerableParts,
-  isoDay,
   isStorableOutcome,
   LOCALE,
   MAX_QUESTION_CHARS,
@@ -195,13 +194,7 @@ export const handleAssistantChat = async ({
 
   const stream = streamText({
     abortSignal: request.signal,
-    instructions: assistantSystemPrompt({
-      firstTransactionDate: isoDay(accounts.firstTransactionDate),
-      hasAccounts: accounts.hasAccounts,
-      lastTransactionDate: isoDay(accounts.lastTransactionDate),
-      locale: body.locale ?? "en",
-      today: new Date().toISOString().slice(0, 10),
-    }),
+    instructions: assistantSystemPrompt(accounts, body.locale ?? "en"),
     messages: await convertToModelMessages(originalMessages),
     model: ai.wrap(model),
     stopWhen: stepCountIs(MAX_STEPS),

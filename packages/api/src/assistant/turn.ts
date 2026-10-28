@@ -41,9 +41,6 @@ const isReplayableToolPart = (part: UIMessage["parts"][number]): boolean =>
   (Predicate.isString(part.state) &&
     Object.hasOwn(REPLAYABLE_TOOL_STATES, part.state));
 
-export const isoDay = (date: Date | string | null): string | null =>
-  date === null ? null : new Date(date).toISOString().slice(0, 10);
-
 export const isStoredPart = (
   part: UIMessage["parts"][number]
 ): part is StoredPart =>
