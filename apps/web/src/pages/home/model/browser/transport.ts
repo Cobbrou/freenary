@@ -97,7 +97,7 @@ export const createBrowserChatTransport = ({
       .join("\n");
 
     if (asked.length > MAX_QUESTION_CHARS) {
-      throw new Error("bad_request");
+      throw new Error("question_too_long");
     }
 
     const accounts = await client.budget.getAccounts();
