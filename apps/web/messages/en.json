@@ -382,6 +382,7 @@
   "bank_row_sync": "Re-sync {institution}",
   "bank_row_synced": "{accounts} · Synced {date}",
   "bank_search_placeholder": "Search banks…",
+  "bank_sync_already_running": "A sync is already in progress",
   "bank_sync_success": "{institution} re-synced",
   "budget_aggregation_average": "Monthly avg.",
   "budget_aggregation_median": "Monthly median",

@@ -14,6 +14,14 @@ const isUniqueViolation = (cause: unknown): boolean =>
   cause instanceof Prisma.PrismaClientKnownRequestError &&
   cause.code === "P2002";
 
+const discardProviderUser = (
+  provider: BankingProvider,
+  session: ProviderUserSession
+): Effect.Effect<void> =>
+  Effect.ignore(
+    Effect.tryPromise(() => provider.deleteUser?.(session) ?? Promise.resolve())
+  );
+
 export const findProviderUser = async (
   userId: string,
   provider: BankingProvider
@@ -62,10 +70,14 @@ export const ensureProviderUser = async (
     }).pipe(
       Effect.as(session),
       Effect.catchTag("ProviderUserAlreadyStored", () =>
-        Effect.tryPromise({
-          catch: (cause) => new Cause.UnknownError(cause),
-          try: () => findProviderUser(userId, provider),
-        })
+        discardProviderUser(provider, session).pipe(
+          Effect.andThen(
+            Effect.tryPromise({
+              catch: (cause) => new Cause.UnknownError(cause),
+              try: () => findProviderUser(userId, provider),
+            })
+          )
+        )
       ),
       Effect.result
     )
@@ -98,11 +110,9 @@ export const releaseProviderUser = async (
     return;
   }
 
-  await Effect.runPromise(
-    Effect.ignore(Effect.tryPromise(() => deleteUser(session)))
-  );
+  await Effect.runPromise(discardProviderUser(provider, session));
 
-  await prisma.bankProviderUser.delete({
-    where: { userId_provider: { provider: provider.id, userId } },
+  await prisma.bankProviderUser.deleteMany({
+    where: { provider: provider.id, userId },
   });
 };

@@ -1,4 +1,5 @@
 import { useChat } from "@ai-sdk/react";
+import { localDay } from "@freenary/api/assistant/prompt";
 import { MAX_QUESTION_CHARS } from "@freenary/api/assistant/turn";
 import { Button } from "@freenary/ui/components/button";
 import { InputMessage } from "@freenary/ui/components/input-message";
@@ -200,7 +201,7 @@ export const AssistantChat = ({
       selected === SERVER_MODEL
         ? new DefaultChatTransport({
             api: `${getServerUrl()}/ai/chat`,
-            body: { locale: getLocale() },
+            body: () => ({ locale: getLocale(), today: localDay(new Date()) }),
             credentials: "include",
           })
         : createBrowserChatTransport({ client, locale: getLocale }),

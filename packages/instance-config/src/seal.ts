@@ -60,7 +60,12 @@ export const unseal = (
   Result.try({
     catch: () => new SealedValueUnreadable({ key }),
     try: () => {
-      const [iv, authTag, body] = sealed.split(SEAL_SEPARATOR);
+      const [iv, authTag, body, ...extra] = sealed.split(SEAL_SEPARATOR);
+
+      if (extra.length > 0) {
+        throw new Error("sealed value has extra segments");
+      }
+
       const decipher = createDecipheriv(
         SEAL_ALGORITHM,
         sealingKey(secret),

@@ -246,7 +246,7 @@ Four writers touch the derived columns of a transaction.
 
 | Writer | Columns it writes |
 | --- | --- |
-| Sync, through `upsertTransaction` | Every raw provider column, plus `channel`, `intermediaryName`, `merchantKey`, `normalisedDescriptor`, `transactionPath`. On create it also sets `category: null` and `categoryOverride: false` |
+| Sync, through `upsertTransaction` | Every raw provider column, plus `channel`, `intermediaryName`, `merchantKey`, `normalisedDescriptor`, `transactionPath`. On create it also sets `category: null` and `categoryOverride: false`. Before the upsert, an `updateMany` scoped by `merchantKeyDiffers` nulls `resolvedCategory`, `resolutionStage` and `resolutionConfidence` on a row whose stored `merchantKey` differs from the new one, with the same skips as `clearResolutions`, so `categoriseUncategorised` resolves the row again. It is one extra indexed round trip per transaction, every sync, whether or not the key changed |
 | `matchInternalTransfers` | `isInternalTransfer`, and nothing else. A paired leg keeps the category the pipeline resolved for it |
 | `categoriseUncategorised` | `intermediaryName`, `resolvedCategory`, `resolutionStage`, `resolutionConfidence` |
 | `updateTransactionCategory` | `category` and `categoryOverride` on the row, the `MerchantOverride` row, and `category` on the siblings that share the merchant key |

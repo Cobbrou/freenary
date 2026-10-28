@@ -391,6 +391,7 @@
   "bank_row_sync": "Resynchroniser {institution}",
   "bank_row_synced": "{accounts} · Synchronisé le {date}",
   "bank_search_placeholder": "Rechercher une banque…",
+  "bank_sync_already_running": "Une synchronisation est déjà en cours",
   "bank_sync_success": "{institution} resynchronisé",
   "budget_aggregation_average": "Moy. mensuelle",
   "budget_aggregation_median": "Médiane mensuelle",

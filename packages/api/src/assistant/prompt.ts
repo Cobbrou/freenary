@@ -11,14 +11,21 @@ const DATA_RANGE_UNAVAILABLE = "No bank account is connected yet.";
 const isoDay = (date: Date | string | null): string | null =>
   date === null ? null : new Date(date).toISOString().slice(0, 10);
 
+export const localDay = (date: Date): string =>
+  [
+    String(date.getFullYear()),
+    String(date.getMonth() + 1).padStart(2, "0"),
+    String(date.getDate()).padStart(2, "0"),
+  ].join("-");
+
 export const assistantSystemPrompt = (
   accounts: AssistantPromptAccounts,
-  locale: string
+  locale: string,
+  today: string
 ): string => {
   const { hasAccounts } = accounts;
   const firstTransactionDate = isoDay(accounts.firstTransactionDate);
   const lastTransactionDate = isoDay(accounts.lastTransactionDate);
-  const today = new Date().toISOString().slice(0, 10);
   const range =
     hasAccounts && firstTransactionDate && lastTransactionDate
       ? `Transaction data covers ${firstTransactionDate} to ${lastTransactionDate}; refuse periods outside it instead of extrapolating.`

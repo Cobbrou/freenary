@@ -100,6 +100,12 @@ export const useBankConnections = ({
         return;
       }
 
+      if (!sync.started) {
+        toast.info(m.bank_sync_already_running());
+
+        return;
+      }
+
       toast.success(
         m.bank_sync_success({ institution: connection.institutionName })
       );

@@ -143,6 +143,13 @@ const deriveKey = (
     remittanceLines: tx.remittanceLines,
   });
 
+export const merchantKeyDiffers = (
+  merchantKey: string | null
+): Prisma.TransactionWhereInput =>
+  merchantKey === null
+    ? { merchantKey: { not: null } }
+    : { OR: [{ merchantKey: { not: merchantKey } }, { merchantKey: null }] };
+
 const upsertTransaction = async (
   accountId: string,
   tx: ProviderTransaction,
@@ -150,6 +157,22 @@ const upsertTransaction = async (
 ) => {
   const shared = mapProviderFields(tx);
   const keyResult = deriveKey(tx, connection);
+  const merchantKey = keyResult.merchantKey || null;
+
+  await prisma.transaction.updateMany({
+    data: {
+      resolutionConfidence: null,
+      resolutionStage: null,
+      resolvedCategory: null,
+    },
+    where: {
+      accountId,
+      categoryOverride: false,
+      isInternalTransfer: false,
+      providerTransactionId: tx.providerTransactionId,
+      ...merchantKeyDiffers(merchantKey),
+    },
+  });
 
   await prisma.transaction.upsert({
     create: {
@@ -159,7 +182,7 @@ const upsertTransaction = async (
       categoryOverride: false,
       channel: keyResult.channel,
       intermediaryName: keyResult.intermediaryName,
-      merchantKey: keyResult.merchantKey || null,
+      merchantKey,
       normalisedDescriptor: keyResult.normalisedDescriptor || null,
       providerTransactionId: tx.providerTransactionId,
       transactionPath: keyResult.path,
@@ -168,7 +191,7 @@ const upsertTransaction = async (
       ...shared,
       channel: keyResult.channel,
       intermediaryName: keyResult.intermediaryName,
-      merchantKey: keyResult.merchantKey || null,
+      merchantKey,
       normalisedDescriptor: keyResult.normalisedDescriptor || null,
       transactionPath: keyResult.path,
     },
