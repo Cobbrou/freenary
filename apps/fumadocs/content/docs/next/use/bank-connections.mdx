@@ -66,6 +66,8 @@ A sync fetches transactions from your banks. Freenary has no nightly sync: it sy
 
 Sorting again keeps every category you fixed by hand.
 
+A pending transaction stays until the bank stops returning it, usually because it was booked. A sync reads back far enough to cover your oldest pending transaction, up to 90 days, then deletes every pending transaction the bank no longer returns. A category you set on it by hand goes with it. A transaction the bank rejected is never kept, so it counts in no total.
+
 When some of a bank's accounts fail, its last sync date still moves forward. Press `Sync transactions` to fill the gap.
 
 One sync runs at a time. A sync you start while another is running does nothing, even when the bank's row then says it re-synced. Wait until Budget shows no sync in progress, then start it again.
