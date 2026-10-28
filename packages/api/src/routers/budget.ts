@@ -1,7 +1,7 @@
 import prisma from "@freenary/db";
 import type { Prisma } from "@freenary/db";
 import { ORPCError } from "@orpc/server";
-import { Data, Effect, Match } from "effect";
+import { Data, Effect } from "effect";
 import { z } from "zod";
 
 import {
@@ -108,7 +108,11 @@ interface TransactionResolution {
 }
 
 type BudgetPipelineReason =
-  | { readonly institutionName: string; readonly kind: "connection-sync" }
+  | {
+      readonly connectionId: string;
+      readonly institutionName: string;
+      readonly kind: "connection-sync";
+    }
   | { readonly kind: "categorisation" };
 
 const MILLISECONDS_PER_DAY = 1000 * 60 * 60 * 24;
@@ -376,21 +380,14 @@ class BudgetPipelineFailed extends Data.TaggedError("BudgetPipelineFailed")<{
   readonly reason: BudgetPipelineReason;
 }> {}
 
-const pipelineFailureMessage = (failure: BudgetPipelineFailed): string => {
-  const causeMessage =
-    failure.cause instanceof Error ? failure.cause.message : null;
-
-  return Match.value(failure.reason).pipe(
-    Match.discriminatorsExhaustive("kind")({
-      categorisation: () =>
-        causeMessage === null
-          ? "Categorisation failed"
-          : `Categorisation: ${causeMessage}`,
-      "connection-sync": ({ institutionName }) =>
-        `Connection ${institutionName}: ${causeMessage ?? "Unknown connection error"}`,
-    })
-  );
-};
+const reportPipelineFailure = (
+  failure: BudgetPipelineFailed
+): Effect.Effect<BudgetPipelineReason> =>
+  Effect.logWarning(
+    "Budget pipeline failed",
+    failure.reason,
+    failure.cause
+  ).pipe(Effect.as(failure.reason));
 
 const writeResolutions = (
   resolutions: TransactionResolution[],
@@ -598,19 +595,22 @@ const syncEveryConnection = (
   userId: string,
   reporter: SyncReporter,
   force: boolean
-): Effect.Effect<string[]> =>
+): Effect.Effect<BudgetPipelineReason[]> =>
   Effect.forEach(
     connections,
-    (connection) =>
-      Effect.tryPromise({
-        catch: (cause) =>
-          new BudgetPipelineFailed({
-            cause,
-            reason: {
-              institutionName: connection.institutionName,
-              kind: "connection-sync",
-            },
-          }),
+    (connection) => {
+      const failed = (cause: unknown) =>
+        new BudgetPipelineFailed({
+          cause,
+          reason: {
+            connectionId: connection.id,
+            institutionName: connection.institutionName,
+            kind: "connection-sync",
+          },
+        });
+
+      return Effect.tryPromise({
+        catch: failed,
         try: async () => {
           const providerUser = await findProviderUser(
             userId,
@@ -625,19 +625,28 @@ const syncEveryConnection = (
           );
         },
       }).pipe(
-        Effect.catchTag("BudgetPipelineFailed", (failure) =>
-          Effect.succeed([pipelineFailureMessage(failure)])
-        )
-      ),
+        Effect.flatMap((failureLines) =>
+          failureLines.length === 0
+            ? Effect.succeed(null)
+            : Effect.fail(failed(failureLines))
+        ),
+        Effect.catchTag("BudgetPipelineFailed", reportPipelineFailure)
+      );
+    },
     { concurrency: 1 }
-  ).pipe(Effect.map((failures) => failures.flat()));
+  ).pipe(
+    Effect.map((failures) => failures.filter((failure) => failure !== null))
+  );
 
 const categoriseAfterSync = (
   userId: string,
   connectionId: string | undefined,
   reporter: SyncReporter,
   force: boolean
-): Effect.Effect<{ categorised: number; warning: string | undefined }> =>
+): Effect.Effect<{
+  categorised: number;
+  failure: BudgetPipelineReason | undefined;
+}> =>
   Effect.tryPromise({
     catch: (cause) =>
       new BudgetPipelineFailed({ cause, reason: { kind: "categorisation" } }),
@@ -649,12 +658,11 @@ const categoriseAfterSync = (
       return await categoriseUncategorised(userId, reporter);
     },
   }).pipe(
-    Effect.map((categorised) => ({ categorised, warning: undefined })),
+    Effect.map((categorised) => ({ categorised, failure: undefined })),
     Effect.catchTag("BudgetPipelineFailed", (failure) =>
-      Effect.succeed({
-        categorised: 0,
-        warning: pipelineFailureMessage(failure),
-      })
+      reportPipelineFailure(failure).pipe(
+        Effect.map((reason) => ({ categorised: 0, failure: reason }))
+      )
     )
   );
 
@@ -681,7 +689,7 @@ const runSyncAccounts = Effect.fnUntraced(function* runSyncAccounts(
     })
   );
 
-  const errors = yield* syncEveryConnection(
+  const connectionFailures = yield* syncEveryConnection(
     connections,
     userId,
     reporter,
@@ -690,7 +698,7 @@ const runSyncAccounts = Effect.fnUntraced(function* runSyncAccounts(
 
   yield* Effect.promise(() => matchInternalTransfers(userId));
 
-  const { categorised, warning } = yield* categoriseAfterSync(
+  const { categorised, failure } = yield* categoriseAfterSync(
     userId,
     connectionId,
     reporter,
@@ -699,10 +707,9 @@ const runSyncAccounts = Effect.fnUntraced(function* runSyncAccounts(
 
   return {
     categorised,
-    error: errors.length > 0 ? errors.join("; ") : undefined,
+    failures: failure ? [...connectionFailures, failure] : connectionFailures,
     started: true,
-    success: errors.length === 0,
-    warning,
+    success: connectionFailures.length === 0,
   };
 });
 
@@ -1408,10 +1415,9 @@ export const budgetRouter = {
       if (claimedAt === null) {
         return {
           categorised: 0,
-          error: undefined,
+          failures: [],
           started: false,
           success: true,
-          warning: undefined,
         };
       }
 

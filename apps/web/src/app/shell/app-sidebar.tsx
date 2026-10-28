@@ -136,11 +136,18 @@ const NavAreaDisclosure = ({
   );
 };
 
+const RAIL_BELOW_THE_BANNER =
+  "top-[var(--update-banner-height,0px)] h-[calc(100svh-var(--update-banner-height,0px))]";
+
 export const AppSidebar = () => {
   const pathname = useLocation({ select: (location) => location.pathname });
 
   return (
-    <Sidebar collapsible="offcanvas" variant="floating">
+    <Sidebar
+      className={RAIL_BELOW_THE_BANNER}
+      collapsible="offcanvas"
+      variant="floating"
+    >
       <SidebarHeader>
         <SidebarBrand />
       </SidebarHeader>

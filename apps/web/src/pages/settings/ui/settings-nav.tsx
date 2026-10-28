@@ -16,7 +16,7 @@ interface SettingsNavProps {
 }
 
 const RAIL_HOLDS_ITS_PLACE_WHILE_THE_PANE_SCROLLS =
-  "lg:sticky lg:top-4 lg:w-48 lg:shrink-0 lg:self-start";
+  "lg:sticky lg:top-[calc(var(--update-banner-height,0px)+1rem)] lg:w-48 lg:shrink-0 lg:self-start";
 
 export const SettingsNav = ({ section }: SettingsNavProps) => (
   <nav

@@ -1,5 +1,7 @@
 import {
   DropdownContent,
+  DropdownGroup,
+  DropdownGroupLabel,
   DropdownLabel,
   DropdownMenu,
   DropdownSeparator,
@@ -17,6 +19,7 @@ import {
   RiBookOpenLine,
   RiContrastLine,
   RiExpandUpDownLine,
+  RiExternalLinkLine,
   RiFileList3Line,
   RiGuideLine,
   RiLogoutBoxLine,
@@ -91,7 +94,6 @@ export const SidebarUserMenu = () => {
           >
             <UserIdentity
               email={session?.user.email}
-              hasUpdate={update !== null}
               isPending={isPending}
               name={session?.user.name}
             />
@@ -114,25 +116,31 @@ export const SidebarUserMenu = () => {
             <DropdownSeparator />
             {update && (
               <>
-                <DropdownLabel>
-                  {m.account_menu_update_available({ version: update })}
-                </DropdownLabel>
-                <MenuItem
-                  icon={remixIcon(RiFileList3Line)}
-                  index={UPDATE_NOTES_ROW}
-                  label={m.account_menu_update_release_notes()}
-                  onSelect={() => {
-                    openInNewTab(releaseNotesUrl(update));
-                  }}
-                />
-                <MenuItem
-                  icon={remixIcon(RiGuideLine)}
-                  index={UPDATE_GUIDE_ROW}
-                  label={m.account_menu_update_guide()}
-                  onSelect={() => {
-                    openInNewTab(updateGuideUrl(update));
-                  }}
-                />
+                <DropdownGroup>
+                  <DropdownGroupLabel>
+                    {m.account_menu_update_available({ version: update })}
+                  </DropdownGroupLabel>
+                  <MenuItem
+                    icon={remixIcon(RiFileList3Line)}
+                    index={UPDATE_NOTES_ROW}
+                    aria-label={`${m.account_menu_update_release_notes()} ${m.update_banner_new_tab()}`}
+                    label={m.account_menu_update_release_notes()}
+                    trailingIcon={remixIcon(RiExternalLinkLine)}
+                    onSelect={() => {
+                      openInNewTab(releaseNotesUrl(update));
+                    }}
+                  />
+                  <MenuItem
+                    icon={remixIcon(RiGuideLine)}
+                    index={UPDATE_GUIDE_ROW}
+                    aria-label={`${m.account_menu_update_guide()} ${m.update_banner_new_tab()}`}
+                    label={m.account_menu_update_guide()}
+                    trailingIcon={remixIcon(RiExternalLinkLine)}
+                    onSelect={() => {
+                      openInNewTab(updateGuideUrl(update));
+                    }}
+                  />
+                </DropdownGroup>
                 <DropdownSeparator />
               </>
             )}

@@ -192,8 +192,8 @@ export const useBudgetProfileEditor = (
       client.settings.saveBudgetProfile({
         lines: submitted.map((line) => toPayload(line, currency)),
       }),
-    onError: (error: Error) => {
-      toast.error(error.message || m.settings_budgeting_save_error());
+    onError: () => {
+      toast.error(m.settings_budgeting_save_error());
     },
     onMutate: () => ({ draftEditCount: draftEditCount.current }),
     onSuccess: async (_saved, _submitted, context) => {

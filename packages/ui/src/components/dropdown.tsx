@@ -807,6 +807,31 @@ const DropdownLabel = forwardRef<
 
 DropdownLabel.displayName = "DropdownLabel";
 
+// A labelled set of rows inside DropdownContent. Base UI's group renders
+// role="group" and points aria-labelledby at its GroupLabel, so a screen
+// reader announces the label with the rows.
+const DropdownGroup = Menu.Group;
+
+const DropdownGroupLabel = forwardRef<
+  HTMLDivElement,
+  HTMLAttributes<HTMLDivElement>
+>(({ className, ...props }, ref) => {
+  const compact = useSize().variant === "compact";
+  return (
+    <Menu.GroupLabel
+      ref={ref}
+      className={cn(
+        "text-muted-foreground shrink-0 px-2 py-1.5",
+        compact ? "text-[11px]" : "text-[12px]",
+        className
+      )}
+      {...props}
+    />
+  );
+});
+
+DropdownGroupLabel.displayName = "DropdownGroupLabel";
+
 // ---------------------------------------------------------------------------
 // DropdownSeparator
 // ---------------------------------------------------------------------------
@@ -827,6 +852,8 @@ DropdownSeparator.displayName = "DropdownSeparator";
 
 export {
   Dropdown,
+  DropdownGroup,
+  DropdownGroupLabel,
   DropdownLabel,
   DropdownSeparator,
   DropdownMenu,
