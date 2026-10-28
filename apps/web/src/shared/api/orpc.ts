@@ -1,6 +1,7 @@
 import type { AppRouter } from "@freenary/api/routers/index";
 import { createORPCClient } from "@orpc/client";
 import { RPCLink } from "@orpc/client/fetch";
+import { SimpleCsrfProtectionLinkPlugin } from "@orpc/client/plugins";
 import type { RouterClient } from "@orpc/server";
 import { createTanstackQueryUtils } from "@orpc/tanstack-query";
 import { QueryCache, QueryClient } from "@tanstack/react-query";
@@ -48,6 +49,7 @@ const link = new RPCLink<ForwardedCookieContext>({
   },
   headers: ({ context }) =>
     context.cookie === undefined ? {} : { cookie: context.cookie },
+  plugins: [new SimpleCsrfProtectionLinkPlugin()],
   url: `${getServerUrl()}/rpc`,
 });
 

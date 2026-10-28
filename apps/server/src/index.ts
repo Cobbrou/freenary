@@ -13,6 +13,7 @@ import { OpenAPIHandler } from "@orpc/openapi/fetch";
 import { OpenAPIReferencePlugin } from "@orpc/openapi/plugins";
 import { ORPCError, onError } from "@orpc/server";
 import { RPCHandler } from "@orpc/server/fetch";
+import { SimpleCsrfProtectionHandlerPlugin } from "@orpc/server/plugins";
 import { ZodToJsonSchemaConverter } from "@orpc/zod/zod4";
 import { Effect } from "effect";
 import { Elysia } from "elysia";
@@ -36,6 +37,7 @@ const rpcHandler = new RPCHandler(appRouter, {
       }
     }),
   ],
+  plugins: [new SimpleCsrfProtectionHandlerPlugin()],
 });
 
 const apiHandler = new OpenAPIHandler(appRouter, {
@@ -87,7 +89,7 @@ new Elysia()
   })
   .use(
     cors({
-      allowedHeaders: ["Content-Type", "Authorization"],
+      allowedHeaders: ["Content-Type", "Authorization", "X-CSRF-Token"],
       credentials: true,
       methods: ["GET", "POST", "OPTIONS"],
       origin: env.CORS_ORIGIN,

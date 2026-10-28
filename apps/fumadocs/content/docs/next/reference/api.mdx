@@ -33,12 +33,13 @@ There's no version prefix. `budget.getTransactions` is `/api-reference/budget/ge
 
 - `/api/auth/*` takes `GET` and `POST`; other methods get `405 Method Not Allowed`.
 - `/rpc` refuses `GET` with `405` and the code `METHOD_NOT_SUPPORTED`.
+- `/rpc` needs the header `X-CSRF-Token: orpc`. Without it, a call gets `403` with the code `CSRF_TOKEN_MISMATCH`. `/api-reference` doesn't need it.
 - `/api-reference/<procedure>` takes `POST` only; other methods get `404 Not Found`.
 - `OPTIONS` gets `204` on any path. An unknown path gets `404` with the text `NOT_FOUND`. An unknown procedure under `/rpc` or `/api-reference` gets `404` with the text `Not Found`, not the JSON error body.
 
 ## CORS
 
-The API server allows one origin, `CORS_ORIGIN`, with credentials, the methods `GET`, `POST` and `OPTIONS`, and the headers `Content-Type` and `Authorization`. A browser client must run on that origin; server-to-server code can ignore CORS.
+The API server allows one origin, `CORS_ORIGIN`, with credentials, the methods `GET`, `POST` and `OPTIONS`, and the headers `Content-Type`, `Authorization` and `X-CSRF-Token`. A browser client must run on that origin; server-to-server code can ignore CORS.
 
 ## Session cookie
 
@@ -97,6 +98,7 @@ That is the `/rpc` body; on `/api-reference`, the object inside `json` is the wh
 | `BAD_REQUEST` | 400 | The input failed the schema (`Input validation failed`), or the procedure refused it with its own message |
 | `UNAUTHORIZED` | 401 | No session on a protected procedure |
 | `FORBIDDEN` | 403 | An operator procedure called by another account |
+| `CSRF_TOKEN_MISMATCH` | 403 | A call to `/rpc` without `X-CSRF-Token: orpc` |
 | `NOT_FOUND` | 404 | A bank connection, transaction, category, bank provider, conversation or integration doesn't match |
 | `METHOD_NOT_SUPPORTED` | 405 | `GET` on `/rpc` |
 | `CONFLICT` | 409 | A custom category name already exists |
@@ -148,6 +150,7 @@ Refusals are plain text, checked in this order:
 
 | Status | Body | Cause |
 | --- | --- | --- |
+| 415 | `unsupported_media_type` | `Content-Type` isn't `application/json` |
 | 401 | `unauthorized` | No session |
 | 503 | `unconfigured` | The instance has no model. See [Configuration](/docs/reference/configuration#assistant) |
 | 429 | `rate_limited` | Over the limit |
