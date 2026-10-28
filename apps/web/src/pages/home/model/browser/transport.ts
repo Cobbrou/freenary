@@ -1,4 +1,7 @@
-import { assistantSystemPrompt } from "@freenary/api/assistant/prompt";
+import {
+  assistantSystemPrompt,
+  localDay,
+} from "@freenary/api/assistant/prompt";
 import { assistantTools } from "@freenary/api/assistant/tools";
 import {
   answerableParts,
@@ -102,7 +105,11 @@ export const createBrowserChatTransport = ({
 
     const accounts = await client.budget.getAccounts();
     const tools = assistantTools(client);
-    const instructions = assistantSystemPrompt(accounts, locale());
+    const instructions = assistantSystemPrompt(
+      accounts,
+      locale(),
+      localDay(new Date())
+    );
 
     const replayable = messages.slice(0, -1).map((message) => ({
       ...message,

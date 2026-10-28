@@ -4,7 +4,7 @@ import { Effect } from "effect";
 
 import { mockProvider } from "../providers/mock";
 import type { FetchTransactionsRequest } from "../providers/types";
-import { importAccountsInSeries } from "./bank-sync";
+import { importAccountsInSeries, merchantKeyDiffers } from "./bank-sync";
 import type { ConnectionSyncContext } from "./bank-sync";
 import type { SyncReporter } from "./sync-progress";
 
@@ -72,5 +72,17 @@ describe("importAccountsInSeries", () => {
     );
 
     expect(accountFailures).toEqual([]);
+  });
+});
+
+describe("merchantKeyDiffers", () => {
+  it("matches a stored key, or none, that differs from a new key", () => {
+    expect(merchantKeyDiffers("FR7612345")).toEqual({
+      OR: [{ merchantKey: { not: "FR7612345" } }, { merchantKey: null }],
+    });
+  });
+
+  it("matches any stored key when the new key is empty", () => {
+    expect(merchantKeyDiffers(null)).toEqual({ merchantKey: { not: null } });
   });
 });

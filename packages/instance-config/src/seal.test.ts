@@ -48,6 +48,14 @@ describe("seal", () => {
     expect(Result.isFailure(unseal(SECRET, "SMTP_HOST", tampered))).toBe(true);
   });
 
+  test("refuses a value with an extra segment", () => {
+    const sealed = seal(SECRET, "SMTP_HOST", "smtp.example.com");
+
+    expect(Result.isFailure(unseal(SECRET, "SMTP_HOST", `${sealed}.x`))).toBe(
+      true
+    );
+  });
+
   test("refuses a value that is not sealed at all", () => {
     expect(Result.isFailure(unseal(SECRET, "SMTP_HOST", "plain"))).toBe(true);
   });

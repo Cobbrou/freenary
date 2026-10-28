@@ -5,7 +5,7 @@ import { z } from "zod";
 import { CATEGORY_GROUPS, SPENDING_CATEGORIES } from "../lib/taxonomy";
 import type { AppRouterClient } from "../routers/index";
 
-const DAY = z.string().regex(/^\d{4}-\d{2}-\d{2}$/u);
+export const DAY = z.iso.date();
 
 const period = {
   from: DAY.describe("inclusive first day, YYYY-MM-DD"),

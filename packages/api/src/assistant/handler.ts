@@ -53,6 +53,7 @@ const chatRequestSchema = z.object({
   locale: z.string().regex(LOCALE).optional(),
   messageId: z.string().optional(),
   messages: z.array(z.looseObject({ role: z.string() })).default([]),
+  today: z.iso.date().optional(),
   trigger: z.string().optional(),
 });
 
@@ -195,7 +196,11 @@ export const handleAssistantChat = async ({
 
   const stream = streamText({
     abortSignal: request.signal,
-    instructions: assistantSystemPrompt(accounts, body.locale ?? "en"),
+    instructions: assistantSystemPrompt(
+      accounts,
+      body.locale ?? "en",
+      body.today ?? new Date().toISOString().slice(0, 10)
+    ),
     messages: await convertToModelMessages(originalMessages),
     model: ai.wrap(model),
     stopWhen: stepCountIs(MAX_STEPS),
