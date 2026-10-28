@@ -1,4 +1,5 @@
 import { useChat } from "@ai-sdk/react";
+import { MAX_QUESTION_CHARS } from "@freenary/api/assistant/turn";
 import { Button } from "@freenary/ui/components/button";
 import { InputMessage } from "@freenary/ui/components/input-message";
 import type { BrandAvatarState } from "@freenary/ui/lib/brand-avatar/states";
@@ -6,7 +7,14 @@ import { RiAddLine, RiRefreshLine } from "@remixicon/react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { UIMessage } from "ai";
 import { DefaultChatTransport } from "ai";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
 import { m } from "@/paraglide/messages.js";
 import { getLocale } from "@/paraglide/runtime.js";
@@ -55,7 +63,13 @@ interface TranscriptTailProps {
   awaitingFirstChunk: boolean;
 }
 
+interface QuestionLengthProps {
+  chars: number;
+  id: string;
+}
+
 const ACKNOWLEDGE_MS = 1600;
+const QUESTION_COUNTER_FROM_CHARS = MAX_QUESTION_CHARS * 0.9;
 
 const loadProgressOf = (
   engine: BrowserModelStatus,
@@ -78,6 +92,12 @@ const errorMessageOf = (message: string): string => {
     return m.assistant_unavailable_description();
   }
 
+  if (message.includes("question_too_long")) {
+    return m.assistant_error_question_too_long({
+      max: MAX_QUESTION_CHARS.toLocaleString(getLocale()),
+    });
+  }
+
   if (message.includes("browser_model_context")) {
     return m.assistant_error_browser_context();
   }
@@ -88,6 +108,16 @@ const errorMessageOf = (message: string): string => {
 
   return m.assistant_error_generic();
 };
+
+const QuestionLength = ({ chars, id }: QuestionLengthProps) =>
+  chars >= QUESTION_COUNTER_FROM_CHARS && (
+    <span className="text-muted-foreground text-xs tabular-nums" id={id}>
+      {m.assistant_question_length({
+        count: chars.toLocaleString(getLocale()),
+        max: MAX_QUESTION_CHARS.toLocaleString(getLocale()),
+      })}
+    </span>
+  );
 
 const TranscriptTail = ({
   avatarState,
@@ -138,6 +168,8 @@ export const AssistantChat = ({
   const [justFinished, setJustFinished] = useState(false);
   const [turn, setTurn] = useState<{ retrying: boolean; startedAt: number }>();
   const acknowledgeTimer = useRef(0);
+  const lastQuestion = useRef("");
+  const questionCounterId = useId();
   const webGpu = useWebGpuSupport();
   const browserModel = useBrowserModel();
   const selected = resolveModelChoice(useRememberedModel(), serverModel);
@@ -186,6 +218,7 @@ export const AssistantChat = ({
   const { error, messages, regenerate, sendMessage, status, stop } = useChat({
     id: conversationId,
     messages: initialMessages,
+    onError: () => setDraft((current) => current || lastQuestion.current),
     onFinish: ({ isAbort }) => {
       if (isAbort) {
         return;
@@ -221,6 +254,7 @@ export const AssistantChat = ({
 
   const ask = useCallback(
     (text: string) => {
+      lastQuestion.current = text;
       setTurn({ retrying: false, startedAt: Date.now() });
       sendMessage({ text });
     },
@@ -349,6 +383,9 @@ export const AssistantChat = ({
           setComposerActive(false);
         }}
         onStop={stop}
+        rightSlot={
+          <QuestionLength chars={draft.length} id={questionCounterId} />
+        }
         onValueChange={(next) => {
           setDraft(next);
           setComposerActive(true);
@@ -359,7 +396,9 @@ export const AssistantChat = ({
         suggestions={messages.length === 0 && ready ? suggestions : undefined}
         status={streaming ? "streaming" : "idle"}
         textareaProps={{
+          "aria-describedby": questionCounterId,
           "aria-label": m.assistant_composer_placeholder(),
+          maxLength: MAX_QUESTION_CHARS,
           onBlur: () => setComposerActive(draft.length > 0),
           onFocus: () => setComposerActive(true),
         }}

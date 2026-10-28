@@ -21,3 +21,15 @@ describe("rateLimitRefusal", () => {
     expect(await response.text()).toBe("rate_limited");
   });
 });
+
+describe("refusalResponse", () => {
+  test("answers 400 question_too_long for a question over the limit", async () => {
+    const response = refusalResponse({
+      chars: 8001,
+      kind: "question-too-long",
+    });
+
+    expect(response.status).toBe(400);
+    expect(await response.text()).toBe("question_too_long");
+  });
+});

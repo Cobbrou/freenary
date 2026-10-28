@@ -40,6 +40,7 @@
   "assistant_error_browser_context": "Cette conversation est trop longue pour le modèle sur cet appareil. Commencez une nouvelle conversation.",
   "assistant_error_browser_model": "Le modèle sur cet appareil n’a pas pu répondre. Réessayez, ou choisissez un autre modèle.",
   "assistant_error_generic": "L’assistant n’a pas pu répondre. Réessayez.",
+  "assistant_error_question_too_long": "Cette question dépasse {max} caractères. Raccourcissez-la et renvoyez-la.",
   "assistant_error_rate_limited": "Trop de questions d’affilée. Patientez un instant et réessayez.",
   "assistant_error_unavailable": "L’assistant est indisponible pour le moment. Réessayez plus tard.",
   "assistant_loading_transcript": "Chargement de votre conversation",
@@ -63,6 +64,7 @@
   "assistant_param_search": "Recherche",
   "assistant_param_sort": "Tri",
   "assistant_param_to": "Au",
+  "assistant_question_length": "{count} / {max} caractères",
   "assistant_result_accounts": [
     {
       "declarations": ["input count", "local countPlural = count: plural"],

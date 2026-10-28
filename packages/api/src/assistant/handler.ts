@@ -66,7 +66,8 @@ export const rateLimitRefusal = (cause: unknown): ChatRefusalReason =>
 export const refusalResponse = Match.type<ChatRefusalReason>().pipe(
   Match.discriminatorsExhaustive("kind")({
     "malformed-body": () => new Response("bad_request", { status: 400 }),
-    "question-too-long": () => new Response("bad_request", { status: 400 }),
+    "question-too-long": () =>
+      new Response("question_too_long", { status: 400 }),
     "rate-limit-unavailable": () =>
       new Response("unavailable", { status: 503 }),
     "rate-limited": () => new Response("rate_limited", { status: 429 }),

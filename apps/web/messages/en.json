@@ -40,6 +40,7 @@
   "assistant_error_browser_context": "This conversation is too long for the model on this device. Start a new conversation.",
   "assistant_error_browser_model": "The model on this device could not answer. Try again, or pick a different model.",
   "assistant_error_generic": "The assistant could not answer. Try again.",
+  "assistant_error_question_too_long": "This question is longer than {max} characters. Shorten it and send it again.",
   "assistant_error_rate_limited": "Too many questions in a row. Wait a moment and try again.",
   "assistant_error_unavailable": "The assistant is unavailable right now. Try again later.",
   "assistant_loading_transcript": "Loading your conversation",
@@ -63,6 +64,7 @@
   "assistant_param_search": "Search",
   "assistant_param_sort": "Sort by",
   "assistant_param_to": "To",
+  "assistant_question_length": "{count} / {max} characters",
   "assistant_result_accounts": [
     {
       "declarations": ["input count", "local countPlural = count: plural"],
