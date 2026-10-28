@@ -20,6 +20,7 @@ import { assistantModel } from "./provider";
 import { assistantTools } from "./tools";
 import {
   answerableParts,
+  isJsonRequest,
   isoDay,
   isStorableOutcome,
   LOCALE,
@@ -127,6 +128,10 @@ export const handleAssistantChat = async ({
   log,
   request,
 }: AssistantChatOptions): Promise<Response> => {
+  if (!isJsonRequest(request)) {
+    return new Response("unsupported_media_type", { status: 415 });
+  }
+
   const session = await auth.api.getSession({ headers: request.headers });
 
   if (!session?.user) {

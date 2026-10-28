@@ -22,6 +22,12 @@ export const MAX_QUESTION_CHARS = 8000;
 
 export const MAX_STEPS = 6;
 
+const JSON_MEDIA_TYPE = "application/json";
+
+export const isJsonRequest = (request: Request): boolean =>
+  request.headers.get("content-type")?.split(";")[0]?.trim().toLowerCase() ===
+  JSON_MEDIA_TYPE;
+
 export const LOCALE = /^[a-z]{2}(?:-[A-Z]{2})?$/u;
 
 const TOOL_PART_PREFIX = "tool-";
