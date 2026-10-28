@@ -4,11 +4,9 @@ import {
   CATEGORY_COLOR_VALUES,
   CATEGORY_DIRECTION_OF,
   CATEGORY_GROUP_FALLBACKS,
-  CATEGORY_GROUP_LABELS,
   CATEGORY_GROUP_OF,
   CATEGORY_GROUPS,
   CATEGORY_ICON_NAMES,
-  CATEGORY_LABELS,
   CATEGORY_PALETTE_SLOTS,
   LEGACY_CATEGORY_GROUPS,
   LEGACY_CATEGORY_SLUGS,
@@ -27,12 +25,11 @@ import {
 import type { CategoryGroup } from "./taxonomy";
 
 describe("category hierarchy", () => {
-  it("gives every category a group, a label and an appearance", () => {
+  it("gives every category a group and an appearance", () => {
     for (const category of SPENDING_CATEGORIES) {
       const group = CATEGORY_GROUP_OF[category];
 
       expect(CATEGORY_GROUPS).toContain(group);
-      expect(CATEGORY_LABELS[category]).toBeTruthy();
       expect(CATEGORY_COLOR_VALUES).toContain(categoryColor(category));
       expect(CATEGORY_ICON_NAMES).toContain(categoryIcon(category));
       expect(CATEGORY_PALETTE_SLOTS).toContain(categoryPaletteSlot(category));
@@ -98,9 +95,8 @@ describe("category hierarchy", () => {
     }
   });
 
-  it("labels every group", () => {
+  it("recognises every group", () => {
     for (const group of CATEGORY_GROUPS) {
-      expect(CATEGORY_GROUP_LABELS[group]).toBeTruthy();
       expect(isCategoryGroup(group)).toBe(true);
     }
   });

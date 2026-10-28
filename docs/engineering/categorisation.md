@@ -437,7 +437,7 @@ Run the test file next to the one you changed with `bun test <path>`, then call 
 
 #### Extend the taxonomy
 
-Add the slug to its group's array in `CATEGORIES_BY_GROUP`, which is what builds `SPENDING_CATEGORIES`. Then add it to `CATEGORY_GROUP_OF`, `CATEGORY_LABELS`, `CATEGORY_DIRECTION_OF` and `CATEGORY_ICONS`. Each of those four is a `satisfies Record<SpendingCategory, …>`. A missed one is a TypeScript error, not a blank in the interface. The colour needs no entry, because the group supplies it.
+Add the slug to its group's array in `CATEGORIES_BY_GROUP`, which is what builds `SPENDING_CATEGORIES`. Then add it to `CATEGORY_GROUP_OF`, `CATEGORY_DIRECTION_OF`, `CATEGORY_ICONS` and `CATEGORY_PALETTE_SLOT_OF`. Each of those four is a `satisfies Record<SpendingCategory, …>`. A missed one is a TypeScript error, not a blank in the interface. The colour needs no entry, because the group supplies it.
 
 #### Add both messages
 

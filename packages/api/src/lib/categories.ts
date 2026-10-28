@@ -1,9 +1,7 @@
 import {
   CATEGORY_GROUP_COLORS,
   CATEGORY_GROUP_ICONS,
-  CATEGORY_GROUP_LABELS,
   CATEGORY_GROUPS,
-  CATEGORY_LABELS,
   categoriesInGroup,
   categoryColor,
   categoryIcon,
@@ -28,7 +26,7 @@ export interface CategoryEntry {
   isGroup: boolean;
   isAssignable: boolean;
   key: string;
-  label: string;
+  label?: string;
   parentKey: string | null;
   slot?: CategoryPaletteSlot;
   usageCount: number;
@@ -115,7 +113,6 @@ const groupEntry = (group: CategoryGroup): CategoryEntry => ({
   isCustom: false,
   isGroup: true,
   key: group,
-  label: CATEGORY_GROUP_LABELS[group],
   parentKey: null,
   usageCount: 0,
 });
@@ -130,7 +127,6 @@ const categoryEntry = (
   isCustom: false,
   isGroup: false,
   key: category,
-  label: CATEGORY_LABELS[category],
   parentKey: group,
   slot: categoryPaletteSlot(category),
   usageCount: 0,
