@@ -21,6 +21,7 @@ import {
   HEADER_HEIGHT,
   ROW_HEIGHT,
 } from "../model/transaction-groups";
+import { LoadError } from "./load-error";
 import { StaleRegion } from "./stale-region";
 import { TransactionGroupHeader } from "./transaction-group-header";
 import { TransactionRow } from "./transaction-row";
@@ -35,6 +36,9 @@ export const TransactionRows = ({
   hasMore,
   onLoadMore,
   isLoading,
+  isError,
+  isRetrying,
+  onRetry,
   isIncoming,
   isStale,
   onTransactionClick,
@@ -44,6 +48,9 @@ export const TransactionRows = ({
   hasMore: boolean;
   onLoadMore: () => void;
   isLoading: boolean;
+  isError: boolean;
+  isRetrying: boolean;
+  onRetry: () => void;
   isIncoming: boolean;
   isStale: boolean;
   onTransactionClick: (tx: Transaction) => void;
@@ -103,6 +110,16 @@ export const TransactionRows = ({
   useEffect(() => {
     loadMoreCheck();
   }, [loadMoreCheck]);
+
+  if (isError) {
+    return (
+      <LoadError
+        isRetrying={isRetrying}
+        onRetry={onRetry}
+        title={m.budget_transactions_load_error_title()}
+      />
+    );
+  }
 
   if (transactions.length === 0 && isLoading) {
     return (

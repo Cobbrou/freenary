@@ -276,6 +276,13 @@ export const TransactionsPage = () => {
           isFilling(transactionsQuery.isLoading) ||
           transactionsQuery.isFetchingNextPage
         }
+        isError={
+          transactionsQuery.isError && !transactionsQuery.isFetchNextPageError
+        }
+        isRetrying={transactionsQuery.isFetching}
+        onRetry={() => {
+          void transactionsQuery.refetch();
+        }}
         isStale={isStaleView(transactionsQuery)}
         onTransactionClick={(tx) => setSelectedTransactionId(tx.id)}
         range={range}
