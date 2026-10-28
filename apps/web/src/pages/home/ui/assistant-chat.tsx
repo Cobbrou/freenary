@@ -299,7 +299,7 @@ export const AssistantChat = ({
   );
 
   return (
-    <div className="flex h-[calc(100svh-4rem)] min-h-0 flex-col gap-4 p-4">
+    <div className="flex h-[calc(100svh-4rem-var(--update-banner-height,0px))] min-h-0 flex-col gap-4 p-4">
       {isPending ? (
         <AssistantChatSkeleton />
       ) : (

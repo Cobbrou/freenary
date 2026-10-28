@@ -51,7 +51,9 @@ Use a complete version such as `1.2.0` when you want updates only after an expli
 
 ## Update notice
 
-When a newer stable release exists, the account menu of the operator shows **Update available: v1.3.0**, with **Release notes** and **How to update**, which opens this page for that release. A dot on your avatar marks the menu until you update. Freenary never updates itself.
+When a newer stable release exists, the operator sees a banner across the top of every page, above the sidebar: **Freenary v1.3.0 is available**. Its **Release notes** and **How to update** links open in a new tab; **How to update** opens this page for that release. Members never see it. Freenary never updates itself.
+
+Select the **×** button to dismiss the banner. Your browser remembers the dismissed version, so the banner stays hidden for it and comes back when a newer release appears. The account menu keeps the same two links under **Update available: v1.3.0** until you update.
 
 The API server asks GitHub for its releases once at startup, then once a day, and keeps the answer in memory. The request is an unauthenticated `GET` to `api.github.com` with a `freenary/<version>` user agent, and it carries no user or financial data. Only `vX.Y.Z` releases count, so the weekly merchant data releases and pre-releases never trigger the notice. A failed request shows nothing and is tried again the next day.
 

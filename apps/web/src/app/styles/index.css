@@ -112,3 +112,11 @@
     font-variant-numeric: tabular-nums;
   }
 }
+
+/* From md the update banner is sticky, so the browser scrolls a focused or
+   targeted element clear of it instead of leaving it under the bar. */
+@media (width >= 48rem) {
+  html {
+    scroll-padding-top: var(--update-banner-height, 0px);
+  }
+}

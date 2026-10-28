@@ -4,7 +4,6 @@
   "account_menu_loading": "Loading account",
   "account_menu_update_available": "Update available: v{version}",
   "account_menu_update_guide": "How to update",
-  "account_menu_update_notice": "A newer Freenary release is available",
   "account_menu_update_release_notes": "Release notes",
   "account_sign_out": "Sign out",
   "assistant_activity_drawing": "Drawing a chart…",
@@ -1338,5 +1337,8 @@
   "ui_thinking_word_planning": "Planning",
   "ui_thinking_word_reading": "Reading",
   "ui_thinking_word_thinking": "Thinking",
-  "ui_toggle_sidebar": "Toggle sidebar"
+  "ui_toggle_sidebar": "Toggle sidebar",
+  "update_banner_dismiss": "Dismiss the notice for v{version}",
+  "update_banner_new_tab": "(opens in a new tab)",
+  "update_banner_title": "Freenary v{version} is available"
 }

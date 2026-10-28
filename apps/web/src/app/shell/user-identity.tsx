@@ -1,22 +1,15 @@
 import { Avatar, AvatarFallback } from "@freenary/ui/components/avatar";
 import { Skeleton } from "@freenary/ui/components/skeleton";
 
-import { m } from "@/paraglide/messages.js";
 import { userInitials } from "@/shared/lib/user-initials";
 
 interface UserIdentityProps {
   email: string | undefined;
-  hasUpdate?: boolean;
   isPending?: boolean;
   name: string | undefined;
 }
 
-export const UserIdentity = ({
-  email,
-  hasUpdate,
-  isPending,
-  name,
-}: UserIdentityProps) => {
+export const UserIdentity = ({ email, isPending, name }: UserIdentityProps) => {
   if (isPending) {
     return (
       <>
@@ -31,18 +24,11 @@ export const UserIdentity = ({
 
   return (
     <>
-      <span className="relative shrink-0">
-        <Avatar className="size-8">
-          <AvatarFallback className="text-xs">
-            {userInitials(name)}
-          </AvatarFallback>
-        </Avatar>
-        {hasUpdate && (
-          <span className="bg-primary ring-sidebar absolute -top-0.5 -right-0.5 size-2.5 rounded-full ring-2">
-            <span className="sr-only">{m.account_menu_update_notice()}</span>
-          </span>
-        )}
-      </span>
+      <Avatar className="size-8">
+        <AvatarFallback className="text-xs">
+          {userInitials(name)}
+        </AvatarFallback>
+      </Avatar>
       <div className="grid flex-1 text-left text-sm leading-tight">
         <span className="truncate font-medium">{name}</span>
         <span className="text-muted-foreground truncate text-xs">{email}</span>

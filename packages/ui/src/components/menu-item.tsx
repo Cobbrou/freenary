@@ -106,6 +106,9 @@ interface MenuItemProps extends HTMLAttributes<HTMLDivElement> {
   /** The row opens a nested DropdownSubmenu rather than acting. It carries a
    *  trailing chevron, and never a checked state. */
   submenu?: boolean;
+  /** Optional decorative icon after the label, such as an external-link
+   *  mark. It is aria-hidden: say what it means in the accessible name. */
+  trailingIcon?: IconComponent;
 }
 
 const MenuItem = forwardRef<HTMLDivElement, MenuItemProps>(
@@ -119,6 +122,7 @@ const MenuItem = forwardRef<HTMLDivElement, MenuItemProps>(
       disabled,
       closeOnClick,
       submenu,
+      trailingIcon: TrailingIcon,
       className,
       onClick,
       ...props
@@ -216,6 +220,18 @@ const MenuItem = forwardRef<HTMLDivElement, MenuItemProps>(
             {label}
           </span>
         </span>
+        {TrailingIcon && (
+          <span aria-hidden="true" className="inline-flex shrink-0">
+            <TrailingIcon
+              size={sizeClasses.icon}
+              strokeWidth={isActive ? 2 : 1.5}
+              className={cn(
+                "transition-[color,stroke-width] duration-80",
+                isActive ? "text-foreground" : "text-muted-foreground"
+              )}
+            />
+          </span>
+        )}
         {submenu && (
           <SubmenuChevron
             size={sizeClasses.icon}
