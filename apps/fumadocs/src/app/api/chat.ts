@@ -7,20 +7,18 @@ import {
   tool,
   toUIMessageStream,
 } from "ai";
-import { Document, type DocumentData } from "flexsearch";
 import { z } from "zod";
 
 import { listVersions, newestRelease, source } from "@/shared/content";
 import { ChatUIMessage, SearchTool } from "@/shared/ui/ai-search";
 
 import { guardChatRequest } from "./chat-guard";
-
-interface CustomDocument extends DocumentData {
-  url: string;
-  title: string;
-  description: string;
-  content: string;
-}
+import {
+  createSectionIndex,
+  type IndexedPage,
+  MAX_SEARCH_RESULTS,
+  searchSections,
+} from "./docs-search";
 
 const INDEXING_CHUNK_SIZE = 50;
 
@@ -30,7 +28,10 @@ const MAX_OUTPUT_TOKENS = 1024;
 
 const DEFAULT_MODEL = "anthropic/claude-3.5-sonnet";
 
-const indexByVersion = new Map<string, Promise<Document<CustomDocument>>>();
+const indexByVersion = new Map<
+  string,
+  Promise<ReturnType<typeof createSectionIndex>>
+>();
 
 const openrouter = createOpenRouter({
   apiKey: process.env.OPENROUTER_API_KEY,
@@ -39,25 +40,25 @@ const openrouter = createOpenRouter({
 const systemPrompt = [
   "You are an AI assistant for a documentation site.",
   "Use the `search` tool to retrieve relevant docs context before answering when needed.",
-  "The `search` tool returns raw JSON results from documentation. Use those results to ground your answer and cite sources as markdown links using the document `url` field when available.",
+  "The `search` tool returns matching documentation sections as JSON, each with a short excerpt. Use those results to ground your answer and cite sources as markdown links using the document `url` field when available.",
   "If you cannot find the answer in search results, say you do not know and suggest a better search query.",
 ].join("\n");
 
 const searchTool = (version: string) =>
   tool({
-    description: "Search the docs content and return raw JSON results.",
+    description:
+      "Search the docs and return the matching sections, each with a short excerpt.",
     inputSchema: z.object({
       query: z.string(),
-      limit: z.number().int().min(1).max(100).default(10),
+      limit: z
+        .number()
+        .int()
+        .min(1)
+        .max(MAX_SEARCH_RESULTS)
+        .default(MAX_SEARCH_RESULTS),
     }),
     async execute({ query, limit }) {
-      const search = await searchServerFor(version);
-
-      return await search.searchAsync(query, {
-        limit,
-        merge: true,
-        enrich: true,
-      });
+      return await searchSections(await searchServerFor(version), query, limit);
     },
   }) satisfies SearchTool;
 
@@ -111,34 +112,22 @@ function searchServerFor(version: string) {
 }
 
 async function createSearchServer(version: string) {
-  const search = new Document<CustomDocument>({
-    document: {
-      id: "url",
-      index: ["title", "description", "content"],
-      store: true,
-    },
-  });
-
-  const documents = await chunkedAll(
+  const pages = await chunkedAll(
     source.getPages().flatMap((page) =>
       page.slugs[0] === version
         ? [
-            (async (): Promise<CustomDocument> => ({
+            (async (): Promise<IndexedPage> => ({
               title: page.data.title,
               description: page.data.description,
               url: page.url,
-              content: await page.data.getText("processed"),
+              structuredData: await page.data.structuredData(),
             }))(),
           ]
         : []
     )
   );
 
-  for (const document of documents) {
-    search.add(document);
-  }
-
-  return search;
+  return createSectionIndex(pages);
 }
 
 async function chunkedAll<O>(promises: Promise<O>[]): Promise<O[]> {

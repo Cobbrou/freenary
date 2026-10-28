@@ -1,6 +1,7 @@
 import { safeValidateUIMessages } from "ai";
 import { z } from "zod";
 
+import { withoutToolParts } from "@/shared/lib/chat-history";
 import type { ChatUIMessage } from "@/shared/ui/ai-search";
 
 const MAX_BODY_LENGTH = 32_000;
@@ -84,5 +85,8 @@ export const guardChatRequest = async (
     return new Response("invalid_body", { status: 400 });
   }
 
-  return { version: body.data.version, messages: messages.data };
+  return {
+    version: body.data.version,
+    messages: withoutToolParts(messages.data),
+  };
 };

@@ -30,6 +30,7 @@ import {
 } from "react";
 import { flushSync } from "react-dom";
 
+import { withoutToolParts } from "../lib/chat-history";
 import { buttonVariants } from "../ui/button";
 import { Markdown } from "./markdown";
 
@@ -374,6 +375,21 @@ export function AISearch({
     transport: new DefaultChatTransport({
       api: "/api/chat",
       body: { version },
+      prepareSendMessagesRequest: ({
+        body,
+        id,
+        messages,
+        trigger,
+        messageId,
+      }) => ({
+        body: {
+          ...body,
+          id,
+          messages: withoutToolParts(messages),
+          trigger,
+          messageId,
+        },
+      }),
     }),
   });
 
