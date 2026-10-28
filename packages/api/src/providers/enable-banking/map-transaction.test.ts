@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
 import type { EBTransaction } from "./client";
-import { mapEBTransactions } from "./map-transaction";
+import { mapEBTransactions, parseMinorUnits } from "./map-transaction";
 
 const transaction = (transactionId: string): EBTransaction => ({
   booking_date: "2026-08-27",
@@ -13,7 +13,37 @@ const transaction = (transactionId: string): EBTransaction => ({
   transaction_id: transactionId,
 });
 
+describe("parseMinorUnits", () => {
+  test("keeps the sign of a signed amount with no indicator", () => {
+    expect(parseMinorUnits("-12.50")).toBe(-1250);
+  });
+
+  test("lets a leading minus win over the indicator", () => {
+    expect(parseMinorUnits("-12.50", "DBIT")).toBe(-1250);
+    expect(parseMinorUnits("-12.50", "CRDT")).toBe(-1250);
+  });
+
+  test("takes the sign from the indicator when the amount is unsigned", () => {
+    expect(parseMinorUnits("12.50", "DBIT")).toBe(-1250);
+    expect(parseMinorUnits("12.50", "CRDT")).toBe(1250);
+  });
+});
+
 describe("mapEBTransactions", () => {
+  test("keeps a negative balance after the transaction negative", () => {
+    const [mapped] = mapEBTransactions(
+      [
+        {
+          ...transaction("overdrawn"),
+          balance_after_transaction: { amount: "-80.00", currency: "EUR" },
+        },
+      ],
+      "2026-01-01"
+    );
+
+    expect(mapped?.balanceAfterMinor).toBe(-8000);
+  });
+
   test("maps the top-level creditor agent", () => {
     const [mapped] = mapEBTransactions(
       [transaction("volatile-id")],
