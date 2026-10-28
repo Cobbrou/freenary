@@ -8,6 +8,7 @@ import { toast } from "sonner";
 
 import { invalidateBudgetData } from "@/entities/budget";
 import { m } from "@/paraglide/messages.js";
+import { getLocale } from "@/paraglide/runtime.js";
 import { client, orpc } from "@/shared/api";
 
 interface SyncVariables {
@@ -36,8 +37,20 @@ export const useSyncAccounts = () => {
     onSuccess: async (sync, variables) => {
       await invalidateBudgetData(queryClient);
 
+      if (sync.failures.some((failure) => failure.kind === "categorisation")) {
+        toast.warning(m.budget_sync_categorisation_error());
+      }
+
       if (!sync.success) {
-        toast.error(m.budget_sync_error(), {
+        const institutions = sync.failures.flatMap((failure) =>
+          failure.kind === "connection-sync" ? [failure.institutionName] : []
+        );
+
+        const named = new Intl.ListFormat(getLocale(), {
+          type: "conjunction",
+        }).format(institutions);
+
+        toast.error(m.budget_sync_connection_error({ institutions: named }), {
           action: {
             label: m.budget_sync_retry(),
             onClick: () => syncMutation.mutate(variables),

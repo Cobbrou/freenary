@@ -95,11 +95,13 @@ To connect the same bank again later, press `Connect` on it. It's a new connecti
 | `No banks match your search` | Search for a shorter part of the name |
 | `Could not connect to` your bank, `Try again later.` | Wait a few minutes, then press `Connect` again |
 | `Bank connection failed. You can try again.` or `The bank sent back an incomplete response.` | Press `Connect` again |
-| `Failed to sync transactions` | Press `Retry` on the message, or the re-sync button on the bank's row. If it keeps failing, see below |
+| `Couldn’t sync` followed by a bank's name, or `Failed to sync transactions` | Press `Retry` on the message, or the re-sync button on the bank's row. If it keeps failing, see below |
+| `Transactions synced, but they couldn’t be sorted into categories.` | Sync again later. Your transactions are imported, only their categories wait |
+| `Couldn’t disconnect the bank. Try again.` | Press `Disconnect` again |
 
 ### A bank keeps failing to sync
 
-Bank consents expire. When yours runs out, or your bank wants you to confirm access again, every sync of that bank fails with `Failed to sync transactions`, and Freenary has no reconnect button. Instead:
+Bank consents expire. When yours runs out, or your bank wants you to confirm access again, every sync of that bank fails with `Couldn’t sync` and the bank's name, and Freenary has no reconnect button. Instead:
 
 1. Press the re-sync button on the bank's row once more. A temporary failure often clears.
 2. If it still fails, [remove the bank](#remove-a-bank). Its accounts and transactions go with it.

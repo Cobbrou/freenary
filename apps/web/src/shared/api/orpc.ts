@@ -21,14 +21,14 @@ export const createQueryClient = () =>
   new QueryClient({
     defaultOptions: { queries: { staleTime: STALE_TIME_MS } },
     queryCache: new QueryCache({
-      onError: (error, query) => {
+      onError: (_error, query) => {
         const isUnobservedPrefetch = query.getObserversCount() === 0;
 
         if (isUnobservedPrefetch) {
           return;
         }
 
-        toast.error(m.query_error({ reason: error.message }), {
+        toast.error(m.query_error_generic(), {
           action: {
             label: m.query_error_retry(),
             onClick: () => {
