@@ -612,11 +612,10 @@ const accountsSummary = (
 
 const syncEveryConnection = (
   connections: Parameters<typeof syncConnection>[0][],
-  errors: string[],
   userId: string,
   reporter: SyncReporter,
   force: boolean
-): Effect.Effect<void> =>
+): Effect.Effect<string[]> =>
   Effect.forEach(
     connections,
     (connection) =>
@@ -635,23 +634,20 @@ const syncEveryConnection = (
             getProvider(connection.provider)
           );
 
-          await syncConnection(
+          return await syncConnection(
             connection,
-            errors,
             providerUser,
             reporter,
             force
           );
         },
       }).pipe(
-        Effect.catchTag("BudgetPipelineFailed", (failure) => {
-          errors.push(pipelineFailureMessage(failure));
-
-          return Effect.void;
-        })
+        Effect.catchTag("BudgetPipelineFailed", (failure) =>
+          Effect.succeed([pipelineFailureMessage(failure)])
+        )
       ),
-    { concurrency: 1, discard: true }
-  );
+    { concurrency: 1 }
+  ).pipe(Effect.map((failures) => failures.flat()));
 
 const categoriseAfterSync = (
   userId: string,
@@ -685,7 +681,6 @@ const runSyncAccounts = Effect.fnUntraced(function* runSyncAccounts(
   force: boolean,
   reporter: SyncReporter
 ) {
-  const errors: string[] = [];
   const where: Prisma.BankConnectionWhereInput = { status: "ACTIVE", userId };
 
   if (connectionId) {
@@ -703,7 +698,13 @@ const runSyncAccounts = Effect.fnUntraced(function* runSyncAccounts(
     })
   );
 
-  yield* syncEveryConnection(connections, errors, userId, reporter, force);
+  const errors = yield* syncEveryConnection(
+    connections,
+    userId,
+    reporter,
+    force
+  );
+
   yield* Effect.promise(() => matchInternalTransfers(userId));
 
   const { categorised, warning } = yield* categoriseAfterSync(

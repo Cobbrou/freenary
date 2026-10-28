@@ -59,38 +59,18 @@ const contextFailing = (
 
 describe("importAccountsInSeries", () => {
   it("reports a failed account, so lastSyncedAt stays put", async () => {
-    const errors: string[] = [];
-
-    const everyAccountImported = await Effect.runPromise(
-      importAccountsInSeries(
-        contextFailing(["savings"]),
-        [checking, savings],
-        errors
-      )
+    const accountFailures = await Effect.runPromise(
+      importAccountsInSeries(contextFailing(["savings"]), [checking, savings])
     );
 
-    expect(everyAccountImported).toBe(false);
-    expect(errors).toEqual(["Account savings: timeout"]);
+    expect(accountFailures).toEqual(["Account savings: timeout"]);
   });
 
-  it("reports success when every account imports", async () => {
-    const errors: string[] = [];
-
-    const everyAccountImported = await Effect.runPromise(
-      importAccountsInSeries(contextFailing([]), [checking, savings], errors)
+  it("reports no failure when every account imports", async () => {
+    const accountFailures = await Effect.runPromise(
+      importAccountsInSeries(contextFailing([]), [checking, savings])
     );
 
-    expect(everyAccountImported).toBe(true);
-    expect(errors).toEqual([]);
-  });
-
-  it("ignores failures of earlier connections in the same run", async () => {
-    const errors = ["Connection Other Bank: expired"];
-
-    const everyAccountImported = await Effect.runPromise(
-      importAccountsInSeries(contextFailing([]), [checking, savings], errors)
-    );
-
-    expect(everyAccountImported).toBe(true);
+    expect(accountFailures).toEqual([]);
   });
 });
