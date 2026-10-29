@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, spyOn, test } from "bun:test";
 
 import { resolveCookiePolicy } from "./cookies";
 
@@ -67,6 +67,23 @@ describe("resolveCookiePolicy", () => {
         webOrigin: "http://app.example.com",
       })
     ).toEqual({ httpOnly: true, sameSite: "lax", secure: false });
+  });
+
+  test("warns when production serves the cookie without Secure", () => {
+    const warn = spyOn(console, "warn").mockImplementation(() => {});
+
+    resolveCookiePolicy({
+      authUrl: "http://freenary.lan",
+      cookieDomain: undefined,
+      isProduction: true,
+      webOrigin: "http://freenary.lan",
+    });
+
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining("has no Secure flag")
+    );
+
+    warn.mockRestore();
   });
 
   test("lets development run cross-host over HTTP after warning", () => {
