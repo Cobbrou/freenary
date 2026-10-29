@@ -11,7 +11,7 @@ Your code calls the same procedures as the web app, with a real account's sessio
 - **One hostname:** your instance's address, such as `https://freenary.example.com`. The web app forwards the API paths to the API server.
 - **Two subdomains:** `BETTER_AUTH_URL`, such as `https://api.example.com`.
 
-Through the web app, the API server must start answering within 9 seconds, or the call gets `502 Bad Gateway`. A caller that leaves first gets `499`. A long `budget.syncAccounts` can hit that 502 while the sync goes on: poll `budget.getSyncStatus`.
+Through the web app, the API server must start answering within 9 seconds, or the call gets `502 Bad Gateway`. A caller that leaves first gets `499`.
 
 ## Paths
 
@@ -129,7 +129,7 @@ Two procedures have their own limit:
 | `auth.accountExists` | 20 per 60 s | Caller address |
 | `assistant.saveTurn` and `POST /ai/chat`, together | 30 per 300 s | Account |
 
-The other 40 procedures have no limit. Pace `budget.syncAccounts`, `budget.recategorise` and `budget.getSankeyData` yourself: each does heavy work.
+The other 41 procedures have no limit. Pace `budget.syncAccounts`, `budget.recategorise` and `budget.getSankeyData` yourself: each does heavy work.
 
 The caller address comes from `X-Forwarded-For`. Callers Freenary can't place share one bucket: see [Trusted proxies](/docs/reference/reverse-proxy#trusted-proxies).
 

@@ -1,6 +1,10 @@
 import { describe, expect, it } from "bun:test";
 
-import { SYNC_RUN_ABANDONED_AFTER_MS, syncProgressFrom } from "./sync-progress";
+import {
+  SYNC_RUN_ABANDONED_AFTER_MS,
+  syncOutcomeFrom,
+  syncProgressFrom,
+} from "./sync-progress";
 import type { SyncRunRow } from "./sync-progress";
 
 const NOW = new Date("2026-09-20T10:00:00.000Z");
@@ -63,5 +67,55 @@ describe("syncProgressFrom", () => {
     const updatedAt = new Date(NOW.getTime() - SYNC_RUN_ABANDONED_AFTER_MS);
 
     expect(syncProgressFrom(row({ updatedAt }), NOW)).toBeNull();
+  });
+});
+
+describe("syncOutcomeFrom", () => {
+  const startedAt = new Date(NOW.getTime() - 20_000);
+
+  it("reports a run still going as running", () => {
+    expect(
+      syncOutcomeFrom({ ...row({}), failures: null }, startedAt, NOW)
+    ).toBe("running");
+  });
+
+  it("reports the outcome of the finished run", () => {
+    const failures = [{ kind: "categorisation" }];
+
+    expect(
+      syncOutcomeFrom(
+        { ...row({ categorised: 5, phase: "FINISHED" }), failures },
+        startedAt,
+        NOW
+      )
+    ).toEqual({ categorised: 5, failures });
+  });
+
+  it("loses a run that finished without an outcome", () => {
+    expect(
+      syncOutcomeFrom(
+        { ...row({ phase: "FINISHED" }), failures: null },
+        startedAt,
+        NOW
+      )
+    ).toBe("lost");
+  });
+
+  it("loses a run another run replaced", () => {
+    expect(
+      syncOutcomeFrom(
+        { ...row({ phase: "FINISHED" }), failures: [] },
+        new Date(startedAt.getTime() - 1),
+        NOW
+      )
+    ).toBe("lost");
+  });
+
+  it("loses a run whose process stopped writing", () => {
+    const updatedAt = new Date(NOW.getTime() - SYNC_RUN_ABANDONED_AFTER_MS);
+
+    expect(
+      syncOutcomeFrom({ ...row({ updatedAt }), failures: null }, startedAt, NOW)
+    ).toBe("lost");
   });
 });

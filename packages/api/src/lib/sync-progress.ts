@@ -1,4 +1,4 @@
-import prisma from "@freenary/db";
+import prisma, { Prisma } from "@freenary/db";
 import { Option } from "effect";
 
 export type SyncProgressPhase = "categorising" | "importing";
@@ -24,6 +24,15 @@ export interface SyncRunRow {
   categorisedTotal: number;
 }
 
+export interface SyncRunOutcomeRow extends SyncRunRow {
+  failures: Prisma.JsonValue;
+}
+
+export interface SyncOutcome {
+  categorised: number;
+  failures: Prisma.JsonValue;
+}
+
 export interface SyncReporter {
   accountsDiscovered: (count: number) => Promise<void>;
   transactionsImported: (count: number) => Promise<void>;
@@ -32,6 +41,10 @@ export interface SyncReporter {
   categorised: (count: number) => Promise<void>;
   heartbeat: () => Promise<void>;
   finished: () => Promise<void>;
+  finishedWith: (outcome: {
+    categorised: number;
+    failures: unknown[];
+  }) => Promise<void>;
 }
 
 interface ReporterState {
@@ -41,6 +54,7 @@ interface ReporterState {
   transactionsImported: number;
   categorised: number;
   categorisedTotal: number;
+  failures: Prisma.InputJsonValue | undefined;
   lastWriteAt: number;
 }
 
@@ -73,6 +87,33 @@ export const syncProgressFrom = (
   };
 };
 
+export const syncOutcomeFrom = (
+  row: SyncRunOutcomeRow | null,
+  startedAt: Date,
+  now: Date
+): SyncOutcome | "lost" | "running" => {
+  if (row === null || row.startedAt.getTime() !== startedAt.getTime()) {
+    return "lost";
+  }
+
+  if (row.phase !== "FINISHED") {
+    return syncProgressFrom(row, now) === null ? "lost" : "running";
+  }
+
+  return row.failures === null
+    ? "lost"
+    : { categorised: row.categorised, failures: row.failures };
+};
+
+export const readSyncOutcome = async (
+  userId: string,
+  startedAt: Date
+): Promise<SyncOutcome | "lost" | "running"> => {
+  const row = await prisma.syncRun.findUnique({ where: { userId } });
+
+  return syncOutcomeFrom(row, startedAt, new Date());
+};
+
 export const readSyncProgress = async (
   userId: string
 ): Promise<SyncProgress | null> => {
@@ -97,6 +138,7 @@ export const claimSyncRun = async (
     accountsTotal: 0,
     categorised: 0,
     categorisedTotal: 0,
+    failures: Prisma.DbNull,
     finishedAt: null,
     phase,
     startedAt: now,
@@ -133,6 +175,7 @@ export const createSyncReporter = (
     accountsTotal: 0,
     categorised: 0,
     categorisedTotal: 0,
+    failures: undefined,
     lastWriteAt: 0,
     phase,
     transactionsImported: 0,
@@ -156,6 +199,7 @@ export const createSyncReporter = (
           accountsTotal: state.accountsTotal,
           categorised: state.categorised,
           categorisedTotal: state.categorisedTotal,
+          failures: state.failures,
           finishedAt: state.phase === "FINISHED" ? new Date(now) : null,
           phase: state.phase,
           transactionsImported: state.transactionsImported,
@@ -189,6 +233,14 @@ export const createSyncReporter = (
     },
     finished: () => {
       state.phase = "FINISHED";
+
+      return write(true);
+    },
+    finishedWith: (outcome) => {
+      state.phase = "FINISHED";
+      state.categorised = outcome.categorised;
+      // SAFETY: the failures are plain objects of strings, as JSON as it gets.
+      state.failures = outcome.failures as Prisma.InputJsonValue;
 
       return write(true);
     },

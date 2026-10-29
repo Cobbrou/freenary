@@ -65,7 +65,7 @@ Two places supply the URL. `packages/db/prisma.config.ts` hands `process.env.DAT
 | `Transaction`, table `transaction` | The field groups below | `@@unique([accountId, providerTransactionId])`, `@@index([accountId, date])`, `@@index([accountId, amount])`, `@@index([merchantKey])`, cascade |
 | `MerchantOverride`, table `merchant_override` | `merchantKey`, `category`, `merchantName?` | `@@unique([userId, merchantKey])`, `@@index([userId])`, cascade. One user choice for one merchant key |
 | `MerchantClassification`, table `merchant_classification` | `signature` (the primary key), `provider`, `model`, `taxonomyVersion`, `category?`, `confidence?`, `answeredBy?`, `classifiedAt` | No user column and no relation. One row per merchant signature, shared by every account on the instance. A null `category` records an abstention |
-| `SyncRun`, table `sync_run` | `userId` (the primary key), `phase SyncPhase`, `accountsTotal`, `accountsDone`, `transactionsImported`, `categorisedTotal`, `categorised`, `startedAt`, `updatedAt`, `finishedAt?` | Cascade. One row per user, rewritten at each sync. `budget.getSyncStatus` reads it, and `budget.syncAccounts` claims it before it starts |
+| `SyncRun`, table `sync_run` | `userId` (the primary key), `phase SyncPhase`, `accountsTotal`, `accountsDone`, `transactionsImported`, `categorisedTotal`, `categorised`, `startedAt`, `updatedAt`, `finishedAt?`, `failures Json?` | Cascade. One row per user, rewritten at each sync. `budget.getSyncStatus` reads it, `budget.syncAccounts` claims it before it starts, and `budget.getSyncOutcome` reads `failures` once it finished |
 
 ### The `Transaction` columns
 

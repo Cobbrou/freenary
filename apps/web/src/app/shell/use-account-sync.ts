@@ -1,14 +1,12 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
 
-import { invalidateBudgetData } from "@/entities/budget";
+import { invalidateBudgetData, SYNC_POLL_INTERVAL_MS } from "@/entities/budget";
 import { useSyncAccounts } from "@/features/account-sync";
 import { orpc } from "@/shared/api";
 import { authClient } from "@/shared/auth";
 
-const SYNC_POLL_INTERVAL_MS = 1500;
-
-const TRANSACTIONS_PER_REFRESH = 100;
+const BUDGET_REFRESH_INTERVAL_MS = 5000;
 
 export const useAccountSync = () => {
   const { data: session } = authClient.useSession();
@@ -41,23 +39,25 @@ export const useAccountSync = () => {
   );
 
   const progress = statusQuery.data ?? null;
-  const phase = progress?.phase ?? null;
-  const importedTick = Math.floor(
-    (progress?.transactionsImported ?? 0) / TRANSACTIONS_PER_REFRESH
-  );
-
-  const refreshKey = phase === null ? null : `${phase}:${importedTick}`;
-  const refreshedKey = useRef<string | null>(null);
+  const lastRefresh = useRef<{ at: number; phase: string | null }>({
+    at: 0,
+    phase: null,
+  });
 
   useEffect(() => {
-    if (refreshedKey.current === refreshKey) {
+    const phase = progress?.phase ?? null;
+    const now = Date.now();
+    const isSamePhase = lastRefresh.current.phase === phase;
+    const isRecent = now - lastRefresh.current.at < BUDGET_REFRESH_INTERVAL_MS;
+
+    if (isSamePhase && (phase === null || isRecent)) {
       return;
     }
 
-    refreshedKey.current = refreshKey;
+    lastRefresh.current = { at: now, phase };
 
     void invalidateBudgetData(queryClient);
-  }, [queryClient, refreshKey]);
+  }, [progress, queryClient]);
 
   const hasStartedBackgroundSync = useRef(false);
   const isIdle = statusQuery.isSuccess && progress === null;

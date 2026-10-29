@@ -26,6 +26,7 @@ const reporter: SyncReporter = {
   categorised: () => Promise.resolve(),
   categorisingStarted: () => Promise.resolve(),
   finished: () => Promise.resolve(),
+  finishedWith: () => Promise.resolve(),
   heartbeat: () => Promise.resolve(),
   transactionsImported: () => Promise.resolve(),
 };

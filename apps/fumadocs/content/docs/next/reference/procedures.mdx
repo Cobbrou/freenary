@@ -40,6 +40,7 @@ All 45 procedures, grouped by router. [API](/docs/reference/api) covers the base
 | [`budget.getRecurringExpenses`](#budgetgetrecurringexpenses) | Protected | The merchants detected as regular |
 | [`budget.getSankeyData`](#budgetgetsankeydata) | Protected | The income-to-category flow |
 | [`budget.getSpendingBreakdown`](#budgetgetspendingbreakdown) | Protected | Money out per category |
+| [`budget.getSyncOutcome`](#budgetgetsyncoutcome) | Protected | What went wrong in a finished sync |
 | [`budget.getSyncStatus`](#budgetgetsyncstatus) | Protected | The sync or recategorisation in flight |
 | [`budget.getTransactions`](#budgetgettransactions) | Protected | One page of transactions, with the range totals |
 | [`budget.listSavedFilters`](#budgetlistsavedfilters) | Protected | The caller's saved searches, by name |
@@ -273,6 +274,14 @@ Internal transfers count as income and as spending.
 
 **Output**: `{ categories }` of `{ amount, category }`, largest first.
 
+### budget.getSyncOutcome
+
+**Input**: `startedAt`, as `budget.syncAccounts` returned it.
+
+**Output**: `null` while that sync runs, then `{ categorised, failures, success }`. `failures` lists what went wrong: `{ kind: "connection-sync", connectionId, institutionName }` for each connection that failed, and `{ kind: "categorisation" }` when sorting the transactions failed. `success` is `false` when at least one connection failed.
+
+**Errors**: `NOT_FOUND` (404) `The sync run ended without an outcome`, when the run crashed, went silent for 5 minutes, or a later run replaced it.
+
 ### budget.getSyncStatus
 
 **Output**: `null` when nothing runs, or `{ accountsDone, accountsTotal, categorised, categorisedTotal, phase, startedAt, transactionsImported }`. `phase` is `importing` or `categorising`. `categorisedTotal` is `0` until categorising starts. `transactionsImported` counts new and updated rows alike.
@@ -331,13 +340,7 @@ Saving under a name the caller already uses, compared without case, replaces tha
 
 **Input**: send `{}` to sync every `ACTIVE` connection of the caller. `connectionId` narrows it to one; an id that isn't the caller's or isn't `ACTIVE` syncs nothing and still answers `success: true`. `force: true` reads the whole 90-day provider window again.
 
-**Output**: `{ categorised, failures, started, success }`. `failures` lists what went wrong: `{ kind: "connection-sync", connectionId, institutionName }` for each connection that failed, and `{ kind: "categorisation" }` when sorting the transactions failed. `success` is `false` when at least one connection failed. `started: false` means another run holds the user and nothing ran.
-
-<Callout type="warn">
-
-It answers HTTP 200 even when every connection failed: read `success`, not the status. One sync runs per user, so a second call answers `started: false`; follow `budget.getSyncStatus` instead.
-
-</Callout>
+**Output**: `{ startedAt }`. It answers as soon as the sync starts, and the sync goes on without the request. Poll `budget.getSyncOutcome` with `startedAt` to learn how it ended. `startedAt: null` means another run holds the user and nothing started: one sync runs per user, so follow `budget.getSyncStatus` instead.
 
 ### budget.updateTransactionCategory
 
