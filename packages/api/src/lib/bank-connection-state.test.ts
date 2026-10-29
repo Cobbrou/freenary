@@ -22,6 +22,7 @@ describe("bank connection state", () => {
     const state = parseBankConnectionState(
       encodeBankConnectionState({
         institution,
+        nonce: "nonce-1",
         original: "csrf-state",
         providerId: "enable-banking",
         returnTo: "settings",
@@ -43,6 +44,7 @@ describe("bank connection state", () => {
   test("HMAC verifies for the same user", () => {
     const encoded = encodeBankConnectionState({
       institution,
+      nonce: "nonce-1",
       providerId: "enable-banking",
       returnTo: "onboarding",
       secret,
@@ -57,6 +59,7 @@ describe("bank connection state", () => {
   test("HMAC rejects a different user", () => {
     const encoded = encodeBankConnectionState({
       institution,
+      nonce: "nonce-1",
       providerId: "enable-banking",
       returnTo: "onboarding",
       secret,
@@ -72,6 +75,7 @@ describe("bank connection state", () => {
     const state = parseBankConnectionState(
       encodeBankConnectionState({
         institution,
+        nonce: "nonce-1",
         providerId: "enable-banking",
         returnTo: "onboarding",
         secret,
@@ -85,6 +89,23 @@ describe("bank connection state", () => {
         userId,
         secret
       )
+    ).toBe(false);
+  });
+
+  test("HMAC rejects a swapped nonce", () => {
+    const state = parseBankConnectionState(
+      encodeBankConnectionState({
+        institution,
+        nonce: "nonce-1",
+        providerId: "enable-banking",
+        returnTo: "onboarding",
+        secret,
+        userId,
+      })
+    );
+
+    expect(
+      verifyBankConnectionState({ ...state, nonce: "nonce-2" }, userId, secret)
     ).toBe(false);
   });
 

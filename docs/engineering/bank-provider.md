@@ -228,9 +228,11 @@ The sync window is 90 days. `dateFrom` is `lastSyncedAt`, or 90 days back on a f
 
 `packages/api/src/lib/bank-connection-state.ts` builds the `state` value that round-trips through the provider. Your adapter passes it through untouched.
 
-The payload is a JSON object with the keys `institution` (its `country`, `id` and `name`), `original`, `providerId` and `returnTo`. The return target is `onboarding` or `settings`. The HMAC is SHA-256 over the user id joined to the serialised payload, keyed by `BETTER_AUTH_SECRET`. It binds three things: the payload, the secret, and the session that started the flow. Verification strips the HMAC, recomputes it over the re-serialised payload, checks the length, then compares with `timingSafeEqual`.
+The payload is a JSON object with the keys `institution` (its `country`, `id` and `name`), `nonce`, `original`, `providerId` and `returnTo`. The return target is `onboarding` or `settings`. The HMAC is SHA-256 over the user id joined to the serialised payload, keyed by `BETTER_AUTH_SECRET`. It binds three things: the payload, the secret, and the session that started the flow. Verification strips the HMAC, recomputes it over the re-serialised payload, checks the length, then compares with `timingSafeEqual`.
 
 > [!WARNING] The HMAC covers a **re-serialised** object, so verification depends on a parsed key order equal to the encode order. A new state field inherits that constraint. Add it in alphabetical position, and add it to the Zod schema in the same place.
+
+The `nonce` makes a state single-use. `startConnection` stores it as a `verification` row (`identifier` `bank-connection-state`, `value` the user id, one-hour `expiresAt`) and sweeps the expired ones. `exchangeCode` deletes that row right before it asks the provider to complete the connection, and refuses the state when the delete removes nothing: replayed, expired, or started by another user. The row lives in the table Better Auth uses for its own codes, under an identifier of its own.
 
 ## Data mapping rules
 
