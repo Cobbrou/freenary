@@ -36,7 +36,7 @@ Stages 2 and 3 are skipped when the merchant key is empty. Stages 4 and 5 still 
 
 ### Stage 0 — the merchant key
 
-`deriveMerchantKey` runs inside the sync, and `upsertTransaction` persists `merchantKey`, `normalisedDescriptor`, `channel`, `transactionPath` and `intermediaryName`. Two paths exist.
+`deriveMerchantKey` runs inside the sync, and `writeTransactionBatch` persists `merchantKey`, `normalisedDescriptor`, `channel`, `transactionPath` and `intermediaryName`. Two paths exist.
 
 The **IBAN path** takes a creditor IBAN when the family code is `ICDT`, `PMNT`, `RCDT` or `RDDT`. It also takes one when no family code exists and the raw descriptor does not look like a card movement. The key is the trimmed upper-case IBAN.
 
@@ -58,7 +58,7 @@ The channel value seeds from the ISO 20022 family code. A verb prefix overwrites
 
 ### Stage 2 — user override
 
-`lookupUserOverride` runs a `findUnique` on the unique index of `MerchantOverride`. A database error returns `null` rather than an exception. A hit carries the stored merchant name.
+`categoriseBatch` loads every `MerchantOverride` of the batch's users in one `findMany`, then looks each key up in memory. If that read fails, it logs a warning and the batch resolves without overrides. A hit carries the stored merchant name.
 
 ### Stage 3 — shared dictionary
 

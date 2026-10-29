@@ -20,29 +20,43 @@ interface OverrideClient {
   };
 }
 
-export const lookupUserOverride = async (
-  userId: string,
-  merchantKey: string
-): Promise<{
+export interface UserOverride {
   category: SpendingCategory;
   merchantName: string | null;
-} | null> => {
-  const stored = await prisma.merchantOverride
-    .findUnique({
-      where: { userId_merchantKey: { merchantKey, userId } },
-    })
-    .then(Option.fromNullishOr, Option.none);
+}
 
-  return Option.match(stored, {
-    onNone: () => null,
-    onSome: (override) => {
+export type UserOverrides = ReadonlyMap<string, UserOverride>;
+
+export const userOverrideKey = (userId: string, merchantKey: string): string =>
+  JSON.stringify([userId, merchantKey]);
+
+export const loadUserOverrides = async (
+  userIds: readonly string[]
+): Promise<UserOverrides> => {
+  const stored = await prisma.merchantOverride.findMany({
+    select: {
+      category: true,
+      merchantKey: true,
+      merchantName: true,
+      userId: true,
+    },
+    where: { userId: { in: [...userIds] } },
+  });
+
+  return new Map(
+    stored.flatMap((override) => {
       const category = resolveCategorySlug(override.category);
 
       return category === null
-        ? null
-        : { category, merchantName: override.merchantName };
-    },
-  });
+        ? []
+        : [
+            [
+              userOverrideKey(override.userId, override.merchantKey),
+              { category, merchantName: override.merchantName },
+            ] as const,
+          ];
+    })
+  );
 };
 
 export const upsertUserOverride = async (
