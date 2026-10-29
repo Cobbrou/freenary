@@ -383,18 +383,26 @@ const replaceHoldings = async (
   });
 };
 
+export const syncWindowStart = (
+  connection: Pick<ConnectionWithAccounts, "lastSyncedAt">,
+  now: Date,
+  reReadFullWindow: boolean
+): Date => {
+  const fullWindowStart = new Date(
+    now.getTime() - PROVIDER_SERVED_HISTORY_DAYS * MS_PER_DAY
+  );
+
+  return reReadFullWindow
+    ? fullWindowStart
+    : (connection.lastSyncedAt ?? fullWindowStart);
+};
+
 const syncWindow = (
   connection: ConnectionWithAccounts,
   now: Date,
   reReadFullWindow: boolean
 ): SyncWindow => {
-  const fullWindowStart = new Date(
-    now.getTime() - PROVIDER_SERVED_HISTORY_DAYS * MS_PER_DAY
-  );
-
-  const start = reReadFullWindow
-    ? fullWindowStart
-    : (connection.lastSyncedAt ?? fullWindowStart);
+  const start = syncWindowStart(connection, now, reReadFullWindow);
 
   return {
     dateFrom: start.toISOString().split("T")[0] ?? "",

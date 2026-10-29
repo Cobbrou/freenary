@@ -4,7 +4,7 @@ description: Every procedure of the Freenary API, with who can call it, the inpu
 icon: ListTree
 ---
 
-All 45 procedures, grouped by router. [API](/docs/reference/api) covers the base URL, the cookie, the request shapes and the rate limits.
+All 48 procedures, grouped by router. [API](/docs/reference/api) covers the base URL, the cookie, the request shapes and the rate limits.
 
 - **Path.** `budget.getTransactions` is `POST /rpc/budget/getTransactions` or `POST /api-reference/budget/getTransactions`.
 - **Input.** `/api-reference/spec.json` on your instance holds every input schema: types, required fields, enums, bounds and defaults. This page adds only the rules a schema can't express.
@@ -36,6 +36,7 @@ All 45 procedures, grouped by router. [API](/docs/reference/api) covers the base
 | [`budget.getCashFlow`](#budgetgetcashflow) | Protected | Money in and out per day, week or month |
 | [`budget.getFixedVsVariable`](#budgetgetfixedvsvariable) | Protected | Money out split into recurring and the rest |
 | [`budget.getMerchants`](#budgetgetmerchants) | Protected | The companies of a date range, most frequent first |
+| [`budget.getPeriodOverview`](#budgetgetperiodoverview) | Protected | The four period charts in one read |
 | [`budget.getRecurring`](#budgetgetrecurring) | Protected | Everything the Recurring page reads |
 | [`budget.getRecurringExpenses`](#budgetgetrecurringexpenses) | Protected | The merchants detected as regular |
 | [`budget.getSankeyData`](#budgetgetsankeydata) | Protected | The income-to-category flow |
@@ -68,7 +69,7 @@ All 45 procedures, grouped by router. [API](/docs/reference/api) covers the base
 
 `from` and `to` are both included. Nothing checks that `from` comes before `to`.
 
-Four procedures take `aggregation`: `getBudgetVsActual`, `getFixedVsVariable`, `getSankeyData` and `getSpendingBreakdown`. `total` sums the range. `average` and `median` work on monthly sums, over the months that hold at least one transaction the procedure reads, so an empty month doesn't count as zero.
+Five procedures take `aggregation`: `getBudgetVsActual`, `getFixedVsVariable`, `getPeriodOverview`, `getSankeyData` and `getSpendingBreakdown`. `total` sums the range. `average` and `median` work on monthly sums, over the months that hold at least one transaction the procedure reads, so an empty month doesn't count as zero.
 
 ## Root procedures
 
@@ -226,6 +227,10 @@ With `average` or `median`, `planned` is the monthly plan. With `total`, it's th
 
 **Output**: `{ merchants }` of `{ count, name, totalMinor }`, highest count first, then by name. `totalMinor` sums absolute amounts.
 
+### budget.getPeriodOverview
+
+**Output**: `{ budgetVsActual, fixedVsVariable, sankey, spendingBreakdown }`, each the output of `getBudgetVsActual`, `getFixedVsVariable`, `getSankeyData` and `getSpendingBreakdown` for the same input. It reads the range once instead of four times.
+
 ### budget.getRecurring
 
 The rules behind `confidence` and `kind` are in [`docs/engineering/categorisation.md`](https://github.com/suiramdev/freenary/blob/dev/docs/engineering/categorisation.md#recurrence-detection).
@@ -306,7 +311,7 @@ The one paged procedure: pass `nextCursor` back as `cursor`.
 - `search` is at most 200 characters and matches the description or the counterparty name as a plain substring, without case.
 - `sort: "amount"` puts the largest first: descending for `direction: "incoming"`, most negative first otherwise.
 
-**Output**: `{ nextCursor, totals, transactions }`. `nextCursor` is `null` on the last page. `totals` is `{ incoming, outgoing }` over the whole filter, not the page, both positive.
+**Output**: `{ nextCursor, totals, transactions }`. `nextCursor` is `null` on the last page. `totals` is `{ incoming, outgoing }` over the whole filter, not the page, both positive, on the first page only: a page read with a `cursor` returns `null`.
 
 | Field of one transaction | Note |
 | --- | --- |

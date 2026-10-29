@@ -85,16 +85,7 @@ export const prefetchPeriod = (
 ) => {
   void warmWithoutRaising([
     queryClient.query(
-      orpc.budget.getSpendingBreakdown.queryOptions({ input: period })
-    ),
-    queryClient.query(
-      orpc.budget.getSankeyData.queryOptions({ input: period })
-    ),
-    queryClient.query(
-      orpc.budget.getFixedVsVariable.queryOptions({ input: period })
-    ),
-    queryClient.query(
-      orpc.budget.getBudgetVsActual.queryOptions({ input: period })
+      orpc.budget.getPeriodOverview.queryOptions({ input: period })
     ),
     queryClient.infiniteQuery(
       transactionsQueryOptions({ ...list, from: period.from, to: period.to })

@@ -230,6 +230,24 @@ export const createAuth = () => {
 
 export const auth = createAuth();
 
+type RequestSession = ReturnType<typeof auth.api.getSession>;
+
+const sessionsByRequestHeaders = new WeakMap<Headers, RequestSession>();
+
+export const requestSession = (headers: Headers): RequestSession => {
+  const known = sessionsByRequestHeaders.get(headers);
+
+  if (known) {
+    return known;
+  }
+
+  const resolving = auth.api.getSession({ headers });
+
+  sessionsByRequestHeaders.set(headers, resolving);
+
+  return resolving;
+};
+
 export type { AuthCapabilities, OAuthProviderDescriptor } from "./providers";
 export { authCapabilities } from "./providers";
 export { resolveCookiePolicy } from "./cookies";

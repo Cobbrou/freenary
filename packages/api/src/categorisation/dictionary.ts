@@ -1,4 +1,5 @@
-import { createReadStream, existsSync, readFileSync } from "node:fs";
+import { createReadStream, existsSync } from "node:fs";
+import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { createInterface } from "node:readline";
 import { createGunzip } from "node:zlib";
@@ -25,7 +26,6 @@ interface DictionaryState {
   entries: Map<string, DictionaryEntry> | null;
   loadedScope: Set<Iso3166Alpha2Country> | null;
   loading: Promise<void> | null;
-  openBatches: number;
 }
 
 const DATA_DIR = path.resolve(import.meta.dirname, "../../data");
@@ -37,7 +37,6 @@ const state: DictionaryState = {
   entries: null,
   loadedScope: null,
   loading: null,
-  openBatches: 0,
 };
 
 const loadedScopeCovers = (
@@ -100,7 +99,7 @@ const indexMerchantLine = (
 
 const indexedOrSkipped = Option.liftThrowable(indexMerchantLine);
 
-const signatureAccepted = (filePath: string): boolean => {
+const signatureAccepted = async (filePath: string): Promise<boolean> => {
   const sigPath = `${filePath}.sig`;
 
   if (!existsSync(sigPath)) {
@@ -111,7 +110,12 @@ const signatureAccepted = (filePath: string): boolean => {
     return false;
   }
 
-  if (!verifySignature(readFileSync(filePath), readFileSync(sigPath))) {
+  const [file, signature] = await Promise.all([
+    readFile(filePath),
+    readFile(sigPath),
+  ]);
+
+  if (!verifySignature(file, signature)) {
     console.warn(
       `[categorisation] Dictionary signature invalid: ${filePath} — refusing to load`
     );
@@ -135,7 +139,7 @@ const buildDictionaryFromFile = async (
     return target;
   }
 
-  if (isVerificationConfigured() && !signatureAccepted(filePath)) {
+  if (isVerificationConfigured() && !(await signatureAccepted(filePath))) {
     return target;
   }
 
@@ -197,8 +201,6 @@ const ensureLoaded = async (
 export const loadDictionary = async (
   countries: Iso3166Alpha2Country[] | undefined
 ): Promise<void> => {
-  state.openBatches += 1;
-
   const wanted =
     countries && countries.length > 0
       ? new Set(countries.map((country) => country.toUpperCase()))
@@ -208,7 +210,7 @@ export const loadDictionary = async (
 
   if (Option.isNone(loaded)) {
     state.entries = new Map();
-    state.loadedScope = EVERY_COUNTRY;
+    state.loadedScope = new Set();
     state.loading = null;
   }
 };
@@ -228,16 +230,6 @@ export const lookupDictionary = async (
   }
 
   return state.entries?.get(merchantKey) ?? null;
-};
-
-export const unloadDictionary = (): void => {
-  state.openBatches = Math.max(0, state.openBatches - 1);
-
-  if (state.openBatches === 0) {
-    state.entries = null;
-    state.loadedScope = null;
-    state.loading = null;
-  }
 };
 
 export const replaceDictionaryEntries = (

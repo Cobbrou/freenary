@@ -186,6 +186,12 @@ export const assistantTools = (api: AppRouterClient) =>
           ...inclusiveDayRange(from, to),
         });
 
+        if (totals === null) {
+          throw new Error(
+            "A first page of transactions came back without totals"
+          );
+        }
+
         return {
           totals: {
             currency: "EUR",

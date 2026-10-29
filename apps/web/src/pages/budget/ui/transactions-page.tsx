@@ -1,4 +1,6 @@
 import type { TransactionFilter } from "@freenary/api/lib/transaction-filters";
+import type { AppRouter } from "@freenary/api/routers/index";
+import type { InferRouterOutputs } from "@orpc/server";
 import {
   keepPreviousData,
   useInfiniteQuery,
@@ -30,6 +32,18 @@ import { BudgetKpiStrip } from "./budget-kpi-strip";
 import { PeriodNavigator } from "./period-navigator";
 import { TransactionDetailDrawer } from "./transaction-detail-drawer";
 import { TransactionList } from "./transaction-list";
+
+type PeriodOverview =
+  InferRouterOutputs<AppRouter>["budget"]["getPeriodOverview"];
+
+const overviewSections = (overview: PeriodOverview | undefined) => ({
+  budgetVsActual: overview?.budgetVsActual,
+  fixedVsVariable: overview?.fixedVsVariable,
+  sankey: overview?.sankey,
+  spendingBreakdown: overview?.spendingBreakdown.categories,
+  totalExpenses: overview?.sankey.totalExpenses ?? 0,
+  totalIncome: overview?.sankey.totalIncome ?? 0,
+});
 
 export const TransactionsPage = () => {
   const accountsQuery = useQuery(orpc.budget.getAccounts.queryOptions());
@@ -70,29 +84,8 @@ export const TransactionsPage = () => {
     string | null
   >(null);
 
-  const breakdownQuery = useQuery({
-    ...orpc.budget.getSpendingBreakdown.queryOptions({
-      input: { aggregation, from, to },
-    }),
-    placeholderData: keepPreviousData,
-  });
-
-  const sankeyQuery = useQuery({
-    ...orpc.budget.getSankeyData.queryOptions({
-      input: { aggregation, from, to },
-    }),
-    placeholderData: keepPreviousData,
-  });
-
-  const fixedVsVariableQuery = useQuery({
-    ...orpc.budget.getFixedVsVariable.queryOptions({
-      input: { aggregation, from, to },
-    }),
-    placeholderData: keepPreviousData,
-  });
-
-  const budgetVsActualQuery = useQuery({
-    ...orpc.budget.getBudgetVsActual.queryOptions({
+  const overviewQuery = useQuery({
+    ...orpc.budget.getPeriodOverview.queryOptions({
       input: { aggregation, from, to },
     }),
     placeholderData: keepPreviousData,
@@ -178,17 +171,18 @@ export const TransactionsPage = () => {
 
   const isAwaitingFirstData = syncProgress !== null && hasNoHistoryYet;
   const isFilling = (isLoading: boolean) => isLoading || isAwaitingFirstData;
+  const overview = overviewSections(overviewQuery.data);
+  const overviewState = {
+    isError: overviewQuery.isError,
+    isPending: isFilling(overviewQuery.isLoading),
+    isStale: isStaleView(overviewQuery),
+  };
+
   const selectedTransaction = selectedTransactionId
     ? (allTransactions.find((t) => t.id === selectedTransactionId) ?? null)
     : null;
 
-  const isUpdating = [
-    breakdownQuery,
-    sankeyQuery,
-    fixedVsVariableQuery,
-    budgetVsActualQuery,
-    transactionsQuery,
-  ].some(isStaleView);
+  const isUpdating = [overviewQuery, transactionsQuery].some(isStaleView);
 
   return (
     <div className="flex flex-1 flex-col gap-6">
@@ -213,44 +207,25 @@ export const TransactionsPage = () => {
 
       <BudgetKpiStrip
         aggregation={aggregation}
-        isError={sankeyQuery.isError}
-        isPending={isFilling(sankeyQuery.isLoading)}
-        isStale={isStaleView(sankeyQuery)}
-        totalExpenses={sankeyQuery.data?.totalExpenses ?? 0}
-        totalIncome={sankeyQuery.data?.totalIncome ?? 0}
+        {...overviewState}
+        totalExpenses={overview.totalExpenses}
+        totalIncome={overview.totalIncome}
       />
 
       <BudgetCharts
         activeCategories={chartCategories}
         aggregation={aggregation}
         breakdown={{
-          data: breakdownQuery.data?.categories,
-          isError: breakdownQuery.isError,
-          isPending: isFilling(breakdownQuery.isLoading),
-          isStale: isStaleView(breakdownQuery),
+          ...overviewState,
+          data: overview.spendingBreakdown,
         }}
-        cashFlow={{
-          data: sankeyQuery.data,
-          isError: sankeyQuery.isError,
-          isPending: isFilling(sankeyQuery.isLoading),
-          isStale: isStaleView(sankeyQuery),
-        }}
+        cashFlow={{ ...overviewState, data: overview.sankey }}
         companion={companion}
-        fixedVsVariable={{
-          data: fixedVsVariableQuery.data,
-          isError: fixedVsVariableQuery.isError,
-          isPending: isFilling(fixedVsVariableQuery.isLoading),
-          isStale: isStaleView(fixedVsVariableQuery),
-        }}
+        fixedVsVariable={{ ...overviewState, data: overview.fixedVsVariable }}
         onCompanionChange={(next) => applyPatch({ companion: next })}
         onSelect={handleSelect}
         onViewChange={(next) => applyPatch({ view: next })}
-        planned={{
-          data: budgetVsActualQuery.data,
-          isError: budgetVsActualQuery.isError,
-          isPending: isFilling(budgetVsActualQuery.isLoading),
-          isStale: isStaleView(budgetVsActualQuery),
-        }}
+        planned={{ ...overviewState, data: overview.budgetVsActual }}
         view={view}
       />
 

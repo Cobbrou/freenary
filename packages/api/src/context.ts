@@ -1,4 +1,4 @@
-import { auth } from "@freenary/auth";
+import { requestSession } from "@freenary/auth";
 import type { Context as ElysiaContext } from "elysia";
 
 export interface CreateContextOptions {
@@ -6,9 +6,7 @@ export interface CreateContextOptions {
 }
 
 export const createContext = async ({ context }: CreateContextOptions) => {
-  const session = await auth.api.getSession({
-    headers: context.request.headers,
-  });
+  const session = await requestSession(context.request.headers);
 
   return {
     auth: null,

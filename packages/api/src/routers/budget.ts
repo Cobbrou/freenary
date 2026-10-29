@@ -12,7 +12,10 @@ import {
 import { prismaClassificationStore } from "../categorisation/classifier/store";
 import { matchInternalTransfers } from "../categorisation/internal-transfer";
 import type { TransactionChannel } from "../categorisation/normalise/types";
-import type { RecurringMonthTotals } from "../categorisation/recurrence";
+import type {
+  RecurringExpense,
+  RecurringMonthTotals,
+} from "../categorisation/recurrence";
 import {
   cadenceWindow,
   detectRecurring,
@@ -30,7 +33,7 @@ import {
 import { protectedProcedure } from "../index";
 import { accountsSummary } from "../lib/accounts-summary";
 import { findProviderUser } from "../lib/bank-provider-user";
-import { syncConnection } from "../lib/bank-sync";
+import { syncConnection, syncWindowStart } from "../lib/bank-sync";
 import type { PlannedLine } from "../lib/budget-planned";
 import {
   monthSpan,
@@ -80,6 +83,10 @@ interface OutgoingRow {
   date: Date;
   merchantKey: string | null;
   resolvedCategory: string | null;
+}
+
+interface PeriodRow extends OutgoingRow {
+  counterpartyName: string | null;
 }
 
 interface BudgetLineRow {
@@ -168,6 +175,14 @@ const cashFlowQuery = ({ labelExpr, truncExpr }: CashFlowGrain) =>
 const aggregationSchema = z
   .enum(["total", "average", "median"])
   .default("total");
+
+type Aggregation = z.infer<typeof aggregationSchema>;
+
+const periodInput = z.object({
+  aggregation: aggregationSchema,
+  from: z.coerce.date(),
+  to: z.coerce.date(),
+});
 
 const zeroBasedMonthBucketKey = (date: Date) =>
   `${date.getFullYear()}-${String(date.getMonth()).padStart(2, "0")}`;
@@ -338,6 +353,24 @@ const userOutgoingByCategory = async (
     to
   );
 
+const directionTotals = async (where: Prisma.TransactionWhereInput) => {
+  const [incoming, outgoing] = await Promise.all([
+    prisma.transaction.aggregate({
+      _sum: { amount: true },
+      where: { ...where, amount: { gt: 0 } },
+    }),
+    prisma.transaction.aggregate({
+      _sum: { amount: true },
+      where: { ...where, amount: { lt: 0 } },
+    }),
+  ]);
+
+  return {
+    incoming: incoming._sum.amount ?? 0,
+    outgoing: Math.abs(outgoing._sum.amount ?? 0),
+  };
+};
+
 const outgoingBudgetLines = (lines: BudgetLineRow[]): PlannedLine[] =>
   lines.flatMap((line) => {
     const planned: PlannedLine = {
@@ -348,6 +381,89 @@ const outgoingBudgetLines = (lines: BudgetLineRow[]): PlannedLine[] =>
 
     return budgetLineKindOf(planned) === "OUTGOING" ? [planned] : [];
   });
+
+const budgetLinesOf = (userId: string): Promise<BudgetLineRow[]> =>
+  prisma.budgetLine.findMany({
+    select: {
+      amount: true,
+      category: { select: { parentSlug: true } },
+      categorySlug: true,
+    },
+    where: { userId },
+  });
+
+const periodRows = (
+  userId: string,
+  from: Date,
+  to: Date
+): Promise<PeriodRow[]> =>
+  prisma.transaction.findMany({
+    select: {
+      amount: true,
+      category: true,
+      counterpartyName: true,
+      date: true,
+      merchantKey: true,
+      resolvedCategory: true,
+    },
+    where: {
+      account: { connection: { userId } },
+      date: { gte: from, lte: to },
+    },
+  });
+
+const spendingBreakdownOf = (byCategory: Map<SpendingCategory, number>) => ({
+  categories: [...byCategory.entries()]
+    .map(([category, amount]) => ({ amount, category }))
+    .toSorted((a, b) => b.amount - a.amount),
+});
+
+const budgetVsActualOf = (
+  lines: BudgetLineRow[],
+  actualByCategory: Map<SpendingCategory, number>,
+  { aggregation, from, to }: z.infer<typeof periodInput>
+) => {
+  const outgoings = outgoingBudgetLines(lines);
+  const planScaleMonths =
+    aggregation === "total" ? periodMonthCount(from, to, new Date()) : 1;
+
+  const planned = plannedByCategory(outgoings, planScaleMonths);
+  const categories = SPENDING_CATEGORIES.flatMap((category) => {
+    const row = {
+      actual: actualByCategory.get(category) ?? 0,
+      category,
+      planned: planned.get(category) ?? 0,
+    };
+
+    return row.planned > 0 || row.actual > 0 ? [row] : [];
+  }).toSorted((a, b) => b.planned - a.planned || b.actual - a.actual);
+
+  return {
+    categories,
+    hasPlan: outgoings.length > 0,
+  };
+};
+
+const fixedVsVariableOf = (
+  rows: OutgoingRow[],
+  byCategory: Map<SpendingCategory, number>,
+  recurring: RecurringExpense[]
+) => {
+  const recurringShare = recurringShareByCategory(
+    rows,
+    new Set(recurring.map((e) => e.merchantKey))
+  );
+
+  let fixed = 0;
+  let total = 0;
+
+  for (const [category, amount] of byCategory) {
+    fixed += Math.round(amount * (recurringShare.get(category) ?? 0));
+    total += amount;
+  }
+
+  return { fixed, variable: total - fixed };
+};
 
 const clearResolutions = ({
   connectionId,
@@ -657,6 +773,25 @@ const categoriseAfterSync = (
     )
   );
 
+const startOfUtcDay = (date: Date) =>
+  new Date(
+    Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate())
+  );
+
+const earliestImportedDay = (
+  connections: { lastSyncedAt: Date | null }[],
+  force: boolean
+): Date | null => {
+  const now = new Date();
+  const starts = connections.map((connection) =>
+    syncWindowStart(connection, now, force).getTime()
+  );
+
+  return starts.length === 0
+    ? null
+    : startOfUtcDay(new Date(Math.min(...starts)));
+};
+
 const runSyncAccounts = Effect.fnUntraced(function* runSyncAccounts(
   userId: string,
   connectionId: string | undefined,
@@ -687,7 +822,9 @@ const runSyncAccounts = Effect.fnUntraced(function* runSyncAccounts(
     force
   );
 
-  yield* Effect.promise(() => matchInternalTransfers(userId));
+  yield* Effect.promise(() =>
+    matchInternalTransfers(userId, earliestImportedDay(connections, force))
+  );
 
   const { categorised, failure } = yield* categoriseAfterSync(
     userId,
@@ -701,6 +838,131 @@ const runSyncAccounts = Effect.fnUntraced(function* runSyncAccounts(
     failures: failure ? [...connectionFailures, failure] : connectionFailures,
   };
 });
+
+const sankeyOf = (
+  transactions: PeriodRow[],
+  aggregation: Aggregation,
+  from: Date,
+  to: Date
+) => {
+  let incomeSources: Map<string | null, number>;
+  let expenseCategories: Map<SpendingCategory, number>;
+
+  if (aggregation === "total") {
+    incomeSources = new Map();
+    expenseCategories = new Map();
+
+    for (const tx of transactions) {
+      if (tx.amount > 0) {
+        const source = incomeSourceOf(tx);
+        incomeSources.set(source, (incomeSources.get(source) ?? 0) + tx.amount);
+      } else {
+        const category = effectiveCategory(tx);
+        const abs = Math.abs(tx.amount);
+        expenseCategories.set(
+          category,
+          (expenseCategories.get(category) ?? 0) + abs
+        );
+      }
+    }
+  } else {
+    const monthsWithTransactions = new Set<string>();
+    const monthlyIncome = new Map<string | null, Map<string, number>>();
+    const monthlyExpense = new Map<SpendingCategory, Map<string, number>>();
+
+    for (const tx of transactions) {
+      const month = zeroBasedMonthBucketKey(tx.date);
+      monthsWithTransactions.add(month);
+
+      if (tx.amount > 0) {
+        const source = incomeSourceOf(tx);
+        let srcMonths = monthlyIncome.get(source);
+
+        if (!srcMonths) {
+          srcMonths = new Map();
+          monthlyIncome.set(source, srcMonths);
+        }
+
+        srcMonths.set(month, (srcMonths.get(month) ?? 0) + tx.amount);
+      } else {
+        const category = effectiveCategory(tx);
+        const abs = Math.abs(tx.amount);
+        let catMonths = monthlyExpense.get(category);
+
+        if (!catMonths) {
+          catMonths = new Map();
+          monthlyExpense.set(category, catMonths);
+        }
+
+        catMonths.set(month, (catMonths.get(month) ?? 0) + abs);
+      }
+    }
+
+    const activeMonths = monthBucketKeysBetween(from, to).filter((month) =>
+      monthsWithTransactions.has(month)
+    );
+
+    incomeSources = aggregateMonthly(monthlyIncome, activeMonths, aggregation);
+
+    expenseCategories = aggregateMonthly(
+      monthlyExpense,
+      activeMonths,
+      aggregation
+    );
+  }
+
+  const incomeNodes = incomeNodesOf(incomeSources);
+
+  const byGroup = new Map<
+    CategoryGroup,
+    { category: SpendingCategory; value: number }[]
+  >();
+
+  for (const [category, value] of expenseCategories) {
+    if (value <= 0) {
+      continue;
+    }
+
+    const group = CATEGORY_GROUP_OF[category];
+    const leaves = byGroup.get(group);
+    const leaf = { category, value };
+
+    if (leaves) {
+      leaves.push(leaf);
+    } else {
+      byGroup.set(group, [leaf]);
+    }
+  }
+
+  const groups = CATEGORY_GROUPS.flatMap((group) => {
+    const leaves = byGroup.get(group);
+
+    if (!leaves) {
+      return [];
+    }
+
+    const categories = leaves.toSorted((a, b) => b.value - a.value);
+
+    return [
+      {
+        categories,
+        group,
+        value: categories.reduce((sum, leaf) => sum + leaf.value, 0),
+      },
+    ];
+  });
+
+  const totalIncome = incomeNodes.reduce((s, n) => s + n.value, 0);
+  const totalExpenses = groups.reduce((s, g) => s + g.value, 0);
+
+  return {
+    groups,
+    incomeNodes,
+    moneyLeft: Math.max(0, totalIncome - totalExpenses),
+    totalExpenses,
+    totalIncome,
+  };
+};
 
 export const budgetRouter = {
   ...savedFilterProcedures,
@@ -741,48 +1003,17 @@ export const budgetRouter = {
   }),
 
   getBudgetVsActual: protectedProcedure
-    .input(
-      z.object({
-        aggregation: aggregationSchema,
-        from: z.coerce.date(),
-        to: z.coerce.date(),
-      })
-    )
+    .input(periodInput)
     .handler(async ({ context, input }) => {
       const userId = context.session.user.id;
       const { aggregation, from, to } = input;
 
       const [lines, actualByCategory] = await Promise.all([
-        prisma.budgetLine.findMany({
-          select: {
-            amount: true,
-            category: { select: { parentSlug: true } },
-            categorySlug: true,
-          },
-          where: { userId },
-        }),
+        budgetLinesOf(userId),
         userOutgoingByCategory(userId, aggregation, from, to),
       ]);
 
-      const outgoings = outgoingBudgetLines(lines);
-      const planScaleMonths =
-        aggregation === "total" ? periodMonthCount(from, to, new Date()) : 1;
-
-      const planned = plannedByCategory(outgoings, planScaleMonths);
-      const categories = SPENDING_CATEGORIES.flatMap((category) => {
-        const row = {
-          actual: actualByCategory.get(category) ?? 0,
-          category,
-          planned: planned.get(category) ?? 0,
-        };
-
-        return row.planned > 0 || row.actual > 0 ? [row] : [];
-      }).toSorted((a, b) => b.planned - a.planned || b.actual - a.actual);
-
-      return {
-        categories,
-        hasPlan: outgoings.length > 0,
-      };
+      return budgetVsActualOf(lines, actualByCategory, input);
     }),
 
   getCashFlow: protectedProcedure
@@ -816,13 +1047,7 @@ export const budgetRouter = {
     }),
 
   getFixedVsVariable: protectedProcedure
-    .input(
-      z.object({
-        aggregation: aggregationSchema,
-        from: z.coerce.date(),
-        to: z.coerce.date(),
-      })
-    )
+    .input(periodInput)
     .handler(async ({ context, input }) => {
       const userId = context.session.user.id;
       const { aggregation, from, to } = input;
@@ -832,21 +1057,11 @@ export const budgetRouter = {
         detectRecurringExpenses(userId, cadenceWindow(from, to)),
       ]);
 
-      const byCategory = outgoingByCategory(rows, aggregation, from, to);
-      const recurringShare = recurringShareByCategory(
+      return fixedVsVariableOf(
         rows,
-        new Set(recurring.map((e) => e.merchantKey))
+        outgoingByCategory(rows, aggregation, from, to),
+        recurring
       );
-
-      let fixed = 0;
-      let total = 0;
-
-      for (const [category, amount] of byCategory) {
-        fixed += Math.round(amount * (recurringShare.get(category) ?? 0));
-        total += amount;
-      }
-
-      return { fixed, variable: total - fixed };
     }),
 
   getMerchants: protectedProcedure
@@ -899,6 +1114,29 @@ export const budgetRouter = {
       };
     }),
 
+  getPeriodOverview: protectedProcedure
+    .input(periodInput)
+    .handler(async ({ context, input }) => {
+      const userId = context.session.user.id;
+      const { aggregation, from, to } = input;
+
+      const [rows, lines, recurring] = await Promise.all([
+        periodRows(userId, from, to),
+        budgetLinesOf(userId),
+        detectRecurringExpenses(userId, cadenceWindow(from, to)),
+      ]);
+
+      const outgoing = rows.filter((row) => row.amount < 0);
+      const byCategory = outgoingByCategory(outgoing, aggregation, from, to);
+
+      return {
+        budgetVsActual: budgetVsActualOf(lines, byCategory, input),
+        fixedVsVariable: fixedVsVariableOf(outgoing, byCategory, recurring),
+        sankey: sankeyOf(rows, aggregation, from, to),
+        spendingBreakdown: spendingBreakdownOf(byCategory),
+      };
+    }),
+
   getRecurring: protectedProcedure.handler(async ({ context }) => {
     const userId = context.session.user.id;
     const asOf = new Date();
@@ -906,14 +1144,7 @@ export const budgetRouter = {
 
     const [detected, lines, incoming, accounts] = await Promise.all([
       detectRecurring(userId, trailingCadence(asOf)),
-      prisma.budgetLine.findMany({
-        select: {
-          amount: true,
-          category: { select: { parentSlug: true } },
-          categorySlug: true,
-        },
-        where: { userId },
-      }),
+      budgetLinesOf(userId),
       prisma.transaction.aggregate({
         _min: { date: true },
         _sum: { amount: true },
@@ -1006,182 +1237,28 @@ export const budgetRouter = {
   }),
 
   getSankeyData: protectedProcedure
-    .input(
-      z.object({
-        aggregation: aggregationSchema,
-        from: z.coerce.date(),
-        to: z.coerce.date(),
-      })
-    )
-    .handler(async ({ context, input }) => {
-      const userId = context.session.user.id;
-      const { aggregation, from, to } = input;
-
-      const transactions = await prisma.transaction.findMany({
-        select: {
-          amount: true,
-          category: true,
-          counterpartyName: true,
-          date: true,
-          resolvedCategory: true,
-        },
-        where: {
-          account: { connection: { userId } },
-          date: { gte: from, lte: to },
-        },
-      });
-
-      let incomeSources: Map<string | null, number>;
-      let expenseCategories: Map<SpendingCategory, number>;
-
-      if (aggregation === "total") {
-        incomeSources = new Map();
-        expenseCategories = new Map();
-
-        for (const tx of transactions) {
-          if (tx.amount > 0) {
-            const source = incomeSourceOf(tx);
-            incomeSources.set(
-              source,
-              (incomeSources.get(source) ?? 0) + tx.amount
-            );
-          } else {
-            const category = effectiveCategory(tx);
-            const abs = Math.abs(tx.amount);
-            expenseCategories.set(
-              category,
-              (expenseCategories.get(category) ?? 0) + abs
-            );
-          }
-        }
-      } else {
-        const monthsWithTransactions = new Set<string>();
-        const monthlyIncome = new Map<string | null, Map<string, number>>();
-        const monthlyExpense = new Map<SpendingCategory, Map<string, number>>();
-
-        for (const tx of transactions) {
-          const month = zeroBasedMonthBucketKey(tx.date);
-          monthsWithTransactions.add(month);
-
-          if (tx.amount > 0) {
-            const source = incomeSourceOf(tx);
-            let srcMonths = monthlyIncome.get(source);
-
-            if (!srcMonths) {
-              srcMonths = new Map();
-              monthlyIncome.set(source, srcMonths);
-            }
-
-            srcMonths.set(month, (srcMonths.get(month) ?? 0) + tx.amount);
-          } else {
-            const category = effectiveCategory(tx);
-            const abs = Math.abs(tx.amount);
-            let catMonths = monthlyExpense.get(category);
-
-            if (!catMonths) {
-              catMonths = new Map();
-              monthlyExpense.set(category, catMonths);
-            }
-
-            catMonths.set(month, (catMonths.get(month) ?? 0) + abs);
-          }
-        }
-
-        const activeMonths = monthBucketKeysBetween(from, to).filter((month) =>
-          monthsWithTransactions.has(month)
-        );
-
-        incomeSources = aggregateMonthly(
-          monthlyIncome,
-          activeMonths,
-          aggregation
-        );
-
-        expenseCategories = aggregateMonthly(
-          monthlyExpense,
-          activeMonths,
-          aggregation
-        );
-      }
-
-      const incomeNodes = incomeNodesOf(incomeSources);
-
-      const byGroup = new Map<
-        CategoryGroup,
-        { category: SpendingCategory; value: number }[]
-      >();
-
-      for (const [category, value] of expenseCategories) {
-        if (value <= 0) {
-          continue;
-        }
-
-        const group = CATEGORY_GROUP_OF[category];
-        const leaves = byGroup.get(group);
-        const leaf = { category, value };
-
-        if (leaves) {
-          leaves.push(leaf);
-        } else {
-          byGroup.set(group, [leaf]);
-        }
-      }
-
-      const groups = CATEGORY_GROUPS.flatMap((group) => {
-        const leaves = byGroup.get(group);
-
-        if (!leaves) {
-          return [];
-        }
-
-        const categories = leaves.toSorted((a, b) => b.value - a.value);
-
-        return [
-          {
-            categories,
-            group,
-            value: categories.reduce((sum, leaf) => sum + leaf.value, 0),
-          },
-        ];
-      });
-
-      const totalIncome = incomeNodes.reduce((s, n) => s + n.value, 0);
-      const totalExpenses = groups.reduce((s, g) => s + g.value, 0);
-
-      return {
-        groups,
-        incomeNodes,
-        moneyLeft: Math.max(0, totalIncome - totalExpenses),
-        totalExpenses,
-        totalIncome,
-      };
-    }),
-
-  getSpendingBreakdown: protectedProcedure
-    .input(
-      z.object({
-        aggregation: aggregationSchema,
-        from: z.coerce.date(),
-        to: z.coerce.date(),
-      })
-    )
-    .handler(async ({ context, input }) => {
-      const categoryAmounts = await userOutgoingByCategory(
-        context.session.user.id,
+    .input(periodInput)
+    .handler(async ({ context, input }) =>
+      sankeyOf(
+        await periodRows(context.session.user.id, input.from, input.to),
         input.aggregation,
         input.from,
         input.to
-      );
+      )
+    ),
 
-      const categories = [...categoryAmounts.entries()]
-        .map(([category, amount]) => ({
-          amount,
-          category,
-        }))
-        .toSorted((a, b) => b.amount - a.amount);
-
-      return { categories };
-    }),
+  getSpendingBreakdown: protectedProcedure
+    .input(periodInput)
+    .handler(async ({ context, input }) =>
+      spendingBreakdownOf(
+        await userOutgoingByCategory(
+          context.session.user.id,
+          input.aggregation,
+          input.from,
+          input.to
+        )
+      )
+    ),
 
   getSyncOutcome: protectedProcedure
     .input(z.object({ startedAt: z.coerce.date() }))
@@ -1345,26 +1422,16 @@ export const budgetRouter = {
         findManyOpts.skip = 1;
       }
 
-      const [fetched, incomingTotal, outgoingTotal] = await Promise.all([
+      const [fetched, totals] = await Promise.all([
         prisma.transaction.findMany(findManyOpts),
-        prisma.transaction.aggregate({
-          _sum: { amount: true },
-          where: { ...baseWhere, amount: { gt: 0 } },
-        }),
-        prisma.transaction.aggregate({
-          _sum: { amount: true },
-          where: { ...baseWhere, amount: { lt: 0 } },
-        }),
+        cursor ? null : directionTotals(baseWhere),
       ]);
 
       const { nextCursor, transactions } = transactionPage(fetched, limit);
 
       return {
         nextCursor,
-        totals: {
-          incoming: incomingTotal._sum.amount ?? 0,
-          outgoing: Math.abs(outgoingTotal._sum.amount ?? 0),
-        },
+        totals,
         transactions: transactions.map((t) => ({
           amount: t.amount,
           category: effectiveCategory(t),

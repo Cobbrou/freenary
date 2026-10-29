@@ -1,4 +1,4 @@
-import { auth } from "@freenary/auth";
+import { requestSession } from "@freenary/auth";
 import { AI_CHAT_RATE_LIMIT } from "@freenary/auth/policy";
 import { createRouterClient, ORPCError } from "@orpc/server";
 import type { UIMessage } from "ai";
@@ -133,7 +133,7 @@ export const handleAssistantChat = async ({
     return new Response("unsupported_media_type", { status: 415 });
   }
 
-  const session = await auth.api.getSession({ headers: request.headers });
+  const session = await requestSession(request.headers);
 
   if (!session?.user) {
     return new Response("unauthorized", { status: 401 });

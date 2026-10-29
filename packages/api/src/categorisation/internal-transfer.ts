@@ -65,7 +65,10 @@ const pairedLegIds = (
   return paired;
 };
 
-const matchInternal = async (userId: string): Promise<number> => {
+const matchInternal = async (
+  userId: string,
+  bookedSince: Date | null
+): Promise<number> => {
   const accounts = await prisma.bankAccount.findMany({
     select: { id: true, identificationHash: true },
     where: {
@@ -89,6 +92,10 @@ const matchInternal = async (userId: string): Promise<number> => {
     where: {
       accountId: { in: accounts.map((account) => account.id) },
       categoryOverride: false,
+      date:
+        bookedSince === null
+          ? undefined
+          : { gte: new Date(bookedSince.getTime() - PAIR_DATE_TOLERANCE_MS) },
       isInternalTransfer: false,
     },
   });
@@ -111,9 +118,12 @@ const matchInternal = async (userId: string): Promise<number> => {
   return count;
 };
 
-export const matchInternalTransfers = async (userId: string): Promise<number> =>
+export const matchInternalTransfers = async (
+  userId: string,
+  bookedSince: Date | null
+): Promise<number> =>
   Option.getOrElse(
-    await matchInternal(userId).then(Option.some, (error) => {
+    await matchInternal(userId, bookedSince).then(Option.some, (error) => {
       console.warn(
         "[categorisation] Matching internal transfers failed",
         error
