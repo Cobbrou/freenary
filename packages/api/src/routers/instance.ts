@@ -52,7 +52,7 @@ import {
   missingKeysOf,
   writesOf,
 } from "../instance/merge";
-import { findProbe } from "../instance/probes";
+import { capProbeDetail, findProbe } from "../instance/probes";
 import { visibleTo } from "../instance/release";
 import {
   DISABLED_VARIANT,
@@ -63,7 +63,6 @@ import { updateCheck } from "../instance/update-check";
 import { bankConnectionCount } from "./bank-connection-count";
 
 const RESTART_GRACE_MS = 250;
-const PROBE_DETAIL_MAX_LENGTH = 300;
 
 const readCurrentSettings = (): Promise<StoredSettings> =>
   Effect.runPromise(readStoredSettings(settings.BETTER_AUTH_SECRET));
@@ -339,7 +338,7 @@ export const instanceRouter = {
         const { reason } = probed.failure;
 
         return {
-          detail: reason.detail.slice(0, PROBE_DETAIL_MAX_LENGTH),
+          detail: capProbeDetail(reason.detail),
           outcome: "probe-failed" as const,
           reason: reason.kind,
           status: reason.kind === "rejected" ? reason.status : null,
