@@ -1,15 +1,13 @@
 import { Field, FieldError, FieldLabel } from "@freenary/ui/components/field";
 import {
   InputGroup,
-  InputGroupAddon,
   InputGroupInput,
 } from "@freenary/ui/components/input-addons";
-import type { ComponentProps, ReactNode } from "react";
+import type { ComponentProps } from "react";
 
 interface AuthFormFieldProps {
   autoComplete: string;
   autoFocus?: boolean;
-  endAdornment?: ReactNode;
   errors: (string | undefined)[];
   id: string;
   inputMode?: ComponentProps<"input">["inputMode"];
@@ -25,7 +23,6 @@ interface AuthFormFieldProps {
 export const AuthFormField = ({
   autoComplete,
   autoFocus,
-  endAdornment,
   errors,
   id,
   inputMode,
@@ -57,9 +54,6 @@ export const AuthFormField = ({
           onBlur={onBlur}
           onChange={(e) => onChange(e.target.value)}
         />
-        {endAdornment ? (
-          <InputGroupAddon align="inline-end">{endAdornment}</InputGroupAddon>
-        ) : null}
       </InputGroup>
       <FieldError errors={errors.map((message) => ({ message }))} />
     </Field>
