@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+
 import prisma from "@freenary/db";
 import { env } from "@freenary/env/server";
 import { ORPCError } from "@orpc/server";
@@ -30,6 +32,9 @@ const providerById = Option.liftThrowable(getProvider);
 const decodeConnectionState = Option.liftThrowable(parseBankConnectionState);
 
 const LIST_INSTITUTIONS_CONCURRENCY = 3;
+
+const BANK_CONNECTION_STATE_IDENTIFIER = "bank-connection-state";
+const BANK_CONNECTION_STATE_TTL_MS = 60 * 60 * 1000;
 
 const MAX_CALLBACK_PARAMS = 20;
 const MAX_CALLBACK_PARAM_KEY_LENGTH = 100;
@@ -69,6 +74,50 @@ const readConnectionState = (
   }
 
   return connectionState;
+};
+
+const issueStateNonce = async (userId: string): Promise<string> => {
+  const now = new Date();
+  const nonce = randomUUID();
+
+  await prisma.$transaction([
+    prisma.verification.deleteMany({
+      where: {
+        expiresAt: { lte: now },
+        identifier: BANK_CONNECTION_STATE_IDENTIFIER,
+      },
+    }),
+    prisma.verification.create({
+      data: {
+        expiresAt: new Date(now.getTime() + BANK_CONNECTION_STATE_TTL_MS),
+        id: nonce,
+        identifier: BANK_CONNECTION_STATE_IDENTIFIER,
+        value: userId,
+      },
+    }),
+  ]);
+
+  return nonce;
+};
+
+const consumeStateNonce = async (
+  nonce: string,
+  userId: string
+): Promise<void> => {
+  const { count } = await prisma.verification.deleteMany({
+    where: {
+      expiresAt: { gt: new Date() },
+      id: nonce,
+      identifier: BANK_CONNECTION_STATE_IDENTIFIER,
+      value: userId,
+    },
+  });
+
+  if (count === 0) {
+    throw new ORPCError("BAD_REQUEST", {
+      message: "Bank connection state has expired or was already used",
+    });
+  }
 };
 
 const requireInstitutionsOf = async (
@@ -195,6 +244,8 @@ export const bankConnectionRouter = {
           message: "No provider session for this user",
         });
       }
+
+      await consumeStateNonce(connectionState.nonce, userId);
 
       const completed = await provider.completeConnection({
         callbackParams: input.params,
@@ -377,8 +428,10 @@ export const bankConnectionRouter = {
 
       const providerUser = await ensureProviderUser(userId, provider);
       const redirectUrl = `${env.CORS_ORIGIN}${provider.callbackPath}`;
+      const nonce = await issueStateNonce(userId);
       const encodedState = encodeBankConnectionState({
         institution,
+        nonce,
         original: input.state,
         providerId: provider.id,
         returnTo: input.returnTo,

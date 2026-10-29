@@ -153,7 +153,7 @@ A caller with no session gets a `guest` answer, not a 401.
 **Errors**
 
 - `NOT_FOUND` (404) `Unknown banking provider`.
-- `BAD_REQUEST` (400) `Missing bank connection state`, `Invalid bank connection state`, `Invalid banking provider in connection state`, `Bank connection state does not belong to this session`, `Bank institution is no longer available`, or `No provider session for this user`.
+- `BAD_REQUEST` (400) `Missing bank connection state`, `Invalid bank connection state`, `Invalid banking provider in connection state`, `Bank connection state does not belong to this session`, `Bank connection state has expired or was already used`, `Bank institution is no longer available`, or `No provider session for this user`.
 - `SERVICE_UNAVAILABLE` (503) `Could not load banks for this country`.
 
 ### bankConnection.getProviderAvailability

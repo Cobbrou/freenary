@@ -6,6 +6,7 @@ import type { ProviderInstitution } from "../providers/types";
 
 export interface BankConnectionStateInput {
   readonly institution: ProviderInstitution;
+  readonly nonce: string;
   readonly original?: string;
   readonly providerId: string;
   readonly returnTo: BankConnectionReturnTarget;
@@ -25,6 +26,7 @@ const bankConnectionStateSchema = z.object({
     id: z.string(),
     name: z.string(),
   }),
+  nonce: z.string(),
   original: z.string().optional(),
   providerId: z.string(),
   returnTo: z.enum(BANK_CONNECTION_RETURN_TARGETS),
@@ -40,6 +42,7 @@ const computeHmac = (payload: string, userId: string, secret: string): string =>
 
 export const encodeBankConnectionState = ({
   institution,
+  nonce,
   original,
   providerId,
   returnTo,
@@ -52,6 +55,7 @@ export const encodeBankConnectionState = ({
       id: institution.id,
       name: institution.name,
     },
+    nonce,
     original,
     providerId,
     returnTo,
