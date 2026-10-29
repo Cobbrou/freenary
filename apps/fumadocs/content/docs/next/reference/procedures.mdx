@@ -17,7 +17,6 @@ All 45 procedures, grouped by router. [API](/docs/reference/api) covers the base
 | Procedure | Access | Purpose |
 | --- | --- | --- |
 | [`healthCheck`](#healthcheck) | Public | Returns `"OK"` from the router |
-| [`privateData`](#privatedata) | Protected | Returns the session user, to test a cookie |
 | [`assistant.getConversation`](#assistantgetconversation) | Protected | The active conversation and the instance's model |
 | [`assistant.saveTurn`](#assistantsaveturn) | Protected | Stores one finished turn the caller answered itself |
 | [`assistant.startNewConversation`](#assistantstartnewconversation) | Protected | Archives the active conversation |
@@ -74,10 +73,6 @@ Four procedures take `aggregation`: `getBudgetVsActual`, `getFixedVsVariable`, `
 ### healthCheck
 
 **Output**: the string `"OK"`.
-
-### privateData
-
-**Output**: `{ message: "This is private", user }`, where `user` is the raw Better Auth user record.
 
 ## `assistant`
 

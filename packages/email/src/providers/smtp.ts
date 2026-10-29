@@ -22,6 +22,7 @@ export const createSmtpEmailProvider = (
     host: credentials.host,
     pool: true,
     port: credentials.port,
+    requireTLS: !credentials.secure && credentials.user !== undefined,
     secure: credentials.secure,
   });
 
