@@ -28,6 +28,7 @@ import {
   upsertUserOverride,
 } from "../categorisation/user-override";
 import { protectedProcedure } from "../index";
+import { accountsSummary } from "../lib/accounts-summary";
 import { findProviderUser } from "../lib/bank-provider-user";
 import { syncConnection } from "../lib/bank-sync";
 import type { PlannedLine } from "../lib/budget-planned";
@@ -87,11 +88,6 @@ interface BudgetLineRow {
   categorySlug: string | null;
 }
 
-interface AccountsSummary {
-  availableBalanceMinor: number | null;
-  currency: string;
-}
-
 interface CashFlowGrain {
   labelExpr: string;
   truncExpr: string;
@@ -142,8 +138,6 @@ const AMOUNT_SIGN_PREDICATE = {
 } as const;
 
 const RECURRING_MONTHS = 12;
-
-const FALLBACK_CURRENCY = "EUR";
 
 const cashFlowGrainFor = (spanDays: number): CashFlowGrain => {
   if (spanDays <= DAILY_GRAIN_MAX_DAYS) {
@@ -573,49 +567,6 @@ const zeroFilledMonths = (
   );
 };
 
-const mostFrequentCurrency = (currencyCounts: Map<string, number>): string => {
-  let currency = FALLBACK_CURRENCY;
-  let bestCount = 0;
-
-  for (const [code, count] of currencyCounts) {
-    const tieBrokenByCode = count === bestCount && code < currency;
-
-    if (count > bestCount || tieBrokenByCode) {
-      currency = code;
-      bestCount = count;
-    }
-  }
-
-  return currency;
-};
-
-const accountsSummary = (
-  accounts: { balanceMinor: number | null; currency: string | null }[]
-): AccountsSummary => {
-  let balance = 0;
-  let valued = false;
-  const currencyCounts = new Map<string, number>();
-
-  for (const account of accounts) {
-    if (account.balanceMinor !== null) {
-      balance += account.balanceMinor;
-      valued = true;
-    }
-
-    if (account.currency) {
-      currencyCounts.set(
-        account.currency,
-        (currencyCounts.get(account.currency) ?? 0) + 1
-      );
-    }
-  }
-
-  return {
-    availableBalanceMinor: valued ? balance : null,
-    currency: mostFrequentCurrency(currencyCounts),
-  };
-};
-
 const syncEveryConnection = (
   connections: Parameters<typeof syncConnection>[0][],
   userId: string,
@@ -960,7 +911,7 @@ export const budgetRouter = {
         },
       }),
       prisma.bankAccount.findMany({
-        select: { balanceMinor: true, currency: true },
+        select: { balanceMinor: true, currency: true, type: true },
         where: { connection: { userId } },
       }),
     ]);

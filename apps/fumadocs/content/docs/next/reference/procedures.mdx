@@ -235,8 +235,8 @@ The rules behind `confidence` and `kind` are in [`docs/engineering/categorisatio
 | Field | Note |
 | --- | --- |
 | `asOf` | When the detection ran. Every projection counts from here |
-| `availableBalanceMinor` | The sum of account balances, or `null` when no account reports one |
-| `currency` | The most common account currency, else `EUR` |
+| `availableBalanceMinor` | The sum of the `CHECKING` account balances in `currency`, or `null` when none reports one |
+| `currency` | The most common currency of the `CHECKING` accounts, else `EUR` |
 | `items` | One detected pattern per entry, without the ones whose last charge is older than their band's longest gap |
 | `monthly` | The trailing 12 calendar months, oldest first, zero-filled: `{ month, fixedMinor, behavioralMinor, discretionaryMinor }`, `month` as `YYYY-MM` |
 | `monthlyIncomeMinor` | Money in over the 365 days before `asOf`, divided by the months since the first incoming transaction, or `null` |
