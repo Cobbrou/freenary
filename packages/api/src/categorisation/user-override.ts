@@ -7,6 +7,19 @@ import type { SpendingCategory } from "../lib/taxonomy";
 
 type TransactionClient = Prisma.TransactionClient;
 
+interface OverrideClient {
+  merchantOverride: {
+    deleteMany: (
+      args: Prisma.MerchantOverrideDeleteManyArgs
+    ) => PromiseLike<Prisma.BatchPayload>;
+  };
+  transaction: {
+    updateMany: (
+      args: Prisma.TransactionUpdateManyArgs
+    ) => PromiseLike<Prisma.BatchPayload>;
+  };
+}
+
 export const lookupUserOverride = async (
   userId: string,
   merchantKey: string
@@ -54,7 +67,7 @@ export const upsertUserOverride = async (
 export const deleteUserOverride = async (
   userId: string,
   merchantKey: string,
-  db: TransactionClient | undefined
+  db: OverrideClient | undefined
 ): Promise<void> => {
   const client = db ?? prisma;
 
@@ -63,4 +76,18 @@ export const deleteUserOverride = async (
       where: { merchantKey, userId },
     })
     .then(Option.some, Option.none);
+
+  await client.transaction.updateMany({
+    data: {
+      resolutionConfidence: null,
+      resolutionStage: null,
+      resolvedCategory: null,
+    },
+    where: {
+      account: { connection: { userId } },
+      categoryOverride: false,
+      merchantKey,
+      resolutionStage: "user-override",
+    },
+  });
 };
