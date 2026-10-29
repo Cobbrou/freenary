@@ -53,20 +53,12 @@ import {
   SPENDING_CATEGORIES,
 } from "../lib/taxonomy";
 import type { CategoryGroup, SpendingCategory } from "../lib/taxonomy";
-import { amountBoundsCondition } from "../lib/transaction-amount-bounds";
 import {
   effectiveCategory,
   pipelineCategory,
 } from "../lib/transaction-category";
+import { transactionFilterConditions } from "../lib/transaction-filter-conditions";
 import {
-  categoryIsOneOf,
-  companyIsOneOf,
-  expandCategoryValues,
-  transactionFilterConditions,
-} from "../lib/transaction-filter-conditions";
-import {
-  MAX_COMPANY_NAME_LENGTH,
-  MAX_FILTER_VALUES,
   MAX_SEARCH_TEXT_LENGTH,
   transactionFiltersSchema,
 } from "../lib/transaction-filters";
@@ -1220,19 +1212,11 @@ export const budgetRouter = {
   getTransactions: protectedProcedure
     .input(
       z.object({
-        amountMax: z.number().int().min(0).optional(),
-        amountMin: z.number().int().min(0).optional(),
-        categories: z.array(z.enum(SPENDING_CATEGORIES)).optional(),
         cursor: z.string().optional(),
         direction: z.enum(["incoming", "outgoing"]).optional(),
         filters: transactionFiltersSchema.optional(),
         from: z.coerce.date(),
-        groups: z.array(z.enum(CATEGORY_GROUPS)).optional(),
         limit: z.number().int().min(1).max(100).default(50),
-        merchants: z
-          .array(z.string().min(1).max(MAX_COMPANY_NAME_LENGTH))
-          .max(MAX_FILTER_VALUES)
-          .optional(),
         search: z.string().max(MAX_SEARCH_TEXT_LENGTH).optional(),
         sort: z.enum(["date", "amount"]).default("date"),
         to: z.coerce.date(),
@@ -1240,21 +1224,8 @@ export const budgetRouter = {
     )
     .handler(async ({ context, input }) => {
       const userId = context.session.user.id;
-      const {
-        amountMax,
-        amountMin,
-        categories,
-        cursor,
-        direction,
-        filters,
-        from,
-        groups,
-        limit,
-        merchants,
-        search,
-        sort,
-        to,
-      } = input;
+      const { cursor, direction, filters, from, limit, search, sort, to } =
+        input;
 
       const dateFilter = { gte: from, lte: to };
       let directionFilter: { gt: number } | { lt: number } | undefined;
@@ -1284,28 +1255,6 @@ export const budgetRouter = {
             },
           ],
         });
-      }
-
-      const amountBounds = amountBoundsCondition({
-        maximumAbsoluteMinorUnits: amountMax,
-        minimumAbsoluteMinorUnits: amountMin,
-      });
-
-      if (amountBounds) {
-        conditions.push(amountBounds);
-      }
-
-      if (merchants && merchants.length > 0) {
-        conditions.push(companyIsOneOf(merchants));
-      }
-
-      const selected = expandCategoryValues([
-        ...(categories ?? []),
-        ...(groups ?? []),
-      ]);
-
-      if (selected.length > 0) {
-        conditions.push(categoryIsOneOf(selected));
       }
 
       conditions.push(...transactionFilterConditions(filters ?? []));

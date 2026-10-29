@@ -295,14 +295,11 @@ The one paged procedure: pass `nextCursor` back as `cursor`.
 **Input**
 
 - `limit` is a whole number from 1 to 100.
-- `amountMin` and `amountMax` compare the absolute amount. Setting either excludes zero-amount transactions.
-- `filters` holds up to 20 filters, and a transaction must match all of them, and every other input too. A filter is `{ field, operator, values }` for `field` `company` or `category`, and `{ field: "amount", operator, value }` for an amount.
+- `filters` holds up to 20 filters, and a transaction must match all of them, and `direction` and `search` too. A filter is `{ field, operator, values }` for `field` `company` or `category`, and `{ field: "amount", operator, value }` for an amount.
   - `company` and `category` take `operator` `is`, `isNot` or `isAnyOf`. `is` and `isNot` take exactly one value, `isAnyOf` up to 50.
-  - A `company` value matches like `merchants`. `isNot` keeps a transaction with no company name.
-  - A `category` value is a category slug or a group slug, and a group stands for every category in it. A transaction no step has categorised counts as `uncategorised`, here and in `categories`.
+  - A `company` value is a name as `getMerchants` returns it, matched without case against the counterparty name, or the normalised descriptor when there is none. `isNot` keeps a transaction with no company name.
+  - A `category` value is a category slug or a group slug, and a group stands for every category in it. A transaction no step has categorised counts as `uncategorised`.
   - `amount` takes `operator` `gt`, `lt` or `eq`, and compares `value`, in minor units, with the absolute amount. `gt` and `lt` are strict, and `eq` matches exactly.
-- `groups`: each group adds every category in it to `categories`.
-- `merchants` takes up to 50 names of at most 200 characters, as `getMerchants` returns them, matched without case.
 - `search` is at most 200 characters and matches the description or the counterparty name as a plain substring, without case.
 - `sort: "amount"` puts the largest first: descending for `direction: "incoming"`, most negative first otherwise.
 
@@ -421,7 +418,7 @@ Same input as `instance.check`. It stores only the values the environment doesn'
 
 ## `settings`
 
-A category key is a spending category slug, or `custom:<id>` for a custom category. The spec lists the slugs as the enum of `budget.getTransactions` `categories`.
+A category key is a spending category slug, or `custom:<id>` for a custom category. The spec lists the slugs, with the group slugs, as the enum of a `category` filter of `budget.getTransactions`.
 
 ### settings.createCustomCategory
 

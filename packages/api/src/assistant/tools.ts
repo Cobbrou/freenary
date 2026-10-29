@@ -3,6 +3,11 @@ import { tool } from "ai";
 import { z } from "zod";
 
 import { CATEGORY_GROUPS, SPENDING_CATEGORIES } from "../lib/taxonomy";
+import { MAX_FILTER_AMOUNT_MINOR_UNITS } from "../lib/transaction-filters";
+import type {
+  CategoryFilterValue,
+  TransactionFilter,
+} from "../lib/transaction-filters";
 import type { AppRouterClient } from "../routers/index";
 
 export const DAY = z.iso.date();
@@ -24,6 +29,47 @@ const inclusiveDayRange = (from: string, to: string) => ({
 
 const decimalAmount = (minorUnits: number): string =>
   (minorUnits / 100).toFixed(2);
+
+const minorUnits = (amount: number) => Math.round(amount * 100);
+
+interface SearchFilterInput {
+  readonly categories?: readonly CategoryFilterValue[];
+  readonly groups?: readonly CategoryFilterValue[];
+  readonly maxAmount?: number;
+  readonly minAmount?: number;
+}
+
+export const searchFilters = ({
+  categories = [],
+  groups = [],
+  maxAmount,
+  minAmount,
+}: SearchFilterInput): TransactionFilter[] => {
+  const filters: TransactionFilter[] = [];
+  const values = [...categories, ...groups];
+
+  if (values.length > 0) {
+    filters.push({ field: "category", operator: "isAnyOf", values });
+  }
+
+  if (minAmount !== undefined && minorUnits(minAmount) > 0) {
+    filters.push({
+      field: "amount",
+      operator: "gt",
+      value: minorUnits(minAmount) - 1,
+    });
+  }
+
+  if (maxAmount !== undefined) {
+    filters.push({
+      field: "amount",
+      operator: "lt",
+      value: Math.min(minorUnits(maxAmount) + 1, MAX_FILTER_AMOUNT_MINOR_UNITS),
+    });
+  }
+
+  return filters;
+};
 
 export type AssistantToolName = keyof typeof ASSISTANT_TOOL_NAMES;
 
@@ -172,14 +218,16 @@ export const assistantTools = (api: AppRouterClient) =>
         sort,
         to,
       }) => {
-        const { totals, transactions } = await api.budget.getTransactions({
-          amountMax:
-            maxAmount === undefined ? undefined : Math.round(maxAmount * 100),
-          amountMin:
-            minAmount === undefined ? undefined : Math.round(minAmount * 100),
+        const filters = searchFilters({
           categories,
-          direction,
           groups,
+          maxAmount,
+          minAmount,
+        });
+
+        const { totals, transactions } = await api.budget.getTransactions({
+          direction,
+          filters: filters.length > 0 ? filters : undefined,
           limit,
           search,
           sort,
