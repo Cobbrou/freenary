@@ -1,5 +1,5 @@
 import prisma from "@freenary/db";
-import { Array as Arr, Option } from "effect";
+import { Array as Arr } from "effect";
 
 import type { SpendingCategory } from "../lib/taxonomy";
 import { resolveCategorySlug } from "../lib/taxonomy";
@@ -432,30 +432,17 @@ const outgoingInWindow = async (
   });
 };
 
-const detectionOrNone = Option.liftThrowable(
-  (
-    transactions: RecurrenceTransaction[],
-    window: RecurrenceWindow
-  ): RecurringDetection => {
-    const expenses = recurringInWindow(transactions, window);
-
-    return {
-      expenses,
-      months: recurringMonthsInWindow(transactions, window, expenses),
-    };
-  }
-);
-
 export const detectRecurring = async (
   userId: string,
   window: RecurrenceWindow
 ): Promise<RecurringDetection> => {
-  const detected = await outgoingInWindow(userId, window).then(
-    (transactions) => detectionOrNone(transactions, window),
-    Option.none
-  );
+  const transactions = await outgoingInWindow(userId, window);
+  const expenses = recurringInWindow(transactions, window);
 
-  return Option.getOrElse(detected, () => ({ expenses: [], months: [] }));
+  return {
+    expenses,
+    months: recurringMonthsInWindow(transactions, window, expenses),
+  };
 };
 
 export const detectRecurringExpenses = async (

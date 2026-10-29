@@ -113,6 +113,13 @@ const matchInternal = async (userId: string): Promise<number> => {
 
 export const matchInternalTransfers = async (userId: string): Promise<number> =>
   Option.getOrElse(
-    await matchInternal(userId).then(Option.some, Option.none),
+    await matchInternal(userId).then(Option.some, (error) => {
+      console.warn(
+        "[categorisation] Matching internal transfers failed",
+        error
+      );
+
+      return Option.none();
+    }),
     () => 0
   );
