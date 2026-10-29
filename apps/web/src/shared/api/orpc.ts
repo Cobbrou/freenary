@@ -35,6 +35,7 @@ export const createQueryClient = () =>
               query.invalidate();
             },
           },
+          id: query.queryHash,
         });
       },
     }),

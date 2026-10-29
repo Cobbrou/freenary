@@ -116,16 +116,11 @@ export const readSyncOutcome = async (
 
 export const readSyncProgress = async (
   userId: string
-): Promise<SyncProgress | null> => {
-  const stored = await prisma.syncRun
-    .findUnique({ where: { userId } })
-    .then(Option.fromNullishOr, Option.none);
-
-  return Option.match(stored, {
-    onNone: () => null,
-    onSome: (row) => syncProgressFrom(row, new Date()),
-  });
-};
+): Promise<SyncProgress | null> =>
+  syncProgressFrom(
+    await prisma.syncRun.findUnique({ where: { userId } }),
+    new Date()
+  );
 
 export const claimSyncRun = async (
   userId: string,

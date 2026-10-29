@@ -94,7 +94,7 @@ This stage runs for the whole batch at once, and only when `TRANSACTION_CLASSIFI
 | Internal transfers | `internal-transfer.ts` | Pairs an outgoing and an incoming transaction of equal absolute amount and the same currency, on two accounts of one user, inside 24 hours. It then sets `isInternalTransfer: true` and nothing else. A movement between the user's own accounts is a transaction type, and no category names it |
 | Recurrence | `recurrence.ts` | Nothing. It groups outgoing transactions by merchant key. It then reads a cadence, a recurrence type, a confidence level and a month-by-month split. The file holds no write, and each request recomputes the answer. [Recurrence detection](#recurrence-detection) holds the rules |
 
-The internal-transfer pass includes rows that already carry a category, and it returns `0` on any throw.
+The internal-transfer pass includes rows that already carry a category. On any throw it logs a warning and returns `0`.
 
 > [!NOTE] **Dead code, stated as a fact about the current tree.** `internal-transfer.ts` selects `BankAccount.identificationHash` and never uses it. The pairing reads amount, currency and date alone. The schema comment calls that column a cross-account matching key, and no code matches on it.
 
@@ -124,7 +124,7 @@ Stages 1 to 4 are deterministic: the same transaction data always gives the same
 
 ## Recurrence detection
 
-`recurrence.ts` reads a cadence out of the stored transactions. It is a pure read: it holds no write, and it never throws. `detectRecurring` returns empty aggregates on a database error. [Budget](../../apps/fumadocs/content/docs/next/use/budget.mdx) is the reader view of the result. The procedure that serves that view is [`budget.getRecurring`](../../apps/fumadocs/content/docs/next/reference/procedures.mdx#budgetgetrecurring).
+`recurrence.ts` reads a cadence out of the stored transactions. It is a pure read: it holds no write. `detectRecurring` lets a database error reach the procedure, so the reader sees an error rather than an empty list. [Budget](../../apps/fumadocs/content/docs/next/use/budget.mdx) is the reader view of the result. The procedure that serves that view is [`budget.getRecurring`](../../apps/fumadocs/content/docs/next/reference/procedures.mdx#budgetgetrecurring).
 
 ### What a group is
 
@@ -509,7 +509,7 @@ Durable facts that the code cannot carry in a name. Each bullet names the module
 - `packages/api/src/categorisation/types.ts › ResolutionBand` — `auto` is displayed without hedging, `suggest` may show a prompt, `unknown` is an honest "uncategorised". An unconfident classifier yields `unknown` rather than a forced guess.
 - `packages/api/src/categorisation/internal-transfer.ts › pairedLegIds` — opposite sign, equal absolute amount, different account, same currency and dates within one day is sufficient; no IBAN is needed. Candidates deliberately include already-categorised transactions, because a transfer counted as income or expense wrecks the budget figures; only `categoryOverride` rows are excluded.
 - `packages/api/src/categorisation/internal-transfer.ts › matchInternal` — the `updateMany` writes `isInternalTransfer` and nothing else. A movement between the user's own accounts is a transaction _type_, not a category, so there is no `internal-transfer` slug to write; the boolean is what every aggregate and the pipeline's own row selection read. Nothing else clears the category a leg already carries, and the flag keeps it out of the figures either way.
-- `packages/api/src/categorisation/user-override.ts`, `internal-transfer.ts`, `recurrence.ts` — a categorisation-stage failure must never break a transaction sync or a read. The override write swallows its error, transfer matching reports zero matches, and recurrence detection reports empty aggregates.
+- `packages/api/src/categorisation/user-override.ts`, `internal-transfer.ts` — a categorisation-stage failure must never break a transaction sync. The override write swallows its error, and transfer matching logs a warning and reports zero matches. `recurrence.ts` is a read, not a sync stage: its failure reaches the caller, because empty aggregates would read as "no recurring payment".
 - `packages/api/src/categorisation/recurrence.ts › recurringFrom` — a group's reported category is the modal value of each row's `category ?? resolvedCategory`, so one corrected transaction cannot flip the group, and a stored slug that no longer resolves degrades to `uncategorised` rather than dropping the group. `uncategorised` is also the reader-facing `Uncategorised` category, so a degraded row reads as an honest catch-all rather than as a blank.
 
 ### The classifier

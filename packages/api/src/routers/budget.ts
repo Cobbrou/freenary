@@ -404,7 +404,15 @@ const writeResolutions = (
           where: { id: transactionId },
         })
       ).pipe(
-        Effect.match({ onFailure: () => 0, onSuccess: () => 1 }),
+        Effect.matchEffect({
+          onFailure: (cause) =>
+            Effect.logWarning(
+              "Writing a transaction resolution failed",
+              transactionId,
+              cause
+            ).pipe(Effect.as(0)),
+          onSuccess: () => Effect.succeed(1),
+        }),
         Effect.tap(() => Effect.promise(() => reporter.categorised(1)))
       ),
     { concurrency: 1 }
