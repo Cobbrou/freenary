@@ -143,78 +143,145 @@ const deriveKey = (
     remittanceLines: tx.remittanceLines,
   });
 
-export const merchantKeyDiffers = (
-  merchantKey: string | null
-): Prisma.TransactionWhereInput =>
-  merchantKey === null
-    ? { merchantKey: { not: null } }
-    : { OR: [{ merchantKey: { not: merchantKey } }, { merchantKey: null }] };
-
-const upsertTransaction = async (
-  accountId: string,
+const transactionFields = (
   tx: ProviderTransaction,
   connection: ConnectionWithAccounts
 ) => {
-  const shared = mapProviderFields(tx);
   const keyResult = deriveKey(tx, connection);
-  const merchantKey = keyResult.merchantKey || null;
 
-  await prisma.transaction.updateMany({
-    data: {
-      resolutionConfidence: null,
-      resolutionStage: null,
-      resolvedCategory: null,
-    },
-    where: {
-      accountId,
-      categoryOverride: false,
-      isInternalTransfer: false,
-      providerTransactionId: tx.providerTransactionId,
-      ...merchantKeyDiffers(merchantKey),
-    },
-  });
+  return {
+    ...mapProviderFields(tx),
+    channel: keyResult.channel,
+    intermediaryName: keyResult.intermediaryName,
+    merchantKey: keyResult.merchantKey || null,
+    normalisedDescriptor: keyResult.normalisedDescriptor || null,
+    transactionPath: keyResult.path,
+  };
+};
 
-  await prisma.transaction.upsert({
-    create: {
-      ...shared,
-      accountId,
-      category: null,
-      categoryOverride: false,
-      channel: keyResult.channel,
-      intermediaryName: keyResult.intermediaryName,
-      merchantKey,
-      normalisedDescriptor: keyResult.normalisedDescriptor || null,
-      providerTransactionId: tx.providerTransactionId,
-      transactionPath: keyResult.path,
-    },
-    update: {
-      ...shared,
-      channel: keyResult.channel,
-      intermediaryName: keyResult.intermediaryName,
-      merchantKey,
-      normalisedDescriptor: keyResult.normalisedDescriptor || null,
-      transactionPath: keyResult.path,
-    },
-    where: {
-      accountId_providerTransactionId: {
-        accountId,
-        providerTransactionId: tx.providerTransactionId,
-      },
-    },
+type TransactionFields = ReturnType<typeof transactionFields>;
+
+type TransactionColumn = keyof TransactionFields;
+
+const NON_TEXT_COLUMN_TYPES: Partial<Record<TransactionColumn, string>> = {
+  amount: "integer",
+  balanceAfterTransaction: "integer",
+  creditorIdentifications: "jsonb",
+  date: "timestamp(3)",
+  remittanceLines: "text[]",
+  transactionDate: "timestamp(3)",
+  valueDate: "timestamp(3)",
+};
+
+const TRANSACTION_BATCH_SIZE = 500;
+
+const quoted = (column: string) => Prisma.raw(`"${column}"`);
+
+// SAFETY: a timestamp column ignores the trailing Z, so the instant is stored in UTC like Prisma's own writes
+const sqlCell = (
+  column: TransactionColumn,
+  value: TransactionFields[TransactionColumn]
+): Prisma.Sql => {
+  const type = NON_TEXT_COLUMN_TYPES[column] ?? "text";
+
+  if (value === Prisma.DbNull || value === null) {
+    return Prisma.sql`NULL::${Prisma.raw(type)}`;
+  }
+
+  if (value instanceof Date) {
+    return Prisma.sql`${value.toISOString()}::${Prisma.raw(type)}`;
+  }
+
+  return Prisma.sql`${type === "jsonb" ? JSON.stringify(value) : value}::${Prisma.raw(type)}`;
+};
+
+const writeTransactionBatch = async (
+  accountId: string,
+  rows: readonly { fields: TransactionFields; providerTransactionId: string }[]
+): Promise<void> => {
+  const [first] = rows;
+
+  if (!first) {
+    return;
+  }
+
+  // SAFETY: Object.keys of a TransactionFields lists TransactionColumns
+  const columns = Object.keys(first.fields) as TransactionColumn[];
+
+  const resolutionIsStale = Prisma.sql`NOT t."categoryOverride" AND NOT t."isInternalTransfer" AND t."merchantKey" IS DISTINCT FROM v."merchantKey"`;
+
+  const updated = await prisma.$queryRaw<{ providerTransactionId: string }[]>`
+    UPDATE "transaction" AS t
+    SET ${Prisma.join(
+      columns.map(
+        (column) => Prisma.sql`${quoted(column)} = v.${quoted(column)}`
+      )
+    )},
+      "resolvedCategory" = CASE WHEN ${resolutionIsStale} THEN NULL ELSE t."resolvedCategory" END,
+      "resolutionStage" = CASE WHEN ${resolutionIsStale} THEN NULL ELSE t."resolutionStage" END,
+      "resolutionConfidence" = CASE WHEN ${resolutionIsStale} THEN NULL ELSE t."resolutionConfidence" END
+    FROM (VALUES ${Prisma.join(
+      rows.map(
+        ({ fields, providerTransactionId }) =>
+          Prisma.sql`(${providerTransactionId}::text, ${Prisma.join(
+            columns.map((column) => sqlCell(column, fields[column]))
+          )})`
+      )
+    )}) AS v ("providerTransactionId", ${Prisma.join(columns.map(quoted))})
+    WHERE t."accountId" = ${accountId}
+      AND t."providerTransactionId" = v."providerTransactionId"
+    RETURNING t."providerTransactionId"
+  `;
+
+  const existing = new Set(updated.map((row) => row.providerTransactionId));
+
+  await prisma.transaction.createMany({
+    data: rows.flatMap(({ fields, providerTransactionId }) =>
+      existing.has(providerTransactionId)
+        ? []
+        : [
+            {
+              ...fields,
+              accountId,
+              category: null,
+              categoryOverride: false,
+              providerTransactionId,
+            },
+          ]
+    ),
+    skipDuplicates: true,
   });
 };
 
-const upsertTransactionsInSeries = async (
+const upsertTransactionsInBatches = async (
   accountId: string,
   transactions: readonly ProviderTransaction[],
   connection: ConnectionWithAccounts,
   reporter: SyncReporter
 ): Promise<void> => {
-  for (const tx of transactions) {
+  const lastCopyPerId = [
+    ...new Map(
+      transactions.map((tx) => [
+        tx.providerTransactionId,
+        {
+          fields: transactionFields(tx, connection),
+          providerTransactionId: tx.providerTransactionId,
+        },
+      ])
+    ).values(),
+  ];
+
+  for (
+    let start = 0;
+    start < lastCopyPerId.length;
+    start += TRANSACTION_BATCH_SIZE
+  ) {
+    const batch = lastCopyPerId.slice(start, start + TRANSACTION_BATCH_SIZE);
+
     // eslint-disable-next-line no-await-in-loop -- sequential to avoid unique constraint races
-    await upsertTransaction(accountId, tx, connection);
+    await writeTransactionBatch(accountId, batch);
     // eslint-disable-next-line no-await-in-loop -- the reporter writes at most once a second; the rest resolve immediately
-    await reporter.transactionsImported(1);
+    await reporter.transactionsImported(batch.length);
   }
 };
 
@@ -346,7 +413,7 @@ const importAccount = async (context: AccountSyncContext): Promise<void> => {
     user,
   });
 
-  await upsertTransactionsInSeries(
+  await upsertTransactionsInBatches(
     account.id,
     transactions,
     connection,

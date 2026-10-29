@@ -28,7 +28,8 @@ import type {
   ResolutionResult,
   ResolutionStage,
 } from "./types";
-import { lookupUserOverride } from "./user-override";
+import { loadUserOverrides, userOverrideKey } from "./user-override";
+import type { UserOverrides } from "./user-override";
 
 type ClassificationCallReason =
   | { readonly kind: "threw"; readonly detail: string }
@@ -174,10 +175,13 @@ const fromChannel = (input: CategoriseInput): ResolutionResult | null => {
   };
 };
 
-const fromUserOverride = async (
-  input: CategoriseInput
-): Promise<ResolutionResult | null> => {
-  const override = await lookupUserOverride(input.userId, input.merchantKey);
+const fromUserOverride = (
+  input: CategoriseInput,
+  overrides: UserOverrides
+): ResolutionResult | null => {
+  const override = overrides.get(
+    userOverrideKey(input.userId, input.merchantKey)
+  );
 
   if (!override) {
     return null;
@@ -240,7 +244,8 @@ const inDirection = (
     : resolution;
 
 const categoriseInternal = async (
-  input: CategoriseInput
+  input: CategoriseInput,
+  overrides: UserOverrides
 ): Promise<ResolutionResult> => {
   const byChannel = inDirection(fromChannel(input), input.amountMinor);
 
@@ -250,7 +255,7 @@ const categoriseInternal = async (
 
   if (input.merchantKey.length > 0) {
     const byOverride = inDirection(
-      await fromUserOverride(input),
+      fromUserOverride(input, overrides),
       input.amountMinor
     );
 
@@ -272,24 +277,30 @@ const categoriseInternal = async (
 };
 
 export const categoriseTransaction = async (
-  input: CategoriseInput
+  input: CategoriseInput,
+  overrides: UserOverrides = new Map()
 ): Promise<ResolutionResult> =>
   Option.getOrElse(
-    await categoriseInternal(input).then(Option.some, Option.none),
+    await categoriseInternal(input, overrides).then(Option.some, Option.none),
     () => UNKNOWN_RESULT
   );
 
 const categoriseInOrder = async (
   transactions: CategoriseInput[]
 ): Promise<ResolutionResult[]> => {
-  const results: ResolutionResult[] = [];
+  const overrides = await loadUserOverrides([
+    ...new Set(transactions.map((tx) => tx.userId)),
+  ]).catch((error: Error) => {
+    console.warn(
+      `[categorisation] user overrides unavailable, resolving without them: ${error}`
+    );
 
-  for (const tx of transactions) {
-    // eslint-disable-next-line no-await-in-loop -- sequential: each lookup may hit the DB for user overrides
-    results.push(await categoriseTransaction(tx));
-  }
+    return new Map();
+  });
 
-  return results;
+  return await Promise.all(
+    transactions.map((tx) => categoriseTransaction(tx, overrides))
+  );
 };
 
 const CLASSIFIER_CONCURRENCY = 4;

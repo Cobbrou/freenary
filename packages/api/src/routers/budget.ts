@@ -394,29 +394,43 @@ const reportPipelineFailure = (
 const writeResolutions = (
   resolutions: TransactionResolution[],
   reporter: SyncReporter
-): Effect.Effect<number> =>
-  Effect.forEach(
-    resolutions,
-    ({ data: fields, transactionId }) =>
+): Effect.Effect<number> => {
+  const byFields = new Map<
+    string,
+    { fields: TransactionResolution["data"]; ids: string[] }
+  >();
+
+  for (const { data: fields, transactionId } of resolutions) {
+    const key = JSON.stringify(fields);
+    const group = byFields.get(key) ?? { fields, ids: [] };
+
+    group.ids.push(transactionId);
+    byFields.set(key, group);
+  }
+
+  return Effect.forEach(
+    [...byFields.values()],
+    ({ fields, ids }) =>
       Effect.tryPromise(() =>
-        prisma.transaction.update({
+        prisma.transaction.updateMany({
           data: fields,
-          where: { id: transactionId },
+          where: { id: { in: ids } },
         })
       ).pipe(
         Effect.matchEffect({
           onFailure: (cause) =>
             Effect.logWarning(
-              "Writing a transaction resolution failed",
-              transactionId,
+              "Writing transaction resolutions failed",
+              ids.length,
               cause
             ).pipe(Effect.as(0)),
-          onSuccess: () => Effect.succeed(1),
+          onSuccess: ({ count }) => Effect.succeed(count),
         }),
-        Effect.tap(() => Effect.promise(() => reporter.categorised(1)))
+        Effect.tap(() => Effect.promise(() => reporter.categorised(ids.length)))
       ),
     { concurrency: 1 }
   ).pipe(Effect.map((written) => written.reduce((sum, one) => sum + one, 0)));
+};
 
 const categoriseUncategorised = async (
   userId: string,

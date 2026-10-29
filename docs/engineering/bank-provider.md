@@ -76,7 +76,7 @@ Twelve members, eight of them required. The adapter never touches Prisma: `packa
 | `startConnection` | yes | a start request | a promise of one `url` | The web app sends the browser to that URL |
 | `completeConnection` | yes | the callback parameters and the user session | a promise of one completed connection | `exchangeCode` writes the connection row and one account row per account |
 | `closeConnection` | yes | a connection request | a promise of nothing | `disconnect` calls it before it deletes the local rows |
-| `fetchTransactions` | yes | a connection request plus an account id and a day range | a promise of provider transactions | `upsertTransaction` writes each one and derives its merchant key |
+| `fetchTransactions` | yes | a connection request plus an account id and a day range | a promise of provider transactions | `upsertTransactionsInBatches` derives each merchant key and writes them 500 at a time |
 | `createUser` | **optional** | none | a promise of one provider user session | `ensureProviderUser` inserts one row per pair of user and provider, and it tolerates a concurrent duplicate |
 | `deleteUser` | **optional** | a provider user session | a promise of nothing | `releaseProviderUser` calls it when the last connection of that user for that provider goes away |
 | `fetchAccounts` | **optional** | a connection request | a promise of provider accounts | `syncProviderAccounts` upserts on the pair of connection and provider account id |
