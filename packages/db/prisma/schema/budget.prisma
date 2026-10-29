@@ -44,7 +44,7 @@ model BankProviderUser {
   /// Provider identifier, same vocabulary as BankConnection.provider.
   provider       String
   providerUserId String
-  /// Permanent user-scoped bearer token. Stored as-is, like better-auth's Account.accessToken.
+  /// Permanent user-scoped bearer token. Sealed with BETTER_AUTH_SECRET; a legacy plain value is sealed on boot or first read.
   accessToken    String
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt

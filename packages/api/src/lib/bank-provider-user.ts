@@ -1,7 +1,132 @@
 import prisma, { Prisma } from "@freenary/db";
+import { env } from "@freenary/env/server";
+import { seal, unseal } from "@freenary/instance-config/seal";
+import type { SealedValueUnreadable } from "@freenary/instance-config/seal";
 import { Cause, Data, Effect, Result } from "effect";
 
 import type { BankingProvider, ProviderUserSession } from "../providers/types";
+
+const SEALED_PREFIX = "sealed:";
+
+interface OpenedToken {
+  readonly isLegacyPlaintext: boolean;
+  readonly token: string;
+}
+
+interface StoredRow {
+  readonly accessToken: string;
+  readonly provider: string;
+  readonly userId: string;
+}
+
+export const tokenSealKey = (provider: string, userId: string): string =>
+  `bank_provider_user:${provider}:${userId}`;
+
+export const sealToken = (secret: string, key: string, token: string): string =>
+  `${SEALED_PREFIX}${seal(secret, key, token)}`;
+
+export const openStoredToken = (
+  secret: string,
+  key: string,
+  stored: string
+): Result.Result<OpenedToken, SealedValueUnreadable> =>
+  stored.startsWith(SEALED_PREFIX)
+    ? Result.map(
+        unseal(secret, key, stored.slice(SEALED_PREFIX.length)),
+        (token) => ({ isLegacyPlaintext: false, token })
+      )
+    : Result.succeed({ isLegacyPlaintext: true, token: stored });
+
+const sealRowToken = (row: StoredRow, token: string): string =>
+  sealToken(
+    env.BETTER_AUTH_SECRET,
+    tokenSealKey(row.provider, row.userId),
+    token
+  );
+
+const replaceStoredToken = (
+  row: StoredRow,
+  replacement: { accessToken: string; providerUserId?: string }
+) =>
+  prisma.bankProviderUser.updateMany({
+    data: replacement,
+    where: {
+      accessToken: row.accessToken,
+      provider: row.provider,
+      userId: row.userId,
+    },
+  });
+
+const openRow = async (row: StoredRow): Promise<string | null> => {
+  const opened = openStoredToken(
+    env.BETTER_AUTH_SECRET,
+    tokenSealKey(row.provider, row.userId),
+    row.accessToken
+  );
+
+  if (Result.isFailure(opened)) {
+    console.warn(
+      `[bank] The ${row.provider} token of user ${row.userId} does not open with the current BETTER_AUTH_SECRET. Connecting a bank again replaces it; the banks linked before keep failing until they are disconnected.`
+    );
+
+    return null;
+  }
+
+  if (opened.success.isLegacyPlaintext) {
+    await replaceStoredToken(row, {
+      accessToken: sealRowToken(row, opened.success.token),
+    });
+  }
+
+  return opened.success.token;
+};
+
+export const sealLegacyProviderTokens = async (): Promise<void> => {
+  const rows = await prisma.bankProviderUser.findMany({
+    select: { accessToken: true, provider: true, userId: true },
+    where: { NOT: { accessToken: { startsWith: SEALED_PREFIX } } },
+  });
+
+  await prisma.$transaction(
+    rows.map((row) =>
+      replaceStoredToken(row, {
+        accessToken: sealRowToken(row, row.accessToken),
+      })
+    )
+  );
+};
+
+const claimUnreadableRow = async (
+  userId: string,
+  provider: BankingProvider,
+  session: ProviderUserSession
+): Promise<ProviderUserSession | null> => {
+  const row = await prisma.bankProviderUser.findUnique({
+    select: { accessToken: true, provider: true, userId: true },
+    where: { userId_provider: { provider: provider.id, userId } },
+  });
+
+  const isReadableOrGone =
+    row === null ||
+    Result.isSuccess(
+      openStoredToken(
+        env.BETTER_AUTH_SECRET,
+        tokenSealKey(provider.id, userId),
+        row.accessToken
+      )
+    );
+
+  if (isReadableOrGone) {
+    return null;
+  }
+
+  const { count } = await replaceStoredToken(row, {
+    accessToken: sealRowToken(row, session.accessToken),
+    providerUserId: session.providerUserId,
+  });
+
+  return count === 1 ? session : null;
+};
 
 class ProviderUserAlreadyStored extends Data.TaggedError(
   "ProviderUserAlreadyStored"
@@ -31,13 +156,24 @@ export const findProviderUser = async (
   }
 
   const row = await prisma.bankProviderUser.findUnique({
-    select: { accessToken: true, providerUserId: true },
+    select: {
+      accessToken: true,
+      provider: true,
+      providerUserId: true,
+      userId: true,
+    },
     where: { userId_provider: { provider: provider.id, userId } },
   });
 
-  return row
-    ? { accessToken: row.accessToken, providerUserId: row.providerUserId }
-    : null;
+  if (!row) {
+    return null;
+  }
+
+  const accessToken = await openRow(row);
+
+  return accessToken === null
+    ? null
+    : { accessToken, providerUserId: row.providerUserId };
 };
 
 export const ensureProviderUser = async (
@@ -61,7 +197,11 @@ export const ensureProviderUser = async (
       try: () =>
         prisma.bankProviderUser.create({
           data: {
-            accessToken: session.accessToken,
+            accessToken: sealToken(
+              env.BETTER_AUTH_SECRET,
+              tokenSealKey(provider.id, userId),
+              session.accessToken
+            ),
             provider: provider.id,
             providerUserId: session.providerUserId,
             userId,
@@ -70,12 +210,21 @@ export const ensureProviderUser = async (
     }).pipe(
       Effect.as(session),
       Effect.catchTag("ProviderUserAlreadyStored", () =>
-        discardProviderUser(provider, session).pipe(
-          Effect.andThen(
-            Effect.tryPromise({
-              catch: (cause) => new Cause.UnknownError(cause),
-              try: () => findProviderUser(userId, provider),
-            })
+        Effect.tryPromise({
+          catch: (cause) => new Cause.UnknownError(cause),
+          try: () => claimUnreadableRow(userId, provider, session),
+        }).pipe(
+          Effect.flatMap((claimed) =>
+            claimed
+              ? Effect.succeed(claimed)
+              : discardProviderUser(provider, session).pipe(
+                  Effect.andThen(
+                    Effect.tryPromise({
+                      catch: (cause) => new Cause.UnknownError(cause),
+                      try: () => findProviderUser(userId, provider),
+                    })
+                  )
+                )
           )
         )
       ),
@@ -106,11 +255,9 @@ export const releaseProviderUser = async (
 
   const session = await findProviderUser(userId, provider);
 
-  if (!session) {
-    return;
+  if (session) {
+    await Effect.runPromise(discardProviderUser(provider, session));
   }
-
-  await Effect.runPromise(discardProviderUser(provider, session));
 
   await prisma.bankProviderUser.deleteMany({
     where: { provider: provider.id, userId },
