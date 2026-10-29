@@ -23,6 +23,8 @@ const MESSAGE_BY_CODE = {
   PASSWORD_COMPROMISED: m.auth_error_password_compromised,
   TOO_MANY_ATTEMPTS: m.auth_error_too_many_attempts,
   TOO_MANY_ATTEMPTS_REQUEST_NEW_CODE: m.auth_error_two_factor_expired,
+  USER_ALREADY_EXISTS: m.auth_error_user_exists,
+  USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL: m.auth_error_user_exists,
 } satisfies Record<string, () => string>;
 
 const isKnownCode = (code: string): code is keyof typeof MESSAGE_BY_CODE =>

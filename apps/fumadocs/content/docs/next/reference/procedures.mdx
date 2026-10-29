@@ -4,7 +4,7 @@ description: Every procedure of the Freenary API, with who can call it, the inpu
 icon: ListTree
 ---
 
-All 45 procedures, grouped by router. [API](/docs/reference/api) covers the base URL, the cookie, the request shapes and the rate limits.
+All 44 procedures, grouped by router. [API](/docs/reference/api) covers the base URL, the cookie, the request shapes and the rate limits.
 
 - **Path.** `budget.getTransactions` is `POST /rpc/budget/getTransactions` or `POST /api-reference/budget/getTransactions`.
 - **Input.** `/api-reference/spec.json` on your instance holds every input schema: types, required fields, enums, bounds and defaults. This page adds only the rules a schema can't express.
@@ -21,7 +21,6 @@ All 45 procedures, grouped by router. [API](/docs/reference/api) covers the base
 | [`assistant.getConversation`](#assistantgetconversation) | Protected | The active conversation and the instance's model |
 | [`assistant.saveTurn`](#assistantsaveturn) | Protected | Stores one finished turn the caller answered itself |
 | [`assistant.startNewConversation`](#assistantstartnewconversation) | Protected | Archives the active conversation |
-| [`auth.accountExists`](#authaccountexists) | Public | Whether an email address holds an account |
 | [`auth.capabilities`](#authcapabilities) | Public | The sign-in methods and password rules of the instance |
 | [`auth.viewer`](#authviewer) | Public | Whether the caller is signed in and onboarded |
 | [`bankConnection.disconnect`](#bankconnectiondisconnect) | Protected | Deletes one bank connection and everything under it |
@@ -107,12 +106,6 @@ Four procedures take `aggregation`: `getBudgetVsActual`, `getFixedVsVariable`, `
 **Output**: `{ ok: true }`. Nothing is deleted.
 
 ## `auth`
-
-### auth.accountExists
-
-**Output**: `{ exists }`. The lookup folds the address to lower case first.
-
-**Errors**: `TOO_MANY_REQUESTS` (429), over the [rate limit](/docs/reference/api#rate-limits).
 
 ### auth.capabilities
 

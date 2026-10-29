@@ -122,11 +122,10 @@ Counters live in the database. Better Auth limits `/api/auth/*` per caller addre
 | Password reset and one-time-code paths | 3 per 60 s |
 | Any other path | 100 per 60 s |
 
-Two procedures have their own limit:
+One surface has its own limit:
 
 | Surface | Limit | Counted per |
 | --- | --- | --- |
-| `auth.accountExists` | 20 per 60 s | Caller address |
 | `assistant.saveTurn` and `POST /ai/chat`, together | 30 per 300 s | Account |
 
 The other 40 procedures have no limit. Pace `budget.syncAccounts`, `budget.recategorise` and `budget.getSankeyData` yourself: each does heavy work.
