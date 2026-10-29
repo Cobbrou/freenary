@@ -52,7 +52,7 @@ import {
   missingKeysOf,
   writesOf,
 } from "../instance/merge";
-import { findProbe } from "../instance/probes";
+import { capProbeDetail, findProbe } from "../instance/probes";
 import { visibleTo } from "../instance/release";
 import {
   DISABLED_VARIANT,
@@ -338,7 +338,7 @@ export const instanceRouter = {
         const { reason } = probed.failure;
 
         return {
-          detail: reason.detail,
+          detail: capProbeDetail(reason.detail),
           outcome: "probe-failed" as const,
           reason: reason.kind,
           status: reason.kind === "rejected" ? reason.status : null,

@@ -54,7 +54,7 @@ Every setup value sealed under the old secret is skipped, with one warning per v
 
 The first account to create a session wins the operator claim. No later sign-in changes it.
 
-The operator can inspect, test, save and finish instance setup. The role grants no access to another user's finances or conversations. Freenary has no in-app role transfer.
+The operator can inspect, test, save and finish instance setup. The role grants no access to another user's finances or conversations. The server calls the endpoints the operator enters, private addresses included, so a local model works; a check shows at most the first 300 characters of what such an endpoint answers. Freenary has no in-app role transfer.
 
 If the wrong account won, follow [The wrong account became the operator](/docs/run/troubleshooting#the-wrong-account-became-the-operator). Treat an unknown operator as a compromised installation.
 

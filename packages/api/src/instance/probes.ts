@@ -103,3 +103,8 @@ export const findProbe = (
   variantId: string
 ): Option.Option<IntegrationProbe> =>
   Option.fromNullishOr(probes[`${integrationId}:${variantId}`]);
+
+const PROBE_DETAIL_MAX_LENGTH = 300;
+
+export const capProbeDetail = (detail: string): string =>
+  [...detail].slice(0, PROBE_DETAIL_MAX_LENGTH).join("");

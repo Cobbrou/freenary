@@ -379,7 +379,7 @@ The procedures behind the setup screen and Settings, under **Connections** › `
 | `outcome` | Other fields | Meaning |
 | --- | --- | --- |
 | `verified` | — | The provider accepted the credentials. A `disabled` variant, with nothing to check, also answers `verified` |
-| `probe-failed` | `detail`, `reason`, `status` | The provider refused, timed out after 10 s, or couldn't be reached. `status` is the HTTP status of a refusal, else `null` |
+| `probe-failed` | `detail`, `reason`, `status` | The provider refused, timed out after 10 s, or couldn't be reached. `status` is the HTTP status of a refusal, else `null`. `detail` holds at most the first 300 characters of the answer or error |
 | `missing-fields` | `keys` | Required fields are empty |
 | `invalid` | `detail` | A value fails validation |
 | `environment-owned` | `keys` | The environment picks another variant; `keys` names the variable |
