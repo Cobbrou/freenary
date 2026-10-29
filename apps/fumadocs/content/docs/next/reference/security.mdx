@@ -35,6 +35,7 @@ Cookie scope, one-hostname and two-subdomain setups are in [Reverse proxy](/docs
 - authenticator secrets and two-factor backup codes;
 - bank-link state against tampering. Each state also works once, within one hour of the start of the link;
 - bank, email and model values saved from the setup screen or from Settings, under **Connections**.
+- each user's Powens token, sealed at rest. A token stored by an older version is sealed shortly after the server starts, or on its first use before that.
 
 Saved values use authenticated encryption with a key derived from this secret. Environment values are never sealed and win over stored values.
 
@@ -42,7 +43,7 @@ Passwords and emailed one-time codes are hashed. Keep `BETTER_AUTH_SECRET`, cred
 
 ## What a rotation costs
 
-Changing `BETTER_AUTH_SECRET` signs everyone out. Trusted-device cookies stop working, bank-link state fails verification, and stored authenticator secrets and backup codes no longer decrypt.
+Changing `BETTER_AUTH_SECRET` signs everyone out. Trusted-device cookies stop working, bank-link state fails verification, and stored authenticator secrets and backup codes no longer decrypt. Powens tokens no longer decrypt either, so the syncs of those banks fail, and the server log names the user when one of them is read. Connecting a bank again gives the user a new Powens token; the banks linked before keep failing until the user disconnects them. Their old Powens user stays at Powens, because Freenary can no longer ask Powens to delete it.
 
 Restore the old secret when possible. Otherwise, a user with a passkey or linked provider can sign in, disable two-factor with their password, then enrol again.
 
@@ -72,7 +73,7 @@ Accounts, transactions, plans, conversations and credentials live in PostgreSQL.
 
 Data leaves the instance through these paths:
 
-- **Bank providers** receive connection and sync requests. A database reader gets a usable Powens user token. Enable Banking stores no per-user token; requests need the application's private key.
+- **Bank providers** receive connection and sync requests. A database reader gets a sealed Powens user token, useless without `BETTER_AUTH_SECRET`. Enable Banking stores no per-user token; requests need the application's private key.
 - **The assistant endpoint** receives the question, conversation context and requested finance data. This can include account and bank names, transactions, counterparties, categories and aggregates, but not IBANs or balances.
 - **Classifier endpoints** receive merchant descriptors, counterparties, country, currency, direction, channel, merchant category, a coarse amount bucket and routing fields. They don't receive exact amounts, dates, IBANs or accounts. Their answers are cached per merchant and shared by every account of the instance. One account can therefore sway the category that every other account gets for the same merchant, or leave it uncategorised for 30 days. A correction made in the app wins only for the account that made it.
 - **Email and sign-in providers** receive the addresses, codes and provider requests their feature needs.

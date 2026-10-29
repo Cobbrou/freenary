@@ -308,7 +308,7 @@ The migration reads `DATABASE_URL` from `apps/server/.env`; [Local development s
 
 A stub proves your adapter reads a payload correctly. It cannot prove the payload matches what the bank sends. Consent expiry, strong customer authentication and rate limits need live credentials. So does a pagination cursor that changes shape, and a per-bank field gap. Record real payloads once, then keep them as fixtures.
 
-> [!WARNING] `bank_provider_user.accessToken` holds a permanent bearer token in plain text. The interface accepts that cost. Do not add an adapter that needs an encrypted token at rest.
+`bank_provider_user.accessToken` holds the permanent bearer token sealed with `BETTER_AUTH_SECRET` (`packages/api/src/lib/bank-provider-user.ts`). The AAD names the provider and the user, so a sealed token copied to another row does not open. A sealed value starts with `sealed:`; any other value is a plain token from an older version, sealed at boot by `sealLegacyProviderTokens` or on its first read. Both writes compare the old value, so they never overwrite a newer token. After a secret rotation, `ensureProviderUser` replaces the unreadable row with the new Powens user. The connections made under the old Powens user keep failing until they are disconnected, and that user is left at Powens.
 
 ## Related
 

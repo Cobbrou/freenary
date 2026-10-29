@@ -2,6 +2,7 @@ import { cors } from "@elysiajs/cors";
 import { handleAssistantChat } from "@freenary/api/assistant/handler";
 import { createContext } from "@freenary/api/context";
 import { updateCheck } from "@freenary/api/instance/update-check";
+import { sealLegacyProviderTokens } from "@freenary/api/lib/bank-provider-user";
 import { isJsonRequest } from "@freenary/api/lib/json-request";
 import {
   handleMockConsent,
@@ -171,6 +172,8 @@ new Elysia()
   });
 
 updateCheck.start();
+
+await sealLegacyProviderTokens();
 
 const setupState = await Effect.runPromise(readSetupState());
 

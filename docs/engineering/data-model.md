@@ -59,7 +59,7 @@ Two places supply the URL. `packages/db/prisma.config.ts` hands `process.env.DAT
 | Model and table | Key fields | Constraints and notes |
 | --- | --- | --- |
 | `BankConnection`, table `bank_connection` | `provider`, `providerSessionId`, `institutionId?`, `institutionName`, `institutionCountry?`, `institutionBic?`, `institutionGroup?`, `status BankConnectionStatus @default(ACTIVE)`, `lastSyncedAt?` | `@@index([userId])` only, cascade. `lastSyncedAt` is also the next sync cursor |
-| `BankProviderUser`, table `bank_provider_user` | `provider`, `providerUserId`, `accessToken` | `@@unique([userId, provider])`, cascade. The schema comment states the token is stored as it arrives |
+| `BankProviderUser`, table `bank_provider_user` | `provider`, `providerUserId`, `accessToken` | `@@unique([userId, provider])`, cascade. The token is sealed with `BETTER_AUTH_SECRET` |
 | `BankAccount`, table `bank_account` | `connectionId`, `providerAccountId`, `iban?`, `identificationHash?`, `name?`, `type BankAccountType @default(UNKNOWN)`, `currency?`, `balanceMinor Int?`, `balanceAt?` | `@@unique([connectionId, providerAccountId])`, `@@index([connectionId])`, cascade |
 | `Holding`, table `holding` | `providerHoldingId`, `label`, `code?`, `codeType?`, `quantity Decimal @db.Decimal(24, 8)`, `unitCost?` and `unitValue? @db.Decimal(24, 6)`, `valuationMinor Int`, `unrealisedGainMinor Int?`, `currency`, `valuedAt?` | `@@unique([accountId, providerHoldingId])`, `@@index([accountId])`, cascade. A snapshot of the last sync, not a history |
 | `Transaction`, table `transaction` | The field groups below | `@@unique([accountId, providerTransactionId])`, `@@index([accountId, date])`, `@@index([accountId, amount])`, `@@index([merchantKey])`, cascade |
