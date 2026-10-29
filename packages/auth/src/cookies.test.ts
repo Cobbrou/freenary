@@ -1,8 +1,12 @@
-import { describe, expect, spyOn, test } from "bun:test";
+import { afterEach, describe, expect, mock, spyOn, test } from "bun:test";
 
 import { resolveCookiePolicy } from "./cookies";
 
 describe("resolveCookiePolicy", () => {
+  afterEach(() => {
+    mock.restore();
+  });
+
   test("keeps the session cookie same-site when one hostname serves both", () => {
     expect(
       resolveCookiePolicy({
@@ -82,8 +86,19 @@ describe("resolveCookiePolicy", () => {
     expect(warn).toHaveBeenCalledWith(
       expect.stringContaining("has no Secure flag")
     );
+  });
 
-    warn.mockRestore();
+  test("does not warn when production serves the cookie over HTTPS", () => {
+    const warn = spyOn(console, "warn").mockImplementation(() => {});
+
+    resolveCookiePolicy({
+      authUrl: "https://freenary.example.com",
+      cookieDomain: undefined,
+      isProduction: true,
+      webOrigin: "https://freenary.example.com",
+    });
+
+    expect(warn).not.toHaveBeenCalled();
   });
 
   test("lets development run cross-host over HTTP after warning", () => {
