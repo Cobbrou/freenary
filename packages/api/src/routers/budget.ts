@@ -42,6 +42,7 @@ import { escapeLikePattern } from "../lib/like-pattern";
 import {
   claimSyncRun,
   createSyncReporter,
+  readSyncOutcome,
   readSyncProgress,
 } from "../lib/sync-progress";
 import type { SyncReporter } from "../lib/sync-progress";
@@ -725,8 +726,6 @@ const runSyncAccounts = Effect.fnUntraced(function* runSyncAccounts(
   return {
     categorised,
     failures: failure ? [...connectionFailures, failure] : connectionFailures,
-    started: true,
-    success: connectionFailures.length === 0,
   };
 });
 
@@ -1211,6 +1210,36 @@ export const budgetRouter = {
       return { categories };
     }),
 
+  getSyncOutcome: protectedProcedure
+    .input(z.object({ startedAt: z.coerce.date() }))
+    .handler(async ({ context, input }) => {
+      const outcome = await readSyncOutcome(
+        context.session.user.id,
+        input.startedAt
+      );
+
+      if (outcome === "running") {
+        return null;
+      }
+
+      if (outcome === "lost") {
+        throw new ORPCError("NOT_FOUND", {
+          message: "The sync run ended without an outcome",
+        });
+      }
+
+      // SAFETY: only syncAccounts writes failures, and it writes these.
+      const failures = outcome.failures as BudgetPipelineReason[];
+
+      return {
+        categorised: outcome.categorised,
+        failures,
+        success: failures.every(
+          (failure) => failure.kind !== "connection-sync"
+        ),
+      };
+    }),
+
   getSyncStatus: protectedProcedure.handler(({ context }) =>
     readSyncProgress(context.session.user.id)
   ),
@@ -1410,24 +1439,28 @@ export const budgetRouter = {
       const claimedAt = await claimSyncRun(userId, "IMPORTING");
 
       if (claimedAt === null) {
-        return {
-          categorised: 0,
-          failures: [],
-          started: false,
-          success: true,
-        };
+        return { startedAt: null };
       }
 
       const reporter = createSyncReporter(userId, "IMPORTING", claimedAt);
 
-      return await Effect.runPromise(
+      Effect.runFork(
         runSyncAccounts(
           userId,
           input?.connectionId,
           input?.force ?? false,
           reporter
-        ).pipe(Effect.ensuring(Effect.promise(() => reporter.finished())))
+        ).pipe(
+          Effect.tapCause(Effect.logError),
+          Effect.matchCauseEffect({
+            onFailure: () => Effect.promise(() => reporter.finished()),
+            onSuccess: (outcome) =>
+              Effect.promise(() => reporter.finishedWith(outcome)),
+          })
+        )
       );
+
+      return { startedAt: claimedAt };
     }),
 
   updateTransactionCategory: protectedProcedure

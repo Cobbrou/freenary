@@ -6,10 +6,10 @@ import {
 } from "@tanstack/react-query";
 import { toast } from "sonner";
 
-import { invalidateBudgetData } from "@/entities/budget";
+import { invalidateBudgetData, syncAccountsToEnd } from "@/entities/budget";
 import { m } from "@/paraglide/messages.js";
 import { getLocale } from "@/paraglide/runtime.js";
-import { client, orpc } from "@/shared/api";
+import { orpc } from "@/shared/api";
 
 interface SyncVariables {
   force?: boolean;
@@ -20,7 +20,7 @@ export const useSyncAccounts = () => {
 
   const syncMutation = useMutation({
     mutationFn: (variables: SyncVariables = {}) =>
-      client.budget.syncAccounts({ force: variables.force }),
+      syncAccountsToEnd({ force: variables.force }),
     mutationKey: orpc.budget.syncAccounts.mutationKey(),
     onError: (_error, variables) => {
       toast.error(m.budget_sync_error(), {

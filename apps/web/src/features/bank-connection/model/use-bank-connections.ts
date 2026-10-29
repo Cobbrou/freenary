@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
 
-import { invalidateBudgetData } from "@/entities/budget";
+import { invalidateBudgetData, syncAccountsToEnd } from "@/entities/budget";
 import { m } from "@/paraglide/messages.js";
 import { client, orpc } from "@/shared/api";
 
@@ -77,7 +77,7 @@ export const useBankConnections = ({
 
   const resyncMutation = useMutation({
     mutationFn: (connection: BankConnection) =>
-      client.budget.syncAccounts({ connectionId: connection.id, force: true }),
+      syncAccountsToEnd({ connectionId: connection.id, force: true }),
     mutationKey: orpc.budget.syncAccounts.mutationKey(),
     onError: () => {
       toast.error(m.budget_sync_error());
