@@ -23,7 +23,7 @@ Don't publish PostgreSQL publicly. Docker-published ports can bypass host firewa
 
 The server and web images declare no non-root user, so their application processes run as root inside each container. Add no host mounts, Docker socket or capabilities.
 
-Session cookies are always `HttpOnly`. They get `Secure` only when `BETTER_AUTH_URL` starts with `https://`; TLS at the proxy doesn't change a value left as `http://`.
+Session cookies are always `HttpOnly`. They get `Secure` only when `BETTER_AUTH_URL` starts with `https://`; TLS at the proxy doesn't change a value left as `http://`. In production, a `http://` value logs a warning at start, or refuses to start when the API and the web app sit on different hosts with no `AUTH_COOKIE_DOMAIN`.
 
 Cookie scope, one-hostname and two-subdomain setups are in [Reverse proxy](/docs/reference/reverse-proxy). Set [trusted proxies](/docs/reference/reverse-proxy#trusted-proxies) so rate limits see each caller instead of one shared address.
 
@@ -74,7 +74,7 @@ Data leaves the instance through these paths:
 
 - **Bank providers** receive connection and sync requests. A database reader gets a usable Powens user token. Enable Banking stores no per-user token; requests need the application's private key.
 - **The assistant endpoint** receives the question, conversation context and requested finance data. This can include account and bank names, transactions, counterparties, categories and aggregates, but not IBANs or balances.
-- **Classifier endpoints** receive merchant descriptors, counterparties, country, currency, direction, channel, merchant category, a coarse amount bucket and routing fields. They don't receive exact amounts, dates, IBANs or accounts.
+- **Classifier endpoints** receive merchant descriptors, counterparties, country, currency, direction, channel, merchant category, a coarse amount bucket and routing fields. They don't receive exact amounts, dates, IBANs or accounts. Their answers are cached per merchant and shared by every account of the instance. One account can therefore sway the category that every other account gets for the same merchant, or leave it uncategorised for 30 days. A correction made in the app wins only for the account that made it.
 - **Email and sign-in providers** receive the addresses, codes and provider requests their feature needs.
 - **The breach check** receives the five-character hash prefix described above.
 

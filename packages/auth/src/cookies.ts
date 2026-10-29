@@ -66,6 +66,12 @@ export const resolveCookiePolicy = ({
     console.warn(`[auth] ${message}`);
   }
 
+  if (isProduction && !secure) {
+    console.warn(
+      `[auth] BETTER_AUTH_URL (${api.origin}) is plain HTTP, so the session cookie has no Secure flag and a browser sends it over unencrypted connections too. Set BETTER_AUTH_URL to its https:// address once TLS sits in front.`
+    );
+  }
+
   return {
     httpOnly: true,
     sameSite: isProvablySameSite ? "lax" : "none",
