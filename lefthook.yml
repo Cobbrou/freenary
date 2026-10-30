@@ -2,7 +2,7 @@
 # https://github.com/evilmartians/lefthook
 
 pre-commit:
-  parallel: true
+  piped: true
   jobs:
     - name: oxlint
       # oxlint exits 1 when the staged set holds no file it can lint. The glob
