@@ -32,6 +32,8 @@ import {
 } from "../categorisation/user-override";
 import { protectedProcedure } from "../index";
 import { accountsSummary } from "../lib/accounts-summary";
+import { AGGREGATION_MODES } from "../lib/aggregation";
+import type { AggregationMode } from "../lib/aggregation";
 import { findProviderUser } from "../lib/bank-provider-user";
 import { syncConnection, syncWindowStart } from "../lib/bank-sync";
 import type { PlannedLine } from "../lib/budget-planned";
@@ -172,11 +174,7 @@ const cashFlowQuery = ({ labelExpr, truncExpr }: CashFlowGrain) =>
   GROUP BY ${truncExpr}, ${labelExpr}
   ORDER BY ${truncExpr} ASC`;
 
-const aggregationSchema = z
-  .enum(["total", "average", "median"])
-  .default("total");
-
-type Aggregation = z.infer<typeof aggregationSchema>;
+const aggregationSchema = z.enum(AGGREGATION_MODES).default("total");
 
 const periodInput = z.object({
   aggregation: aggregationSchema,
@@ -218,7 +216,7 @@ const median = (values: number[]): number => {
 const aggregateMonthly = <K>(
   monthly: Map<K, Map<string, number>>,
   months: string[],
-  mode: "average" | "median"
+  mode: Exclude<AggregationMode, "total">
 ): Map<K, number> => {
   const aggregated = new Map<K, number>();
 
@@ -241,7 +239,7 @@ const aggregateMonthly = <K>(
 const aggregateOutgoing = <T extends { amount: number; date: Date }, K>(
   transactions: T[],
   keyOf: (tx: T) => K,
-  aggregation: "average" | "median" | "total",
+  aggregation: AggregationMode,
   from: Date,
   to: Date
 ): Map<K, number> => {
@@ -302,7 +300,7 @@ const outgoingRows = (
 
 const outgoingByCategory = (
   rows: OutgoingRow[],
-  aggregation: "average" | "median" | "total",
+  aggregation: AggregationMode,
   from: Date,
   to: Date
 ): Map<SpendingCategory, number> =>
@@ -342,7 +340,7 @@ const recurringShareByCategory = (
 
 const userOutgoingByCategory = async (
   userId: string,
-  aggregation: "average" | "median" | "total",
+  aggregation: AggregationMode,
   from: Date,
   to: Date
 ): Promise<Map<SpendingCategory, number>> =>
@@ -841,7 +839,7 @@ const runSyncAccounts = Effect.fnUntraced(function* runSyncAccounts(
 
 const sankeyOf = (
   transactions: PeriodRow[],
-  aggregation: Aggregation,
+  aggregation: AggregationMode,
   from: Date,
   to: Date
 ) => {

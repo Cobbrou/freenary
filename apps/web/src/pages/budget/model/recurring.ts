@@ -1,47 +1,23 @@
 import type { SpendingCategory } from "@freenary/api/lib/taxonomy";
+import type { AppRouter } from "@freenary/api/routers/index";
+import type { InferRouterOutputs } from "@orpc/server";
 
 import type { Locale } from "@/paraglide/runtime.js";
 
 import { localDayOfBankDate } from "./period";
 
-export type RecurrenceConfidence = (typeof RECURRENCE_CONFIDENCES)[number];
+export type RecurringData =
+  InferRouterOutputs<AppRouter>["budget"]["getRecurring"];
 
-export type RecurrenceFrequency = (typeof RECURRENCE_FREQUENCIES)[number];
+export type RecurringItem = RecurringData["items"][number];
 
-export type RecurrenceKind = (typeof RECURRENCE_KINDS)[number];
+export type RecurringMonth = RecurringData["monthly"][number];
 
-export interface RecurringItem {
-  amountSpread: number;
-  category: SpendingCategory;
-  confidence: RecurrenceConfidence;
-  currency: string;
-  frequency: RecurrenceFrequency;
-  intervalDays: number;
-  kind: RecurrenceKind;
-  lastSeen: string;
-  merchantKey: string;
-  merchantName: string | null;
-  nextExpected: string;
-  occurrences: number;
-  typicalAmountMinor: number;
-}
+export type RecurrenceConfidence = RecurringItem["confidence"];
 
-export interface RecurringMonth {
-  behavioralMinor: number;
-  discretionaryMinor: number;
-  fixedMinor: number;
-  month: string;
-}
+export type RecurrenceFrequency = RecurringItem["frequency"];
 
-export interface RecurringData {
-  asOf: string;
-  availableBalanceMinor: number | null;
-  currency: string;
-  items: RecurringItem[];
-  monthly: RecurringMonth[];
-  monthlyIncomeMinor: number | null;
-  plannedOutgoingMinor: number | null;
-}
+export type RecurrenceKind = RecurringItem["kind"];
 
 export interface UpcomingPayment {
   amountMinor: number;
@@ -124,7 +100,7 @@ export const RECURRENCE_CONFIDENCES = [
   "confirmed",
   "likely",
   "pattern",
-] as const;
+] as const satisfies readonly RecurrenceConfidence[];
 
 export const RECURRENCE_FREQUENCIES = [
   "annual",
@@ -132,9 +108,12 @@ export const RECURRENCE_FREQUENCIES = [
   "monthly",
   "quarterly",
   "weekly",
-] as const;
+] as const satisfies readonly RecurrenceFrequency[];
 
-export const RECURRENCE_KINDS = ["behavioral", "fixed"] as const;
+export const RECURRENCE_KINDS = [
+  "behavioral",
+  "fixed",
+] as const satisfies readonly RecurrenceKind[];
 
 export const UPCOMING_HORIZON_DAYS = 30;
 

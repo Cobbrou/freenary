@@ -1,13 +1,11 @@
-export type SyncPhase = "categorising" | "importing";
+import type { AppRouter } from "@freenary/api/routers/index";
+import type { InferRouterOutputs } from "@orpc/server";
 
-export interface SyncProgress {
-  phase: SyncPhase;
-  accountsDone: number;
-  accountsTotal: number;
-  transactionsImported: number;
-  categorised: number;
-  categorisedTotal: number;
-}
+export type SyncProgress = NonNullable<
+  InferRouterOutputs<AppRouter>["budget"]["getSyncStatus"]
+>;
+
+export type SyncPhase = SyncProgress["phase"];
 
 export type SyncProgressDetail =
   | { kind: "accounts"; done: number; total: number }

@@ -36,6 +36,36 @@ export default defineConfig({
   jsPlugins: ["@shadcn/lint"],
   overrides: [
     {
+      files: ["apps/web/**"],
+      rules: {
+        "no-restricted-imports": [
+          "error",
+          {
+            patterns: [
+              {
+                allowTypeImports: true,
+                group: [
+                  "@freenary/api",
+                  "@freenary/api/**",
+                  "!@freenary/api/assistant/prompt",
+                  "!@freenary/api/assistant/tools",
+                  "!@freenary/api/assistant/turn",
+                  "!@freenary/api/assistant/ui",
+                  "!@freenary/api/lib/aggregation",
+                  "!@freenary/api/lib/budget-profile",
+                  "!@freenary/api/lib/categories",
+                  "!@freenary/api/lib/taxonomy",
+                  "!@freenary/api/lib/transaction-filters",
+                ],
+                message:
+                  "The web runs this code in the browser: import only the isomorphic @freenary/api modules, or `import type` anything else.",
+              },
+            ],
+          },
+        ],
+      },
+    },
+    {
       files: ["**/*.test.ts", "**/*.test.tsx"],
       rules: {
         "oxslop/require-safety-comment-for-type-assertion": "off",

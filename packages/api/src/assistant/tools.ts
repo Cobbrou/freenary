@@ -2,6 +2,7 @@ import type { Tool } from "ai";
 import { tool } from "ai";
 import { z } from "zod";
 
+import { AGGREGATION_MODES } from "../lib/aggregation";
 import { CATEGORY_GROUPS, SPENDING_CATEGORIES } from "../lib/taxonomy";
 import type { AppRouterClient } from "../routers/index";
 
@@ -13,7 +14,7 @@ const period = {
 };
 
 const aggregation = z
-  .enum(["total", "average", "median"])
+  .enum(AGGREGATION_MODES)
   .default("total")
   .describe("total over the period, or the per-month average or median");
 

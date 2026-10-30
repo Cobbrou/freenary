@@ -2,7 +2,6 @@ import type { TransactionFilter } from "@freenary/api/lib/transaction-filters";
 import type { AppRouter } from "@freenary/api/routers/index";
 import type { InferRouterOutputs } from "@orpc/server";
 import {
-  keepPreviousData,
   useInfiniteQuery,
   useQuery,
   useQueryClient,
@@ -15,6 +14,7 @@ import { orpc } from "@/shared/api";
 
 import {
   isStaleView,
+  periodOverviewQueryOptions,
   prefetchPeriod,
   prefetchTransactions,
   transactionsQueryOptions,
@@ -84,12 +84,9 @@ export const TransactionsPage = () => {
     string | null
   >(null);
 
-  const overviewQuery = useQuery({
-    ...orpc.budget.getPeriodOverview.queryOptions({
-      input: { aggregation, from, to },
-    }),
-    placeholderData: keepPreviousData,
-  });
+  const overviewQuery = useQuery(
+    periodOverviewQueryOptions({ aggregation, from, to })
+  );
 
   const listInput = useMemo<TransactionsInput>(
     () => ({
