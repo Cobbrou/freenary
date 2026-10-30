@@ -31,7 +31,7 @@ describe("TRANSACTION_CLASSIFIER_TIMEOUT_MS", () => {
 
 const DEVELOPMENT_AUTH_SECRET = "dev_secret_change_me_at_least_32chars";
 
-const outputOf = ({ stdout, stderr }: Bun.SyncSubprocess) =>
+const outputOf = ({ stdout, stderr }: Bun.SyncSubprocess<"pipe", "pipe">) =>
   `${stdout.toString().trim()}${stderr.toString().trim()}`;
 
 const parseSecretUnder = (nodeEnv: string, secret: string) =>
