@@ -88,6 +88,8 @@ describe("the single-origin forwarding", () => {
     });
 
     expect(routes.length).toBeGreaterThan(0);
-    expect(FORWARDED_PATH_PREFIXES.toSorted()).toEqual(routes.toSorted());
+    expect<string[]>(FORWARDED_PATH_PREFIXES.toSorted()).toEqual(
+      routes.toSorted()
+    );
   });
 });

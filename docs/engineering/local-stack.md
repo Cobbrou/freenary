@@ -282,7 +282,7 @@ bun run build
 | --- | --- | --- | --- |
 | 1 | _(unnamed)_ | `bun install --frozen-lockfile` | The lockfile matches the manifests |
 | 2 | Lint & format | `bun run check` | `ultracite check` over the whole repository |
-| 3 | Type check | `bun run check-types` | `turbo run check-types` |
+| 3 | Type check | `bun run check-types` | `turbo run check-types`, then `tsc --noEmit -p scripts` |
 | 4 | Architecture | `bun run check:fsd` | `turbo run lint:fsd`, the Feature-Sliced Design rules of `apps/web` and `apps/fumadocs` |
 | 5 | Documentation | `bun run docs:check` | `turbo run docs:check`, which reaches `apps/fumadocs` |
 | 6 | Environment | `bun run env:check` | `scripts/env-sync.ts --check`, which compares `.env.example` and the configuration reference against `packages/env/src/schema.ts` |
@@ -301,7 +301,7 @@ The `compose` job needs no Bun and no install. It runs `docker compose config --
 
 That job is the one CI check no root script covers. Reproduce it from `.github/workflows/ci.yml` before you change any of these compose files.
 
-> [!WARNING] `bun run check-types` reaches every workspace, `apps/web` included, which checks its test files too. The web check runs after its `build`, because the build generates `src/routeTree.gen.ts` and `src/paraglide/`, so the first run in a fresh checkout takes as long as a web build.
+> [!WARNING] `bun run check-types` reaches every workspace, `apps/web` included, which checks its test files too, then the root `scripts/` folder through `scripts/tsconfig.json`. The web check runs after its `build`, because the build generates `src/routeTree.gen.ts` and `src/paraglide/`, so the first run in a fresh checkout takes as long as a web build.
 
 ### Tests: the API tests in CI, the rest by hand
 
