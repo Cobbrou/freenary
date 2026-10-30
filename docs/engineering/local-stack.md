@@ -339,7 +339,7 @@ Four of the added rules change how the code is written. `no-comments` rejects ev
 
 A comment therefore never holds a fact. `docs/engineering/` in the repository holds one file per area. Each bullet names the file and the symbol it belongs to. Read the file for the area you change, and add to it when the code cannot state what you learned.
 
-`lefthook.yml` declares one hook. On `pre-commit` it runs three jobs in parallel:
+`lefthook.yml` declares one hook. On `pre-commit` it runs three jobs in order, with `piped: true`, so two jobs never write the same file at once and a failure skips the jobs after it:
 
 | Job | Command |
 | --- | --- |

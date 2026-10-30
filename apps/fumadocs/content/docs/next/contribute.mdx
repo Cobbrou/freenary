@@ -80,7 +80,7 @@ bun run build         # Build
 
 `bun run fix` repairs most lint and format errors. A second CI job parses every Compose file.
 
-On each commit, lefthook runs three jobs on the staged files:
+On each commit, lefthook runs three jobs on the staged files, one after another, and stops at the first that fails:
 
 - `oxlint --fix`, then stages the fixes.
 - `oxfmt --write`, then stages the fixes.
