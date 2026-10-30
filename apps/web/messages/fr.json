@@ -777,6 +777,7 @@
   "first_steps_state_todo": "À faire",
   "first_steps_title": "Premiers pas",
   "locale_switcher_label": "Langue",
+  "mutation_error_generic": "Une erreur est survenue. Réessayez.",
   "nav_analysis": "Analyse",
   "nav_budget": "Budget",
   "nav_budget_recurring": "Récurrent",

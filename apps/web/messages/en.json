@@ -768,6 +768,7 @@
   "first_steps_state_todo": "To do",
   "first_steps_title": "First steps",
   "locale_switcher_label": "Language",
+  "mutation_error_generic": "Something went wrong. Try again.",
   "nav_analysis": "Analysis",
   "nav_budget": "Budget",
   "nav_budget_recurring": "Recurring",

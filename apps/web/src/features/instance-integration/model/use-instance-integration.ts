@@ -64,6 +64,7 @@ export const useInstanceIntegration = ({
 
   const complete = useMutation(
     orpc.instance.complete.mutationOptions({
+      meta: { errorShownInline: true },
       onSuccess: async ({ restarting }) => {
         if (restarting) {
           await reconnect();
