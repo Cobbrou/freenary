@@ -227,7 +227,7 @@ export const PeriodNavigator = ({
     !firstMonth || new Date(anchorYear, anchorMonth - step, 1) >= firstMonth;
 
   const canGoForward =
-    !lastMonth || new Date(anchorYear, anchorMonth + step, 1) <= lastMonth;
+    !lastMonth || new Date(anchorYear, anchorMonth + 1, 1) <= lastMonth;
 
   return (
     <div className="flex items-center justify-between">
