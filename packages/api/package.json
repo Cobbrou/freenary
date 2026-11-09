@@ -3,12 +3,23 @@
   "license": "AGPL-3.0-or-later",
   "type": "module",
   "exports": {
-    ".": {
-      "default": "./src/index.ts"
-    },
-    "./*": {
-      "default": "./src/*.ts"
-    }
+    ".": "./src/index.ts",
+    "./assistant/handler": "./src/assistant/handler.ts",
+    "./assistant/prompt": "./src/assistant/prompt.ts",
+    "./assistant/tools": "./src/assistant/tools.ts",
+    "./assistant/turn": "./src/assistant/turn.ts",
+    "./assistant/ui": "./src/assistant/ui.ts",
+    "./context": "./src/context.ts",
+    "./instance/update-check": "./src/instance/update-check.ts",
+    "./lib/aggregation": "./src/lib/aggregation.ts",
+    "./lib/bank-provider-user": "./src/lib/bank-provider-user.ts",
+    "./lib/budget-profile": "./src/lib/budget-profile.ts",
+    "./lib/categories": "./src/lib/categories.ts",
+    "./lib/json-request": "./src/lib/json-request.ts",
+    "./lib/taxonomy": "./src/lib/taxonomy.ts",
+    "./lib/transaction-filters": "./src/lib/transaction-filters.ts",
+    "./providers/mock/consent": "./src/providers/mock/consent.ts",
+    "./routers/index": "./src/routers/index.ts"
   },
   "scripts": {
     "check-types": "tsc --noEmit",

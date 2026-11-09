@@ -9,6 +9,7 @@ const progress = (overrides: Partial<SyncProgress>): SyncProgress => ({
   categorised: 0,
   categorisedTotal: 0,
   phase: "importing",
+  startedAt: new Date(0),
   transactionsImported: 0,
   ...overrides,
 });

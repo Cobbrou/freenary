@@ -9,7 +9,7 @@ import {
   MOCK_CONSENT_PATH,
 } from "@freenary/api/providers/mock/consent";
 import { appRouter } from "@freenary/api/routers/index";
-import { auth } from "@freenary/auth";
+import { auth, requestSession } from "@freenary/auth";
 import { env } from "@freenary/env/server";
 import { readSetupState } from "@freenary/instance-config";
 import { OpenAPIHandler } from "@orpc/openapi/fetch";
@@ -22,7 +22,6 @@ import { Effect } from "effect";
 import { Elysia } from "elysia";
 import { initLogger } from "evlog";
 import { createAuthMiddleware } from "evlog/better-auth";
-import type { BetterAuthInstance } from "evlog/better-auth";
 import { evlog } from "evlog/elysia";
 import { createFsDrain } from "evlog/fs";
 
@@ -72,8 +71,13 @@ initLogger({
   env: { service: "freenary-server" },
 });
 
-// SAFETY: auth is created by better-auth which satisfies BetterAuthInstance; cast needed for evlog middleware typing
-const identifyUser = createAuthMiddleware(auth as BetterAuthInstance, {
+const sessionResolvedOncePerRequest = {
+  api: {
+    getSession: ({ headers }: { headers: Headers }) => requestSession(headers),
+  },
+};
+
+const identifyUser = createAuthMiddleware(sessionResolvedOncePerRequest, {
   exclude: ["/api/auth/**"],
   maskEmail: true,
 });

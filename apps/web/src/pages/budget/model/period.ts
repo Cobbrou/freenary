@@ -1,15 +1,12 @@
+import type { AggregationMode } from "@freenary/api/lib/aggregation";
+
 import { m } from "@/paraglide/messages.js";
 import type { Locale } from "@/paraglide/runtime.js";
 
 export type TimeRange = "1M" | "3M" | "1Y";
 
-export type AggregationMode = "total" | "average" | "median";
-
-export const AGGREGATION_MODES: AggregationMode[] = [
-  "total",
-  "average",
-  "median",
-];
+export { AGGREGATION_MODES } from "@freenary/api/lib/aggregation";
+export type { AggregationMode } from "@freenary/api/lib/aggregation";
 
 const AGGREGATION_LABEL_MESSAGES = {
   average: m.budget_aggregation_average,

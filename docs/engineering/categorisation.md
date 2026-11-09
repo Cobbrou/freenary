@@ -17,7 +17,7 @@ The pipeline is a batch pass over stored rows. It never runs when the web app re
 
 ## The stages
 
-The function `categoriseBatch(transactions, options)` loads the dictionary once and walks the batch in order. It then runs the classifier phase over everything no stage resolved. It unloads the dictionary in a `finally` block. Nothing escapes `categoriseTransaction`: any error becomes the unknown result.
+The function `categoriseBatch(transactions, options)` loads the dictionary once and walks the batch in order. It then runs the classifier phase over everything no stage resolved. The dictionary stays loaded for the next batch. Nothing escapes `categoriseTransaction`: any error becomes the unknown result.
 
 `ResolutionStage` holds exactly `channel`, `internal-transfer`, `user-override`, `dictionary`, `mcc`, `rules`, `cached-model`, `model` and `none`. `ResolutionBand` holds `auto`, `suggest` and `unknown`.
 
@@ -94,7 +94,7 @@ This stage runs for the whole batch at once, and only when `TRANSACTION_CLASSIFI
 | Internal transfers | `internal-transfer.ts` | Pairs an outgoing and an incoming transaction of equal absolute amount and the same currency, on two accounts of one user, inside 24 hours. It then sets `isInternalTransfer: true` and nothing else. A movement between the user's own accounts is a transaction type, and no category names it |
 | Recurrence | `recurrence.ts` | Nothing. It groups outgoing transactions by merchant key. It then reads a cadence, a recurrence type, a confidence level and a month-by-month split. The file holds no write, and each request recomputes the answer. [Recurrence detection](#recurrence-detection) holds the rules |
 
-The internal-transfer pass includes rows that already carry a category. On any throw it logs a warning and returns `0`.
+The internal-transfer pass includes rows that already carry a category. After a sync it reads only rows booked from the earliest day the sync imported, minus the 24-hour tolerance; a forced sync starts from the full provider window. On any throw it logs a warning and returns `0`.
 
 > [!NOTE] **Dead code, stated as a fact about the current tree.** `internal-transfer.ts` selects `BankAccount.identificationHash` and never uses it. The pairing reads amount, currency and date alone. The schema comment calls that column a cross-account matching key, and no code matches on it.
 
@@ -269,7 +269,7 @@ The artifact is `packages/api/data/merchants.jsonl.gz`, gzipped JSONL, one merch
 | `aliases` | Each alias with its normalised form |
 | `countries` | The country scope. It is optional, because an artifact built before the scope existed carries none |
 
-`dictionary.ts` streams the file into a module map with a reference count. The keys are `normalisedName` plus every `normalisedAlias` that no other row took. It drops a row with a null category. It also drops a row outside the country scope of the batch, where an empty `countries` list means worldwide. A missing file warns once and leaves an empty map, so stage 3 becomes a permanent miss.
+`dictionary.ts` streams the file once into a module map that stays resident for the life of the process; a batch whose countries the loaded scope does not cover re-reads it with the wider scope. A load that throws, such as a corrupt file, leaves an empty map for that batch and is retried by the next one. A missing file or a refused signature is not an error: it leaves an empty map that stays until the process restarts. The keys are `normalisedName` plus every `normalisedAlias` that no other row took. It drops a row with a null category. It also drops a row outside the country scope of the batch, where an empty `countries` list means worldwide. A missing file warns once and leaves an empty map, so stage 3 becomes a permanent miss.
 
 ### The build
 
@@ -492,7 +492,7 @@ Durable facts that the code cannot carry in a name. Each bullet names the module
 
 - `packages/api/src/categorisation/dictionary.ts › loadedScopeCovers` — batches share one module-global map, so a narrower load must never satisfy a wider caller: two concurrent batches in different countries would otherwise inherit whichever filter loaded first. A `loadedScope` of `null` covers every request; a widening rebuild publishes a superset map, so a batch still reading the previous map stays correct.
 - `packages/api/src/categorisation/dictionary.ts › ensureLoaded` — the new load is assigned to `state.loading` _before_ it is awaited and chains behind the in-flight one, so a concurrent caller queues instead of starting a second decompression, and `widenTo` re-tests the scope once the queue settles.
-- `packages/api/src/categorisation/dictionary.ts › lookupDictionary` — populates the module cache without incrementing `openBatches`, so it loads outside the reference-count protocol, and it asks for `EVERY_COUNTRY` (`null`, every country) because a lookup outside a batch has no scope and a narrower load would risk a false miss. A test that calls it leaves the real artifact resident for later files, which is why the dictionary tests call `unloadDictionary()` in `beforeEach` and `afterEach`.
+- `packages/api/src/categorisation/dictionary.ts › lookupDictionary` — populates the module cache when nothing is loaded, and it asks for `EVERY_COUNTRY` (`null`, every country) because a lookup outside a batch has no scope and a narrower load would risk a false miss. The map stays resident for the life of the process, which is why the dictionary tests call `replaceDictionaryEntries(null)` in `beforeEach` and `afterEach`.
 - `packages/api/src/categorisation/dictionary.ts › DATA_DIR` — the loader once resolved one directory above the package's own `data/`, found nothing and logged only a warning, turning every stage-3 lookup into a miss. `dictionary.test.ts` guards that path: the fixture must occupy the real artifact path, the build output is renamed aside for the run, and `beforeAll` restores an interrupted run's backup first because the artifact is gitignored and a second rename would destroy the only copy.
 - `packages/api/src/categorisation/dictionary.ts › indexMerchantLine` — a stored category can predate either taxonomy change, so it is decoded through `resolveCategorySlug` rather than rejected: the artifact outlives the code that built it, and both the pre-hierarchy and the two-level spellings still resolve. A malformed line is skipped silently and never fails the batch.
 - `packages/api/src/categorisation/verify.ts › ALGORITHM_FROM_KEY` — `node:crypto`'s `verify(null, …)` takes the algorithm from the key itself, which is Ed25519 (`packages/api/scripts/generate-signing-key.ts`). Verification fails closed: with no `DICTIONARY_PUBLIC_KEY`, `verifySignature` returns false before it looks at anything.

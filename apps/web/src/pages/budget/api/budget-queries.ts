@@ -65,6 +65,12 @@ export const transactionsQueryOptions = ({
     placeholderData: keepPreviousData,
   });
 
+export const periodOverviewQueryOptions = (period: PeriodInput) =>
+  orpc.budget.getPeriodOverview.queryOptions({
+    input: period,
+    placeholderData: keepPreviousData,
+  });
+
 const warmWithoutRaising = async (fetching: Promise<unknown>[]) => {
   await Promise.allSettled(fetching);
 };
@@ -84,18 +90,7 @@ export const prefetchPeriod = (
   list: Omit<TransactionsInput, "from" | "to">
 ) => {
   void warmWithoutRaising([
-    queryClient.query(
-      orpc.budget.getSpendingBreakdown.queryOptions({ input: period })
-    ),
-    queryClient.query(
-      orpc.budget.getSankeyData.queryOptions({ input: period })
-    ),
-    queryClient.query(
-      orpc.budget.getFixedVsVariable.queryOptions({ input: period })
-    ),
-    queryClient.query(
-      orpc.budget.getBudgetVsActual.queryOptions({ input: period })
-    ),
+    queryClient.query(periodOverviewQueryOptions(period)),
     queryClient.infiniteQuery(
       transactionsQueryOptions({ ...list, from: period.from, to: period.to })
     ),

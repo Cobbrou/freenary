@@ -1,5 +1,6 @@
 import { isAssistantToolName } from "@freenary/api/assistant/tools";
 import type { AssistantToolName } from "@freenary/api/assistant/tools";
+import { AGGREGATION_MODES } from "@freenary/api/lib/aggregation";
 import {
   CATEGORY_GROUPS,
   SPENDING_CATEGORIES,
@@ -29,7 +30,7 @@ const TOOL_PURPOSES = {
 } satisfies Record<AssistantToolName, () => string>;
 
 const toolInputSchema = z.looseObject({
-  aggregation: z.enum(["total", "average", "median"]).optional(),
+  aggregation: z.enum(AGGREGATION_MODES).optional(),
   categories: z.array(z.enum(SPENDING_CATEGORIES)).optional(),
   direction: z.enum(["incoming", "outgoing"]).optional(),
   from: z.string().optional(),

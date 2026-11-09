@@ -15,7 +15,7 @@ import { gzipSync } from "node:zlib";
 import {
   loadDictionary,
   lookupDictionary,
-  unloadDictionary,
+  replaceDictionaryEntries,
 } from "./dictionary";
 
 interface MerchantFixture {
@@ -86,11 +86,11 @@ describe("dictionary", () => {
   });
 
   beforeEach(() => {
-    unloadDictionary();
+    replaceDictionaryEntries(null);
   });
 
   afterEach(() => {
-    unloadDictionary();
+    replaceDictionaryEntries(null);
   });
 
   it("loads the artifact from the package's own data directory", async () => {
@@ -118,6 +118,34 @@ describe("dictionary", () => {
     await loadDictionary(["ZZ"]);
 
     expect(await lookupDictionary("no such merchant")).toBeNull();
+  });
+
+  it("keeps the artifact loaded for the next batch", async () => {
+    await writeFixtureAtTheArtifactPath();
+    await loadDictionary(["ZZ"]);
+    await rm(DATA_PATH);
+    await loadDictionary(["ZZ"]);
+
+    expect(await lookupDictionary("testmart")).toEqual({
+      category: "groceries",
+      name: "Testmart",
+    });
+  });
+
+  it("retries a load that failed on the next batch", async () => {
+    await mkdir(path.dirname(DATA_PATH), { recursive: true });
+    await writeFile(DATA_PATH, "not gzip");
+    await loadDictionary(["ZZ"]);
+
+    expect(await lookupDictionary("testmart")).toBeNull();
+
+    await writeFixtureAtTheArtifactPath();
+    await loadDictionary(["ZZ"]);
+
+    expect(await lookupDictionary("testmart")).toEqual({
+      category: "groceries",
+      name: "Testmart",
+    });
   });
 
   it("drops merchants outside the requested country but keeps unscoped ones", async () => {

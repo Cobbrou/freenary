@@ -14,11 +14,7 @@ import type {
   TransactionClassifier,
 } from "./classifier/types";
 import { deterministicCategory, readsAsRefund } from "./deterministic";
-import {
-  loadDictionary,
-  lookupDictionary,
-  unloadDictionary,
-} from "./dictionary";
+import { loadDictionary, lookupDictionary } from "./dictionary";
 import { keywordsFor } from "./keywords";
 import type { TransactionChannel } from "./normalise/types";
 import type {
@@ -614,5 +610,5 @@ export const categoriseBatch = async (
 
   await loadDictionary(options.countries);
 
-  return await categoriseAll(transactions, options).finally(unloadDictionary);
+  return await categoriseAll(transactions, options);
 };
