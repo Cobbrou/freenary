@@ -34,7 +34,8 @@ import { PRESS_MOTION } from "./list-controls";
 
 interface SpendingBreakdownChartProps {
   activeCategories: SpendingCategory[];
-  data: CategoryAmount[];
+  categories: CategoryAmount[];
+  currency: string;
   onSelect?: (selection: CategorySelection | null) => void;
 }
 
@@ -91,11 +92,13 @@ const buildConfigKeyedByCategorySlug = (
 const SpendingBreakdownTooltip = ({
   active,
   config,
+  currency,
   payload,
   total,
 }: {
   active?: boolean;
   config: ChartConfig;
+  currency: string;
   payload?: { payload?: BreakdownSlice }[];
   total: number;
 }) => {
@@ -121,7 +124,7 @@ const SpendingBreakdownTooltip = ({
           </span>
         </span>
         <span className="text-foreground font-mono font-medium tabular-nums">
-          {formatCurrency(slice.amount)} ({share}%)
+          {formatCurrency(slice.amount, currency)} ({share}%)
         </span>
       </div>
     </ChartTooltipCard>
@@ -131,6 +134,7 @@ const SpendingBreakdownTooltip = ({
 const LegendChip = ({
   amount,
   color,
+  currency,
   index,
   isSelected,
   label,
@@ -139,6 +143,7 @@ const LegendChip = ({
 }: {
   amount: number;
   color: string | undefined;
+  currency: string;
   index: number;
   isSelected: boolean;
   label: ReactNode;
@@ -168,7 +173,9 @@ const LegendChip = ({
           style={{ backgroundColor: color }}
         />
         <span>{label}</span>
-        <span className="text-foreground">{formatCurrency(amount)}</span>
+        <span className="text-foreground">
+          {formatCurrency(amount, currency)}
+        </span>
       </motion.button>
     </li>
   );
@@ -176,7 +183,8 @@ const LegendChip = ({
 
 export const SpendingBreakdownChart = ({
   activeCategories,
-  data: categories,
+  categories,
+  currency,
   onSelect,
 }: SpendingBreakdownChartProps) => {
   const slices = useMemo(() => breakdownSlices(categories), [categories]);
@@ -232,7 +240,13 @@ export const SpendingBreakdownChart = ({
       >
         <PieChart>
           <ChartTooltip
-            content={<SpendingBreakdownTooltip config={config} total={total} />}
+            content={
+              <SpendingBreakdownTooltip
+                config={config}
+                currency={currency}
+                total={total}
+              />
+            }
           />
           <Pie
             data={slices}
@@ -271,6 +285,7 @@ export const SpendingBreakdownChart = ({
             <LegendChip
               amount={slice.amount}
               color={config[sliceKey(slice)]?.color}
+              currency={currency}
               index={index}
               isSelected={isSelected(slice)}
               key={sliceKey(slice)}
@@ -291,6 +306,7 @@ export const SpendingBreakdownChart = ({
                   <LegendChip
                     amount={entry.amount}
                     color={categoryChartColor(entry.category)}
+                    currency={currency}
                     index={slices.length + place}
                     isSelected={activeCategories.includes(entry.category)}
                     key={entry.category}

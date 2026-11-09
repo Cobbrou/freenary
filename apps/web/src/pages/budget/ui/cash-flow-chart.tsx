@@ -9,10 +9,12 @@ import { selectionOfNodeId, toCashFlowSankey } from "../model/cash-flow-sankey";
 import type { CashFlowData } from "../model/cash-flow-sankey";
 
 interface CashFlowChartProps extends CashFlowData {
+  currency: string;
   onSelect?: (selection: CategorySelection) => void;
 }
 
 export const CashFlowChart = ({
+  currency,
   groups,
   incomeNodes,
   moneyLeft,
@@ -48,7 +50,7 @@ export const CashFlowChart = ({
       <SankeyChart
         className="max-h-full"
         columns={flow.columns}
-        formatValue={formatCurrency}
+        formatValue={(value) => formatCurrency(value, currency)}
         label={m.budget_cash_flow_chart_label()}
         links={flow.links}
         onNodeClick={onSelect ? handleNodeClick : undefined}

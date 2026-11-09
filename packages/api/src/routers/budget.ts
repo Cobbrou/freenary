@@ -72,6 +72,7 @@ import {
   transactionFiltersSchema,
 } from "../lib/transaction-filters";
 import { transactionPage } from "../lib/transaction-page";
+import { userCurrency } from "../lib/user-currency";
 import { getProvider } from "../providers/registry";
 import { savedFilterProcedures } from "./saved-filters";
 
@@ -965,11 +966,14 @@ export const budgetRouter = {
       },
     });
 
-    const transactionDateBounds = await prisma.transaction.aggregate({
-      _max: { date: true },
-      _min: { date: true },
-      where: { account: { connection: { userId } } },
-    });
+    const [transactionDateBounds, currency] = await Promise.all([
+      prisma.transaction.aggregate({
+        _max: { date: true },
+        _min: { date: true },
+        where: { account: { connection: { userId } } },
+      }),
+      userCurrency(userId),
+    ]);
 
     return {
       accounts: accounts.map((a) => ({
@@ -978,6 +982,7 @@ export const budgetRouter = {
         institutionName: a.connection.institutionName,
         name: a.name,
       })),
+      currency,
       firstTransactionDate: transactionDateBounds._min.date,
       hasAccounts: accounts.length > 0,
       lastTransactionDate: transactionDateBounds._max.date,
@@ -990,12 +995,13 @@ export const budgetRouter = {
       const userId = context.session.user.id;
       const { aggregation, from, to } = input;
 
-      const [lines, actualByCategory] = await Promise.all([
+      const [lines, actualByCategory, currency] = await Promise.all([
         budgetLinesOf(userId),
         userOutgoingByCategory(userId, aggregation, from, to),
+        userCurrency(userId),
       ]);
 
-      return budgetVsActualOf(lines, actualByCategory, input);
+      return { ...budgetVsActualOf(lines, actualByCategory, input), currency };
     }),
 
   getCashFlow: protectedProcedure
@@ -1015,11 +1021,15 @@ export const budgetRouter = {
 
       const sql = cashFlowQuery(cashFlowGrainFor(spanDays));
 
-      const periods = await prisma.$queryRawUnsafe<
-        { incoming: bigint; label: string; outgoing: bigint }[]
-      >(sql, userId, from, to);
+      const [periods, currency] = await Promise.all([
+        prisma.$queryRawUnsafe<
+          { incoming: bigint; label: string; outgoing: bigint }[]
+        >(sql, userId, from, to),
+        userCurrency(userId),
+      ]);
 
       return {
+        currency,
         periods: periods.map((p) => ({
           incoming: Number(p.incoming),
           label: p.label,
@@ -1034,16 +1044,20 @@ export const budgetRouter = {
       const userId = context.session.user.id;
       const { aggregation, from, to } = input;
 
-      const [rows, recurring] = await Promise.all([
+      const [rows, recurring, currency] = await Promise.all([
         outgoingRows(userId, from, to),
         detectRecurringExpenses(userId, cadenceWindow(from, to)),
+        userCurrency(userId),
       ]);
 
-      return fixedVsVariableOf(
-        rows,
-        outgoingByCategory(rows, aggregation, from, to),
-        recurring
-      );
+      return {
+        ...fixedVsVariableOf(
+          rows,
+          outgoingByCategory(rows, aggregation, from, to),
+          recurring
+        ),
+        currency,
+      };
     }),
 
   getMerchants: protectedProcedure
@@ -1102,20 +1116,27 @@ export const budgetRouter = {
       const userId = context.session.user.id;
       const { aggregation, from, to } = input;
 
-      const [rows, lines, recurring] = await Promise.all([
+      const [rows, lines, recurring, currency] = await Promise.all([
         periodRows(userId, from, to),
         budgetLinesOf(userId),
         detectRecurringExpenses(userId, cadenceWindow(from, to)),
+        userCurrency(userId),
       ]);
 
       const outgoing = rows.filter((row) => row.amount < 0);
       const byCategory = outgoingByCategory(outgoing, aggregation, from, to);
 
       return {
-        budgetVsActual: budgetVsActualOf(lines, byCategory, input),
-        fixedVsVariable: fixedVsVariableOf(outgoing, byCategory, recurring),
-        sankey: sankeyOf(rows, aggregation, from, to),
-        spendingBreakdown: spendingBreakdownOf(byCategory),
+        budgetVsActual: {
+          ...budgetVsActualOf(lines, byCategory, input),
+          currency,
+        },
+        fixedVsVariable: {
+          ...fixedVsVariableOf(outgoing, byCategory, recurring),
+          currency,
+        },
+        sankey: { ...sankeyOf(rows, aggregation, from, to), currency },
+        spendingBreakdown: { ...spendingBreakdownOf(byCategory), currency },
       };
     }),
 
@@ -1220,27 +1241,30 @@ export const budgetRouter = {
 
   getSankeyData: protectedProcedure
     .input(periodInput)
-    .handler(async ({ context, input }) =>
-      sankeyOf(
-        await periodRows(context.session.user.id, input.from, input.to),
-        input.aggregation,
-        input.from,
-        input.to
-      )
-    ),
+    .handler(async ({ context, input }) => {
+      const userId = context.session.user.id;
+      const [rows, currency] = await Promise.all([
+        periodRows(userId, input.from, input.to),
+        userCurrency(userId),
+      ]);
+
+      return {
+        ...sankeyOf(rows, input.aggregation, input.from, input.to),
+        currency,
+      };
+    }),
 
   getSpendingBreakdown: protectedProcedure
     .input(periodInput)
-    .handler(async ({ context, input }) =>
-      spendingBreakdownOf(
-        await userOutgoingByCategory(
-          context.session.user.id,
-          input.aggregation,
-          input.from,
-          input.to
-        )
-      )
-    ),
+    .handler(async ({ context, input }) => {
+      const userId = context.session.user.id;
+      const [categoryAmounts, currency] = await Promise.all([
+        userOutgoingByCategory(userId, input.aggregation, input.from, input.to),
+        userCurrency(userId),
+      ]);
+
+      return { ...spendingBreakdownOf(categoryAmounts), currency };
+    }),
 
   getSyncOutcome: protectedProcedure
     .input(z.object({ startedAt: z.coerce.date() }))
@@ -1361,14 +1385,16 @@ export const budgetRouter = {
         findManyOpts.skip = 1;
       }
 
-      const [fetched, totals] = await Promise.all([
+      const [fetched, totals, currency] = await Promise.all([
         prisma.transaction.findMany(findManyOpts),
         cursor ? null : directionTotals(baseWhere),
+        userCurrency(userId),
       ]);
 
       const { nextCursor, transactions } = transactionPage(fetched, limit);
 
       return {
+        currency,
         nextCursor,
         totals,
         transactions: transactions.map((t) => ({

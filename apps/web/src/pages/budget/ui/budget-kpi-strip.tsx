@@ -16,6 +16,7 @@ interface SummaryLabels {
 
 interface BudgetKpiStripProps {
   aggregation: AggregationMode;
+  currency: string;
   isError: boolean;
   isPending: boolean;
   isStale: boolean;
@@ -52,7 +53,7 @@ const KpiCell = ({
 }: {
   label: string;
   tone?: string;
-  value: number | null;
+  value: string | null;
 }) => {
   const { controlHeight } = useSize();
 
@@ -68,7 +69,7 @@ const KpiCell = ({
         </span>
       ) : (
         <span className={cn("text-2xl font-semibold tabular-nums", tone)}>
-          {formatCurrency(value)}
+          {value}
         </span>
       )}
       <span className="text-muted-foreground text-sm">{label}</span>
@@ -78,6 +79,7 @@ const KpiCell = ({
 
 export const BudgetKpiStrip = ({
   aggregation,
+  currency,
   isError,
   isPending,
   isStale,
@@ -101,18 +103,17 @@ export const BudgetKpiStrip = ({
   }
 
   const net = totalIncome - totalExpenses;
+  const shown = (amount: number) =>
+    isError ? null : formatCurrency(amount, currency);
 
   return (
     <StaleRegion className={STRIP_LAYOUT} isStale={isStale}>
-      <KpiCell label={labels.income()} value={isError ? null : totalIncome} />
-      <KpiCell
-        label={labels.expenses()}
-        value={isError ? null : totalExpenses}
-      />
+      <KpiCell label={labels.income()} value={shown(totalIncome)} />
+      <KpiCell label={labels.expenses()} value={shown(totalExpenses)} />
       <KpiCell
         label={labels.net()}
         tone={net >= 0 ? "text-success" : "text-destructive"}
-        value={isError ? null : net}
+        value={shown(net)}
       />
     </StaleRegion>
   );

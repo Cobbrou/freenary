@@ -200,21 +200,21 @@ The provider answers one country at a time and the result is the union. A bank i
 
 ### budget.getAccounts
 
-**Output**: `{ accounts, firstTransactionDate, hasAccounts, lastTransactionDate }`. `accounts` holds `{ iban, id, institutionName, name }` in no set order. The two dates bound the caller's transactions, and are `null` when there are none.
+**Output**: `{ accounts, currency, firstTransactionDate, hasAccounts, lastTransactionDate }`. `accounts` holds `{ iban, id, institutionName, name }` in no set order. `currency` is the code most of the caller's accounts use, or `EUR` when none has one. `getBudgetVsActual`, `getCashFlow`, `getFixedVsVariable`, `getPeriodOverview`, `getSankeyData`, `getSpendingBreakdown`, `getTransactions` and `settings.getBudgetProfile` return the same one. The two dates bound the caller's transactions, and are `null` when there are none.
 
 ### budget.getBudgetVsActual
 
-**Output**: `{ categories, hasPlan }`. `categories` holds `{ actual, category, planned }` for each category whose plan or spend isn't zero, largest planned first, then largest actual. `hasPlan` is `false` with no outgoing budget line.
+**Output**: `{ categories, currency, hasPlan }`. `categories` holds `{ actual, category, planned }` for each category whose plan or spend isn't zero, largest planned first, then largest actual. `hasPlan` is `false` with no outgoing budget line.
 
 With `average` or `median`, `planned` is the monthly plan. With `total`, it's the monthly plan times the months from `from` to `to` or today, whichever comes first: average-length months, rounded, at least 1.
 
 ### budget.getCashFlow
 
-**Output**: `{ periods }` of `{ incoming, label, outgoing }`, oldest first. `label` is a day (`YYYY-MM-DD`) for ranges up to 31 days, the Monday of a week up to 93 days, and a month (`YYYY-MM`) beyond.
+**Output**: `{ currency, periods }`, with `periods` of `{ incoming, label, outgoing }`, oldest first. `label` is a day (`YYYY-MM-DD`) for ranges up to 31 days, the Monday of a week up to 93 days, and a month (`YYYY-MM`) beyond.
 
 ### budget.getFixedVsVariable
 
-**Output**: `{ fixed, variable }`. The two sum to the money out, aggregated as asked.
+**Output**: `{ currency, fixed, variable }`. The two sum to the money out, aggregated as asked.
 
 ### budget.getMerchants
 
@@ -262,7 +262,7 @@ The rules behind `confidence` and `kind` are in [`docs/engineering/categorisatio
 
 ### budget.getSankeyData
 
-**Output**: `{ groups, incomeNodes, moneyLeft, totalExpenses, totalIncome }`.
+**Output**: `{ currency, groups, incomeNodes, moneyLeft, totalExpenses, totalIncome }`.
 
 - `groups` holds `{ categories, group, value }`, with `{ category, value }` rows in `categories`.
 - `incomeNodes` holds `{ name, value }`: the 10 largest sources by counterparty name, then one node with `name: null` for the rest. Money in with no counterparty name joins that `null` node before the top 10 are picked, so it can rank among them.
@@ -272,7 +272,7 @@ Internal transfers count as income and as spending.
 
 ### budget.getSpendingBreakdown
 
-**Output**: `{ categories }` of `{ amount, category }`, largest first.
+**Output**: `{ categories, currency }`, with `categories` of `{ amount, category }`, largest first.
 
 ### budget.getSyncOutcome
 
@@ -303,7 +303,7 @@ The one paged procedure: pass `nextCursor` back as `cursor`.
 - `search` is at most 200 characters and matches the description or the counterparty name as a plain substring, without case.
 - `sort: "amount"` puts the largest first: descending for `direction: "incoming"`, most negative first otherwise.
 
-**Output**: `{ nextCursor, totals, transactions }`. `nextCursor` is `null` on the last page. `totals` is `{ incoming, outgoing }` over the whole filter, not the page, both positive, on the first page only: a page read with a `cursor` returns `null`.
+**Output**: `{ currency, nextCursor, totals, transactions }`. `currency` is the currency of `totals`. `nextCursor` is `null` on the last page. `totals` is `{ incoming, outgoing }` over the whole filter, not the page, both positive, on the first page only: a page read with a `cursor` returns `null`.
 
 | Field of one transaction | Note |
 | --- | --- |
@@ -444,7 +444,7 @@ Deletes the category and its subcategories, and moves their budget lines to one 
 
 ### settings.getBudgetProfile
 
-**Output**: `{ lines }` in saved order, each `{ amount, categoryKey, id, label }`. `amount` is minor units per month. `label` is `null` when the line has no name.
+**Output**: `{ currency, lines }`, with `currency` as in `budget.getAccounts` and `lines` in saved order, each `{ amount, categoryKey, id, label }`. `amount` is minor units per month. `label` is `null` when the line has no name.
 
 ### settings.listCategories
 

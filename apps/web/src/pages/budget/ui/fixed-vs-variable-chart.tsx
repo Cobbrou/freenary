@@ -4,11 +4,13 @@ import { CHART_COLOR_VARS } from "@/shared/lib/chart-colors";
 import { formatCurrency } from "@/shared/lib/format-currency";
 
 interface FixedVsVariableChartProps {
+  currency: string;
   fixed: number;
   variable: number;
 }
 
 export const FixedVsVariableChart = ({
+  currency,
   fixed,
   variable,
 }: FixedVsVariableChartProps) => {
@@ -72,7 +74,7 @@ export const FixedVsVariableChart = ({
               {slice.label}
             </span>
             <span className="ms-auto shrink-0 font-mono tabular-nums">
-              {formatCurrency(slice.value)}
+              {formatCurrency(slice.value, currency)}
             </span>
             <span className="text-muted-foreground min-w-9 shrink-0 text-end font-mono tabular-nums">
               {share.format(slice.value / total)}

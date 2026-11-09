@@ -26,6 +26,7 @@ import { BudgetProfileSummary } from "./budget-profile-summary";
 
 interface BudgetProfilePreviewProps {
   categories: CategoryEntry[];
+  currency: string | undefined;
   isPending: boolean;
   lines: EditorLine[];
 }
@@ -54,6 +55,7 @@ const uncategorisedGroupInCurrentLocale = (): Pick<
 
 export const BudgetProfilePreview = ({
   categories,
+  currency,
   isPending,
   lines,
 }: BudgetProfilePreviewProps) => {
@@ -82,7 +84,7 @@ export const BudgetProfilePreview = ({
     return (debouncedLines ?? []).map((line) => {
       const entry = entryByKey.get(line.categoryKey);
       const group = chartColumnGroupOf(entry);
-      const amount = amountOf(line.amountInput);
+      const amount = amountOf(line.amountInput, currency);
       const categoryLabel = entry ? categoryEntryLabel(entry) : "";
 
       return {
@@ -95,7 +97,7 @@ export const BudgetProfilePreview = ({
         label: line.label.trim() || categoryLabel || m.settings_line_untitled(),
       };
     });
-  }, [categories, debouncedLines]);
+  }, [categories, currency, debouncedLines]);
 
   const flow = useMemo(
     () => toBudgetProfileSankey(profileLines),
@@ -117,7 +119,7 @@ export const BudgetProfilePreview = ({
     return { totalAllocated, totalRevenue };
   }, [profileLines]);
 
-  if (debouncedLines === NOT_LOADED_YET) {
+  if (debouncedLines === NOT_LOADED_YET || currency === undefined) {
     return (
       <div aria-busy="true">
         <output className="sr-only">{m.settings_budget_flow_loading()}</output>
@@ -162,11 +164,12 @@ export const BudgetProfilePreview = ({
     <div className={cn("flex flex-col", FLOW_AND_TOTALS_GAP)}>
       <SankeyChart
         columns={flow.columns}
-        formatValue={formatCurrency}
+        formatValue={(value) => formatCurrency(value, currency)}
         label={m.settings_budget_flow_chart_label()}
         links={flow.links}
       />
       <BudgetProfileSummary
+        currency={currency}
         totalAllocated={totals.totalAllocated}
         totalRevenue={totals.totalRevenue}
       />

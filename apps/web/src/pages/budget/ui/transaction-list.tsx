@@ -25,6 +25,7 @@ const SORT_OPTIONS = [
 
 export const TransactionList = ({
   transactions,
+  currency,
   totals,
   direction,
   onDirectionChange,
@@ -50,6 +51,7 @@ export const TransactionList = ({
   range,
 }: {
   transactions: Transaction[];
+  currency: string;
   totals: { incoming: number; outgoing: number };
   direction: TransactionDirection;
   onDirectionChange: (dir: TransactionDirection) => void;
@@ -86,19 +88,20 @@ export const TransactionList = ({
   const outgoingLabel = isError
     ? m.budget_tab_outgoing_unknown()
     : m.budget_tab_outgoing({
-        amount: formatCurrency(Math.abs(totals.outgoing), "EUR"),
+        amount: formatCurrency(Math.abs(totals.outgoing), currency),
       });
 
   const incomingLabel = isError
     ? m.budget_tab_incoming_unknown()
     : m.budget_tab_incoming({
-        amount: formatCurrency(totals.incoming, "EUR"),
+        amount: formatCurrency(totals.incoming, currency),
       });
 
   return (
     <div className="flex flex-1 flex-col gap-3">
       <ListFilterBar>
         <FilterTokenSearch
+          currency={currency}
           direction={direction}
           filters={filters}
           from={from}

@@ -5,7 +5,9 @@ export interface AccountsSummary {
   currency: string;
 }
 
-const mostFrequentCurrency = (currencyCounts: Map<string, number>): string => {
+export const mostFrequentCurrency = (
+  currencyCounts: Map<string, number>
+): string => {
   let currency = FALLBACK_CURRENCY;
   let bestCount = 0;
 

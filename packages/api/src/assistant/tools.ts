@@ -3,6 +3,7 @@ import { tool } from "ai";
 import { z } from "zod";
 
 import { AGGREGATION_MODES } from "../lib/aggregation";
+import { fromMinor, minorUnitDigits, toMinor } from "../lib/money";
 import { CATEGORY_GROUPS, SPENDING_CATEGORIES } from "../lib/taxonomy";
 import { MAX_FILTER_AMOUNT_MINOR_UNITS } from "../lib/transaction-filters";
 import type {
@@ -28,10 +29,8 @@ const inclusiveDayRange = (from: string, to: string) => ({
   to: new Date(`${to}T23:59:59.999Z`),
 });
 
-const decimalAmount = (minorUnits: number): string =>
-  (minorUnits / 100).toFixed(2);
-
-const minorUnits = (amount: number) => Math.round(amount * 100);
+const decimalAmount = (minorUnits: number, currency: string): string =>
+  fromMinor(minorUnits, currency).toFixed(minorUnitDigits(currency));
 
 interface SearchFilterInput {
   readonly categories?: readonly CategoryFilterValue[];
@@ -40,13 +39,12 @@ interface SearchFilterInput {
   readonly minAmount?: number;
 }
 
-export const searchFilters = ({
-  categories = [],
-  groups = [],
-  maxAmount,
-  minAmount,
-}: SearchFilterInput): TransactionFilter[] => {
+export const searchFilters = (
+  { categories = [], groups = [], maxAmount, minAmount }: SearchFilterInput,
+  currency: string
+): TransactionFilter[] => {
   const filters: TransactionFilter[] = [];
+  const minorUnits = (amount: number) => toMinor(amount, currency);
   const values = [...categories, ...groups];
 
   if (values.length > 0) {
@@ -112,18 +110,19 @@ export const assistantTools = (api: AppRouterClient) =>
       description:
         "Compare the user's declared monthly budget with what they actually spent, per category.",
       execute: async ({ aggregation: mode, from, to }) => {
-        const { categories, hasPlan } = await api.budget.getBudgetVsActual({
-          aggregation: mode,
-          ...inclusiveDayRange(from, to),
-        });
+        const { categories, currency, hasPlan } =
+          await api.budget.getBudgetVsActual({
+            aggregation: mode,
+            ...inclusiveDayRange(from, to),
+          });
 
         return {
           categories: categories.map(({ actual, category, planned }) => ({
-            actual: decimalAmount(actual),
+            actual: decimalAmount(actual, currency),
             category,
-            planned: decimalAmount(planned),
+            planned: decimalAmount(planned, currency),
           })),
-          currency: "EUR",
+          currency,
           hasPlan,
         };
       },
@@ -134,16 +133,16 @@ export const assistantTools = (api: AppRouterClient) =>
       description:
         "Incoming and outgoing totals over time for a period, bucketed by day, week or month depending on its length.",
       execute: async ({ from, to }) => {
-        const { periods } = await api.budget.getCashFlow(
+        const { currency, periods } = await api.budget.getCashFlow(
           inclusiveDayRange(from, to)
         );
 
         return {
-          currency: "EUR",
+          currency,
           periods: periods.map(({ incoming, label, outgoing }) => ({
-            incoming: decimalAmount(incoming),
+            incoming: decimalAmount(incoming, currency),
             label,
-            outgoing: decimalAmount(outgoing),
+            outgoing: decimalAmount(outgoing, currency),
           })),
         };
       },
@@ -154,15 +153,16 @@ export const assistantTools = (api: AppRouterClient) =>
       description:
         "Split outgoings into the part that recurs (rent, subscriptions, insurance) and the part that does not.",
       execute: async ({ aggregation: mode, from, to }) => {
-        const { fixed, variable } = await api.budget.getFixedVsVariable({
-          aggregation: mode,
-          ...inclusiveDayRange(from, to),
-        });
+        const { currency, fixed, variable } =
+          await api.budget.getFixedVsVariable({
+            aggregation: mode,
+            ...inclusiveDayRange(from, to),
+          });
 
         return {
-          currency: "EUR",
-          fixed: decimalAmount(fixed),
-          variable: decimalAmount(variable),
+          currency,
+          fixed: decimalAmount(fixed, currency),
+          variable: decimalAmount(variable, currency),
         };
       },
       inputSchema: z.object({ aggregation, ...period }),
@@ -177,7 +177,7 @@ export const assistantTools = (api: AppRouterClient) =>
         return {
           expenses: expenses.map(({ typicalAmountMinor, ...rest }) => ({
             ...rest,
-            typicalAmount: decimalAmount(typicalAmountMinor),
+            typicalAmount: decimalAmount(typicalAmountMinor, rest.currency),
           })),
         };
       },
@@ -188,7 +188,7 @@ export const assistantTools = (api: AppRouterClient) =>
       description:
         "Outgoing totals per category for a period. The cheapest way to answer 'where did my money go'.",
       execute: async ({ aggregation: mode, from, to }) => {
-        const { categories } = await api.budget.getSpendingBreakdown({
+        const { categories, currency } = await api.budget.getSpendingBreakdown({
           aggregation: mode,
           ...inclusiveDayRange(from, to),
         });
@@ -196,9 +196,9 @@ export const assistantTools = (api: AppRouterClient) =>
         return {
           categories: categories.map(({ amount, category }) => ({
             category,
-            total: decimalAmount(amount),
+            total: decimalAmount(amount, currency),
           })),
-          currency: "EUR",
+          currency,
         };
       },
       inputSchema: z.object({ aggregation, ...period }),
@@ -219,21 +219,21 @@ export const assistantTools = (api: AppRouterClient) =>
         sort,
         to,
       }) => {
-        const filters = searchFilters({
-          categories,
-          groups,
-          maxAmount,
-          minAmount,
-        });
+        const { currency: boundsCurrency } = await api.budget.getAccounts();
+        const filters = searchFilters(
+          { categories, groups, maxAmount, minAmount },
+          boundsCurrency
+        );
 
-        const { totals, transactions } = await api.budget.getTransactions({
-          direction,
-          filters: filters.length > 0 ? filters : undefined,
-          limit,
-          search,
-          sort,
-          ...inclusiveDayRange(from, to),
-        });
+        const { currency, totals, transactions } =
+          await api.budget.getTransactions({
+            direction,
+            filters: filters.length > 0 ? filters : undefined,
+            limit,
+            search,
+            sort,
+            ...inclusiveDayRange(from, to),
+          });
 
         if (totals === null) {
           throw new Error(
@@ -243,13 +243,13 @@ export const assistantTools = (api: AppRouterClient) =>
 
         return {
           totals: {
-            currency: "EUR",
-            incoming: decimalAmount(totals.incoming),
-            outgoing: decimalAmount(totals.outgoing),
+            currency,
+            incoming: decimalAmount(totals.incoming, currency),
+            outgoing: decimalAmount(totals.outgoing, currency),
           },
           transactions: transactions.map(({ amount, ...rest }) => ({
             ...rest,
-            amount: decimalAmount(amount),
+            amount: decimalAmount(amount, rest.currency),
           })),
         };
       },

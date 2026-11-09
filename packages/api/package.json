@@ -16,6 +16,7 @@
     "./lib/budget-profile": "./src/lib/budget-profile.ts",
     "./lib/categories": "./src/lib/categories.ts",
     "./lib/json-request": "./src/lib/json-request.ts",
+    "./lib/money": "./src/lib/money.ts",
     "./lib/taxonomy": "./src/lib/taxonomy.ts",
     "./lib/transaction-filters": "./src/lib/transaction-filters.ts",
     "./providers/mock/consent": "./src/providers/mock/consent.ts",

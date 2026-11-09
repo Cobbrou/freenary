@@ -126,7 +126,8 @@ describe("filterTokenText", () => {
     expect(
       filterTokenText(
         { field: "company", operator: "isAnyOf", values: ["Uber", "Lyft"] },
-        "en"
+        "en",
+        "EUR"
       ).value
     ).toBe("Uber or Lyft");
   });

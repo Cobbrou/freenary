@@ -55,13 +55,14 @@ export const filterValueList = (
 
 export const filterTokenText = (
   filter: TransactionFilter,
-  locale: string
+  locale: string,
+  currency: string
 ): FilterTokenText => {
   if (filter.field === "amount") {
     return {
       field: FILTER_FIELD_LABELS.amount(),
       operator: AMOUNT_OPERATOR_SYMBOLS[filter.operator](),
-      value: formatCurrency(filter.value),
+      value: formatCurrency(filter.value, currency),
     };
   }
 
@@ -79,9 +80,10 @@ export const filterTokenText = (
 
 export const filterTokenSentence = (
   filter: TransactionFilter,
-  locale: string
+  locale: string,
+  currency: string
 ): string => {
-  const { field, value } = filterTokenText(filter, locale);
+  const { field, value } = filterTokenText(filter, locale, currency);
   const operator =
     filter.field === "amount"
       ? AMOUNT_OPERATOR_LABELS[filter.operator]()

@@ -196,7 +196,7 @@ const SuggestionPopup = ({
 );
 
 export const FilterTokenSearch = (options: FilterTokenSearchOptions) => {
-  const { filters } = options;
+  const { currency, filters } = options;
   const locale = getLocale();
   const listId = useId();
   const pendingId = useId();
@@ -242,7 +242,7 @@ export const FilterTokenSearch = (options: FilterTokenSearchOptions) => {
           className="text-muted-foreground size-3.5 shrink-0"
         />
         {filters.map((filter, index) => {
-          const chip = filterTokenText(filter, locale);
+          const chip = filterTokenText(filter, locale, currency);
 
           return (
             <FilterTokenChip
@@ -251,7 +251,7 @@ export const FilterTokenSearch = (options: FilterTokenSearchOptions) => {
               onRemove={() => handleRemove(index)}
               operator={chip.operator}
               removeLabel={m.budget_filter_token_remove({
-                filter: filterTokenSentence(filter, locale),
+                filter: filterTokenSentence(filter, locale, currency),
               })}
               value={chip.value}
             />

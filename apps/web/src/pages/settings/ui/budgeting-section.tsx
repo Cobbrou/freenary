@@ -20,6 +20,7 @@ import { SettingsSection } from "./settings-section";
 interface BudgetingSectionProps {
   addLine: () => void;
   categories: CategoryEntry[];
+  currency: string | undefined;
   errors: Map<string, string>;
   isPending: boolean;
   lines: EditorLine[];
@@ -34,6 +35,7 @@ const SKELETON_LINES = 3;
 export const BudgetingSection = ({
   addLine,
   categories,
+  currency,
   errors,
   isPending,
   lines,
@@ -56,13 +58,14 @@ export const BudgetingSection = ({
     >
       <BudgetProfilePreview
         categories={categories}
+        currency={currency}
         isPending={isPending}
         lines={lines}
       />
 
       <Separator />
 
-      {isPending ? (
+      {isPending || currency === undefined ? (
         <div aria-busy="true">
           <output className="sr-only">{m.settings_budgeting_loading()}</output>
           <div aria-hidden="true" className="flex flex-col gap-2">
@@ -84,6 +87,7 @@ export const BudgetingSection = ({
               {lines.map((line) => (
                 <BudgetLineRow
                   categories={categories}
+                  currency={currency}
                   error={errors.get(line.id)}
                   key={line.id}
                   line={line}

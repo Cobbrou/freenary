@@ -28,7 +28,7 @@ import type { OperatorStanding } from "../model/settings-nav-items";
 import { useBudgetProfileEditor } from "../model/use-budget-profile-editor";
 import type {
   BudgetProfileEditor,
-  ServerBudgetLine,
+  ServerBudgetProfile,
 } from "../model/use-budget-profile-editor";
 import {
   AppearanceLocaleSection,
@@ -68,7 +68,7 @@ interface SettingsContentProps extends SecurityPaneProps {
   isPending: boolean;
   operatorStanding: OperatorStanding;
   section: SettingsSection;
-  serverLines: ServerBudgetLine[] | undefined;
+  serverProfile: ServerBudgetProfile | undefined;
 }
 
 const AppearancePane = () => (
@@ -95,6 +95,7 @@ const BudgetPane = ({
     <BudgetingSection
       addLine={editor.addLine}
       categories={categories}
+      currency={editor.currency}
       errors={editor.errors}
       isPending={isPending}
       lines={editor.lines}
@@ -163,10 +164,10 @@ const SettingsContent = ({
   operatorStanding,
   providers,
   section,
-  serverLines,
+  serverProfile,
   sessions,
 }: SettingsContentProps) => {
-  const editor = useBudgetProfileEditor(serverLines, categories);
+  const editor = useBudgetProfileEditor(serverProfile, categories);
 
   const panes = {
     appearance: <AppearancePane />,
@@ -253,7 +254,7 @@ export const SettingsPage = () => {
       })}
       providers={capabilitiesQuery.data?.oauth}
       section={section}
-      serverLines={profileQuery.data?.lines}
+      serverProfile={profileQuery.data}
       sessions={sessionsQuery.data}
     />
   );

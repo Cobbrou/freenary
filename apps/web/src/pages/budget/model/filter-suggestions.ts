@@ -154,13 +154,14 @@ export const companySuggestions = (
 
 const amountSuggestion = (
   draft: AmountDraft,
-  minorUnits: number
+  minorUnits: number,
+  currency: string
 ): FilterSuggestion[] =>
   minorUnits > 0 && minorUnits <= MAX_FILTER_AMOUNT_MINOR_UNITS
     ? [
         {
           kind: "amount",
-          label: `${AMOUNT_OPERATOR_SYMBOLS[draft.operator]()} ${formatCurrency(minorUnits)}`,
+          label: `${AMOUNT_OPERATOR_SYMBOLS[draft.operator]()} ${formatCurrency(minorUnits, currency)}`,
           minorUnits,
         },
       ]
@@ -173,6 +174,7 @@ export interface SuggestionContext {
     names: readonly string[];
     query: string;
   };
+  currency: string;
   draft: FilterDraft | null;
   filters: readonly TransactionFilter[];
   query: string;
@@ -182,6 +184,7 @@ export interface SuggestionContext {
 
 export const filterSuggestionsFor = ({
   companies,
+  currency,
   draft,
   filters,
   query,
@@ -197,7 +200,7 @@ export const filterSuggestionsFor = ({
   }
 
   if (draft.stage === "amount") {
-    return amountSuggestion(draft, typedAmountMinor);
+    return amountSuggestion(draft, typedAmountMinor, currency);
   }
 
   return draft.field === "category"
@@ -217,7 +220,7 @@ const companyStatus = ({
 };
 
 export const filterSuggestionStatus = (
-  { companies, draft, filters, typedAmountMinor }: SuggestionContext,
+  { companies, currency, draft, filters, typedAmountMinor }: SuggestionContext,
   suggestions: readonly FilterSuggestion[]
 ): string | null => {
   if (draft === null) {
@@ -229,7 +232,7 @@ export const filterSuggestionStatus = (
   if (draft.stage === "amount") {
     if (typedAmountMinor > MAX_FILTER_AMOUNT_MINOR_UNITS) {
       return m.budget_filter_amount_too_large({
-        amount: formatCurrency(MAX_FILTER_AMOUNT_MINOR_UNITS),
+        amount: formatCurrency(MAX_FILTER_AMOUNT_MINOR_UNITS, currency),
       });
     }
 

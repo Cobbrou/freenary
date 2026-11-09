@@ -1,3 +1,4 @@
+import { toMinor } from "@freenary/api/lib/money";
 import type { TransactionFilter } from "@freenary/api/lib/transaction-filters";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { Match } from "effect";
@@ -33,6 +34,7 @@ import type { TransactionDirection } from "./search";
 import { parseAmountBound } from "./transaction-filters";
 
 export interface FilterTokenSearchOptions {
+  currency: string;
   direction: TransactionDirection;
   filters: TransactionFilter[];
   from: Date;
@@ -44,12 +46,12 @@ export interface FilterTokenSearchOptions {
 }
 
 const COMPANY_SETTLE_MS = 250;
-const MINOR_PER_UNIT = 100;
 export const NO_HIGHLIGHT = -1;
 
 export const filterKey = (filter: TransactionFilter) => searchKey([filter], "");
 
 export const useFilterTokenSearch = ({
+  currency,
   direction,
   filters,
   from,
@@ -85,9 +87,7 @@ export const useFilterTokenSearch = ({
     placeholderData: keepPreviousData,
   });
 
-  const typedAmountMinor = Math.round(
-    parseAmountBound(query, locale) * MINOR_PER_UNIT
-  );
+  const typedAmountMinor = toMinor(parseAmountBound(query, locale), currency);
 
   const companies = {
     isError: merchantsQuery.isError,
@@ -98,7 +98,16 @@ export const useFilterTokenSearch = ({
     query: settledCompanyQuery,
   };
 
-  const context = { companies, draft, filters, query, text, typedAmountMinor };
+  const context = {
+    companies,
+    currency,
+    draft,
+    filters,
+    query,
+    text,
+    typedAmountMinor,
+  };
+
   const suggestions = filterSuggestionsFor(context);
   const status = filterSuggestionStatus(context, suggestions);
   const isChoosingSeveral =

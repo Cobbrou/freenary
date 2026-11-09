@@ -25,7 +25,6 @@ import type { ComponentProps } from "react";
 import type { CategorySelection } from "@/entities/category";
 import { m } from "@/paraglide/messages.js";
 
-import type { CashFlowData } from "../model/cash-flow-sankey";
 import { aggregationLabel } from "../model/period";
 import type { AggregationMode } from "../model/period";
 import type { CompanionView, PrimaryView } from "../model/search";
@@ -36,11 +35,16 @@ import { PRESS_MOTION } from "./list-controls";
 import { SpendingBreakdownChart } from "./spending-breakdown-chart";
 import { StaleRegion } from "./stale-region";
 
-type BreakdownData = ComponentProps<typeof SpendingBreakdownChart>["data"];
+type BreakdownData = Pick<
+  ComponentProps<typeof SpendingBreakdownChart>,
+  "categories" | "currency"
+>;
+
+type CashFlowData = Omit<ComponentProps<typeof CashFlowChart>, "onSelect">;
 
 type PlannedData = Pick<
   ComponentProps<typeof BudgetVsActualChart>,
-  "categories" | "hasPlan"
+  "categories" | "currency" | "hasPlan"
 >;
 
 type FixedData = ComponentProps<typeof FixedVsVariableChart>;
@@ -122,7 +126,7 @@ const PrimaryChartBody = ({
     <StaleRegion className="h-full" isStale={breakdown.isStale}>
       <SpendingBreakdownChart
         activeCategories={activeCategories}
-        data={breakdown.data}
+        {...breakdown.data}
         onSelect={onSelect}
       />
     </StaleRegion>
