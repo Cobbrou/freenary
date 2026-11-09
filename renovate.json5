@@ -4,7 +4,8 @@
 
   // Pull requests target the integration branch, like every other one. Renovate
   // reads this file from the default branch alone (useBaseBranchConfig defaults
-  // to "none"), so a change here is live once it reaches main.
+  // to "none"), and the default branch is dev, so a change here is live once
+  // it merges.
   baseBranchPatterns: ["dev"],
   timezone: "Europe/Paris",
   schedule: ["before 6am on monday"],

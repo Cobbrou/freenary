@@ -6,14 +6,16 @@ Freenary ships as two container images. A release is maintainer work. A contribu
 
 ## The two branches
 
-| Branch | Role                   | What lands on it                  |
-| ------ | ---------------------- | --------------------------------- |
-| `dev`  | The integration branch | Every pull request                |
-| `main` | The release branch     | `dev`, at the moment of a release |
+| Branch | Role | What lands on it |
+| --- | --- | --- |
+| `dev` | The integration branch, and the repository default | Every pull request |
+| `main` | The release branch | `dev`, at the moment of a release |
+
+`dev` is the default branch, so GitHub closes the issue a pull request names with `Closes #n` as soon as it merges. GitHub closes nothing from a merge into any other branch. The **Run workflow** menu of the `Release` workflow opens on `dev`; pick `main`.
 
 A normal release takes three moves. A maintainer merges a documentation snapshot into `dev`, merges `dev` into `main`, then runs the `Release` workflow from `main`.
 
-A hotfix goes the other way. The pull request opens against `main`, so the fix carries none of the unreleased work on `dev`. The release runs from `main` as usual. Then `main` merges back into `dev`, or the fix disappears at the next release.
+A hotfix goes the other way. The pull request opens against `main`, so the fix carries none of the unreleased work on `dev`. The release runs from `main` as usual. Then `main` merges back into `dev`, or the fix disappears at the next release. Close its issue by hand: a merge into `main` closes nothing.
 
 The root `package.json` carries no `version` field, and the repository holds no changelog file. The git tag is the version, and no file repeats it.
 

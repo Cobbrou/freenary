@@ -4,7 +4,7 @@ How Renovate opens dependency pull requests, what it automerges, and why the Bun
 
 Renovate keeps the dependencies of this repository current. It reads `renovate.json5` at the root, and it opens every pull request against `dev`.
 
-> [!WARNING] Renovate reads that file from the **default branch** alone. `useBaseBranchConfig` defaults to `none`, so a change to `renovate.json5` on `dev` changes nothing until `main` carries it. The same holds for the `workflow_dispatch` trigger of `ci.yml`. Both reach `main` at the next release. Before that, Renovate runs on its own defaults.
+> [!NOTE] Renovate reads that file from the **default branch** alone, and `useBaseBranchConfig` defaults to `none`. The default branch is `dev`, so a change to `renovate.json5` takes effect once its pull request merges. The same holds for the `workflow_dispatch` trigger of `ci.yml`.
 
 ## What it watches
 
@@ -70,7 +70,7 @@ bun install --lockfile-only --ignore-scripts
 
 The job then calls `gh workflow run ci.yml`. A push made with `GITHUB_TOKEN` starts no workflow. GitHub exempts the two dispatch events from that rule, and `ci.yml` declares `workflow_dispatch` for this one caller. Pull requests from this manager carry the `catalog` label.
 
-> [!WARNING] GitHub reads the `workflow_dispatch` trigger from the default branch. The call above answers 422 until `main` carries it, which happens at the next release. Until then, a catalog pull request keeps its lock file commit but starts no CI run. Start the **CI** workflow by hand on that branch, and the job log says the same.
+> [!WARNING] GitHub reads the `workflow_dispatch` trigger from the default branch, `dev`. If `ci.yml` on `dev` loses it, the call above answers 422, and a catalog pull request keeps its lock file commit but starts no CI run. Start the **CI** workflow by hand on that branch, and the job log says the same.
 
 > [!WARNING] Delete the custom manager, this workflow, and the `workflow_dispatch` trigger of `ci.yml` on the day Renovate gains Bun catalog support. Until then the catalog has two readers, and a change to the block shape can break the second one.
 

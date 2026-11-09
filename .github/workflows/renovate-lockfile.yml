@@ -8,8 +8,8 @@ name: Renovate lockfile
 # The push below carries GITHUB_TOKEN, and a push made with that token starts no
 # workflow. GitHub exempts workflow_dispatch and repository_dispatch from that
 # rule, which is why ci.yml declares the first and why the last step here calls
-# it. GitHub reads that trigger from the default branch, so the call answers 422
-# until this change reaches main; the step says so rather than failing silently.
+# it. GitHub reads that trigger from the default branch, dev, so the call answers
+# 422 when ci.yml on dev lacks it; the step says so rather than failing silently.
 
 on:
   push:
@@ -55,6 +55,6 @@ jobs:
           git commit -m "chore(deps): refresh bun.lock" -- bun.lock
           git push
           if ! gh workflow run ci.yml --ref "$GITHUB_REF_NAME"; then
-            echo "::error::bun.lock is committed, but CI did not start on it. GitHub reads the workflow_dispatch trigger from the default branch, so this call works once ci.yml carries it on main. Start CI by hand on $GITHUB_REF_NAME."
+            echo "::error::bun.lock is committed, but CI did not start on it. GitHub reads the workflow_dispatch trigger from the default branch, so this call works only while ci.yml on dev carries it. Start CI by hand on $GITHUB_REF_NAME."
             exit 1
           fi
