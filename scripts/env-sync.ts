@@ -74,8 +74,8 @@ const SECTIONS: Section[] = [
   {
     id: "core",
     preamble: [
-      "The two values below are development values. A real instance replaces both;",
-      "`docker compose up` refuses to start with either one empty.",
+      "Replace the database password and fill the secret. `docker compose up` refuses",
+      "to start with either one empty, and production refuses the development secret.",
       "  openssl rand -hex 16   # database password",
       "  openssl rand -hex 32   # BETTER_AUTH_SECRET, 32 characters or more",
     ],

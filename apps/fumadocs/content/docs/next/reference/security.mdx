@@ -29,7 +29,7 @@ Cookie scope, one-hostname and two-subdomain setups are in [Reverse proxy](/docs
 
 ## Secrets and sealing
 
-`BETTER_AUTH_SECRET` must have at least 32 characters. It protects:
+`BETTER_AUTH_SECRET` must have at least 32 characters, and production refuses the development default `dev_secret_change_me_at_least_32chars`. It protects:
 
 - session and trusted-device cookie signatures;
 - authenticator secrets and two-factor backup codes;

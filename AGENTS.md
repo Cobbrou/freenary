@@ -16,7 +16,7 @@ bun run dev:up     # PostgreSQL, migrations, API server, web app, docs site
 `dev:up` runs `docker-compose.dev.yml` under a per-worktree Compose project and prints the URLs it serves. No dev service publishes a host port: one shared Traefik on port 80 routes plain-HTTP hostnames (`web.<slug>.freenary.localhost`, `server.<slug>.freenary.localhost`, `docs.<slug>.freenary.localhost`) to the containers, and the slug comes from the git branch. `scripts/dev.ts` reuses a Traefik already on the `devproxy` network, or starts `docker-compose.proxy.yml`; the self-hosting `docker-compose.yml` never involves it. Use Chrome or Firefox, which treat `*.localhost` as a secure context. Without Docker for the apps, use the local path instead:
 
 ```bash
-cp .env.example .env                    # POSTGRES_PASSWORD and BETTER_AUTH_SECRET for docker-compose.yml
+sed "s/^BETTER_AUTH_SECRET=$/BETTER_AUTH_SECRET=$(openssl rand -hex 32)/" .env.example > .env  # docker-compose.yml needs both secrets
 echo 'DATABASE_URL=postgresql://postgres:password@localhost:5432/freenary' > apps/server/.env
 docker compose up -d --wait postgres
 (cd packages/db && bun run db:migrate:deploy)   # the Prisma CLI reads DATABASE_URL from apps/server/.env
