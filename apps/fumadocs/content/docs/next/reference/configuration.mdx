@@ -125,7 +125,7 @@ See [Email](/docs/run/email).
 | `SMTP_HOST` | unset | The mail host. | `smtp` stops the start without it. |
 | `SMTP_PASSWORD` | unset | The SMTP password. | The adapter reads it only when `SMTP_USER` holds a value. |
 | `SMTP_PORT` | `465` with `SMTP_SECURE=true`, else `587` | The mail port. | A value above 65535 stops the start. |
-| `SMTP_SECURE` | `false` | `true` picks implicit TLS. `false` picks STARTTLS. | A value that is not a boolean string stops the start. |
+| `SMTP_SECURE` | `false` | `true` picks implicit TLS. `false` picks STARTTLS. | With `false` and `SMTP_USER` set, a server that offers no STARTTLS is refused, so the password never travels in clear. A value that is not a boolean string stops the start. |
 | `SMTP_USER` | unset | The SMTP user. | Unset means Freenary sends no SMTP credentials at all. |
 
 {/* env-sync:end */}

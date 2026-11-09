@@ -405,7 +405,8 @@ export const serverEnvSchema = {
     .describe("`true` picks implicit TLS. `false` picks STARTTLS.")
     .meta({
       example: "false",
-      onError: "A value that is not a boolean string stops the start.",
+      onError:
+        "With `false` and `SMTP_USER` set, a server that offers no STARTTLS is refused, so the password never travels in clear. A value that is not a boolean string stops the start.",
       section: "email",
     }),
   SMTP_USER: z.string().optional().describe("The SMTP user.").meta({
