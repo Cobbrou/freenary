@@ -35,7 +35,11 @@ import { accountsSummary } from "../lib/accounts-summary";
 import { AGGREGATION_MODES } from "../lib/aggregation";
 import type { AggregationMode } from "../lib/aggregation";
 import { findProviderUser } from "../lib/bank-provider-user";
-import { syncConnection, syncWindowStart } from "../lib/bank-sync";
+import {
+  earliestImportedDay,
+  oldestPendingDate,
+  syncConnection,
+} from "../lib/bank-sync";
 import type { PlannedLine } from "../lib/budget-planned";
 import {
   monthSpan,
@@ -763,25 +767,6 @@ const categoriseAfterSync = (
     )
   );
 
-const startOfUtcDay = (date: Date) =>
-  new Date(
-    Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate())
-  );
-
-const earliestImportedDay = (
-  connections: { lastSyncedAt: Date | null }[],
-  force: boolean
-): Date | null => {
-  const now = new Date();
-  const starts = connections.map((connection) =>
-    syncWindowStart(connection, now, force).getTime()
-  );
-
-  return starts.length === 0
-    ? null
-    : startOfUtcDay(new Date(Math.min(...starts)));
-};
-
 const runSyncAccounts = Effect.fnUntraced(function* runSyncAccounts(
   userId: string,
   connectionId: string | undefined,
@@ -805,6 +790,10 @@ const runSyncAccounts = Effect.fnUntraced(function* runSyncAccounts(
     })
   );
 
+  const oldestPending = yield* Effect.promise(() =>
+    oldestPendingDate(connections.map((connection) => connection.id))
+  );
+
   const connectionFailures = yield* syncEveryConnection(
     connections,
     userId,
@@ -813,7 +802,10 @@ const runSyncAccounts = Effect.fnUntraced(function* runSyncAccounts(
   );
 
   yield* Effect.promise(() =>
-    matchInternalTransfers(userId, earliestImportedDay(connections, force))
+    matchInternalTransfers(
+      userId,
+      earliestImportedDay(connections, force, oldestPending)
+    )
   );
 
   const { categorised, failure } = yield* categoriseAfterSync(
