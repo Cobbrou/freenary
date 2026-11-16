@@ -21,7 +21,10 @@ export const SidebarBrand = () => {
         onPointerLeave={() => setGreeted(false)}
       >
         <SidebarMenuButton render={<Link to="/" />} size="lg">
-          <BrandAvatar className="size-6!" state={greeted ? "happy" : "logo"} />
+          <BrandAvatar
+            className="size-6!"
+            state={greeted ? "saving" : "logo"}
+          />
           <span className="font-heading text-sm font-semibold tracking-tight">
             {m.shell_brand_name()}
           </span>

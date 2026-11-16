@@ -1,298 +1,302 @@
-import { clamp01, fract, TAU } from "./math";
-import { BRAND_ARCS, type Pose } from "./pose";
 import {
-  annulusPath,
-  blobPath,
-  capsulePath,
-  circlePath,
+  BASE,
+  COIN_RADIUS,
+  EYE_DEPTH,
+  EYE_HEIGHT,
+  EYE_SPACING,
+  EYE_WIDTH,
+  EYE_Y,
+  GAZE_X,
+  GAZE_Y,
+  HALF_DEPTH,
+  HEAD,
+  NOSTRIL_GAP,
+  NOSTRIL_RX,
+  NOSTRIL_RY,
+  PIVOT,
+  SLOT,
+  SLOT_LINE,
+  SNOUT_CENTER,
+  SNOUT_DEPTH,
+} from "./mark";
+import { DEG } from "./math";
+import type { CoinPose, Pose, ShinePose, SparkPose } from "./pose";
+import {
+  type Command,
+  ellipse,
+  happyArc,
+  pill,
   type Point,
-  sparkPath,
-  wedgePath,
-  zPath,
+  roundedPolygon,
+  sparkle,
+  toPath,
 } from "./shape";
+
+export {
+  COIN_COLOR,
+  COIN_MARK_COLOR,
+  EYE_INK,
+  MARK_COLOR,
+  SHINE_COLOR,
+  SPARK_COLOR,
+  VIEW_BOX_SIZE,
+} from "./mark";
 
 /**
  * Turns a pose into the exact paths a renderer draws. The slot list is fixed
- * and ordered, so a renderer can mount the elements once and then only ever
- * patch `d` and `opacity` — no reconciliation while the avatar animates.
+ * and ordered, so a renderer mounts the elements once and then only patches
+ * `d` and `opacity` — no reconciliation while the avatar animates.
+ *
+ * The head is drawn as a stack of copies from its back face to its front face,
+ * slid apart along the turn; their union is the silhouette of a solid slab
+ * seen at that angle, sides included. Every copy winds the same way, so one
+ * path under the default `nonzero` rule fills the union. The coin slot is a
+ * hole through the whole slab, so a renderer cuts it out with a mask rather
+ * than filling it.
  */
 
-export const INK_SLOTS = [
+export const EYE_SLOTS = [
   "eye-left",
   "eye-right",
-  "brow-left",
-  "brow-right",
-  "mouth",
-  "orbit-0",
-  "orbit-1",
-  "orbit-2",
-  "pulse-0",
-  "pulse-1",
-  "pulse-2",
-  "spark-0",
-  "spark-1",
-  "spark-2",
-  "spark-3",
-  "spark-4",
-  "spark-5",
-  "zzz-0",
-  "zzz-1",
-  "zzz-2",
+  "arc-left",
+  "arc-right",
 ] as const;
 
-export type InkSlot = (typeof INK_SLOTS)[number];
+export type EyeSlot = (typeof EYE_SLOTS)[number];
 
-const hex = (rgb: readonly [number, number, number]): string =>
-  `#${rgb.map((channel) => Math.round(channel).toString(16).padStart(2, "0")).join("")}`;
-
-const SPARK_COLORS = [
-  hex(BRAND_ARCS[0].color),
-  hex(BRAND_ARCS[1].color),
-  hex(BRAND_ARCS[2].color),
-];
-
-export type InkStyle = {
-  fill: string;
-  fillRule?: "evenodd";
+/** Pills are filled; happy arcs are stroked. Neither style ever animates. */
+export const EYE_STROKE_WIDTH = EYE_WIDTH * 0.6;
+export const EYE_STYLES: Record<EyeSlot, "fill" | "stroke"> = {
+  "eye-left": "fill",
+  "eye-right": "fill",
+  "arc-left": "stroke",
+  "arc-right": "stroke",
 };
 
-/** Fills never animate, so they are read once at mount. */
-export const INK_STYLES: Record<InkSlot, InkStyle> = {
-  "eye-left": { fill: "currentColor" },
-  "eye-right": { fill: "currentColor" },
-  "brow-left": { fill: "currentColor" },
-  "brow-right": { fill: "currentColor" },
-  mouth: { fill: "currentColor" },
-  "orbit-0": { fill: "currentColor" },
-  "orbit-1": { fill: "currentColor" },
-  "orbit-2": { fill: "currentColor" },
-  "pulse-0": { fill: "currentColor", fillRule: "evenodd" },
-  "pulse-1": { fill: "currentColor", fillRule: "evenodd" },
-  "pulse-2": { fill: "currentColor", fillRule: "evenodd" },
-  "spark-0": { fill: SPARK_COLORS[0] ?? "currentColor" },
-  "spark-1": { fill: SPARK_COLORS[1] ?? "currentColor" },
-  "spark-2": { fill: SPARK_COLORS[2] ?? "currentColor" },
-  "spark-3": { fill: SPARK_COLORS[0] ?? "currentColor" },
-  "spark-4": { fill: SPARK_COLORS[1] ?? "currentColor" },
-  "spark-5": { fill: SPARK_COLORS[2] ?? "currentColor" },
-  "zzz-0": { fill: "currentColor" },
-  "zzz-1": { fill: "currentColor" },
-  "zzz-2": { fill: "currentColor" },
-};
-
-export type InkDraw = {
-  slot: InkSlot;
+export type EyeDraw = {
+  slot: EyeSlot;
   d: string;
   opacity: number;
 };
 
-export type SectorDraw = {
-  /** Stable across frames so a renderer can mount the arcs once. */
-  id: string;
-  d: string;
-  fill: string;
-};
+export type Draw = { d: string; opacity: number };
+
+/** A coin is a gold disc plus a darker ring, faded together. */
+export type CoinDraw = { disc: string; ring: string; opacity: number };
 
 export type AvatarFrame = {
-  /** Ring silhouette: outer edge plus aperture, filled `evenodd`. */
-  clip: string;
-  sectors: SectorDraw[];
-  /** Same length and order as `INK_SLOTS`. */
-  ink: InkDraw[];
+  /** The whole slab: every depth layer, back to front, in one path. */
+  body: string;
+  /** The front face alone — the mark itself when the head is square on. */
+  front: string;
+  slot: string;
+  /** The agent's two nostrils, faded with the eyes. */
+  nose: Draw;
+  /** A band of light, to be clipped to `front`. */
+  shine: Draw;
+  /** Everything above the slot's line: the falling coin is clipped to it. */
+  coinClip: string;
+  drop: CoinDraw;
+  /** Same length and order as the pose's open coins. */
+  coins: CoinDraw[];
+  /** Same length and order as the pose's sparks. */
+  sparks: Draw[];
+  /** Same length and order as `EYE_SLOTS`. */
+  eyes: EyeDraw[];
 };
-
-export const VIEW_BOX_SIZE = 100;
-const CENTER: Point = { x: 50, y: 50 };
 
 const EMPTY = "";
 
-const mixChannel = (from: number, to: number, amount: number): number =>
-  from + (to - from) * amount;
+/**
+ * Maps a point on a plane `depth` units in front of the head's middle into
+ * the viewBox under a pose: squash about the base, foreshorten and slide with
+ * the turn, tilt about the pivot, then lift.
+ */
+const projection = (pose: Pose, depth: number) => {
+  const cosYaw = Math.cos(pose.yaw);
+  const cosPitch = Math.cos(pose.pitch);
+  const slideX = depth * Math.sin(pose.yaw);
+  const slideY = -depth * Math.sin(pose.pitch);
+  const sin = Math.sin(pose.roll * DEG);
+  const cos = Math.cos(pose.roll * DEG);
+  return (point: Point): Point => {
+    const x = BASE.x + (point.x - BASE.x) * pose.sx * cosYaw + slideX;
+    const y = BASE.y + (point.y - BASE.y) * pose.sy * cosPitch + slideY;
+    const dx = x - PIVOT.x;
+    const dy = y - PIVOT.y;
+    return {
+      x: PIVOT.x + dx * cos - dy * sin,
+      y: PIVOT.y + dx * sin + dy * cos + pose.lift,
+    };
+  };
+};
 
-const sectorFill = (
-  base: readonly [number, number, number],
-  pose: Pose
-): string => {
-  const { tint, tintR, tintG, tintB } = pose.sectors;
-  if (tint <= 0) {
-    return hex(base);
+/**
+ * Open Bot Avatar's eyelid: a blink or a squint shortens the pill, never below
+ * a little over half its width, and it closes toward a point slightly below
+ * its middle.
+ */
+const eyeOpening = (blink: number, squint: number): number =>
+  Math.max(
+    EYE_HEIGHT * Math.max(0.09, (1 - blink) * (1 - squint * 0.4)),
+    EYE_WIDTH * 0.55
+  );
+
+const buildEyes = (pose: Pose): EyeDraw[] => {
+  const map = projection(pose, EYE_DEPTH);
+  const centers = [-1, 1].map((side): Point => ({
+    x: 50 + (side * EYE_SPACING) / 2 + pose.gazeX * GAZE_X,
+    y: EYE_Y + pose.gazeY * GAZE_Y,
+  }));
+  const squints = [pose.squintL, pose.squintR];
+  const happy = [pose.happyL, pose.happyR];
+  const visible = pose.eyes > 0.002;
+
+  const pills = centers.map((center, index): EyeDraw => {
+    const opacity = pose.eyes * (1 - (happy[index] ?? 0));
+    const open = eyeOpening(pose.blink, squints[index] ?? 0);
+    const lowered = { x: center.x, y: center.y + (EYE_HEIGHT - open) * 0.18 };
+    return {
+      slot: index === 0 ? "eye-left" : "eye-right",
+      d:
+        visible && opacity > 0.002
+          ? toPath(pill(lowered, EYE_WIDTH, open), map)
+          : EMPTY,
+      opacity,
+    };
+  });
+
+  const arcs = centers.map((center, index): EyeDraw => {
+    const opacity = pose.eyes * (happy[index] ?? 0);
+    return {
+      slot: index === 0 ? "arc-left" : "arc-right",
+      d:
+        visible && opacity > 0.002
+          ? toPath(happyArc(center, EYE_WIDTH, EYE_HEIGHT), map)
+          : EMPTY,
+      opacity,
+    };
+  });
+
+  return [...pills, ...arcs];
+};
+
+/** Coins ride a little in front of the face, so a turn never hides them. */
+const COIN_DEPTH = HALF_DEPTH + 3;
+const RING_OUTER = 0.66;
+const RING_INNER = 0.48;
+const VISIBLE = 0.002;
+
+const buildCoin = (coin: CoinPose, map: (point: Point) => Point): CoinDraw => {
+  if (coin.opacity <= VISIBLE) {
+    return { disc: EMPTY, ring: EMPTY, opacity: 0 };
   }
-  return hex([
-    mixChannel(base[0], tintR, tint),
-    mixChannel(base[1], tintG, tint),
-    mixChannel(base[2], tintB, tint),
-  ]);
+  const center = { x: coin.x, y: coin.y };
+  const rx = COIN_RADIUS * Math.max(coin.width, 0.06);
+  return {
+    disc: toPath(ellipse(center, rx, COIN_RADIUS), map),
+    ring:
+      toPath(ellipse(center, rx * RING_OUTER, COIN_RADIUS * RING_OUTER), map) +
+      toPath(ellipse(center, rx * RING_INNER, COIN_RADIUS * RING_INNER), map),
+    opacity: coin.opacity,
+  };
 };
 
-const buildSectors = (pose: Pose): SectorDraw[] => {
-  const spans = [
-    pose.sectors.greenSpan,
-    pose.sectors.orangeSpan,
-    pose.sectors.blueSpan,
+const buildSpark = (spark: SparkPose, map: (point: Point) => Point): Draw =>
+  spark.size <= 0.05
+    ? { d: EMPTY, opacity: 0 }
+    : {
+        d: toPath(
+          sparkle({ x: spark.x, y: spark.y }, spark.size, spark.turn),
+          map
+        ),
+        opacity: 1,
+      };
+
+const SHINE_HALF_WIDTH = 6;
+const SHINE_SLANT = 0.4;
+
+/** A slanted band of light whose middle crosses the head at `shine.at`. */
+const buildShine = (shine: ShinePose, map: (point: Point) => Point): Draw => {
+  if (shine.opacity <= VISIBLE) {
+    return { d: EMPTY, opacity: 0 };
+  }
+  const centerAt = (y: number) => 50 + shine.at * 50 + SHINE_SLANT * (y - 50);
+  const top = centerAt(0);
+  const bottom = centerAt(100);
+  const band: Command[] = [
+    { op: "M", to: { x: top - SHINE_HALF_WIDTH, y: 0 } },
+    { op: "L", to: { x: top + SHINE_HALF_WIDTH, y: 0 } },
+    { op: "L", to: { x: bottom + SHINE_HALF_WIDTH, y: 100 } },
+    { op: "L", to: { x: bottom - SHINE_HALF_WIDTH, y: 100 } },
+    { op: "Z" },
   ];
-  // Overshoots the silhouette in every deformation; the ring clip cuts it back.
-  const reach = pose.body.radius * 1.9 + 12;
-  const origin: Point = {
-    x: CENTER.x + pose.body.x,
-    y: CENTER.y + pose.body.y,
-  };
-
-  let cursor = pose.sectors.rotation;
-  return BRAND_ARCS.map((arc, index) => {
-    const span = Math.max(spans[index] ?? 0, 0);
-    const d = wedgePath(origin, reach, cursor, span);
-    cursor += span;
-    return { id: arc.name, d, fill: sectorFill(arc.color, pose) };
-  });
+  return { d: toPath(band, map), opacity: shine.opacity };
 };
 
-const buildFace = (pose: Pose, center: Point): InkDraw[] => {
-  const { face } = pose;
-  const at: Point = {
-    x: center.x + pose.aperture.x + face.gazeX,
-    y: center.y + pose.aperture.y + face.gazeY,
-  };
-  const feature = (slot: InkSlot, capsule: typeof face.left): InkDraw => {
-    const opacity = face.opacity * capsule.opacity;
-    return {
-      slot,
-      d: opacity <= 0.002 ? EMPTY : capsulePath(capsule, at),
-      opacity,
-    };
-  };
+const ABOVE_SLOT: readonly Command[] = roundedPolygon(
+  [
+    { x: -100, y: -200 },
+    { x: 200, y: -200 },
+    { x: 200, y: SLOT_LINE },
+    { x: -100, y: SLOT_LINE },
+  ],
+  [0, 0, 0, 0]
+);
 
-  return [
-    feature("eye-left", face.left),
-    feature("eye-right", face.right),
-    feature("brow-left", face.browLeft),
-    feature("brow-right", face.browRight),
-    feature("mouth", face.mouth),
-  ];
-};
-
-const ORBIT_SLOTS: InkSlot[] = ["orbit-0", "orbit-1", "orbit-2"];
-const PULSE_SLOTS: InkSlot[] = ["pulse-0", "pulse-1", "pulse-2"];
-const SPARK_SLOTS: InkSlot[] = [
-  "spark-0",
-  "spark-1",
-  "spark-2",
-  "spark-3",
-  "spark-4",
-  "spark-5",
+const NOSE: readonly Command[] = [
+  ...[-1, 1].flatMap((side) =>
+    ellipse(
+      { x: SNOUT_CENTER.x + side * NOSTRIL_GAP, y: SNOUT_CENTER.y },
+      NOSTRIL_RX,
+      NOSTRIL_RY
+    )
+  ),
 ];
-const ZZZ_SLOTS: InkSlot[] = ["zzz-0", "zzz-1", "zzz-2"];
 
-const blank = (slot: InkSlot): InkDraw => ({ slot, d: EMPTY, opacity: 0 });
+const buildNose = (pose: Pose): Draw =>
+  pose.eyes <= VISIBLE
+    ? { d: EMPTY, opacity: 0 }
+    : { d: toPath(NOSE, projection(pose, SNOUT_DEPTH)), opacity: pose.eyes };
 
-const buildOrbit = (pose: Pose, center: Point): InkDraw[] => {
-  const { orbitOpacity, orbitAngle, orbitRadius, orbitSize } = pose.decor;
-  return ORBIT_SLOTS.map((slot, index) => {
-    const opacity = orbitOpacity * (1 - index * 0.34);
-    if (opacity <= 0.002) {
-      return blank(slot);
-    }
-    const angle = orbitAngle - index * 0.17;
-    const dot: Point = {
-      x: center.x + orbitRadius * Math.sin(angle),
-      y: center.y - orbitRadius * Math.cos(angle),
-    };
-    return {
-      slot,
-      d: circlePath(dot, orbitSize * (1 - index * 0.24)),
-      opacity,
-    };
-  });
-};
+/**
+ * Depth layers in the slab. At the widest turn the faces sit about eight units
+ * apart, so nine layers leave under a unit between neighbours — no visible
+ * step along the sides.
+ */
+const DEPTH_LAYERS = 9;
 
-const buildPulse = (pose: Pose, center: Point): InkDraw[] => {
-  const { pulseOpacity, pulsePhase, pulseSpread, pulseWidth } = pose.decor;
-  return PULSE_SLOTS.map((slot, index) => {
-    if (pulseOpacity <= 0.002) {
-      return blank(slot);
-    }
-    const progress = fract(pulsePhase + index / PULSE_SLOTS.length);
-    // Rings fade in over their first moments so none of them pops into place.
-    const opacity =
-      pulseOpacity * (1 - progress) ** 1.4 * clamp01(progress * 7);
-    return {
-      slot,
-      d: annulusPath(
-        center,
-        pose.body.radius * 1.06 + progress * pulseSpread,
-        pulseWidth
-      ),
-      opacity,
-    };
-  });
-};
-
-const buildSparks = (pose: Pose, center: Point): InkDraw[] => {
-  const { sparkOpacity, sparkPhase, sparkSpread, sparkSize } = pose.decor;
-  return SPARK_SLOTS.map((slot, index) => {
-    if (sparkOpacity <= 0.002) {
-      return blank(slot);
-    }
-    // Staggering by a prime-ish fraction keeps the ring of sparks from
-    // pulsing in lockstep.
-    const progress = fract(sparkPhase + index * 0.37);
-    const envelope = Math.sin(progress * Math.PI);
-    const angle = (index / SPARK_SLOTS.length) * TAU + index * 0.31;
-    const distance = pose.body.radius * 1.02 + progress * sparkSpread;
-    return {
-      slot,
-      d: sparkPath(
-        {
-          x: center.x + distance * Math.sin(angle),
-          y: center.y - distance * Math.cos(angle),
-        },
-        sparkSize * envelope,
-        progress * 1.6 + index
-      ),
-      opacity: sparkOpacity * envelope,
-    };
-  });
-};
-
-const buildZzz = (pose: Pose, center: Point): InkDraw[] => {
-  const { zzzOpacity, zzzPhase, zzzSize } = pose.decor;
-  return ZZZ_SLOTS.map((slot, index) => {
-    if (zzzOpacity <= 0.002) {
-      return blank(slot);
-    }
-    const progress = fract(zzzPhase + index / ZZZ_SLOTS.length);
-    return {
-      slot,
-      d: zPath(
-        {
-          x: center.x + pose.body.radius * 0.5 + progress * 15,
-          y: center.y - pose.body.radius * 0.5 - progress * 22,
-        },
-        zzzSize * (0.55 + progress * 0.75),
-        0.12 + progress * 0.2
-      ),
-      opacity: zzzOpacity * Math.sin(progress * Math.PI),
-    };
-  });
-};
+/** How far the two faces may drift apart before the slab needs its layers. */
+const FLAT_SLIDE = 0.05;
 
 export const poseToFrame = (pose: Pose): AvatarFrame => {
-  const bodyCenter: Point = {
-    x: CENTER.x + pose.body.x,
-    y: CENTER.y + pose.body.y,
-  };
-  const body = blobPath(pose.body, CENTER);
-  const hollow = pose.aperture.radius > 0.5;
-  const clip = hollow ? body + blobPath(pose.aperture, bodyCenter) : body;
-
+  const front = toPath(HEAD, projection(pose, HALF_DEPTH));
+  const slide =
+    2 * HALF_DEPTH * Math.hypot(Math.sin(pose.yaw), Math.sin(pose.pitch));
+  const layers =
+    slide < FLAT_SLIDE
+      ? [front]
+      : Array.from({ length: DEPTH_LAYERS }, (_, index) =>
+          toPath(
+            HEAD,
+            projection(
+              pose,
+              -HALF_DEPTH + (2 * HALF_DEPTH * index) / (DEPTH_LAYERS - 1)
+            )
+          )
+        );
+  const face = projection(pose, HALF_DEPTH);
+  const coins = projection(pose, COIN_DEPTH);
   return {
-    clip,
-    sectors: buildSectors(pose),
-    ink: [
-      ...buildFace(pose, bodyCenter),
-      ...buildOrbit(pose, bodyCenter),
-      ...buildPulse(pose, bodyCenter),
-      ...buildSparks(pose, bodyCenter),
-      ...buildZzz(pose, bodyCenter),
-    ],
+    body: layers.join(""),
+    front,
+    slot: toPath(SLOT, face),
+    nose: buildNose(pose),
+    eyes: buildEyes(pose),
+    shine: buildShine(pose.shine, face),
+    coinClip: toPath(ABOVE_SLOT, face),
+    drop: buildCoin(pose.drop, coins),
+    coins: pose.coins.map((coin) => buildCoin(coin, coins)),
+    sparks: pose.sparks.map((spark) => buildSpark(spark, coins)),
   };
 };

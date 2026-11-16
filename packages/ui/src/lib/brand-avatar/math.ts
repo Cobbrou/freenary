@@ -1,6 +1,11 @@
 /**
  * Time-independent scalar helpers for the brand avatar. Every function here is
- * pure and clock-free so a frame can be reproduced from `(state, time)` alone.
+ * pure and clock-free so a frame can be reproduced from `(state, time, seed)`
+ * alone.
+ *
+ * The blink schedule, the gaze saccades and the hash behind them follow the
+ * Open Bot Avatar renderer (https://dominikscholz.github.io/open-bot-avatar/),
+ * whose eyes and motion this avatar reuses.
  */
 
 export const TAU = Math.PI * 2;
@@ -14,65 +19,83 @@ export const clamp01 = (value: number): number => clamp(value, 0, 1);
 export const lerp = (from: number, to: number, weight: number): number =>
   from + (to - from) * weight;
 
-/**
- * Exponential ease-out. The reference this avatar imitates never overshoots on
- * the body, so transitions use this rather than a spring.
- */
-export const easeOutExpo = (t: number): number => {
-  const x = clamp01(t);
-  return x >= 1 ? 1 : 1 - 2 ** (-10 * x);
+/** Hermite ease in 0..1 — the curve every blend and saccade uses. */
+export const smoothstep = (value: number): number => {
+  const x = clamp01(value);
+  return x * x * (3 - 2 * x);
 };
 
-export const easeOutCubic = (t: number): number => 1 - (1 - clamp01(t)) ** 3;
+/** Signed oscillation in -1..1 with a period of `seconds`. */
+export const cycle = (time: number, seconds: number, phase = 0): number =>
+  Math.sin((TAU * time) / seconds + phase);
 
-/** Signed oscillation in -1..1 at `hz` cycles per unit of time. */
-export const wave = (time: number, hz: number, phase = 0): number =>
-  Math.sin((time * hz + phase) * TAU);
-
-/** Unsigned oscillation in 0..1. */
-export const oscillate = (time: number, hz: number, phase = 0): number =>
-  0.5 + wave(time, hz, phase) / 2;
-
-/** Hop envelope in 0..1 that lands hard and leaves soft. */
-export const hop = (time: number, hz: number, phase = 0): number =>
-  Math.abs(Math.sin((time * hz + phase) * Math.PI));
-
-/** Deterministic 0..1 value for an integer key — used to schedule blinks. */
-const hash01 = (key: number): number => {
-  const x = Math.sin(key * 127.1 + 311.7) * 43_758.545_3;
-  return x - Math.floor(x);
+/** Deterministic 0..1 value for a seed and an integer key. */
+export const hash01 = (seed: number, key: number): number => {
+  let value = (seed ^ Math.imul(key | 0, 2_654_435_761)) >>> 0;
+  value = Math.imul(value ^ (value >>> 16), 2_246_822_507);
+  value = Math.imul(value ^ (value >>> 13), 3_266_489_909);
+  value ^= value >>> 16;
+  return (value >>> 0) / 4_294_967_296;
 };
 
-/**
- * Smooth aperiodic drift in -1..1. Three incommensurable sines read as organic
- * over any window a viewer will watch, and cost three `sin` calls.
- */
-export const drift = (time: number, seed = 0): number =>
-  (Math.sin(time * 1.13 + seed * 1.7) +
-    0.62 * Math.sin(time * 0.47 + seed * 4.1) +
-    0.4 * Math.sin(time * 0.19 + seed * 8.3)) /
-  2.02;
-
-/** Fractional part, always in 0..1 including for negative input. */
-export const fract = (value: number): number => value - Math.floor(value);
-
-/**
- * Blink closure in 0..1 (1 = shut). Blinks are scheduled from a hash of the
- * interval index, so the rhythm is irregular yet identical on every replay.
- */
-export const blink = (time: number, period: number, seed = 0): number => {
-  const index = Math.floor(time / period);
-  const jitter = hash01(index + seed) * period * 0.62;
-  const local = time - index * period - jitter;
-  const CLOSE = 0.115;
-  if (local < 0 || local > CLOSE) {
-    // A second blink follows the first often enough to notice its absence.
-    const doubled = hash01(index + seed + 0.5) > 0.68;
-    const second = local - CLOSE - 0.09;
-    if (!doubled || second < 0 || second > CLOSE) {
-      return 0;
-    }
-    return Math.sin((second / CLOSE) * Math.PI);
+/** A stable 32-bit seed for a string, so each avatar blinks on its own beat. */
+export const seedOf = (text: string): number => {
+  let value = 2_166_136_261;
+  for (let index = 0; index < text.length; index += 1) {
+    value ^= text.charCodeAt(index);
+    value = Math.imul(value, 16_777_619);
   }
-  return Math.sin((local / CLOSE) * Math.PI);
+  return value >>> 0;
+};
+
+const BLINK_PERIOD = 4.2;
+const BLINK_SECONDS = 0.19;
+const DOUBLE_BLINK_GAP = 0.34;
+const DOUBLE_BLINK_CHANCE = 0.2;
+
+/**
+ * Eyelid closure in 0..1 (1 = shut). One blink lands somewhere in every
+ * 4.2-second window, and one window in five blinks twice.
+ */
+export const blinkAt = (seed: number, time: number): number => {
+  const window = Math.floor(time / BLINK_PERIOD);
+  let closure = 0;
+  for (const index of [window - 1, window]) {
+    const start = index * BLINK_PERIOD + 0.5 + hash01(seed, index * 2) * 2.9;
+    const starts =
+      hash01(seed, index * 2 + 1) > 1 - DOUBLE_BLINK_CHANCE
+        ? [start, start + DOUBLE_BLINK_GAP]
+        : [start];
+    for (const at of starts) {
+      const progress = (time - at) / BLINK_SECONDS;
+      if (progress > 0 && progress < 1) {
+        closure = Math.max(closure, Math.sin(Math.PI * progress));
+      }
+    }
+  }
+  return closure;
+};
+
+const SACCADE_PERIOD = 1.9;
+const SACCADE_SECONDS = 0.16;
+const CENTERED_CHANCE = 0.4;
+
+const saccadeTarget = (seed: number, index: number): [number, number] =>
+  hash01(seed, 1000 + index * 3) < CENTERED_CHANCE
+    ? [0, 0]
+    : [
+        (hash01(seed, 1001 + index * 3) * 2 - 1) * 0.6,
+        (hash01(seed, 1002 + index * 3) * 2 - 1) * 0.35,
+      ];
+
+/**
+ * Where idle eyes look, in -1..1 per axis. Every 1.9 seconds they jump to a
+ * new spot — straight ahead two times in five — in a quick eased move.
+ */
+export const saccadeAt = (seed: number, time: number): [number, number] => {
+  const index = Math.floor(time / SACCADE_PERIOD);
+  const [fromX, fromY] = saccadeTarget(seed, index - 1);
+  const [toX, toY] = saccadeTarget(seed, index);
+  const weight = smoothstep((time - index * SACCADE_PERIOD) / SACCADE_SECONDS);
+  return [lerp(fromX, toX, weight), lerp(fromY, toY, weight)];
 };

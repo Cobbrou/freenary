@@ -9,7 +9,7 @@ src/
   components/        # Vendored registry primitives (button, dropdown, sidebar, ...)
   hooks/             # Reusable React hooks
   lib/               # cn() and other tiny helpers
-    brand-avatar/    # The mark's morph engine — see "The Brand Avatar"
+    brand-avatar/    # The logo and agent engine — see "The Brand Avatar"
   styles/
     globals.css      # Tailwind v4 layer + design tokens (colors, radii, spacing)
 components.json      # Registry config for this package — the `@fluid` and `@bklit` registries and the shadcn CLI
@@ -69,27 +69,30 @@ That same ignore keeps `@shadcn/lint` off this package, which is correct: a rule
 
 ## The Brand Avatar
 
-`BrandAvatar` (`src/components/brand-avatar.tsx`) is the product mark as a character. `state="logo"` draws exactly the static ring the favicon draws — the same measured proportions, the same three arcs — and every other state morphs out of it. The engine behind it lives in `src/lib/brand-avatar/` and is framework-free:
+`BrandAvatar` (`src/components/brand-avatar.tsx`) draws one piggy bank head in two roles. `state="logo"` is the Freenary logo: a pink squircle whose two top corners rise into ears, with the coin slot cut through it — no eyes, no nose, square to the viewer and still. It is what the favicon and `BrandPattern` draw. Every other state is the agent: the same head with two ink nostrils that fade in with the eyes, and the eyes and motion of [Open Bot Avatar](https://dominikscholz.github.io/open-bot-avatar/) — two dark pill eyes that blink, glance about and turn into happy arcs, a head that floats, hops, tilts, turns as a solid slab, and follows the pointer. On top of that come Freenary's money moments: `saving` drops coin after coin into the slot, `success` drops one and grins, `loading` flips a coin above the head, `notification` lifts one out of the slot, `celebrating` and `rich` toss coins out of it among gold glints, and `rich` and `idle` sweep a shine across the head. The engine behind it lives in `src/lib/brand-avatar/` and is framework-free:
 
 | Module | Owns |
 | --- | --- |
-| `math.ts` | Easings, oscillators, the irregular blink schedule. |
-| `shape.ts` | The two path primitives: a closed radial blob, and a capsule whose top and bottom edges bow independently. |
-| `pose.ts` | `Pose` — the avatar's whole appearance as numbers — plus the blend and the ring-band guard. |
-| `states.ts` | The state library: one `(time, age) => Pose` per expression. |
-| `frame.ts` | A pose turned into the exact paths, and the fixed ordered slot list a renderer draws. |
+| `math.ts` | Easings, oscillators, and Open Bot Avatar's seeded hash, blink schedule and gaze saccades. |
+| `shape.ts` | Path commands mapped through a point function on the way out, plus the rounded polygon, the eye pill, the happy arc, the ellipse and the sparkle. |
+| `mark.ts` | The mark's geometry and colours: the head, the slot, the snout, the slab depth, the eyes' size and place, and the coin. |
+| `pose.ts` | `Pose` — Open Bot Avatar's turn, tilt, lift, squash, gaze, blink and squint as numbers, plus the falling coin, the open coins, the glints and the shine — the mark and agent rest poses, the blend, `attend()` (the turn toward the pointer) and the range guard. |
+| `states.ts` | The state library: one `(moment) => Pose` per state, where a moment carries the time, the state's age, the seed, the pointer gaze and whether it is `still`. `idle`, `happy` and `thinking` are Open Bot Avatar's three motions ported value for value, sway damping while attending included; the rest reuse the same levers. All transitions share `TRANSITION_SECONDS`, Open Bot Avatar's 420 ms. |
+| `attention.ts` | Turning a pointer position into an eased gaze target, as Open Bot Avatar does. |
+| `frame.ts` | A pose turned into the exact paths, and the fixed ordered eye slots a renderer draws. |
 | `engine.ts` | Blends the state being left into the state being entered. |
 
-Five rules hold this together, and each one is load-bearing:
+Six rules hold this together, and each one is load-bearing:
 
-- **No clocks below the component.** `engine.sample(t)` and `brandAvatarFrame(state, t)` are pure functions of time, which is what makes `frozenAt`, the reduced-motion still frame and a DOM-less test suite produce the same image. A state builder that reads `Date.now()` breaks all three at once.
-- **A pose holds nothing but numbers.** That is why blending two states is one pass over the keys rather than a per-field special case. A colour belongs in a pose as `tintR/G/B`, never as a string.
-- **Silhouette harmonics are fixed at 2, 3 and 5.** A `lobes` count as a pose field would blend to a fractional harmonic, which is no longer periodic over a full turn and kinks the seam at twelve o'clock. Add amplitude, never a count.
-- **The ring band is the mark.** `resize()` scales both radii together; scaling only the outer edge eats the band. `normalizePose()` is the backstop for a state whose aperture outgrows its body.
-- **An angle or a cycle counter needs a period entry.** Anything a state derives from absolute time and feeds to `sin`, `cos` or `fract` — a rotation, an orbit angle, a decor phase — grows without bound, so it goes in `BLOB_CYCLES`, `SECTOR_CYCLES` or `DECOR_CYCLES`. Without one, a transition lerps it and unwinds every turn the state has accumulated: a spinner thirty seconds in sits at 8760 degrees and would strobe two dozen times backwards on its way to rest. `rebaseCycles()` crosses that gap once, at `setState`, so the blend itself stays a plain lerp — resolving the wrap per frame instead re-rounds against a moving target and jumps most of a turn in a single frame.
+- **No clocks below the component.** `engine.sample(t, gaze)` and `brandAvatarFrame(state, t, seed, still)` are pure functions of their inputs, which is what makes the `frozen` prop, the reduced-motion still frame and a DOM-less test suite produce the same image. A `still` frame is Open Bot Avatar's reduced-motion pose — every cycle at rest, no blink, no glance, no hop — so a frozen avatar never shows eyes caught half shut. A state builder that reads `Date.now()` breaks all three at once. The seed comes from `useId`, so each avatar blinks on its own beat and the server and client still render the same first frame.
+- **A pose holds nothing but numbers.** That is why blending two states is one pass over the fields. Two kinds of field cannot be halfway and are the exceptions in `blendPose()`. The eye shape (`happyL`, `happyR`) is 0 or 1: it swaps at the midpoint behind closed eyes, so a pill never morphs into an arc on screen. Coins fade rather than slide: a hidden coin fades in where the new state wants it, and a visible one fades out where it was over the first half while the new state's fades in over the second. The choice reads only the source coin, which a transition holds still, so it cannot flip mid-blend and throw a coin across the head.
+- **All motion is affine.** Turning, tilting, lifting and squashing map every control point through one function, which transforms the curve exactly, so a frame never resamples a shape. A deformation that is not affine — a wobble, a bend — would need the outline sampled instead.
+- **The head turns as a slab.** `frame.ts` stacks copies of the head from its back face to its front face along the turn, in one path whose copies all wind the same way, so the default fill rule unions them into a solid's silhouette. The coin slot is a hole through the whole slab, which is why the renderer cuts it with a mask instead of filling it. The snout sits further forward than the eyes, so it slides further on a turn. Square on, every copy coincides and the path is the bare mark.
+- **Props are fixed slots that fade, never come and go.** The pose always carries one falling coin, three open coins, four glints and one shine; a state that does not use them leaves them at rest with zero opacity or size, so any two states still blend. The falling coin is clipped to the region above the slot's line, which is what makes it vanish into the slot. Coin widths and glint sizes are stored as values, never as an ever-growing spin angle, so no blend can unwind a spin. `engine.test.ts` steps every state and several transitions at 240 frames a second and fails on any jump, so a new prop or state is checked for pops the moment it lands.
+- **The mark stays the mark.** `logo` has no eyes, no turn and no clock, and `attend()` leaves a pose without eyes alone, so cursor following can never move the logo. Leaving `logo` fades the eyes in over the blend.
 
-The renderer patches `d` and `opacity` on a fixed set of paths instead of re-rendering, so a wall of avatars costs no React commits per frame. Adding a decoration therefore means adding a slot to `INK_SLOTS` and its static fill to `INK_STYLES` — the shape list must never change between frames.
+The renderer patches `d` and `opacity` on a fixed set of paths instead of re-rendering, so a wall of avatars costs no React commits per frame. Pills are filled and arcs are stroked, so each eye has one slot of each in `EYE_SLOTS`, and the frame shows one at a time. Fills never animate: the head, nostrils, coins, glints and eyes keep their `mark.ts` colours in every theme, because the brand does not follow the theme and the eyes sit on the pink head rather than on the page.
 
-`BrandPattern` (`src/components/brand-pattern.tsx`) is the mark as a surface: the `logo` frame tiled across an SVG `<pattern>`, for a place that is about the brand rather than about data. It draws the same `brandAvatarFrame("logo", 0)` the favicon does, so the two cannot drift, and it is decorative by construction — `aria-hidden`, no pointer events, brand fills that ignore the theme, and an `opacity-*` class from the caller for how much of them shows.
+`BrandPattern` (`src/components/brand-pattern.tsx`) is the logo as a surface: the `logo` frame — the head with its coin slot — tiled across an SVG `<pattern>`, for a place that is about the brand rather than about data. It draws the same `brandAvatarFrame("logo", 0)` the favicon does, so the two cannot drift, and it is decorative by construction — `aria-hidden`, no pointer events, brand fills that ignore the theme, and an `opacity-*` class from the caller for how much of them shows.
 
 Nothing here decides _when_ a state applies; callers pass `state`. Triggers belong to the feature that has the context, not to the mark.

@@ -1,26 +1,39 @@
+import { COIN_RADIUS, SLOT_LINE } from "./mark";
 import {
-  blink,
+  blinkAt,
   clamp01,
-  DEG,
-  drift,
-  easeOutCubic,
-  easeOutExpo,
-  hop,
-  oscillate,
+  cycle,
+  hash01,
+  saccadeAt,
+  smoothstep,
   TAU,
-  wave,
 } from "./math";
-import { facePose, FACE_APERTURE, markPose, type Pose } from "./pose";
-import type { CapsulePose } from "./shape";
+import {
+  agentPose,
+  attend,
+  type CoinPose,
+  type Gaze,
+  markPose,
+  type Pose,
+} from "./pose";
 
 /**
- * The state library. Each entry turns a moment in time into a complete pose;
+ * The state library. Each entry turns a moment into a complete pose;
  * `engine.ts` blends between two of them. Nothing here reads a clock, so the
- * same `(state, time)` always produces the same frame.
+ * same `(state, time, age, seed)` always produces the same frame.
+ *
+ * `logo` is the Freenary mark and never moves. Every other state is the agent,
+ * built from Open Bot Avatar's three motions — `idle`, `happy` and `thinking`,
+ * ported value for value — and from the same handful of levers for the rest:
+ * turn, tilt, lift, squash, gaze, blink and squint. The money moments add
+ * Freenary's own props on top: a coin saved into the slot, coins tossed out of
+ * it or flipped above the head, gold glints, and a shine across the head.
  *
  * `time` is absolute, which keeps every cycle continuous across a state change.
  * `age` is how long the state has been the target, and drives the one-shot
- * accents — the pop of a surprise, the shake of an error.
+ * accents — the pop of a surprise, the shake of an error. A `still` moment is
+ * Open Bot Avatar's reduced-motion pose: every cycle at rest, no blink, no
+ * glance, no hop — only what the state holds steadily.
  */
 
 export const BRAND_AVATAR_STATES = [
@@ -43,519 +56,559 @@ export const BRAND_AVATAR_STATES = [
   "error",
   "wink",
   "shy",
+  "saving",
+  "rich",
 ] as const;
 
 export type BrandAvatarState = (typeof BRAND_AVATAR_STATES)[number];
 
-/** Slow ripples that keep the silhouette from ever looking like a stencil. */
-const organic = (pose: Pose, time: number, amount = 1): void => {
-  pose.body.lobe3 = 0.013 * amount;
-  pose.body.lobe3Phase = time * 0.42;
-  pose.body.lobe5 = 0.008 * amount;
-  pose.body.lobe5Phase = -time * 0.27;
-  pose.body.lobe2 = 0.006 * amount;
-  pose.body.lobe2Phase = time * 0.19;
+export type Moment = {
+  time: number;
+  age: number;
+  seed: number;
+  /** Reduced motion: hold the state's steady pose and nothing that moves. */
+  still?: boolean;
+  /** Where the pointer is, if the avatar is following it. */
+  gaze?: Gaze;
 };
 
 /**
- * Scales the whole creature. Both radii move together: shrinking only the
- * outer edge would eat the ring band, and the band is the mark.
+ * One state's clock. Each avatar runs its own offset, so a row of them never
+ * moves in step, and a still moment zeroes every cycle, blink and glance.
  */
-const resize = (pose: Pose, factor: number): void => {
-  pose.body.radius *= factor;
-  pose.aperture.radius *= factor;
+type Clock = {
+  t: number;
+  still: boolean;
+  /** Open Bot Avatar's sway damping: the head steadies while it attends. */
+  sway: number;
+  wave: (seconds: number, phase?: number) => number;
+  blink: (rate?: number) => number;
+  glance: () => [number, number];
 };
 
-const breathing = (
+const ATTENTION_DAMPING = 0.7;
+
+const clockOf = ({ time, seed, still = false, gaze }: Moment): Clock => {
+  const t = still ? 0 : time + hash01(seed, 7) * 10;
+  return {
+    t,
+    still,
+    sway: 1 - ATTENTION_DAMPING * smoothstep(gaze?.weight ?? 0),
+    wave: (seconds, phase = 0) => (still ? 0 : cycle(t, seconds, phase)),
+    blink: (rate = 1) => (still ? 0 : blinkAt(seed, t * rate)),
+    glance: () => (still ? [0, 0] : saccadeAt(seed, t)),
+  };
+};
+
+/** A hop that lands hard: lift, plus the squash on touching down. */
+const hopping = (
   pose: Pose,
-  time: number,
-  hz: number,
-  depth: number
+  clock: Clock,
+  period: number,
+  height: number
 ): void => {
-  const swell = wave(time, hz);
-  resize(pose, 1 + depth * swell);
-  pose.body.squash += depth * 0.8 * swell;
-};
-
-/** Squeezes an eye toward a closed line. `closure` runs 0..1. */
-const shut = (eye: CapsulePose, closure: number): void => {
-  const squeeze = 1 - closure * 0.93;
-  eye.top *= squeeze;
-  eye.bottom *= squeeze;
-};
-
-const blinking = (pose: Pose, time: number, period = 3.7, seed = 0): void => {
-  const closure = blink(time, period, seed);
-  if (closure > 0) {
-    shut(pose.face.left, closure);
-    shut(pose.face.right, closure);
+  if (clock.still) {
+    return;
   }
+  const phase = ((clock.t % period) + period) % period;
+  const t = phase / period;
+  const arc = 4 * t * (1 - t);
+  const landing = clamp01(1 - Math.min(t, 1 - t) / 0.12);
+  pose.lift = -height * arc;
+  pose.sy = 1 - 0.09 * landing + 0.03 * arc;
+  pose.sx = 1 + 0.07 * landing - 0.015 * arc;
 };
 
-/** Upward crescent — the eye of a smile. `strength` runs 0..1. */
-const crescent = (eye: CapsulePose, strength: number): void => {
-  eye.halfWidth = 5.1;
-  eye.top = -1.6 - 0.7 * (1 - strength);
-  eye.bottom = 1.6;
-  eye.topBow = -5.6 * strength;
-  eye.bottomBow = -4.4 * strength;
+/** Slow float and breath, shared by every calm state. */
+const breathing = (pose: Pose, clock: Clock, depth = 1): void => {
+  if (clock.still) {
+    return;
+  }
+  pose.lift = -0.45 * depth * (1 - Math.cos((TAU * clock.t) / 3.4));
+  const swell = clock.wave(3.4, -Math.PI / 2);
+  pose.sy = 1 + 0.012 * depth * swell;
+  pose.sx = 1 - 0.008 * depth * swell;
 };
 
-const smile = (pose: Pose, width: number, open: number): void => {
-  const mouth = pose.face.mouth;
-  mouth.opacity = 1;
-  mouth.halfWidth = width;
-  mouth.top = -0.8 - open;
-  mouth.bottom = 1.1 + open;
-  mouth.topBow = 1.9 - open * 0.9;
-  mouth.bottomBow = 2.6 + open * 0.6;
+/** A one-shot accent in 0..1 over `seconds`; a still moment shows it settled. */
+const accent = (clock: Clock, age: number, seconds: number): number =>
+  clock.still ? 0 : Math.sin(clamp01(age / seconds) * Math.PI);
+
+/** Seconds a dropped coin takes from its release to the slot. */
+const COIN_FALL_SECONDS = 0.6;
+const COIN_RELEASE_HEIGHT = 34;
+
+/**
+ * A coin falling into the slot, at `progress` 0 (released) to 1 (gone). It
+ * drops under gravity and turns edge-on just before the slot, which is the
+ * only way a coin fits.
+ */
+const fallingCoin = (progress: number): CoinPose => {
+  const p = clamp01(progress);
+  const start = SLOT_LINE - COIN_RELEASE_HEIGHT;
+  const end = SLOT_LINE + COIN_RADIUS + 1;
+  return {
+    x: 50,
+    y: start + (end - start) * p * p,
+    width: 1 - 0.85 * smoothstep((p - 0.35) / 0.45),
+    opacity: progress >= 1 ? 0 : smoothstep(p / 0.12),
+  };
+};
+
+/** The body's little gulp as a coin goes in: 0..1 around the end of a fall. */
+const gulpAt = (progress: number): number =>
+  Math.sin(clamp01((progress - 0.8) / 0.4) * Math.PI);
+
+const gulping = (pose: Pose, gulp: number): void => {
+  pose.sy -= 0.05 * gulp;
+  pose.sx += 0.035 * gulp;
+};
+
+/**
+ * Where the eyes look while a coin falls: up at it, then back to the viewer.
+ * They lift over the first quarter of the fall, the length of an Open Bot
+ * Avatar glance, so a new coin never snaps them upward.
+ */
+const watchingFall = (pose: Pose, progress: number): void => {
+  const follow = smoothstep(progress / 0.25) * (1 - smoothstep(progress));
+  pose.gazeY = -0.9 * follow;
+  pose.gazeX = -0.15 * follow;
+};
+
+/** Sideways reach of each tossed coin; the middle one goes mostly up. */
+const TOSS_SPREAD = [-46, 12, 46] as const;
+const TOSS_SECONDS = 1.5;
+
+/**
+ * Coins tossed out of the slot, each on its own beat: a quick rise, then a
+ * fall past the cheeks, turning over as it goes.
+ */
+const tossingCoins = (pose: Pose, clock: Clock): void => {
+  pose.coins = pose.coins.map((_, index) => {
+    const phase = (((clock.t / TOSS_SECONDS + index / 3) % 1) + 1) % 1;
+    return {
+      x: 50 + (TOSS_SPREAD[index] ?? 0) * phase,
+      y: SLOT_LINE - 4 - 110 * phase + 170 * phase * phase,
+      width: Math.abs(Math.cos(phase * TAU * 1.5 + index)),
+      opacity: smoothstep(phase / 0.1) * (1 - smoothstep((phase - 0.8) / 0.2)),
+    };
+  });
+};
+
+const TWINKLE_SECONDS = 1.3;
+
+/** Glints that swell and shrink on staggered beats, never all at once. */
+const twinkling = (pose: Pose, clock: Clock, size: number): void => {
+  pose.sparks = pose.sparks.map((spark, index) => {
+    const phase = (((clock.t / TWINKLE_SECONDS + index * 0.27) % 1) + 1) % 1;
+    return {
+      ...spark,
+      size: size * Math.max(0, Math.sin(Math.PI * phase)) ** 1.5,
+      turn: 0.35 * Math.sin(TAU * phase),
+    };
+  });
+};
+
+/** One burst of glints around the head, `amount` 0..1. */
+const glinting = (pose: Pose, amount: number, size = 7): void => {
+  pose.sparks = pose.sparks.map((spark) => ({ ...spark, size: size * amount }));
+};
+
+const SHINE_SECONDS = 0.9;
+
+/** A highlight crossing the head once every `period` seconds. */
+const shining = (
+  pose: Pose,
+  clock: Clock,
+  period: number,
+  strength: number
+): void => {
+  const local = (((clock.t % period) + period) % period) / SHINE_SECONDS;
+  if (clock.still || local >= 1) {
+    return;
+  }
+  pose.shine = {
+    at: -1.3 + 2.6 * smoothstep(local),
+    opacity: strength * Math.sin(Math.PI * local),
+  };
+};
+
+const happyEyes = (pose: Pose): void => {
+  pose.happyL = 1;
+  pose.happyR = 1;
 };
 
 const logo = (): Pose => markPose();
 
-const idle = (time: number): Pose => {
-  const pose = facePose();
-  organic(pose, time);
-  breathing(pose, time, 0.21, 0.012);
-  blinking(pose, time);
-  pose.face.gazeX = drift(time * 0.5, 3) * 2.6;
-  pose.face.gazeY = drift(time * 0.42, 8) * 1.4;
-  pose.body.lean = drift(time * 0.3, 5) * 0.014;
+/** Open Bot Avatar's `idle`. */
+const idle = (moment: Moment): Pose => {
+  const clock = clockOf(moment);
+  const pose = agentPose();
+  pose.yaw += 0.07 * clock.sway * clock.wave(6.1);
+  pose.pitch += 0.04 * clock.sway * clock.wave(4.7, 1);
+  pose.roll = 1.6 * clock.wave(5.3, 2);
+  breathing(pose, clock);
+  pose.blink = clock.blink();
+  [pose.gazeX, pose.gazeY] = clock.glance();
+  shining(pose, clock, 7, 0.22);
   return pose;
 };
 
-const happy = (time: number): Pose => {
-  const pose = facePose();
-  organic(pose, time, 1.2);
-  const bounce = hop(time, 1.15);
-  pose.body.y = -2.6 * bounce;
-  pose.body.squash = 0.075 - 0.15 * bounce;
-  resize(pose, 1 + 0.012 * bounce);
-  crescent(pose.face.left, 1);
-  crescent(pose.face.right, 1);
-  smile(pose, 4.6, 0);
-  pose.face.gazeX = drift(time * 0.6, 2) * 1.4;
+/** Open Bot Avatar's `happy`. */
+const happy = (moment: Moment): Pose => {
+  const clock = clockOf(moment);
+  const pose = agentPose();
+  hopping(pose, clock, 0.92, 3.2);
+  pose.roll = 4.5 * clock.wave(1.84);
+  pose.yaw += 0.1 * clock.wave(1.84, 0.6);
+  happyEyes(pose);
   return pose;
 };
 
-const excited = (time: number): Pose => {
-  const pose = facePose();
-  organic(pose, time, 1.8);
-  const bounce = hop(time, 2.5);
-  resize(pose, 0.9 * (1 + 0.022 * bounce));
-  pose.body.y = -4.4 * bounce;
-  pose.body.squash = 0.13 - 0.28 * bounce;
-  pose.sectors.rotation = time * 46;
-  for (const eye of [pose.face.left, pose.face.right]) {
-    eye.halfWidth = 5.1;
-    eye.top = -8.4;
-    eye.bottom = 8;
-  }
-  smile(pose, 4.4, 1.1 + 0.5 * bounce);
-  pose.decor.sparkOpacity = 1;
-  pose.decor.sparkPhase = time * 1.5;
-  pose.decor.sparkSpread = 7;
-  pose.decor.sparkSize = 4.6;
+/** Open Bot Avatar's `thinking`. */
+const thinking = (moment: Moment): Pose => {
+  const clock = clockOf(moment);
+  const pose = agentPose();
+  pose.yaw += 0.12 + 0.05 * clock.sway * clock.wave(7.3);
+  pose.pitch += 0.08;
+  pose.roll = -5 + 1.4 * clock.wave(4.1);
+  pose.lift = clock.still ? 0 : -0.5 * (1 - Math.cos((TAU * clock.t) / 5.2));
+  pose.gazeX = 0.55 + 0.3 * clock.wave(5.6);
+  pose.gazeY = -0.8;
+  pose.squintL = 0.22;
+  pose.squintR = 0.32 + 0.1 * clock.wave(3.1);
+  pose.blink = clock.blink(0.7);
   return pose;
 };
 
-const curious = (time: number): Pose => {
-  const pose = facePose();
-  organic(pose, time);
-  breathing(pose, time, 0.24, 0.01);
-  const scan = wave(time, 0.26);
-  pose.body.lean = 0.12 + 0.03 * wave(time, 0.22);
-  pose.body.rotation = 6 * DEG;
-  pose.aperture.x = scan * 1.6;
-  pose.face.gazeX = scan * 4.2;
-  pose.face.gazeY = -1.4 + wave(time, 0.13) * 1.1;
-  blinking(pose, time, 4.4);
-  pose.face.left.halfWidth = 4.2;
-  pose.face.left.top = -6.6;
-  pose.face.left.bottom = 6.6;
-  pose.face.right.halfWidth = 4.9;
-  pose.face.right.top = -8.2;
-  pose.face.right.bottom = 7.8;
-  pose.face.browRight.opacity = 1;
-  pose.face.browRight.y = -15.4;
-  pose.face.browRight.tilt = -0.14;
-  pose.face.mouth.opacity = 0.85;
-  pose.face.mouth.halfWidth = 2.1;
-  pose.face.mouth.top = -1.6;
-  pose.face.mouth.bottom = 1.6;
+const excited = (moment: Moment): Pose => {
+  const clock = clockOf(moment);
+  const pose = agentPose();
+  hopping(pose, clock, 0.62, 4);
+  pose.roll = 3 * clock.wave(1.24);
+  pose.squintL = -0.25;
+  pose.squintR = -0.25;
+  pose.gazeY = -0.3;
+  twinkling(pose, clock, 6);
   return pose;
 };
 
-const surprised = (time: number, age: number): Pose => {
-  const pose = facePose();
-  organic(pose, time, 0.6);
-  const pop = easeOutExpo(clamp01(age / 0.26));
-  const settle = easeOutCubic(clamp01((age - 0.3) / 0.7));
-  resize(pose, 1 + 0.15 * pop - 0.09 * settle);
-  pose.body.squash = -0.07 * pop + 0.03 * settle;
-  pose.body.x = wave(time, 9) * 0.35 * (1 - settle);
-  pose.aperture.radius += 3 * pop;
-  for (const eye of [pose.face.left, pose.face.right]) {
-    eye.halfWidth = 5.6;
-    eye.top = -9.2 * (0.75 + 0.25 * pop);
-    eye.bottom = 9.2 * (0.75 + 0.25 * pop);
-  }
-  for (const brow of [pose.face.browLeft, pose.face.browRight]) {
-    brow.opacity = 1;
-    brow.y = -16 - 0.8 * pop;
-    brow.topBow = -1.3;
-    brow.bottomBow = -1.3;
-  }
-  pose.face.mouth.opacity = 1;
-  pose.face.mouth.halfWidth = 2.6;
-  pose.face.mouth.top = -3;
-  pose.face.mouth.bottom = 3;
-  pose.face.mouth.y = 12.4;
-  pose.decor.pulseOpacity = 0.5 * (1 - settle);
-  pose.decor.pulsePhase = age * 1.1;
-  pose.decor.pulseSpread = 9;
+const curious = (moment: Moment): Pose => {
+  const clock = clockOf(moment);
+  const pose = agentPose();
+  breathing(pose, clock);
+  pose.yaw += 0.18;
+  pose.roll = 8 + 1.2 * clock.wave(4.4);
+  pose.gazeX = 0.5 + 0.2 * clock.wave(3.8);
+  pose.gazeY = -0.2;
+  pose.squintL = 0.3;
+  pose.squintR = -0.1;
+  pose.blink = clock.blink();
   return pose;
 };
 
-const confused = (time: number): Pose => {
-  const pose = facePose();
-  const rock = wave(time, 0.45);
-  pose.body.rotation = rock * 6 * DEG;
-  pose.body.lean = rock * 0.05;
-  pose.body.lobe2 = 0.03;
-  pose.body.lobe2Phase = time * 0.9;
-  pose.body.lobe3 = 0.018;
-  pose.body.lobe3Phase = -time * 0.6;
-  blinking(pose, time, 4.8);
-  pose.face.left.halfWidth = 3.7;
-  pose.face.left.top = -4.6;
-  pose.face.left.bottom = 5.1;
-  pose.face.left.bottomBow = -1.2;
-  pose.face.right.halfWidth = 5;
-  pose.face.right.top = -8;
-  pose.face.right.bottom = 8;
-  pose.face.browLeft.opacity = 1;
-  pose.face.browLeft.y = -12.6;
-  pose.face.browLeft.tilt = 0.26;
-  pose.face.browRight.opacity = 1;
-  pose.face.browRight.y = -15.4;
-  pose.face.browRight.tilt = -0.1;
-  pose.face.mouth.opacity = 0.9;
-  pose.face.mouth.halfWidth = 3.8;
-  pose.face.mouth.topBow = 1.5;
-  pose.face.mouth.bottomBow = -1.2;
-  pose.face.gazeX = -1.6 + wave(time, 0.31) * 2.4;
-  pose.face.gazeY = -1.8;
+const surprised = (moment: Moment): Pose => {
+  const clock = clockOf(moment);
+  const pose = agentPose();
+  const pop = accent(clock, moment.age, 0.4);
+  breathing(pose, clock, 0.5);
+  pose.lift -= 4 * pop;
+  pose.sy += 0.06 * pop;
+  pose.sx -= 0.04 * pop;
+  pose.pitch += 0.08;
+  pose.squintL = -0.4;
+  pose.squintR = -0.4;
   return pose;
 };
 
-const thinking = (time: number): Pose => {
-  const pose = facePose();
-  organic(pose, time, 0.8);
-  breathing(pose, time, 0.18, 0.01);
-  resize(pose, 0.86);
-  pose.body.lean = 0.05;
-  pose.sectors.rotation = time * 14;
-  blinking(pose, time, 5.2);
-  for (const eye of [pose.face.left, pose.face.right]) {
-    eye.top = -4.6;
-    eye.bottom = 5.5;
-    eye.bottomBow = -0.9;
-  }
-  for (const brow of [pose.face.browLeft, pose.face.browRight]) {
-    brow.opacity = 0.85;
-    brow.y = -12.4;
-  }
-  pose.face.gazeX = -2.6 + drift(time * 0.8, 2) * 1.1;
-  pose.face.gazeY = -2.8;
-  pose.decor.orbitOpacity = 1;
-  pose.decor.orbitAngle = time * TAU * 0.34;
-  pose.decor.orbitRadius = 43;
-  pose.decor.orbitSize = 3.6;
+const confused = (moment: Moment): Pose => {
+  const clock = clockOf(moment);
+  const pose = agentPose();
+  breathing(pose, clock);
+  pose.roll = 7 * clock.wave(2.6);
+  pose.yaw += 0.08 * clock.wave(2.6, 1);
+  pose.gazeX = -0.4 + 0.3 * clock.wave(3.3);
+  pose.gazeY = -0.4;
+  pose.squintL = 0.45;
+  pose.squintR = -0.1;
+  pose.blink = clock.blink();
   return pose;
 };
 
-const concerned = (time: number): Pose => {
-  const pose = facePose();
-  organic(pose, time, 0.7);
-  breathing(pose, time, 0.3, 0.008);
-  resize(pose, 0.965);
-  pose.body.droop = 0.22;
-  pose.body.squash = 0.07;
-  pose.body.x = wave(time, 5.5) * 0.28;
-  blinking(pose, time, 3.1);
-  pose.face.left.top = -5.4;
-  pose.face.left.bottom = 5.2;
-  pose.face.left.topBow = 1.7;
-  pose.face.left.tilt = 0.14;
-  pose.face.right.top = -5.4;
-  pose.face.right.bottom = 5.2;
-  pose.face.right.topBow = 1.7;
-  pose.face.right.tilt = -0.14;
-  pose.face.browLeft.opacity = 1;
-  pose.face.browLeft.y = -12.8;
-  pose.face.browLeft.tilt = -0.3;
-  pose.face.browRight.opacity = 1;
-  pose.face.browRight.y = -12.8;
-  pose.face.browRight.tilt = 0.3;
-  pose.face.mouth.opacity = 1;
-  pose.face.mouth.halfWidth = 3.6;
-  pose.face.mouth.topBow = -1.7;
-  pose.face.mouth.bottomBow = -2.3;
-  pose.face.gazeY = 1.2;
+const concerned = (moment: Moment): Pose => {
+  const clock = clockOf(moment);
+  const pose = agentPose();
+  breathing(pose, clock, 0.6);
+  pose.pitch -= 0.25;
+  pose.roll = -3;
+  pose.lift += 1;
+  pose.gazeX = 0.1 * clock.wave(5);
+  pose.gazeY = 0.5;
+  pose.squintL = 0.2;
+  pose.squintR = 0.2;
+  pose.blink = clock.blink(1.2);
   return pose;
 };
 
-const sleepy = (time: number): Pose => {
-  const pose = facePose();
-  organic(pose, time, 0.5);
-  const breath = wave(time, 0.13);
-  resize(pose, 1 + 0.026 * breath);
-  pose.body.droop = 0.42 + 0.08 * breath;
-  pose.body.squash = 0.1;
-  pose.body.y = 1.6 + 1.4 * oscillate(time, 0.13);
-  pose.body.lean = 0.07;
-  pose.body.rotation = 3 * DEG;
-  pose.aperture.radius = 23;
-  for (const eye of [pose.face.left, pose.face.right]) {
-    eye.halfWidth = 5.3;
-    eye.top = -0.9;
-    eye.bottom = 1;
-    eye.topBow = 0.9;
-    eye.bottomBow = 0.6;
-    eye.y = 0;
-  }
-  pose.face.mouth.opacity = 0.5;
-  pose.face.mouth.halfWidth = 1.6;
-  pose.face.mouth.top = -1.2;
-  pose.face.mouth.bottom = 1.2;
-  pose.decor.zzzOpacity = 1;
-  pose.decor.zzzPhase = time * 0.34;
-  pose.decor.zzzSize = 7;
+const sleepy = (moment: Moment): Pose => {
+  const clock = clockOf(moment);
+  const pose = agentPose();
+  const breath = clock.wave(5.5);
+  pose.pitch -= 0.2;
+  pose.roll = 5 + 2 * breath;
+  pose.lift = 1 + breath;
+  pose.sy = 1 - 0.025 * breath;
+  pose.sx = 1 + 0.015 * breath;
+  pose.gazeY = 0.4;
+  pose.blink = 0.82 + 0.1 * clock.wave(5.5, 1);
   return pose;
 };
 
-const celebrating = (time: number): Pose => {
-  const pose = facePose();
-  organic(pose, time, 1.6);
-  const bounce = hop(time, 1.6);
-  resize(pose, 0.84 * (1 + 0.02 * bounce));
-  pose.body.y = -6.2 * bounce;
-  pose.body.rotation = wave(time, 0.8) * 13 * DEG;
-  pose.body.squash = 0.1 - 0.24 * bounce;
-  pose.sectors.rotation = time * 96;
-  crescent(pose.face.left, 1);
-  crescent(pose.face.right, 1);
-  smile(pose, 5.2, 1.6);
-  pose.decor.sparkOpacity = 1;
-  pose.decor.sparkPhase = time * 1.1;
-  pose.decor.sparkSpread = 10;
-  pose.decor.sparkSize = 5.8;
-  pose.decor.pulseOpacity = 0.3;
-  pose.decor.pulsePhase = time * 0.7;
-  pose.decor.pulseSpread = 12;
+const celebrating = (moment: Moment): Pose => {
+  const clock = clockOf(moment);
+  const pose = agentPose();
+  hopping(pose, clock, 0.7, 5.5);
+  pose.roll = 9 * clock.wave(1.4);
+  pose.yaw += 0.18 * clock.wave(1.4, 0.6);
+  happyEyes(pose);
+  tossingCoins(pose, clock);
+  twinkling(pose, clock, 7);
   return pose;
 };
 
-/** The mark's three arcs, shrunk to one sweeping tricolour band. */
-const loading = (time: number): Pose => {
-  const pose = markPose();
-  pose.aperture.radius = FACE_APERTURE;
-  organic(pose, time, 0.6);
-  breathing(pose, time, 0.5, 0.008);
-  // Total angle the three arcs cover together, in degrees.
-  const sweep = 96 + 46 * oscillate(time, 0.45);
-  pose.sectors.greenSpan = sweep * 0.458;
-  pose.sectors.orangeSpan = sweep * 0.292;
-  pose.sectors.blueSpan = sweep * 0.25;
-  // A uniform spin reads as mechanical; the added sine gives the sweep the
-  // accelerate-and-catch-up feel of the arc it replaces.
-  pose.sectors.rotation = time * 292 + 34 * wave(time, 0.45);
+/** A coin flipped above the head while the sums are done; the eyes follow it. */
+const loading = (moment: Moment): Pose => {
+  const clock = clockOf(moment);
+  const pose = agentPose();
+  breathing(pose, clock);
+  const toss = clock.still ? 0 : Math.abs(Math.sin((TAU * clock.t) / 1.1));
+  const [coin = fallingCoin(1), ...rest] = pose.coins;
+  pose.coins = [
+    {
+      ...coin,
+      x: 50,
+      y: -4 - 7 * toss,
+      width: clock.still ? 1 : Math.abs(Math.cos(clock.t * 7)),
+      opacity: 1,
+    },
+    ...rest,
+  ];
+  pose.gazeY = -0.9 - 0.1 * toss;
+  pose.pitch += 0.1 + 0.04 * toss;
+  pose.squintL = 0.1;
+  pose.squintR = 0.1;
+  pose.blink = clock.blink(0.6);
   return pose;
 };
 
-const notification = (time: number, age: number): Pose => {
-  const pose = markPose();
-  const pop = Math.sin(clamp01(age / 0.42) * Math.PI);
-  pose.body.radius = 23 * (1 + 0.03 * wave(time, 1.1) + 0.12 * pop);
-  pose.aperture.radius = 0;
-  organic(pose, time, 0.8);
-  pose.decor.pulseOpacity = 0.4;
-  pose.decor.pulsePhase = time * 0.62;
-  pose.decor.pulseSpread = 20;
-  pose.decor.pulseWidth = 2.2;
+const notification = (moment: Moment): Pose => {
+  const clock = clockOf(moment);
+  const pose = agentPose();
+  breathing(pose, clock);
+  const hop = accent(clock, moment.age, 0.5);
+  pose.lift -= 4 * hop;
+  pose.sy += 0.05 * hop;
+  pose.yaw = -0.05;
+  pose.pitch = 0.1;
+  pose.squintL = -0.2;
+  pose.squintR = -0.2;
+  pose.blink = clock.blink();
+  const rise = clock.still ? 1 : smoothstep(moment.age / 0.45);
+  const [coin = fallingCoin(1), ...rest] = pose.coins;
+  pose.coins = [
+    {
+      ...coin,
+      x: 50,
+      y: SLOT_LINE - 4 - 16 * rise + 1.5 * clock.wave(1.6),
+      width: 1,
+      opacity: rise,
+    },
+    ...rest,
+  ];
+  pose.gazeY = -0.7 * rise;
+  return pose;
+};
+
+const listening = (moment: Moment): Pose => {
+  const clock = clockOf(moment);
+  const pose = agentPose();
+  breathing(pose, clock);
+  pose.yaw = -0.08 + 0.04 * clock.wave(6);
+  pose.pitch = 0.05 + 0.06 * Math.max(0, clock.wave(1.3));
+  pose.roll = 3;
+  pose.squintL = -0.1;
+  pose.squintR = -0.1;
+  pose.blink = clock.blink(0.8);
   return pose;
 };
 
 /** Speech-shaped envelope in 0..1 built from three incommensurable sines. */
-const voice = (time: number): number =>
-  clamp01(
-    0.45 +
-      0.3 * wave(time, 1.7) +
-      0.22 * wave(time, 3.3, 0.31) +
-      0.16 * wave(time, 0.7, 0.7)
+const voice = (clock: Clock): number =>
+  clock.still
+    ? 0
+    : clamp01(
+        0.45 +
+          0.3 * cycle(clock.t * 1.4, 1 / 1.7) +
+          0.22 * cycle(clock.t * 1.4, 1 / 3.3, 2) +
+          0.16 * cycle(clock.t * 1.4, 1 / 0.7, 4.4)
+      );
+
+/** No mouth in this style: the head nods along with the words instead. */
+const speaking = (moment: Moment): Pose => {
+  const clock = clockOf(moment);
+  const pose = agentPose();
+  const level = voice(clock);
+  pose.yaw += 0.06 * clock.sway * clock.wave(6.1);
+  pose.roll = 1.6 * clock.wave(5.3, 2);
+  pose.lift = -1.4 * level;
+  pose.pitch += 0.06 * level;
+  pose.sy = 1 + 0.025 * level;
+  pose.sx = 1 - 0.015 * level;
+  pose.blink = clock.blink();
+  [pose.gazeX, pose.gazeY] = clock.glance();
+  return pose;
+};
+
+/** How long either side of the landing the eyes close to swap to a grin. */
+const GRIN_BLINK = 0.12;
+
+/** A coin dropped into the slot, a gulp, then a happy hop and a flash of gold. */
+const success = (moment: Moment): Pose => {
+  const clock = clockOf(moment);
+  const progress = clock.still ? 2 : moment.age / COIN_FALL_SECONDS;
+  const pose = agentPose();
+  breathing(pose, clock);
+  watchingFall(pose, Math.min(progress, 1));
+  pose.drop = fallingCoin(progress);
+  gulping(pose, gulpAt(progress));
+  if (progress >= 1) {
+    happyEyes(pose);
+  }
+  pose.blink = clamp01(1 - Math.abs(progress - 1) / GRIN_BLINK);
+  const hop = accent(clock, moment.age - COIN_FALL_SECONDS, 0.55);
+  pose.lift -= 4 * hop;
+  pose.sy += 0.05 * hop;
+  glinting(pose, accent(clock, moment.age - COIN_FALL_SECONDS, 0.8));
+  return pose;
+};
+
+const error = (moment: Moment): Pose => {
+  const clock = clockOf(moment);
+  const pose = agentPose();
+  breathing(pose, clock, 0.5);
+  const shake = clock.still
+    ? 0
+    : Math.exp(-moment.age * 2.6) * Math.sin(moment.age * TAU * 5.5);
+  pose.yaw += 0.35 * shake;
+  pose.roll = 4 * shake;
+  pose.pitch -= 0.12;
+  pose.squintL = 0.55;
+  pose.squintR = 0.55;
+  pose.gazeY = 0.2;
+  return pose;
+};
+
+const wink = (moment: Moment): Pose => {
+  const clock = clockOf(moment);
+  const pose = agentPose();
+  breathing(pose, clock);
+  const beat = smoothstep(Math.max(0, clock.wave(1.8)));
+  pose.lift -= 1.5 * beat;
+  pose.roll = -5;
+  pose.happyL = 1;
+  pose.gazeX = 0.2;
+  return pose;
+};
+
+/** Eyes politely closed and the head turned away — for a secret being typed. */
+const shy = (moment: Moment): Pose => {
+  const clock = clockOf(moment);
+  const pose = agentPose();
+  breathing(pose, clock);
+  pose.yaw = -0.55;
+  pose.pitch = -0.12;
+  pose.roll = -6;
+  happyEyes(pose);
+  return pose;
+};
+
+const SAVING_SECONDS = 1.8;
+/** The still moment of saving: just after a coin went in, eyes pleased. */
+const SAVED_STILL = 1.3;
+
+/** Coin after coin into the slot — putting money aside. */
+const saving = (moment: Moment): Pose => {
+  const clock = clockOf(moment);
+  const pose = agentPose();
+  breathing(pose, clock);
+  const local = clock.still
+    ? SAVED_STILL
+    : (((clock.t % SAVING_SECONDS) + SAVING_SECONDS) % SAVING_SECONDS) /
+      COIN_FALL_SECONDS;
+  pose.drop = fallingCoin(local);
+  gulping(pose, gulpAt(local));
+  watchingFall(pose, Math.min(local, 1));
+  const pleased =
+    clamp01((local - 0.95) / 0.3) * (1 - clamp01((local - 2.2) / 0.4));
+  pose.squintL = 0.3 * pleased;
+  pose.squintR = 0.3 * pleased;
+  pose.sparks = pose.sparks.map((spark, index) =>
+    index === 1
+      ? {
+          x: 66,
+          y: SLOT_LINE - 9,
+          size: 6 * Math.sin(clamp01((local - 0.9) / 0.6) * Math.PI),
+          turn: 0.4 * local,
+        }
+      : spark
   );
-
-const listening = (time: number): Pose => {
-  const pose = facePose();
-  organic(pose, time);
-  const level = voice(time);
-  pose.aperture.radius = FACE_APERTURE - 0.6 + 1.4 * level;
-  resize(pose, 0.92 * (1 + 0.026 * level));
-  blinking(pose, time, 4.6);
-  for (const eye of [pose.face.left, pose.face.right]) {
-    eye.top = -7.6;
-    eye.bottom = 7.2;
-  }
-  pose.face.gazeX = drift(time * 0.35, 4) * 1;
-  pose.decor.pulseOpacity = 0.14 + 0.22 * level;
-  pose.decor.pulsePhase = time * 0.85;
-  pose.decor.pulseSpread = 8;
-  pose.decor.pulseWidth = 2;
   return pose;
 };
 
-const speaking = (time: number): Pose => {
-  const pose = facePose();
-  organic(pose, time, 1.1);
-  const jaw = voice(time * 1.9);
-  pose.body.squash = 0.02 + 0.03 * jaw;
-  pose.body.y = -0.7 * jaw;
-  pose.body.lean = wave(time, 0.37) * 0.03;
-  blinking(pose, time, 4.2);
-  const mouth = pose.face.mouth;
-  mouth.opacity = 1;
-  mouth.halfWidth = 3.4 + 1.2 * jaw;
-  mouth.top = -0.8 - 2.6 * jaw;
-  mouth.bottom = 0.8 + 2.8 * jaw;
-  pose.face.gazeX = drift(time * 0.45, 6) * 1.6;
+/** Plenty: coins tossed out of the slot, glints all round, a gleaming head. */
+const rich = (moment: Moment): Pose => {
+  const clock = clockOf(moment);
+  const pose = agentPose();
+  hopping(pose, clock, 0.92, 2.2);
+  pose.roll = 3 * clock.wave(1.84);
+  happyEyes(pose);
+  tossingCoins(pose, clock);
+  twinkling(pose, clock, 7);
+  shining(pose, clock, 2.2, 0.35);
   return pose;
 };
 
-const success = (time: number, age: number): Pose => {
-  const pose = facePose();
-  organic(pose, time, 1.1);
-  breathing(pose, time, 0.26, 0.01);
-  const grow = easeOutCubic(clamp01(age / 0.5));
-  pose.sectors.greenSpan = 165 + 195 * grow;
-  pose.sectors.orangeSpan = 105 * (1 - grow);
-  pose.sectors.blueSpan = 90 * (1 - grow);
-  resize(pose, 1 + 0.075 * Math.sin(clamp01(age / 0.55) * Math.PI));
-  crescent(pose.face.left, 1);
-  crescent(pose.face.right, 1);
-  smile(pose, 4.4, 0.2);
-  pose.decor.pulseOpacity = 0.55 * (1 - clamp01(age / 1.2));
-  pose.decor.pulsePhase = time * 0.9;
-  pose.decor.pulseSpread = 10;
-  return pose;
+const BUILDS: Record<BrandAvatarState, (moment: Moment) => Pose> = {
+  logo,
+  idle,
+  happy,
+  excited,
+  curious,
+  surprised,
+  confused,
+  thinking,
+  concerned,
+  sleepy,
+  celebrating,
+  loading,
+  notification,
+  listening,
+  speaking,
+  success,
+  error,
+  wink,
+  shy,
+  saving,
+  rich,
 };
 
-const error = (time: number, age: number): Pose => {
-  const pose = facePose();
-  organic(pose, time, 0.7);
-  const shake = Math.exp(-age * 2.4) * Math.sin(age * TAU * 6.5);
-  pose.body.x = shake * 3.6;
-  pose.body.rotation = shake * 3 * DEG;
-  pose.body.squash = 0.04;
-  // Nearly all the way to alarm red: a lighter mix turns the green arc muddy
-  // brown rather than red.
-  pose.sectors.tint = 0.88;
-  pose.sectors.tintR = 0xf2;
-  pose.sectors.tintG = 0x55;
-  pose.sectors.tintB = 0x5a;
-  pose.face.left.halfWidth = 4.4;
-  pose.face.left.top = -2.2;
-  pose.face.left.bottom = 2.4;
-  pose.face.left.tilt = 0.3;
-  pose.face.right.halfWidth = 4.4;
-  pose.face.right.top = -2.2;
-  pose.face.right.bottom = 2.4;
-  pose.face.right.tilt = -0.3;
-  pose.face.browLeft.opacity = 1;
-  pose.face.browLeft.y = -11.8;
-  pose.face.browLeft.tilt = 0.34;
-  pose.face.browRight.opacity = 1;
-  pose.face.browRight.y = -11.8;
-  pose.face.browRight.tilt = -0.34;
-  pose.face.mouth.opacity = 1;
-  pose.face.mouth.halfWidth = 3.8;
-  pose.face.mouth.topBow = -1.4;
-  pose.face.mouth.bottomBow = -1.8;
-  return pose;
-};
+/**
+ * A state's pose at a moment, turned toward the pointer when there is one —
+ * applied here, inside the state, so a transition blends the attending pose
+ * just as Open Bot Avatar's does.
+ */
+export const statePose = (state: BrandAvatarState, moment: Moment): Pose =>
+  attend(BUILDS[state](moment), moment.still ? undefined : moment.gaze);
 
-const wink = (time: number): Pose => {
-  const pose = facePose();
-  organic(pose, time, 1.1);
-  const beat = hop(time, 0.9);
-  pose.body.y = -1.7 * beat;
-  pose.body.squash = 0.06 - 0.11 * beat;
-  pose.body.lean = 0.08;
-  pose.body.rotation = -4 * DEG;
-  pose.face.left.halfWidth = 5;
-  pose.face.left.top = -0.7;
-  pose.face.left.bottom = 0.8;
-  pose.face.left.topBow = -1.3;
-  pose.face.left.bottomBow = -1.1;
-  smile(pose, 3.6, 0);
-  pose.face.mouth.x = 1.6;
-  pose.face.mouth.tilt = -0.12;
-  return pose;
-};
-
-/** Eyes politely closed and the head turned a little away — for a secret being typed. */
-const shy = (time: number): Pose => {
-  const pose = facePose();
-  organic(pose, time, 0.8);
-  breathing(pose, time, 0.2, 0.01);
-  pose.body.lean = -0.06;
-  pose.body.rotation = -5 * DEG;
-  pose.body.y = 0.8;
-  for (const eye of [pose.face.left, pose.face.right]) {
-    eye.halfWidth = 5;
-    eye.top = -0.7;
-    eye.bottom = 0.8;
-    eye.topBow = -1.3;
-    eye.bottomBow = -1.1;
-  }
-  pose.face.gazeY = 1.4;
-  smile(pose, 3, 0);
-  return pose;
-};
-
-interface StateSpec {
-  /** Seconds the blend into this state takes. */
-  transition: number;
-  build: (time: number, age: number) => Pose;
-}
-
-const SPECS: Record<BrandAvatarState, StateSpec> = {
-  logo: { transition: 0.55, build: logo },
-  idle: { transition: 0.5, build: idle },
-  happy: { transition: 0.42, build: happy },
-  excited: { transition: 0.32, build: excited },
-  curious: { transition: 0.5, build: curious },
-  surprised: { transition: 0.16, build: surprised },
-  confused: { transition: 0.5, build: confused },
-  thinking: { transition: 0.5, build: thinking },
-  concerned: { transition: 0.55, build: concerned },
-  sleepy: { transition: 0.7, build: sleepy },
-  celebrating: { transition: 0.3, build: celebrating },
-  loading: { transition: 0.4, build: loading },
-  notification: { transition: 0.35, build: notification },
-  listening: { transition: 0.4, build: listening },
-  speaking: { transition: 0.35, build: speaking },
-  success: { transition: 0.28, build: success },
-  error: { transition: 0.18, build: error },
-  wink: { transition: 0.3, build: wink },
-  shy: { transition: 0.45, build: shy },
-};
-
-export const statePose = (
-  state: BrandAvatarState,
-  time: number,
-  age: number
-): Pose => SPECS[state].build(time, age);
-
-export const stateTransition = (state: BrandAvatarState): number =>
-  SPECS[state].transition;
+/** Open Bot Avatar blends every change of motion over the same 420 ms. */
+export const TRANSITION_SECONDS = 0.42;

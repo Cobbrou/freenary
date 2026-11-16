@@ -9,8 +9,6 @@ interface AssistantAvatarProps {
   className?: string;
 }
 
-const SETTLED_FRAME_SECONDS = 1.2;
-
 export const AssistantAvatar = ({
   className,
   frozen = false,
@@ -29,7 +27,7 @@ export const AssistantAvatar = ({
     >
       <BrandAvatar
         className={className}
-        frozenAt={frozen ? SETTLED_FRAME_SECONDS : undefined}
+        frozen={frozen}
         label={label}
         state={greeting ? "happy" : state}
       />

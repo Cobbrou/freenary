@@ -1,297 +1,252 @@
-import { clamp, lerp, TAU } from "./math";
-import type { BlobPose, CapsulePose } from "./shape";
+import { SLOT_LINE } from "./mark";
+import { clamp, clamp01, lerp, smoothstep } from "./math";
 
 /**
- * A pose is the avatar's complete appearance at one instant, expressed only as
- * numbers so two poses can be blended field by field. Nothing here knows about
- * time: `states.ts` produces a pose for a given moment, `engine.ts` blends the
- * one the avatar is leaving into the one it is entering.
+ * A pose is the avatar's complete appearance at one instant, as numbers, in
+ * Open Bot Avatar's vocabulary: how the head is turned, tilted, lifted and
+ * squashed, and where and how the two eyes look. `states.ts` produces one for
+ * a moment in time; `engine.ts` blends the one being left into the one being
+ * entered.
  */
-
-/** Measured off the mark: the three arcs, clockwise from twelve o'clock. */
-export const BRAND_ARCS = [
-  { name: "green", color: [0x28, 0xd2, 0x6e] as const, span: 165 },
-  { name: "orange", color: [0xff, 0x96, 0x32] as const, span: 105 },
-  { name: "blue", color: [0x35, 0x8f, 0xf3] as const, span: 90 },
-] as const;
-
-const BODY_RADIUS = 43;
-/** The mark's own aperture: 0.42 of the outer radius. */
-const LOGO_APERTURE = 18;
-/** Widened aperture that leaves room for a face. */
-export const FACE_APERTURE = 24;
-
-/** Ring band below which a blended pose stops reading as a ring. */
-const MIN_BAND = 6.5;
-
-export type SectorPose = {
-  /** Degrees added to all three arcs. */
-  rotation: number;
-  greenSpan: number;
-  orangeSpan: number;
-  blueSpan: number;
-  /** Weight of `tintR/G/B` mixed into every arc, 0..1. */
-  tint: number;
-  tintR: number;
-  tintG: number;
-  tintB: number;
-  opacity: number;
-};
-
-export interface FacePose {
-  /** Fades every facial feature together. */
-  opacity: number;
-  /** Shifts both eyes and the mouth — the avatar has no separate pupils. */
+export interface Pose {
+  /** Turn about the vertical axis, in radians; negative faces the viewer's left. */
+  yaw: number;
+  /** Turn about the horizontal axis, in radians; positive faces up. */
+  pitch: number;
+  /** Tilt in the picture plane, in degrees, clockwise. */
+  roll: number;
+  /** Vertical offset in units; negative is up. */
+  lift: number;
+  /** Horizontal and vertical scale about the base — squash and stretch. */
+  sx: number;
+  sy: number;
+  /** Where the eyes look, -1..1 per axis; positive is right and down. */
   gazeX: number;
   gazeY: number;
-  left: CapsulePose;
-  right: CapsulePose;
-  browLeft: CapsulePose;
-  browRight: CapsulePose;
-  mouth: CapsulePose;
+  /** Eyelid closure, 0 open to 1 shut. */
+  blink: number;
+  /** Per-eye narrowing, 0..1; negative opens the eye wider. */
+  squintL: number;
+  squintR: number;
+  /** 1 draws the eye as a happy arc, 0 as a pill. Never fractional. */
+  happyL: number;
+  happyR: number;
+  /** Fades both eyes together; the mark has none. */
+  eyes: number;
+  /** The coin being saved: it falls into the slot and is cut off at its line. */
+  drop: CoinPose;
+  /** Coins in the open — tossed out of the slot, or flipped above the head. */
+  coins: CoinPose[];
+  /** Glints around the head when there is money about. */
+  sparks: SparkPose[];
+  /** A highlight sweeping across the head, as across polished metal. */
+  shine: ShinePose;
 }
 
-export type DecorPose = {
-  /** Expanding rings, used for notifications and listening. */
-  pulseOpacity: number;
-  pulsePhase: number;
-  pulseSpread: number;
-  pulseWidth: number;
-  /** A dot with a short trail orbiting the body. */
-  orbitOpacity: number;
-  orbitAngle: number;
-  orbitRadius: number;
-  orbitSize: number;
-  /** Four-pointed stars thrown outward. */
-  sparkOpacity: number;
-  sparkPhase: number;
-  sparkSpread: number;
-  sparkSize: number;
-  /** Drifting "z" glyphs. */
-  zzzOpacity: number;
-  zzzPhase: number;
-  zzzSize: number;
+/** A coin in head space, so it hops and turns with the head. */
+export type CoinPose = {
+  x: number;
+  y: number;
+  /** Face-on width as a share of its height: 1 face-on, near 0 edge-on. */
+  width: number;
+  opacity: number;
 };
 
-export interface Pose {
-  body: BlobPose;
-  aperture: BlobPose;
-  sectors: SectorPose;
-  face: FacePose;
-  decor: DecorPose;
-}
+export type SparkPose = {
+  x: number;
+  y: number;
+  /** Tip-to-centre reach; 0 hides the glint. */
+  size: number;
+  turn: number;
+};
 
-const restBlob = (radius: number): BlobPose => ({
-  radius,
-  squash: 0,
-  lean: 0,
-  taper: 0,
-  droop: 0,
-  rotation: 0,
-  lobe2: 0,
-  lobe2Phase: 0,
-  lobe3: 0,
-  lobe3Phase: 0,
-  lobe5: 0,
-  lobe5Phase: 0,
-  x: 0,
-  y: 0,
-});
+export type ShinePose = {
+  /** Where the band crosses the head, -1 (left edge) to 1 (right edge). */
+  at: number;
+  opacity: number;
+};
 
-const EYE_GAP = 8.6;
-const EYE_Y = -2.2;
-const EYE_HALF_WIDTH = 4.8;
-const EYE_REACH = 7.8;
+/** The number of open coins a pose carries, always. */
+export const OPEN_COINS = 3;
 
-const restEye = (side: 1 | -1): CapsulePose => ({
-  x: side * EYE_GAP,
-  y: EYE_Y,
-  halfWidth: EYE_HALF_WIDTH,
-  top: -EYE_REACH,
-  bottom: EYE_REACH,
-  topBow: 0,
-  bottomBow: 0,
-  round: 1,
-  tilt: 0,
-  opacity: 1,
-});
-
-const restBrow = (side: 1 | -1): CapsulePose => ({
-  x: side * EYE_GAP,
-  y: -13.4,
-  halfWidth: 4.6,
-  top: -1,
-  bottom: 1,
-  topBow: 0,
-  bottomBow: 0,
-  round: 1,
-  tilt: 0,
+/** A coin waiting, unseen, inside the slot. */
+export const restCoin = (): CoinPose => ({
+  x: 50,
+  y: SLOT_LINE,
+  width: 1,
   opacity: 0,
 });
 
-const restMouth = (): CapsulePose => ({
-  x: 0,
-  y: 10.6,
-  halfWidth: 4.4,
-  top: -1.4,
-  bottom: 1.4,
-  topBow: 0,
-  bottomBow: 0,
-  round: 1,
-  tilt: 0,
-  opacity: 0,
-});
+/**
+ * Where the glints sit when there are any — around the ears and the cheeks —
+ * and so how many a pose carries, always.
+ */
+const SPARK_SPOTS: readonly [number, number][] = [
+  [8, 10],
+  [93, 22],
+  [96, 74],
+  [5, 66],
+];
 
-/** The mark exactly as it is drawn today: a plain ring, no face, no decor. */
+const restSparks = (): SparkPose[] =>
+  SPARK_SPOTS.map(([x, y]) => ({ x, y, size: 0, turn: 0 }));
+
+/** Open Bot Avatar's resting turn: a little to the left and a little up. */
+export const REST_YAW = -0.3;
+export const REST_PITCH = 0.2;
+
+/** The Freenary mark: the bare head, square to the viewer, no eyes. */
 export const markPose = (): Pose => ({
-  body: restBlob(BODY_RADIUS),
-  aperture: restBlob(LOGO_APERTURE),
-  sectors: {
-    rotation: 0,
-    greenSpan: BRAND_ARCS[0].span,
-    orangeSpan: BRAND_ARCS[1].span,
-    blueSpan: BRAND_ARCS[2].span,
-    tint: 0,
-    tintR: 0,
-    tintG: 0,
-    tintB: 0,
-    opacity: 1,
-  },
-  face: {
-    opacity: 0,
-    gazeX: 0,
-    gazeY: 0,
-    left: restEye(-1),
-    right: restEye(1),
-    browLeft: restBrow(-1),
-    browRight: restBrow(1),
-    mouth: restMouth(),
-  },
-  decor: {
-    pulseOpacity: 0,
-    pulsePhase: 0,
-    pulseSpread: 0.5,
-    pulseWidth: 2.4,
-    orbitOpacity: 0,
-    orbitAngle: 0,
-    orbitRadius: BODY_RADIUS + 9,
-    orbitSize: 3.4,
-    sparkOpacity: 0,
-    sparkPhase: 0,
-    sparkSpread: 0.3,
-    sparkSize: 5,
-    zzzOpacity: 0,
-    zzzPhase: 0,
-    zzzSize: 7,
-  },
+  yaw: 0,
+  pitch: 0,
+  roll: 0,
+  lift: 0,
+  sx: 1,
+  sy: 1,
+  gazeX: 0,
+  gazeY: 0,
+  blink: 0,
+  squintL: 0,
+  squintR: 0,
+  happyL: 0,
+  happyR: 0,
+  eyes: 0,
+  drop: restCoin(),
+  coins: Array.from({ length: OPEN_COINS }, restCoin),
+  sparks: restSparks(),
+  shine: { at: -1, opacity: 0 },
 });
 
-/** The mark with its aperture opened and both eyes visible. */
-export const facePose = (): Pose => {
-  const pose = markPose();
-  pose.aperture.radius = FACE_APERTURE;
-  pose.face.opacity = 1;
-  return pose;
-};
+/** The agent at rest: the same head, turned, with its eyes open. */
+export const agentPose = (): Pose => ({
+  ...markPose(),
+  yaw: REST_YAW,
+  pitch: REST_PITCH,
+  eyes: 1,
+});
+
+/** Below this a coin is not on screen, so where it was does not matter. */
+const HIDDEN = 0.01;
 
 /**
- * Fields that are angles or cycle counters rather than quantities, with the
- * period after which they render identically. They grow without bound — a
- * spinner thirty seconds in sits at 8760 degrees — so a transition has to
- * cross the gap to the target's nearest congruent value instead of unwinding
- * every turn the state has accumulated.
+ * Coins never slide between two states' positions. A hidden coin fades in
+ * where the state wants it — sliding it would make a dropped coin rise out of
+ * the slot before it falls in. A visible one fades out where it was over the
+ * first half of the blend, and the state's coin fades in over the second, so
+ * the swap happens at zero opacity. The choice reads only the source coin,
+ * which a transition holds still, so it cannot flip mid-blend.
  */
-const BLOB_CYCLES: Record<string, number> = {
-  // TAU is a whole multiple of each harmonic's own period, so one table entry
-  // is correct for all three phases.
-  lobe2Phase: TAU,
-  lobe3Phase: TAU,
-  lobe5Phase: TAU,
-  rotation: TAU,
-};
-
-const SECTOR_CYCLES: Record<string, number> = { rotation: 360 };
-
-const DECOR_CYCLES: Record<string, number> = {
-  orbitAngle: TAU,
-  pulsePhase: 1,
-  sparkPhase: 1,
-  zzzPhase: 1,
-};
-
-const rebase = (
-  source: Record<string, number>,
-  target: Record<string, number>,
-  cycles: Record<string, number>
-): void => {
-  for (const [key, period] of Object.entries(cycles)) {
-    const from = source[key] ?? 0;
-    const to = target[key] ?? 0;
-    source[key] = from + period * Math.round((to - from) / period);
+const blendCoin = (from: CoinPose, to: CoinPose, w: number): CoinPose => {
+  if (from.opacity <= HIDDEN) {
+    return { ...to, opacity: lerp(from.opacity, to.opacity, w) };
   }
+  return w < 0.5
+    ? { ...from, opacity: from.opacity * (1 - 2 * w) }
+    : { ...to, opacity: to.opacity * (2 * w - 1) };
 };
 
-/**
- * Moves a pose's cyclic fields onto the branch nearest the pose it is about to
- * blend into, so the blend itself can be a plain lerp.
- *
- * Resolving the wrap per frame instead would re-round against a target whose
- * rotation keeps advancing: once the gap crosses half a period the rounding
- * term steps, and the ring jumps most of a turn in a single frame.
- */
-export const rebaseCycles = (source: Pose, target: Pose): void => {
-  rebase(source.body, target.body, BLOB_CYCLES);
-  rebase(source.aperture, target.aperture, BLOB_CYCLES);
-  rebase(source.sectors, target.sectors, SECTOR_CYCLES);
-  rebase(source.decor, target.decor, DECOR_CYCLES);
-};
-
-const mixNumbers = <T extends Record<string, number>>(
-  from: T,
-  to: T,
-  weight: number
-): T => {
-  const out: Record<string, number> = {};
-  for (const key of Object.keys(from)) {
-    out[key] = lerp(from[key] ?? 0, to[key] ?? 0, weight);
-  }
-  // Safety: every key is copied from `from` and every value stays a number, so
-  // the result has exactly `T`'s shape.
-  return out as T;
-};
-
-export const blendPose = (from: Pose, to: Pose, weight: number): Pose => ({
-  body: mixNumbers(from.body, to.body, weight),
-  aperture: mixNumbers(from.aperture, to.aperture, weight),
-  sectors: mixNumbers(from.sectors, to.sectors, weight),
-  face: {
-    opacity: lerp(from.face.opacity, to.face.opacity, weight),
-    gazeX: lerp(from.face.gazeX, to.face.gazeX, weight),
-    gazeY: lerp(from.face.gazeY, to.face.gazeY, weight),
-    left: mixNumbers(from.face.left, to.face.left, weight),
-    right: mixNumbers(from.face.right, to.face.right, weight),
-    browLeft: mixNumbers(from.face.browLeft, to.face.browLeft, weight),
-    browRight: mixNumbers(from.face.browRight, to.face.browRight, weight),
-    mouth: mixNumbers(from.face.mouth, to.face.mouth, weight),
-  },
-  decor: mixNumbers(from.decor, to.decor, weight),
+const blendSpark = (from: SparkPose, to: SparkPose, w: number): SparkPose => ({
+  x: lerp(from.x, to.x, w),
+  y: lerp(from.y, to.y, w),
+  size: lerp(from.size, to.size, w),
+  turn: lerp(from.turn, to.turn, w),
 });
 
 /**
- * Keeps a blended pose renderable. Halfway between "solid dot" and "open ring"
- * the two radii are independent, so the aperture has to be pushed back inside
- * the body — otherwise the inner edge crosses the outer one and the shape
- * inverts.
+ * Blends two poses. Everything is a plain lerp except two things that cannot
+ * be halfway: the eye shape, which switches at the midpoint behind a blink,
+ * and the coins, which fade rather than slide (see `blendCoin`).
  */
-export const normalizePose = (pose: Pose): Pose => {
-  const bodyRadius = Math.max(pose.body.radius, 8);
-  const maxAperture = Math.max(bodyRadius - MIN_BAND, 0);
-  const apertureRadius = clamp(pose.aperture.radius, 0, maxAperture);
-  const play = Math.max(maxAperture - apertureRadius, 0);
-
-  pose.body.radius = bodyRadius;
-  pose.aperture.radius = apertureRadius;
-  pose.aperture.x = clamp(pose.aperture.x, -play, play);
-  pose.aperture.y = clamp(pose.aperture.y, -play, play);
-  return pose;
+export const blendPose = (from: Pose, to: Pose, weight: number): Pose => {
+  const w = clamp01(weight);
+  const swap = 1 - Math.abs(2 * w - 1);
+  const shapeChanges = from.happyL !== to.happyL || from.happyR !== to.happyR;
+  return {
+    yaw: lerp(from.yaw, to.yaw, w),
+    pitch: lerp(from.pitch, to.pitch, w),
+    roll: lerp(from.roll, to.roll, w),
+    lift: lerp(from.lift, to.lift, w),
+    sx: lerp(from.sx, to.sx, w),
+    sy: lerp(from.sy, to.sy, w),
+    gazeX: lerp(from.gazeX, to.gazeX, w),
+    gazeY: lerp(from.gazeY, to.gazeY, w),
+    blink: shapeChanges
+      ? Math.max(lerp(from.blink, to.blink, w), swap)
+      : lerp(from.blink, to.blink, w),
+    squintL: lerp(from.squintL, to.squintL, w),
+    squintR: lerp(from.squintR, to.squintR, w),
+    happyL: w < 0.5 ? from.happyL : to.happyL,
+    happyR: w < 0.5 ? from.happyR : to.happyR,
+    eyes: lerp(from.eyes, to.eyes, w),
+    drop: blendCoin(from.drop, to.drop, w),
+    coins: to.coins.map((coin, index) =>
+      blendCoin(from.coins[index] ?? coin, coin, w)
+    ),
+    sparks: to.sparks.map((spark, index) =>
+      blendSpark(from.sparks[index] ?? spark, spark, w)
+    ),
+    shine: {
+      at: lerp(from.shine.at, to.shine.at, w),
+      opacity: lerp(from.shine.opacity, to.shine.opacity, w),
+    },
+  };
 };
+
+/** Where the pointer is, relative to the avatar, plus how much it counts. */
+export type Gaze = { x: number; y: number; weight: number };
+
+const FOLLOW_GAZE = 0.7;
+const FOLLOW_YAW = 0.32;
+const FOLLOW_PITCH = 0.18;
+
+/**
+ * Turns the head and the eyes toward the pointer, the way Open Bot Avatar's
+ * cursor following does: pill eyes look most of the way there, and the head
+ * turns from its resting angle toward it. Happy arcs have no pupil to aim.
+ */
+export const attend = (pose: Pose, gaze: Gaze | undefined): Pose => {
+  if (!gaze || gaze.weight <= 0 || pose.eyes <= 0) {
+    return pose;
+  }
+  const weight = smoothstep(gaze.weight);
+  const x = clamp(gaze.x, -1, 1);
+  const y = clamp(gaze.y, -1, 1);
+  const pills = pose.happyL === 0 && pose.happyR === 0;
+  return {
+    ...pose,
+    gazeX: pills ? lerp(pose.gazeX, x * FOLLOW_GAZE, weight) : pose.gazeX,
+    gazeY: pills ? lerp(pose.gazeY, y * FOLLOW_GAZE, weight) : pose.gazeY,
+    yaw: pose.yaw + weight * (x * FOLLOW_YAW - REST_YAW) * pose.eyes,
+    pitch:
+      pose.pitch + weight * (-y * FOLLOW_PITCH - REST_PITCH / 2) * pose.eyes,
+  };
+};
+
+const MIN_SCALE = 0.4;
+const MAX_TURN = 1.2;
+
+/**
+ * Keeps a pose drawable: a turn past ~70 degrees would fold the head edge-on,
+ * and a squash past the minimum would invert it.
+ */
+export const normalizePose = (pose: Pose): Pose => ({
+  ...pose,
+  yaw: clamp(pose.yaw, -MAX_TURN, MAX_TURN),
+  pitch: clamp(pose.pitch, -MAX_TURN, MAX_TURN),
+  sx: Math.max(pose.sx, MIN_SCALE),
+  sy: Math.max(pose.sy, MIN_SCALE),
+  blink: clamp01(pose.blink),
+  squintL: clamp(pose.squintL, -0.5, 1),
+  squintR: clamp(pose.squintR, -0.5, 1),
+  eyes: clamp01(pose.eyes),
+  drop: { ...pose.drop, opacity: clamp01(pose.drop.opacity) },
+  coins: pose.coins.map((coin) => ({
+    ...coin,
+    opacity: clamp01(coin.opacity),
+  })),
+  sparks: pose.sparks.map((spark) => ({
+    ...spark,
+    size: Math.max(spark.size, 0),
+  })),
+  shine: { ...pose.shine, opacity: clamp01(pose.shine.opacity) },
+});

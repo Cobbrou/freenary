@@ -1,5 +1,5 @@
 import { brandAvatarFrame } from "@freenary/ui/lib/brand-avatar/engine";
-import { VIEW_BOX_SIZE } from "@freenary/ui/lib/brand-avatar/frame";
+import { MARK_COLOR, VIEW_BOX_SIZE } from "@freenary/ui/lib/brand-avatar/frame";
 import { cn } from "@freenary/ui/lib/utils";
 import * as React from "react";
 
@@ -8,13 +8,16 @@ import * as React from "react";
  * rather than about data — a sign-in panel, an empty stage. Purely decorative,
  * so it is hidden from assistive technology and takes no pointer events.
  *
- * It tiles the very frame the favicon draws, so retuning the mark retunes
- * this. The fills are the brand's own and do not follow the theme; a caller
- * sets how much of them shows with an `opacity-*` class.
+ * It tiles the very frame the favicon draws — the piggy bank head with its
+ * coin slot — so retuning the mark retunes this. The fills are
+ * the brand's own and do not follow the theme; a caller sets how much of them
+ * shows with an `opacity-*` class.
  */
 
 /** `logo` has no clock in it, which is what lets one frame be drawn once. */
 const MARK = brandAvatarFrame("logo", 0);
+/** Square to the viewer, the two faces coincide, so the slot is a plain hole. */
+const MARK_PATH = MARK.front + MARK.slot;
 
 /** Two marks per tile, on the diagonal, so rows fall out of step. */
 const TILE_UNITS = VIEW_BOX_SIZE * 2;
@@ -33,17 +36,9 @@ type BrandPatternProps = Omit<React.ComponentProps<"svg">, "children"> & {
 };
 
 function BrandPattern({ className, tile = 160, ...props }: BrandPatternProps) {
-  const id = React.useId();
-  const clipId = `${id}clip`;
-  const tileId = `${id}tile`;
+  const tileId = `${React.useId()}tile`;
 
-  const mark = (
-    <g clipPath={`url(#${clipId})`}>
-      {MARK.sectors.map((sector) => (
-        <path d={sector.d} fill={sector.fill} key={sector.id} />
-      ))}
-    </g>
-  );
+  const mark = <path d={MARK_PATH} fill={MARK_COLOR} fillRule="evenodd" />;
 
   return (
     <svg
@@ -57,9 +52,6 @@ function BrandPattern({ className, tile = 160, ...props }: BrandPatternProps) {
       {...props}
     >
       <defs>
-        <clipPath id={clipId}>
-          <path clipRule="evenodd" d={MARK.clip} />
-        </clipPath>
         <pattern
           height={tile}
           id={tileId}

@@ -15,7 +15,7 @@ export const AuthBrandPanel = () => (
       className="from-muted absolute inset-x-0 bottom-0 h-56 bg-linear-to-t to-transparent"
     />
     <div className="relative flex flex-1 items-center justify-center p-8">
-      <BrandAvatar frozenAt={0} size={176} state="logo" />
+      <BrandAvatar frozen size={176} state="logo" />
     </div>
     <div className="relative p-8">
       <h2 className="text-3xl font-bold tracking-tight">freenary</h2>

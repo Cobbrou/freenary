@@ -8,7 +8,7 @@ import {
 import type { BrandAvatarState } from "@freenary/ui/lib/brand-avatar/states";
 import {
   BRAND_AVATAR_STATES,
-  stateTransition,
+  TRANSITION_SECONDS,
 } from "@freenary/ui/lib/brand-avatar/states";
 import { spring } from "@freenary/ui/lib/springs";
 import { surfaceClasses } from "@freenary/ui/lib/surface-classes";
@@ -63,7 +63,7 @@ const StateCell = ({
       </div>
       <span className="font-mono text-[0.65rem]">{state}</span>
       <span className="text-muted-foreground font-mono text-[0.6rem]">
-        {stateTransition(state).toFixed(2)}s
+        {TRANSITION_SECONDS.toFixed(2)}s
       </span>
     </motion.button>
   );
@@ -164,7 +164,7 @@ export const BrandAvatarPage = () => {
               <span className="font-semibold">{demo}</span>
             </p>
             <p className="text-muted-foreground font-mono text-xs">
-              blend {stateTransition(demo).toFixed(2)}s
+              blend {TRANSITION_SECONDS.toFixed(2)}s
             </p>
             <div className="mt-2 flex flex-wrap gap-1">
               {DEMO_SIZES.map((preset) => (

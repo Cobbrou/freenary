@@ -160,20 +160,20 @@ Avoid vague names (`form.tsx`, `card.tsx`, `section.tsx`) and PascalCase filenam
 
 ## The avatar
 
-The brand mark is a procedural character, not an asset: the tricolour donut, drawn from numbers so it can morph into an expression, a loading spinner or a notification dot. **It lives in `@freenary/ui`, not here** — see [The Brand Avatar](../../packages/ui/AGENTS.md#the-brand-avatar) for the engine, the state library and the invariants that hold it together. This app owns four things:
+The Freenary logo and the agent are one procedural piggy bank head, not an asset: the logo is the pink head with its coin slot, and the agent is the same head with two ink nostrils and Open Bot Avatar's eyes and motion, plus gold coins and glints for its money moments. **It lives in `@freenary/ui`, not here** — see [The Brand Avatar](../../packages/ui/AGENTS.md#the-brand-avatar) for the engine, the state library and the invariants that hold it together. This app owns four things:
 
 ```txt
-src/app/shell/sidebar-brand.tsx      # the shell's mark, greeting on hover and focus
-src/pages/login/ui/auth-form.tsx     # the sign-in screen's mark, driven by use-auth-avatar
+src/app/shell/sidebar-brand.tsx      # the shell's logo, turning into the agent on hover and focus
+src/pages/login/ui/auth-form.tsx     # the sign-in screen's agent, driven by use-auth-avatar
 src/pages/assistant/model/avatar-state.ts # agent state -> BrandAvatarState, with precedence
-scripts/generate-favicon.ts          # public/favicon.svg + favicon.png
+scripts/generate-favicon.ts          # public/favicon.svg + favicon.png + deploy/dokploy/freenary.svg
 ```
 
-**Nothing below the component decides _when_ a state applies; callers pass `state`.** `SidebarBrand` holds `logo` and swaps to `happy` while pointed at or focused. `useAuthAvatar` (`src/pages/login/model/use-auth-avatar.ts`) reads focus and input events bubbling from the sign-in form — `curious` at a field, `listening` while keys land, `shy` at a password, `loading`, `error` and `success` from the flow's outcome — so no field knows the mark exists. The assistant drives `thinking`, `speaking`, `concerned` and `success` the same way, from `assistantAvatarState`. The sign-in screen's other half is `BrandPattern` (`@freenary/ui/components/brand-pattern`), the mark tiled as a decorative field.
+**Nothing below the component decides _when_ a state applies; callers pass `state`.** `SidebarBrand` holds `logo` and swaps to `saving` — coins dropping into the slot — while pointed at or focused. `useAuthAvatar` (`src/pages/login/model/use-auth-avatar.ts`) reads focus and input events bubbling from the sign-in form — `curious` at a field, `listening` while keys land, `shy` at a password, `loading`, `error` and `success` from the flow's outcome — so no field knows the agent exists. The assistant drives `thinking`, `speaking`, `concerned` and `success` the same way, from `assistantAvatarState`. The sign-in screen's other half is the logo, large, over `BrandPattern` (`@freenary/ui/components/brand-pattern`), the logo tiled as a decorative field.
 
 **The assistant's face is a pure mapping, not scattered conditionals.** `assistantAvatarState` (`src/pages/assistant/model/avatar-state.ts`) turns `useChat`'s status plus the live tool state into one `BrandAvatarState`, and its precedence is the behaviour: a failure outranks everything, a tool call mid-answer reads as `thinking` rather than `speaking`, and the `success` acknowledgement is time-boxed. Change the mapping there and its test (`avatar-state.test.ts`, beside it), never by branching inside a component.
 
-**The favicon is generated from the same modules.** `bun run favicon` rewrites `public/favicon.svg` from `brandAvatarFrame("logo", 0)`, so retuning the mark cannot leave the tab icon behind. `logo` is the one state with no clock in it, which is why a favicon can hold it. The ink colour is the one duplication the generator carries: `currentColor` in the app, two literals plus a `prefers-color-scheme` query in the script, because a tab icon has no theme. `logo` closes its aperture over the face and so emits no ink today, and the script leaves the stylesheet out rather than shipping it dead — which is why the tab icon is identical in light and dark. `public/favicon.png` is the 32px raster fallback for browsers that ignore SVG favicons, and the script rewrites it only when `rsvg-convert` or `resvg` is on PATH.
+**The favicon is generated from the same modules.** `bun run favicon` rewrites `public/favicon.svg` from `brandAvatarFrame("logo", 0)`, and writes the same file to `deploy/dokploy/freenary.svg`, the logo the Dokploy template's `meta.json` names, so retuning the logo cannot leave the tab icon or the template behind. `logo` is the one state with no clock in it, which is why a favicon can hold it. It is one pink path with the slot cut out by the even-odd rule, in a fixed colour, so the tab icon is identical in light and dark. `public/favicon.png` is the 32px raster fallback for browsers that ignore SVG favicons, and the script rewrites it only when `rsvg-convert` or `resvg` is on PATH.
 
 ## Icons
 

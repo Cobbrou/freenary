@@ -1,32 +1,33 @@
 import { type AvatarFrame, poseToFrame } from "./frame";
-import { clamp01, easeOutExpo } from "./math";
-import { blendPose, normalizePose, type Pose, rebaseCycles } from "./pose";
-import { type BrandAvatarState, statePose, stateTransition } from "./states";
+import { clamp01, smoothstep } from "./math";
+import { blendPose, type Gaze, normalizePose, type Pose } from "./pose";
+import { type BrandAvatarState, statePose, TRANSITION_SECONDS } from "./states";
 
 /**
  * Drives the avatar without owning a clock: the caller passes the time, so a
  * paused avatar, a frozen thumbnail and a test all produce the same frame.
  *
  * A state change snapshots the pose being displayed and blends from that
- * snapshot rather than from the previous state's live pose. It costs a frozen
- * source for the length of one transition — a few hundred milliseconds, under
- * a weight that rises exponentially — and in exchange an interrupted
- * transition is exactly as correct as a completed one.
+ * snapshot to the new state's live pose over Open Bot Avatar's 420 ms
+ * smoothstep, so an interrupted transition is exactly as smooth as a completed
+ * one. The pointer gaze goes into each state's pose, so the blend carries the
+ * head's turn toward the cursor through a transition rather than dropping it.
  */
 export type BrandAvatarEngine = {
   state: () => BrandAvatarState;
   setState: (next: BrandAvatarState, time: number) => void;
-  sample: (time: number) => AvatarFrame;
+  sample: (time: number, gaze?: Gaze) => AvatarFrame;
 };
 
 export const createBrandAvatarEngine = (
   initial: BrandAvatarState,
-  time = 0
+  time = 0,
+  seed = 0
 ): BrandAvatarEngine => {
   let current = initial;
   let startedAt = time;
   let source: Pose | null = null;
-  let shown: Pose = normalizePose(statePose(initial, time, 0));
+  let shown: Pose = statePose(initial, { time, age: 0, seed });
 
   return {
     state: () => current,
@@ -35,36 +36,39 @@ export const createBrandAvatarEngine = (
       if (next === current) {
         return;
       }
-      // Cross to the branch of every angle and cycle counter nearest the state
-      // being entered, once, so the blend below stays a plain lerp.
-      rebaseCycles(shown, statePose(next, at, 0));
       source = shown;
       current = next;
       startedAt = at;
     },
 
-    sample: (at) => {
+    sample: (at, gaze) => {
       const age = at - startedAt;
-      const target = statePose(current, at, age);
+      const target = statePose(current, { time: at, age, seed, gaze });
       let pose = target;
       if (source) {
-        const weight = easeOutExpo(clamp01(age / stateTransition(current)));
+        const weight = smoothstep(clamp01(age / TRANSITION_SECONDS));
         pose = weight >= 1 ? target : blendPose(source, target, weight);
         if (weight >= 1) {
           source = null;
         }
       }
-      shown = normalizePose(pose);
-      return poseToFrame(shown);
+      shown = pose;
+      return poseToFrame(normalizePose(pose));
     },
   };
 };
 
 /**
  * One settled frame of a state, with no transition and no engine to keep
- * alive — what a state board or a still export needs.
+ * alive — what a state board, the favicon or a still export needs. A `still`
+ * frame is the reduced-motion pose: no blink, no glance, no sway.
  */
 export const brandAvatarFrame = (
   state: BrandAvatarState,
-  time: number
-): AvatarFrame => poseToFrame(normalizePose(statePose(state, time, time)));
+  time: number,
+  seed = 0,
+  still = false
+): AvatarFrame =>
+  poseToFrame(
+    normalizePose(statePose(state, { time, age: time, seed, still }))
+  );
