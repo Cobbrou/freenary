@@ -1,6 +1,7 @@
+import { spring } from "@freenary/ui/lib/springs";
 import { cn } from "@freenary/ui/lib/utils";
 import { RiCheckLine, RiErrorWarningLine } from "@remixicon/react";
-import { AnimatePresence, motion } from "motion/react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 
 import { m } from "@/paraglide/messages.js";
 import { remixIcon } from "@/shared/lib/remix-icon";
@@ -16,6 +17,13 @@ const NOTICE_ICON_SIZE = 16;
 const ICON_SWAP = { bounce: 0, duration: 0.3, type: "spring" } as const;
 const ICON_HIDDEN = { filter: "blur(4px)", opacity: 0, scale: 0.25 };
 const ICON_SHOWN = { filter: "blur(0px)", opacity: 1, scale: 1 };
+
+const REDUCED_REVEAL = {
+  height: { duration: 0 },
+  opacity: { duration: 0.15 },
+} as const;
+
+const INSTANT = { duration: 0 } as const;
 const AlertIcon = remixIcon(RiErrorWarningLine);
 const CheckIcon = remixIcon(RiCheckLine);
 
@@ -24,11 +32,13 @@ interface OutcomeNoticeProps {
   provider: string;
 }
 
-export const OutcomeNotice = ({ outcome, provider }: OutcomeNoticeProps) => {
-  if (outcome === undefined) {
-    return null;
-  }
-
+const OutcomeNoticeBody = ({
+  outcome,
+  provider,
+}: {
+  outcome: SaveOutcome;
+  provider: string;
+}) => {
   const isFailure = isFailedOutcome(outcome);
   const detail = isFailure ? outcomeDetail(outcome) : null;
 
@@ -71,5 +81,37 @@ export const OutcomeNotice = ({ outcome, provider }: OutcomeNoticeProps) => {
         </details>
       )}
     </div>
+  );
+};
+
+export const OutcomeNotice = ({ outcome, provider }: OutcomeNoticeProps) => {
+  const prefersReducedMotion = useReducedMotion();
+
+  return (
+    <AnimatePresence initial={false}>
+      {outcome === undefined ? null : (
+        <motion.div
+          key="outcome"
+          animate={{
+            height: "auto",
+            opacity: 1,
+            transitionEnd: { overflow: "visible" },
+          }}
+          className="-mt-6"
+          exit={{
+            height: 0,
+            opacity: 0,
+            overflow: "hidden",
+            transition: prefersReducedMotion ? INSTANT : spring.moderate.exit,
+          }}
+          initial={{ height: 0, opacity: 0, overflow: "hidden" }}
+          transition={prefersReducedMotion ? REDUCED_REVEAL : spring.moderate}
+        >
+          <div className="pt-6">
+            <OutcomeNoticeBody outcome={outcome} provider={provider} />
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 };

@@ -1,6 +1,8 @@
 import { Button } from "@freenary/ui/components/button";
 import { Field, FieldGroup } from "@freenary/ui/components/field";
+import { spring } from "@freenary/ui/lib/springs";
 import { useForm } from "@tanstack/react-form";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useMemo, useState } from "react";
 import { z } from "zod";
 
@@ -34,6 +36,13 @@ interface AuthCredentialsStepProps {
 
 const NAME_MIN_LENGTH = 2;
 
+const REDUCED_REVEAL = {
+  height: { duration: 0 },
+  opacity: { duration: 0.15 },
+} as const;
+
+const INSTANT = { duration: 0 } as const;
+
 const buildCredentialsSchemaForLocale = (
   mode: AccountMode,
   minPasswordLength: number | undefined
@@ -64,6 +73,7 @@ export const AuthCredentialsStep = ({
   pendingProvider,
 }: AuthCredentialsStepProps) => {
   const [mode, setMode] = useState<AccountMode>("signin");
+  const prefersReducedMotion = useReducedMotion();
 
   const schema = useMemo(
     () =>
@@ -110,25 +120,51 @@ export const AuthCredentialsStep = ({
             )}
           </form.Field>
 
-          {isSignUp && (
-            <form.Field name="name">
-              {(field) => (
-                <AuthFormField
-                  autoComplete="name"
-                  autoFocus
-                  errors={field.state.meta.errors.map(
-                    (error) => error?.message
-                  )}
-                  id={field.name}
-                  label={m.auth_name_label()}
-                  placeholder={m.auth_name_placeholder()}
-                  value={field.state.value}
-                  onBlur={field.handleBlur}
-                  onChange={field.handleChange}
-                />
-              )}
-            </form.Field>
-          )}
+          <AnimatePresence initial={false}>
+            {isSignUp && (
+              <motion.div
+                key="name"
+                animate={{
+                  height: "auto",
+                  opacity: 1,
+                  transitionEnd: { overflow: "visible" },
+                }}
+                className="-mt-4"
+                exit={{
+                  height: 0,
+                  opacity: 0,
+                  overflow: "hidden",
+                  transition: prefersReducedMotion
+                    ? INSTANT
+                    : spring.moderate.exit,
+                }}
+                initial={{ height: 0, opacity: 0, overflow: "hidden" }}
+                transition={
+                  prefersReducedMotion ? REDUCED_REVEAL : spring.moderate
+                }
+              >
+                <div className="pt-4">
+                  <form.Field name="name">
+                    {(field) => (
+                      <AuthFormField
+                        autoComplete="name"
+                        autoFocus
+                        errors={field.state.meta.errors.map(
+                          (error) => error?.message
+                        )}
+                        id={field.name}
+                        label={m.auth_name_label()}
+                        placeholder={m.auth_name_placeholder()}
+                        value={field.state.value}
+                        onBlur={field.handleBlur}
+                        onChange={field.handleChange}
+                      />
+                    )}
+                  </form.Field>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           <form.Field name="password">
             {(field) => (

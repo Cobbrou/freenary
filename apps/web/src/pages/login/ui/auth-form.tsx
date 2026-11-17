@@ -89,8 +89,6 @@ export const AuthForm = ({
     <div {...avatar.handlers}>
       <BrandAvatar className="mb-6" size={56} state={avatar.state} />
 
-      <AuthHeader description={heading.description} title={heading.title} />
-
       <AnimatePresence initial={false} mode="wait">
         <motion.div
           key={flow.step}
@@ -105,6 +103,7 @@ export const AuthForm = ({
           initial={{ opacity: 0, y: 0 }}
           transition={prefersReducedMotion ? { duration: 0 } : spring.moderate}
         >
+          <AuthHeader description={heading.description} title={heading.title} />
           {flow.step === "credentials" && (
             <AuthCredentialsStep
               capabilities={capabilities}

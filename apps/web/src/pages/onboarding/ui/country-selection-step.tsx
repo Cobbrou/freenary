@@ -19,7 +19,7 @@ import {
   isFullySupportedCountry,
 } from "@/shared/lib/countries";
 import { remixIcon } from "@/shared/lib/remix-icon";
-import { WizardStepHeader } from "@/shared/ui/wizard-step-header";
+import { WizardStepHeader } from "@/shared/ui/wizard";
 
 interface CountrySelectionStepProps {
   onContinue: () => void;
@@ -102,7 +102,7 @@ export const CountrySelectionStep = ({
           </ComboboxList>
         </ComboboxContent>
       </Combobox>
-      <p className="text-muted-foreground text-center text-xs">
+      <p className="text-muted-foreground text-xs">
         {m.onboarding_contribute_prompt()}{" "}
         <a
           className="text-primary underline underline-offset-2"

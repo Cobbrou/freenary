@@ -13,20 +13,10 @@ export const SetupWizardSkeleton = () => {
     <div aria-busy="true">
       <output className="sr-only">{m.setup_loading()}</output>
       <div aria-hidden="true" className="flex flex-col gap-8">
-        <div className="flex items-center justify-center gap-3">
-          <div className="flex items-center gap-2.5">
-            <Skeleton className="size-7 rounded-full" />
-            <Skeleton className="h-4 w-14" />
-          </div>
-          <Skeleton className="h-px w-8 sm:w-12" />
-          <Skeleton className="size-7 rounded-full" />
-          <Skeleton className="h-px w-8 sm:w-12" />
-          <Skeleton className="size-7 rounded-full" />
-        </div>
-
         <div className="flex flex-col gap-2">
-          <Skeleton className="h-6 w-48" />
-          <Skeleton className="h-4 w-72" />
+          <Skeleton className="h-7 w-48" />
+          <Skeleton className="h-7 w-full" />
+          <Skeleton className="h-7 w-56" />
         </div>
 
         {FIELD_ROWS.map((row) => (

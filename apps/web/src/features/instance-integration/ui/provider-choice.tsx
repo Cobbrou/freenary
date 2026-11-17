@@ -5,7 +5,7 @@ import { cn } from "@freenary/ui/lib/utils";
 import { useId } from "react";
 
 import { m } from "@/paraglide/messages.js";
-import { WizardStepHeader } from "@/shared/ui/wizard-step-header";
+import { WizardStepHeader } from "@/shared/ui/wizard";
 
 import {
   integrationDescription,

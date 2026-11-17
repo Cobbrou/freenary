@@ -39,6 +39,7 @@ export const useSetup = () => {
 
   const [chosenStep, setChosenStep] = useState<string | null>(null);
   const [direction, setDirection] = useState<1 | -1>(1);
+  const [configuringStep, setConfiguringStep] = useState<string | null>(null);
 
   const status = useQuery(orpc.instance.status.queryOptions());
   const isOperator = status.data?.isOperator ?? false;
@@ -65,6 +66,7 @@ export const useSetup = () => {
     instanceIntegration.complete.reset();
     setDirection(heading);
     setChosenStep(next);
+    setConfiguringStep(null);
   };
 
   const completeError = instanceIntegration.complete.error;
@@ -96,6 +98,16 @@ export const useSetup = () => {
     }
   };
 
+  const handleConfigure = () => {
+    setDirection(1);
+    setConfiguringStep(stepId);
+  };
+
+  const handleLeaveConfigure = () => {
+    setDirection(-1);
+    setConfiguringStep(null);
+  };
+
   return {
     check: instanceIntegration.check,
     complete: instanceIntegration.complete,
@@ -103,8 +115,11 @@ export const useSetup = () => {
     configuration,
     direction,
     handleBack,
+    handleConfigure,
+    handleLeaveConfigure,
     handleNext,
     handleSignOut,
+    isConfiguring: configuringStep === stepId,
     isOperator,
     isPending: status.isPending || (isOperator && configuration.isPending),
     loadFailed,

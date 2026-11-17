@@ -10,14 +10,16 @@ import { toast } from "sonner";
 
 import {
   EnvironmentSummary,
+  initialChoiceOf,
+  isFailedOutcome,
   ProviderStep,
   restartDocsUrl,
 } from "@/features/instance-integration";
 import type { SaveOutcome } from "@/features/instance-integration";
 import { m } from "@/paraglide/messages.js";
-import { WizardShell } from "@/shared/ui/wizard-shell";
-import { WizardStepper } from "@/shared/ui/wizard-stepper";
+import { WizardShell, WizardStepper } from "@/shared/ui/wizard";
 
+import { setupAvatarState } from "../model/avatar-state";
 import { completionFailureMessage, stepLabel } from "../model/labels";
 import { FINISH_STEP, setupIntegrationsOf } from "../model/setup-steps";
 import { useSetup } from "../model/use-setup";
@@ -30,7 +32,7 @@ const SKIP_VARIANT = "disabled";
 export const SetupPage = () => {
   const setup = useSetup();
   const [outcomes, setOutcomes] = useState<Record<string, SaveOutcome>>({});
-
+  const [choices, setChoices] = useState<Record<string, string>>({});
   const described = setup.configuration.data;
   const integrations = described?.integrations ?? [];
   const fault = described?.fault ?? null;
@@ -131,12 +133,15 @@ export const SetupPage = () => {
     const recordOutcome = (outcome: SaveOutcome) =>
       setOutcomes((held) => ({ ...held, [integrationId]: outcome }));
 
-    const clearOutcome = () =>
+    const clearOutcome = () => {
       setOutcomes((held) =>
-        Object.fromEntries(
-          Object.entries(held).filter(([id]) => id !== integrationId)
-        )
+        held[integrationId] === undefined
+          ? held
+          : Object.fromEntries(
+              Object.entries(held).filter(([id]) => id !== integrationId)
+            )
       );
+    };
 
     if (activeIntegration.configuredBy === "environment") {
       return (
@@ -176,9 +181,9 @@ export const SetupPage = () => {
         { integrationId, values, variantId },
         {
           onSuccess: (outcome) => {
-            if (outcome.outcome !== "verified") {
-              recordOutcome(outcome);
+            recordOutcome(outcome);
 
+            if (outcome.outcome !== "verified") {
               return;
             }
 
@@ -195,10 +200,29 @@ export const SetupPage = () => {
 
     return (
       <ProviderStep
+        chosen={choices[integrationId] ?? initialChoiceOf(activeIntegration)}
         descriptor={activeIntegration}
         isBusy={setup.check.isPending || setup.save.isPending}
+        isConfiguring={setup.isConfiguring}
         isFirstStep={setup.stepIndex === 0}
         onBack={setup.handleBack}
+        onCheck={(variantId, values) =>
+          setup.check.mutate(
+            { integrationId, values, variantId },
+            { onSuccess: recordOutcome }
+          )
+        }
+        onChoose={(variantId) => {
+          clearOutcome();
+          setChoices((held) =>
+            held[integrationId] === variantId
+              ? held
+              : { ...held, [integrationId]: variantId }
+          );
+        }}
+        onConfiguringChange={(next) =>
+          next ? setup.handleConfigure() : setup.handleLeaveConfigure()
+        }
         onEdit={clearOutcome}
         onSave={(variantId, values, checkFirst) =>
           checkFirst
@@ -219,12 +243,26 @@ export const SetupPage = () => {
     );
   };
 
+  const integrationPhase = setup.isConfiguring ? "credentials" : "choose";
+  const phaseKey =
+    setup.restartPhase === "idle" ? integrationPhase : setup.restartPhase;
+
   return (
     <WizardShell
+      avatarState={setupAvatarState({
+        hasCompletionFailure: setup.completionFailure !== null,
+        hasFailedOutcome: isFailedOutcome(outcomes[setup.stepId]),
+        hasOutcome: outcomes[setup.stepId] !== undefined,
+        isBusy:
+          setup.check.isPending ||
+          setup.save.isPending ||
+          setup.complete.isPending,
+        restartPhase: setup.restartPhase,
+      })}
       direction={setup.direction}
       isPending={setup.isPending}
       skeleton={<SetupWizardSkeleton />}
-      stepKey={setup.stepId}
+      stepKey={`${setup.stepId}:${phaseKey}`}
       stepper={setup.isOperator && !setup.loadFailed ? stepper : null}
       toolbar={
         <Button onClick={setup.handleSignOut} type="button" variant="ghost">

@@ -8,7 +8,7 @@ import {
 } from "@/features/bank-connection";
 import type { BankInstitution, BankLinking } from "@/features/bank-connection";
 import { m } from "@/paraglide/messages.js";
-import { WizardStepHeader } from "@/shared/ui/wizard-step-header";
+import { WizardStepHeader } from "@/shared/ui/wizard";
 
 interface BankConnectionStepProps {
   bankLinking: BankLinking;

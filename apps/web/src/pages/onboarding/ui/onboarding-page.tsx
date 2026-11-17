@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
 import { AuthGate } from "@/features/auth-gate";
 import { useBankLinking } from "@/features/bank-connection";
@@ -16,6 +16,7 @@ const OnboardingContent = () => {
     orpc.bankConnection.listInstitutions.queryOptions({
       enabled: wizard.taxCountries.length > 0 && bankLinking === "available",
       input: { countries: wizard.taxCountries },
+      placeholderData: keepPreviousData,
     })
   );
 
@@ -30,7 +31,7 @@ const OnboardingContent = () => {
       connectedCount={connectionsQuery.data?.connections.length ?? 0}
       direction={wizard.direction}
       isBanksError={banksQuery.isError}
-      isBanksPending={banksQuery.isPending}
+      isBanksPending={banksQuery.isPending || banksQuery.isPlaceholderData}
       isCompleting={wizard.isCompleting}
       isPending={bankLinking === "pending"}
       onBack={wizard.handleBack}

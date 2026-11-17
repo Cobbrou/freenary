@@ -1,5 +1,7 @@
 import { Button } from "@freenary/ui/components/button";
 import { useIcon } from "@freenary/ui/lib/icon-context";
+import { spring } from "@freenary/ui/lib/springs";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useState } from "react";
 import type { FormEvent } from "react";
 
@@ -31,6 +33,26 @@ const PROBE_FAILED = "probe-failed";
 const POWENS = "powens";
 const FOCUSABLE_FIELD = "input, textarea";
 const STEP_TITLE = "h1";
+const SUB_STEP_SHIFT_PX = 8;
+const NO_SUB_STEP_SHIFT_PX = 0;
+
+interface SubStepMotion {
+  direction: 1 | -1;
+  shift: number;
+}
+
+const subStepVariants = {
+  center: { opacity: 1, transition: spring.moderate, x: 0 },
+  enter: ({ direction, shift }: SubStepMotion) => ({
+    opacity: 0,
+    x: direction * shift,
+  }),
+  exit: ({ direction, shift }: SubStepMotion) => ({
+    opacity: 0,
+    transition: spring.moderate.exit,
+    x: -direction * shift,
+  }),
+};
 
 const focusStep = (body: HTMLDivElement | null) => {
   const target =
@@ -63,6 +85,18 @@ export const CredentialSequence = ({
 }: CredentialSequenceProps) => {
   const ArrowLeftIcon = useIcon("arrow-left");
   const [index, setIndex] = useState(0);
+  const [direction, setDirection] = useState<1 | -1>(1);
+  const prefersReducedMotion = useReducedMotion();
+  const subStepMotion: SubStepMotion = {
+    direction,
+    shift: prefersReducedMotion ? NO_SUB_STEP_SHIFT_PX : SUB_STEP_SHIFT_PX,
+  };
+
+  const moveTo = (position: number) => {
+    setDirection(position < index ? -1 : 1);
+    setIndex(position);
+  };
+
   const [values, setValues] = useState(() => filledValuesOf(variant.fields));
   const [problems, setProblems] = useState<Record<string, FieldProblem>>({});
 
@@ -90,7 +124,7 @@ export const CredentialSequence = ({
       setProblems((held) => ({ ...held, [at.key]: problem }));
     }
 
-    setIndex(position);
+    moveTo(position);
   };
 
   const save = (checkFirst: boolean) => {
@@ -116,7 +150,7 @@ export const CredentialSequence = ({
     const move = stepAfter(index, steps.length);
 
     if (move.kind === "step") {
-      setIndex(move.index);
+      moveTo(move.index);
     } else {
       save(true);
     }
@@ -128,7 +162,7 @@ export const CredentialSequence = ({
     const move = stepBefore(index);
 
     if (move.kind === "step") {
-      setIndex(move.index);
+      moveTo(move.index);
     } else {
       onBack();
     }
@@ -196,9 +230,26 @@ export const CredentialSequence = ({
         </h1>
       </div>
 
-      <div className="flex flex-col gap-4" key={index} ref={focusStep}>
-        {renderStep()}
-        {isLast && variant.id === POWENS ? <PowensSandboxNote /> : null}
+      <div className="relative">
+        <AnimatePresence
+          custom={subStepMotion}
+          initial={false}
+          mode="popLayout"
+        >
+          <motion.div
+            key={index}
+            animate="center"
+            className="flex flex-col gap-4"
+            custom={subStepMotion}
+            exit="exit"
+            initial="enter"
+            ref={focusStep}
+            variants={subStepVariants}
+          >
+            {renderStep()}
+            {isLast && variant.id === POWENS ? <PowensSandboxNote /> : null}
+          </motion.div>
+        </AnimatePresence>
       </div>
 
       {isLast ? <OutcomeNotice outcome={outcome} provider={provider} /> : null}

@@ -27,10 +27,15 @@ export interface SetupIntegrationDescriptor {
 }
 
 interface ProviderStepProps {
+  chosen?: string;
   descriptor: SetupIntegrationDescriptor;
   isBusy: boolean;
+  isConfiguring?: boolean;
   isFirstStep: boolean;
   onBack: () => void;
+  onCheck?: (variantId: string, values: Record<string, string>) => void;
+  onChoose?: (variantId: string) => void;
+  onConfiguringChange?: (isConfiguring: boolean) => void;
   onEdit: () => void;
   onSave: (
     variantId: string,
@@ -43,19 +48,36 @@ interface ProviderStepProps {
 }
 
 export const ProviderStep = ({
+  chosen: controlledChoice,
   descriptor,
   isBusy,
+  isConfiguring: controlledIsConfiguring,
   isFirstStep,
   onBack,
+  onCheck,
+  onChoose,
+  onConfiguringChange,
   onEdit,
   onSave,
   onSkip,
   outcome,
   wording = "setup",
 }: ProviderStepProps) => {
-  const [chosen, setChosen] = useState(() => initialChoiceOf(descriptor));
-  const [isConfiguring, setIsConfiguring] = useState(false);
+  const [ownChoice, setOwnChoice] = useState(() => initialChoiceOf(descriptor));
+  const [ownIsConfiguring, setOwnIsConfiguring] = useState(false);
+  const isConfiguring = controlledIsConfiguring ?? ownIsConfiguring;
+  const chosen = controlledChoice ?? ownChoice;
   const variant = descriptor.variants.find((entry) => entry.id === chosen);
+
+  const setConfiguring = (next: boolean) => {
+    setOwnIsConfiguring(next);
+    onConfiguringChange?.(next);
+  };
+
+  const choose = (variantId: string) => {
+    setOwnChoice(variantId);
+    onChoose?.(variantId);
+  };
 
   if (isConfiguring && variant !== undefined) {
     return (
@@ -63,8 +85,13 @@ export const ProviderStep = ({
         isBusy={isBusy}
         onBack={() => {
           onEdit();
-          setIsConfiguring(false);
+          setConfiguring(false);
         }}
+        onCheck={
+          onCheck === undefined
+            ? undefined
+            : (values) => onCheck(chosen, values)
+        }
         onEdit={onEdit}
         onSave={(values, checkFirst) => onSave(chosen, values, checkFirst)}
         outcome={outcome}
@@ -81,8 +108,8 @@ export const ProviderStep = ({
       isBusy={isBusy}
       isFirstStep={isFirstStep}
       onBack={onBack}
-      onChoose={setChosen}
-      onContinue={() => setIsConfiguring(true)}
+      onChoose={choose}
+      onContinue={() => setConfiguring(true)}
       onSkip={offersSkipButton(descriptor, wording === "setup") ? onSkip : null}
       wording={wording}
     />

@@ -11,7 +11,7 @@ import {
 import type { SetupIntegrationDescriptor } from "@/features/instance-integration";
 import { m } from "@/paraglide/messages.js";
 import { remixIcon } from "@/shared/lib/remix-icon";
-import { WizardStepHeader } from "@/shared/ui/wizard-step-header";
+import { WizardStepHeader } from "@/shared/ui/wizard";
 
 const CONFIGURED_STATE = "configured";
 const DISABLED_STATE = "disabled";

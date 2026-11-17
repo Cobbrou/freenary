@@ -5,7 +5,7 @@ import type { ComponentType } from "react";
 import { useState } from "react";
 
 import { m } from "@/paraglide/messages.js";
-import { WizardStepHeader } from "@/shared/ui/wizard-step-header";
+import { WizardStepHeader } from "@/shared/ui/wizard";
 
 import {
   credentialStepsOf,
@@ -51,9 +51,12 @@ const VARIANT_GUIDES: Readonly<Record<string, VariantGuide>> = {
   "subq-snap": { Note: NoGuideNote, Steps: SubqSnapGuide },
 };
 
+type CredentialAction = "save" | "test";
+
 interface ProviderCredentialsProps {
   isBusy: boolean;
   onBack: () => void;
+  onCheck?: (values: Record<string, string>) => void;
   onEdit: () => void;
   onSave: (values: Record<string, string>, checkFirst: boolean) => void;
   outcome: SaveOutcome | undefined;
@@ -82,6 +85,7 @@ const problemsOf = (
 const SingleScreenCredentials = ({
   isBusy,
   onBack,
+  onCheck,
   onEdit,
   onSave,
   outcome,
@@ -91,6 +95,7 @@ const SingleScreenCredentials = ({
   const ArrowLeftIcon = useIcon("arrow-left");
   const [values, setValues] = useState(() => filledValuesOf(variant.fields));
   const [problems, setProblems] = useState<Record<string, FieldProblem>>({});
+  const [lastAction, setLastAction] = useState<CredentialAction>("save");
 
   const provider = variantLabel(variant.id);
   const guideUrl = variantGuideUrl(variant.id);
@@ -102,15 +107,19 @@ const SingleScreenCredentials = ({
   const optional = editable.filter((field) => !field.required);
   const checkFailed = outcome?.outcome === PROBE_FAILED;
 
-  const save = (checkFirst: boolean) => {
+  const submit = (action: CredentialAction, run: () => void) => {
     const found = problemsOf(editable, values);
 
     setProblems(found);
 
     if (Object.keys(found).length === 0) {
-      onSave(values, checkFirst);
+      setLastAction(action);
+      run();
     }
   };
+
+  const save = (checkFirst: boolean) =>
+    submit("save", () => onSave(values, checkFirst));
 
   const renderField = (field: SetupFieldDescriptor) => {
     const problem = problems[field.key];
@@ -192,7 +201,18 @@ const SingleScreenCredentials = ({
         >
           {m.setup_back()}
         </Button>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          {onCheck === undefined ? null : (
+            <Button
+              disabled={isBusy && lastAction !== "test"}
+              loading={isBusy && lastAction === "test"}
+              onClick={() => submit("test", () => onCheck(values))}
+              type="button"
+              variant="ghost"
+            >
+              {m.setup_test_connection()}
+            </Button>
+          )}
           {checkFailed ? (
             <Button
               disabled={isBusy}
@@ -203,7 +223,12 @@ const SingleScreenCredentials = ({
               {m.setup_save_anyway()}
             </Button>
           ) : null}
-          <Button loading={isBusy} onClick={() => save(true)} type="button">
+          <Button
+            disabled={isBusy && lastAction !== "save"}
+            loading={isBusy && lastAction === "save"}
+            onClick={() => save(true)}
+            type="button"
+          >
             {SAVE_LABELS[wording]()}
           </Button>
         </div>
@@ -212,11 +237,14 @@ const SingleScreenCredentials = ({
   );
 };
 
-export const ProviderCredentials = (props: ProviderCredentialsProps) => {
+export const ProviderCredentials = ({
+  onCheck,
+  ...props
+}: ProviderCredentialsProps) => {
   const steps = credentialStepsOf(props.variant.id, props.variant.fields);
 
   return steps === null ? (
-    <SingleScreenCredentials {...props} />
+    <SingleScreenCredentials {...props} onCheck={onCheck} />
   ) : (
     <CredentialSequence {...props} steps={steps} />
   );

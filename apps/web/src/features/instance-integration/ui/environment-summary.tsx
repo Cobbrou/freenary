@@ -6,7 +6,7 @@ import { RiCheckLine, RiServerLine } from "@remixicon/react";
 
 import { m } from "@/paraglide/messages.js";
 import { remixIcon } from "@/shared/lib/remix-icon";
-import { WizardStepHeader } from "@/shared/ui/wizard-step-header";
+import { WizardStepHeader } from "@/shared/ui/wizard";
 
 import {
   environmentDocsUrl,

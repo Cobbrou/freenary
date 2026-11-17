@@ -1,27 +1,55 @@
-import { BrandAvatar } from "@freenary/ui/components/brand-avatar";
-import { BrandPattern } from "@freenary/ui/components/brand-pattern";
+import { motion, useReducedMotion } from "motion/react";
 
 import { m } from "@/paraglide/messages.js";
+import { PinkBackdrop } from "@/shared/ui/pink-backdrop";
 
-export const AuthBrandPanel = () => (
-  <div className="bg-muted relative hidden overflow-hidden lg:flex lg:flex-col">
-    <BrandPattern className="opacity-20 dark:opacity-25" />
-    <div
-      aria-hidden="true"
-      className="from-muted absolute top-1/2 left-1/2 size-[44rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-radial from-35% to-transparent"
-    />
-    <div
-      aria-hidden="true"
-      className="from-muted absolute inset-x-0 bottom-0 h-56 bg-linear-to-t to-transparent"
-    />
-    <div className="relative flex flex-1 items-center justify-center p-8">
-      <BrandAvatar frozen size={176} state="logo" />
+const PITCH_LINES = [
+  { id: "connect", text: m.auth_pitch_connect },
+  { id: "see", text: m.auth_pitch_see },
+  { id: "know", text: m.auth_pitch_know },
+] as const;
+
+const STRONG_EASE_OUT = [0.23, 1, 0.32, 1] as const;
+const LINE_SECONDS = 0.6;
+const LINE_STAGGER_SECONDS = 0.12;
+const FIRST_LINE_DELAY_SECONDS = 0.15;
+const RISE_PX = 12;
+
+const lineMotion = (order: number, reduceMotion: boolean) => ({
+  animate: { filter: "blur(0px)", opacity: 1, y: 0 },
+  initial: reduceMotion
+    ? { opacity: 0 }
+    : { filter: "blur(4px)", opacity: 0, y: RISE_PX },
+  transition: {
+    delay: FIRST_LINE_DELAY_SECONDS + order * LINE_STAGGER_SECONDS,
+    duration: LINE_SECONDS,
+    ease: STRONG_EASE_OUT,
+  },
+});
+
+export const AuthBrandPanel = () => {
+  const reduceMotion = useReducedMotion() ?? false;
+
+  return (
+    <div className="relative hidden overflow-hidden lg:flex lg:flex-col">
+      <PinkBackdrop />
+      <div className="relative flex flex-1 items-center p-12 xl:p-16">
+        <h2 className="font-heading text-4xl leading-tight font-semibold tracking-tight xl:text-5xl">
+          {PITCH_LINES.map((line, order) => (
+            <motion.span
+              className="block"
+              key={line.id}
+              {...lineMotion(order, reduceMotion)}
+            >
+              {line.text()}
+            </motion.span>
+          ))}
+        </h2>
+      </div>
+      <div className="relative p-12 pt-0 xl:p-16 xl:pt-0">
+        <p className="text-lg font-bold tracking-tight">freenary</p>
+        <p className="text-foreground/70 text-sm italic">{m.auth_tagline()}</p>
+      </div>
     </div>
-    <div className="relative p-8">
-      <h2 className="text-3xl font-bold tracking-tight">freenary</h2>
-      <p className="text-muted-foreground mt-1 text-sm italic">
-        {m.auth_tagline()}
-      </p>
-    </div>
-  </div>
-);
+  );
+};

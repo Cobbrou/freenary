@@ -285,6 +285,9 @@
   "auth_signup_code_sent_toast": "Compte créé. Confirmez votre adresse e-mail avec le code que nous vous avons envoyé.",
   "auth_switch_to_sign_in": "Vous avez déjà un compte ? Connectez-vous",
   "auth_switch_to_sign_up": "Pas encore de compte ? Créez-en un",
+  "auth_pitch_connect": "Connectez vos banques.",
+  "auth_pitch_see": "Suivez chaque euro.",
+  "auth_pitch_know": "Sachez ce qu’il reste.",
   "auth_tagline": "Vos finances, enfin claires.",
   "auth_two_factor_code_label": "Code de l’application d’authentification",
   "auth_two_factor_description": "Saisissez le code à 6 chiffres de votre application d’authentification.",
@@ -1488,5 +1491,6 @@
   "ui_toggle_sidebar": "Afficher ou masquer la barre latérale",
   "update_banner_dismiss": "Masquer l’avis pour la v{version}",
   "update_banner_new_tab": "(s’ouvre dans un nouvel onglet)",
-  "update_banner_title": "Freenary v{version} est disponible"
+  "update_banner_title": "Freenary v{version} est disponible",
+  "wizard_step_done": "{step} (terminé)"
 }

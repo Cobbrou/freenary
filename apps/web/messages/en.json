@@ -276,6 +276,9 @@
   "auth_signup_code_sent_toast": "Account created. Confirm your email with the code we sent.",
   "auth_switch_to_sign_in": "Already have an account? Sign in",
   "auth_switch_to_sign_up": "No account yet? Create one",
+  "auth_pitch_connect": "Connect your banks.",
+  "auth_pitch_see": "See every euro.",
+  "auth_pitch_know": "Know what’s left.",
   "auth_tagline": "Your finances, understood.",
   "auth_two_factor_code_label": "Authenticator code",
   "auth_two_factor_description": "Enter the 6-digit code from your authenticator app.",
@@ -1479,5 +1482,6 @@
   "ui_toggle_sidebar": "Toggle sidebar",
   "update_banner_dismiss": "Dismiss the notice for v{version}",
   "update_banner_new_tab": "(opens in a new tab)",
-  "update_banner_title": "Freenary v{version} is available"
+  "update_banner_title": "Freenary v{version} is available",
+  "wizard_step_done": "{step} (done)"
 }
