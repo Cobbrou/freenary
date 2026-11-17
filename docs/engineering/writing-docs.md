@@ -18,7 +18,7 @@ cd apps/fumadocs
 bun run dev
 ```
 
-The site answers on `http://localhost:4000`. The development stack serves the same app at `http://docs.<slug>.freenary.localhost` (see [Local development stack](./local-stack.md)). Pages live under `apps/fumadocs/content/docs/`, and the base route is `/docs`.
+The site answers on `http://localhost:4000`. The development stack serves the same app at `https://docs.<slug>.freenary.kiri.localhost` (see [Local development stack](./local-stack.md)). Pages live under `apps/fumadocs/content/docs/`, and the base route is `/docs`.
 
 ## Versions
 

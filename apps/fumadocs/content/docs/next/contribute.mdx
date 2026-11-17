@@ -22,23 +22,33 @@ bun install
 
 ## Run it in Docker
 
+Run the stack on [Kiri](https://docs.runkiri.com/), the Docker engine we recommend for it. Kiri gives each container its own [hostname](https://docs.runkiri.com/domains/), so every worktree gets its own addresses and no port to publish.
+
+1. [Install Kiri](https://docs.runkiri.com/install/), then point `docker` at it with `docker context use kiri`.
+2. On a Mac, open Kiri's **Settings → Domains** and turn **HTTPS** on, so your Mac trusts the certificates Kiri makes. See [HTTPS](https://docs.runkiri.com/https/).
+3. Start the stack:
+
 ```bash
 bun run dev:up
 ```
 
 It starts PostgreSQL, applies the migrations, and runs the API server, the web app and the documentation site with live reload. It prints the addresses it serves:
 
-- `http://web.<slug>.freenary.localhost`
-- `http://server.<slug>.freenary.localhost`
-- `http://docs.<slug>.freenary.localhost`
+- `https://web.<slug>.freenary.kiri.localhost`
+- `https://server.<slug>.freenary.kiri.localhost`
+- `https://docs.<slug>.freenary.kiri.localhost`
 
-The slug comes from your git branch, so two worktrees run side by side. A shared Traefik container on port 80 routes these hostnames. Use Chrome or Firefox, which resolve `*.localhost` on their own.
+The slug comes from your git branch, so two worktrees run side by side. Kiri serves HTTPS on macOS only, so on Linux and Windows the addresses start with `http://`.
+
+### Use your own router instead
+
+Kiri is a recommendation, not a requirement. The stack publishes no port, so any router that reaches the containers works: send each hostname to its container port, `3001` for `web`, `3000` for `server`, `4000` for `docs` and `8025` for `mailpit`. Then set `FREENARY_DEV_DOMAIN` in `.env` to the domain your hostnames end in, in place of `kiri.localhost`, and `FREENARY_DEV_SCHEME` to `http` or `https`. You can also skip Docker for the apps, as the next section shows.
 
 `bun run dev:logs` follows the logs, `bun run dev:down` stops everything, and `bun run dev:reset` deletes the database and starts over.
 
 There's no seed data. Create an account on the sign-in screen: with no email provider, sign-up signs you in at once.
 
-To work on emailed codes, start with `bun run dev:mail` instead. It adds a Mailpit inbox at `http://mail.<slug>.freenary.localhost`, and the server sends every email there.
+To work on emailed codes, start with `bun run dev:mail` instead. It adds a Mailpit inbox at `https://mail.<slug>.freenary.kiri.localhost`, and the server sends every email there.
 
 ### Bank data without credentials
 

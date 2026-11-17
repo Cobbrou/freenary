@@ -90,26 +90,66 @@ describe("deriveDevIdentity URL / host consistency", () => {
 });
 
 describe("deriveDevIdentity host shapes", () => {
-  test("produces http + freenary.localhost hosts", () => {
+  test("produces https + kiri.localhost hosts by default", () => {
     const id = deriveDevIdentity({ branch: "feat/projects" });
 
-    expect(new URL(id.corsOrigin).protocol).toBe("http:");
-    expect(id.webHost).toBe("web.feat-projects.freenary.localhost");
-    expect(id.serverHost).toBe("server.feat-projects.freenary.localhost");
-    expect(id.corsOrigin).toBe("http://web.feat-projects.freenary.localhost");
+    expect(id.scheme).toBe("https");
+    expect(id.webHost).toBe("web.feat-projects.freenary.kiri.localhost");
+    expect(id.serverHost).toBe("server.feat-projects.freenary.kiri.localhost");
+    expect(id.corsOrigin).toBe(
+      "https://web.feat-projects.freenary.kiri.localhost"
+    );
+
     expect(id.betterAuthUrl).toBe(
-      "http://server.feat-projects.freenary.localhost"
+      "https://server.feat-projects.freenary.kiri.localhost"
     );
 
     expect(id.viteServerUrl).toBe(
-      "http://server.feat-projects.freenary.localhost"
+      "https://server.feat-projects.freenary.kiri.localhost"
     );
 
-    expect(id.docsHost).toBe("docs.feat-projects.freenary.localhost");
-    expect(id.docsUrl).toBe("http://docs.feat-projects.freenary.localhost");
-    expect(id.mailHost).toBe("mail.feat-projects.freenary.localhost");
-    expect(id.mailUrl).toBe("http://mail.feat-projects.freenary.localhost");
-    expect(id.cookieDomain).toBe(".feat-projects.freenary.localhost");
+    expect(id.docsHost).toBe("docs.feat-projects.freenary.kiri.localhost");
+    expect(id.docsUrl).toBe(
+      "https://docs.feat-projects.freenary.kiri.localhost"
+    );
+
+    expect(id.mailHost).toBe("mail.feat-projects.freenary.kiri.localhost");
+    expect(id.mailUrl).toBe(
+      "https://mail.feat-projects.freenary.kiri.localhost"
+    );
+
+    expect(id.cookieDomain).toBe(".feat-projects.freenary.kiri.localhost");
+  });
+
+  test("a plain http scheme reaches every URL", () => {
+    const id = deriveDevIdentity({ branch: "feat/projects", scheme: "http" });
+
+    expect(id.corsOrigin).toBe(
+      "http://web.feat-projects.freenary.kiri.localhost"
+    );
+
+    expect(id.betterAuthUrl).toBe(
+      "http://server.feat-projects.freenary.kiri.localhost"
+    );
+
+    expect(id.docsUrl).toBe(
+      "http://docs.feat-projects.freenary.kiri.localhost"
+    );
+
+    expect(id.mailUrl).toBe(
+      "http://mail.feat-projects.freenary.kiri.localhost"
+    );
+  });
+
+  test.each([
+    ["a domain of your own replaces kiri.localhost", "dev.test", "dev.test"],
+    ["edge dots and case are dropped", ".Kiri.Local.", "kiri.local"],
+    ["an empty domain falls back to kiri.localhost", "  ", "kiri.localhost"],
+  ])("%s", (_name, domain, expected) => {
+    const id = deriveDevIdentity({ branch: "feat/projects", domain });
+
+    expect(id.webHost).toBe(`web.feat-projects.freenary.${expected}`);
+    expect(id.cookieDomain).toBe(`.feat-projects.freenary.${expected}`);
   });
 });
 

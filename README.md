@@ -29,7 +29,7 @@ bun install
 bun run dev:up
 ```
 
-`dev:up` runs everything in Docker at `http://web.<slug>.freenary.localhost`. [Contribute](apps/fumadocs/content/docs/next/contribute.mdx) covers the local setup without Docker and the checks to run before a pull request.
+`dev:up` runs everything in Docker at `https://web.<slug>.freenary.kiri.localhost` (`http://` on Linux and Windows), routed by [Kiri](https://docs.runkiri.com/), which we recommend; any router of your own works too. [Contribute](apps/fumadocs/content/docs/next/contribute.mdx) covers the local setup without Docker and the checks to run before a pull request.
 
 ## Contributing
 

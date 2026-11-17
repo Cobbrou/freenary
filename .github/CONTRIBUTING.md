@@ -52,7 +52,7 @@ bun run build         # every app
 
 Most lint/format issues are auto-fixable with `bun run fix`.
 
-CI's `compose` job has no root script. It parses `docker-compose.dev.yml` (alone and with `docker-compose.mail.yml`), `docker-compose.proxy.yml`, `docker-compose.yml`, `deploy/docker-compose.yml` and `deploy/coolify.yml` with `docker compose config --quiet`. It also asserts that `docker-compose.yml` refuses an empty `POSTGRES_PASSWORD` and `BETTER_AUTH_SECRET`, and that `deploy/docker-compose.yml` refuses an empty `FREENARY_URL`, `POSTGRES_PASSWORD` and `BETTER_AUTH_SECRET`. Reproduce it from [`.github/workflows/ci.yml`](workflows/ci.yml) before you change any of these files.
+CI's `compose` job has no root script. It parses `docker-compose.dev.yml` (alone and with `docker-compose.mail.yml`), `docker-compose.yml`, `deploy/docker-compose.yml` and `deploy/coolify.yml` with `docker compose config --quiet`. It also asserts that `docker-compose.yml` refuses an empty `POSTGRES_PASSWORD` and `BETTER_AUTH_SECRET`, and that `deploy/docker-compose.yml` refuses an empty `FREENARY_URL`, `POSTGRES_PASSWORD` and `BETTER_AUTH_SECRET`. Reproduce it from [`.github/workflows/ci.yml`](workflows/ci.yml) before you change any of these files.
 
 CI runs the `packages/api` tests and no other test file, and there is no root `test` script. Run the other test files your change touches by hand with `bun test <path>`. [Contribute](../apps/fumadocs/content/docs/next/contribute.mdx#tests) has the details.
 

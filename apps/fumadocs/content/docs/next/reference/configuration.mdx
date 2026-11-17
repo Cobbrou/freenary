@@ -278,10 +278,12 @@ The development stack reads a few more, which the production files ignore:
 | Variable | Default | What it does |
 | --- | --- | --- |
 | `FREENARY_SLUG` | the git branch, else the directory name, else `dev` | Names the Compose project and every hostname of one worktree stack. It reaches Compose through the `-p` flag. |
-| `SERVER_HOST` | `server.<slug>.freenary.localhost` | The API server hostname. It fills `BETTER_AUTH_URL`. |
-| `WEB_HOST` | `web.<slug>.freenary.localhost` | The web app hostname. It fills `CORS_ORIGIN`. |
-| `DOCS_HOST` | `docs.<slug>.freenary.localhost` | The documentation hostname, in the Traefik route alone. |
-| `MAIL_HOST` | `mail.<slug>.freenary.localhost` | The Mailpit inbox hostname, in the Traefik route alone. It applies to `bun run dev:mail`. |
+| `FREENARY_DEV_DOMAIN` | `kiri.localhost` | The domain every development hostname ends in, after `<service>.<slug>.freenary.`. Set it when you route the hostnames with something other than Kiri, or to `kiri.local` once Kiri answers on that suffix. |
+| `FREENARY_DEV_SCHEME` | `https` on macOS, `http` elsewhere | The scheme of every development URL, `http` or `https`, and `scripts/dev.ts` refuses any other value. Kiri serves HTTPS on macOS alone. |
+| `SERVER_HOST` | `server.<slug>.freenary.kiri.localhost` | The API server hostname, in its Kiri label. It fills `BETTER_AUTH_URL`. |
+| `WEB_HOST` | `web.<slug>.freenary.kiri.localhost` | The web app hostname, in its Kiri label. It fills `CORS_ORIGIN`. |
+| `DOCS_HOST` | `docs.<slug>.freenary.kiri.localhost` | The documentation hostname, in its Kiri label alone. |
+| `MAIL_HOST` | `mail.<slug>.freenary.kiri.localhost` | The Mailpit inbox hostname, in its Kiri label alone. It applies to `bun run dev:mail`. |
 | `DOCS_PORT` | `4000` | The documentation port inside its own container. |
 
 {/* env-sync:end */}

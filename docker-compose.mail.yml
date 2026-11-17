@@ -2,7 +2,7 @@ name: freenary
 
 # An SMTP transport for the development stack, with no mail account and no
 # console printing: Mailpit accepts every message and holds it in a web inbox.
-# `bun run dev:up --mail` layers this file over docker-compose.dev.yml. Without
+# `bun run dev:mail` layers this file over docker-compose.dev.yml. Without
 # it the stack configures no email provider, so Freenary hides the flows that
 # need one instead of offering them.
 
@@ -14,24 +14,16 @@ services:
       MP_SMTP_AUTH_ALLOW_INSECURE: 1
     expose:
       - "1025"
-    # `mailpit` also resolves on devproxy, to every worktree's inbox; the
-    # server reaches this one through a default-network-only alias.
-    networks:
-      default:
-        aliases: [freenary-mailpit]
-      devproxy: {}
     labels:
-      - traefik.enable=true
-      - traefik.http.routers.freenary-${FREENARY_SLUG:-dev}-mail.rule=Host(`${MAIL_HOST:-mail.freenary.localhost}`)
-      - traefik.http.routers.freenary-${FREENARY_SLUG:-dev}-mail.entrypoints=web
-      - traefik.http.services.freenary-${FREENARY_SLUG:-dev}-mail.loadbalancer.server.port=8025
+      dev.kiri.domain: ${MAIL_HOST:-mail.freenary.kiri.localhost}
+      dev.kiri.http.port: "8025"
     restart: unless-stopped
 
   server:
     environment:
       EMAIL_PROVIDER: smtp
       EMAIL_FROM: Freenary <no-reply@freenary.test>
-      SMTP_HOST: freenary-mailpit
+      SMTP_HOST: mailpit
       SMTP_PORT: 1025
       SMTP_SECURE: false
     depends_on:

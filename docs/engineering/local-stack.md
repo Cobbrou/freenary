@@ -6,7 +6,7 @@ Two paths run Freenary on your machine. The containerised path runs every part i
 
 | Path | Start it with | It needs | It gives you |
 | --- | --- | --- | --- |
-| Containerised | `bun run dev:up` | Docker, and port `80` free or held by the shared dev proxy | Five services, one hostname per application, one isolated stack per worktree |
+| Containerised | `bun run dev:up` | Docker, on [Kiri](https://docs.runkiri.com/) or behind a router of your own | Five services, one hostname per application, one isolated stack per worktree |
 | Local | PostgreSQL, `db:migrate:deploy`, then `bun run dev` | Docker and two variables in two files | Three host processes and PostgreSQL on `127.0.0.1:5432` |
 
 ## The containerised path
@@ -23,14 +23,14 @@ The stack needs no `.env` file. The `server` service declares `env_file` with `p
 | --- | --- | --- | --- | --- |
 | `postgres` | `postgres:18-alpine` | image default | image default | `expose` only, plus the `pgdata` volume and a `pg_isready` health check |
 | `bootstrap` | `.docker/dockerfile.dev` | `/app/packages/db` | `bun x prisma migrate deploy` | none. It gets `DATABASE_URL` alone |
-| `server` | `.docker/dockerfile.dev` | `/app/apps/server` | `bun run --hot src/index.ts` | Traefik labels, port `3000` |
-| `web` | `.docker/dockerfile.dev` | `/app/apps/web` | `bun run dev -- --host 0.0.0.0` | Traefik labels, port `3001` |
-| `docs` | `.docker/dockerfile.dev` | `/app/apps/fumadocs` | `bun run dev -- --host 0.0.0.0` | Traefik labels, port `4000` |
-| `mailpit` | `axllent/mailpit:v1.28` | image default | image default | Traefik labels, port `8025`. Only with `--mail` |
+| `server` | `.docker/dockerfile.dev` | `/app/apps/server` | `bun run --hot src/index.ts` | Kiri labels, port `3000` |
+| `web` | `.docker/dockerfile.dev` | `/app/apps/web` | `bun run dev -- --host 0.0.0.0` | Kiri labels, port `3001` |
+| `docs` | `.docker/dockerfile.dev` | `/app/apps/fumadocs` | `bun run dev -- --host 0.0.0.0` | Kiri labels, port `4000` |
+| `mailpit` | `axllent/mailpit:v1.28` | image default | image default | Kiri labels, port `8025`. Only with `--mail` |
 
-Only `server` loads the root `.env` and the derived values. The `web` service gets `VITE_SERVER_URL` and `SERVER_URL`, which defaults to `http://freenary-server:3000`. A server-rendered page therefore reaches the API over the container network. Only the default network of the stack knows that alias. It therefore never reaches the API of another worktree. The `docs` service gets `DOCS_PORT`, which no code reads.
+Only `server` loads the root `.env` and the derived values. The `web` service gets `VITE_SERVER_URL` and `SERVER_URL`, which defaults to `http://server:3000`. A server-rendered page therefore reaches the API over the container network. Each stack has a network of its own, so that name never reaches the API of another worktree. The `docs` service gets `DOCS_PORT`, which no code reads.
 
-The `web` and `docs` services also get `DEV_PUBLIC_URL`, their Traefik address. Their dev servers print that address in the logs, not the address inside the container. The `server` service prints `BETTER_AUTH_URL`.
+The `web` and `docs` services also get `DEV_PUBLIC_URL`, their public address. Their dev servers print that address in the logs, not the address inside the container. The `server` service prints `BETTER_AUTH_URL`.
 
 The `bootstrap` service is one-shot. It waits for `postgres` to report healthy, then applies the migrations. The `server` service waits for it with the condition `service_completed_successfully`, so the schema lands first. Bootstrap re-runs on every `up`, and it exits `0` when the schema is already current.
 
@@ -68,13 +68,15 @@ The `slugify` helper lowercases the name and collapses each run outside `[a-z0-9
 | Field | Template | With `slug=dev` |
 | --- | --- | --- |
 | Compose project | `freenary-${slug}` | `freenary-dev` |
-| Web host | `web.${slug}.freenary.localhost` | `web.dev.freenary.localhost` |
-| Server host | `server.${slug}.freenary.localhost` | `server.dev.freenary.localhost` |
-| Docs host | `docs.${slug}.freenary.localhost` | `docs.dev.freenary.localhost` |
-| Mail host | `mail.${slug}.freenary.localhost` | `mail.dev.freenary.localhost` |
-| Cookie domain | `.${slug}.freenary.localhost` | `.dev.freenary.localhost` |
+| Web host | `web.${slug}.freenary.${domain}` | `web.dev.freenary.kiri.localhost` |
+| Server host | `server.${slug}.freenary.${domain}` | `server.dev.freenary.kiri.localhost` |
+| Docs host | `docs.${slug}.freenary.${domain}` | `docs.dev.freenary.kiri.localhost` |
+| Mail host | `mail.${slug}.freenary.${domain}` | `mail.dev.freenary.kiri.localhost` |
+| Cookie domain | `.${slug}.freenary.${domain}` | `.dev.freenary.kiri.localhost` |
 
-The wrapper passes the cookie domain as `AUTH_COOKIE_DOMAIN`, so both origins share the session cookie. Every origin uses plain `http`. Chrome and Firefox treat each `*.localhost` origin as a secure context. The web app therefore works as it does over HTTPS. Safari does not, so use Chrome or Firefox.
+`domain` is `FREENARY_DEV_DOMAIN`, read like `FREENARY_SLUG`, and `kiri.localhost` when unset. The wrapper passes the cookie domain as `AUTH_COOKIE_DOMAIN`, so both origins share the session cookie.
+
+Every origin uses `https` on macOS and `http` elsewhere, because Kiri serves HTTPS on the Mac alone. `FREENARY_DEV_SCHEME` overrides that choice, and the wrapper refuses any value other than `http` or `https`. Over `https`, Better Auth marks the session cookie `Secure`.
 
 The operating system sends every `*.localhost` name to `127.0.0.1`, so you edit no `/etc/hosts` file.
 
@@ -82,34 +84,28 @@ The operating system sends every `*.localhost` name to `127.0.0.1`, so you edit 
 
 ```bash
 [freenary dev] worktree "<slug>"
-  web     http://web.<slug>.freenary.localhost
-  server  http://server.<slug>.freenary.localhost
-  docs    http://docs.<slug>.freenary.localhost
-  mail    http://mail.<slug>.freenary.localhost
+  web     https://web.<slug>.freenary.kiri.localhost
+  server  https://server.<slug>.freenary.kiri.localhost
+  docs    https://docs.<slug>.freenary.kiri.localhost
+  mail    https://mail.<slug>.freenary.kiri.localhost
   project freenary-<slug>
 ```
 
 The `mail` line appears with `--mail` alone. The project name and the hostnames all carry the slug, so two worktrees run side by side. Each one gets its own containers, its own `pgdata` volume and its own URLs.
 
-### The shared proxy
+### Kiri routes the hostnames
 
-**No development service publishes a host port.** `postgres` uses `expose`, which opens nothing on the host. `server`, `web`, `docs` and `mailpit` join a second network, `devproxy`, and carry Traefik labels. One Traefik on port `80` reads those labels and routes each hostname to its container.
+**No development service publishes a host port.** `postgres` uses `expose`, which opens nothing on the host. `server`, `web`, `docs` and `mailpit` each carry two [Kiri](https://docs.runkiri.com/domains/) labels: `dev.kiri.domain` names the hostname, and `dev.kiri.http.port` names the container port that hostname reaches. Kiri's router on the host reads the `Host` header and relays each request to its container. It answers on port `80` for `http`, and on port `443` for `https`.
 
-One proxy serves every stack on the machine. That includes each worktree of Freenary, and each other project on the `devproxy` network. The router names carry the slug, so two stacks never replace the routes of each other.
+On a Mac, Kiri [ends HTTPS](https://docs.runkiri.com/https/) with a certificate per hostname, signed by its own certificate authority, and each container still serves plain HTTP. Turn **HTTPS** on once in Kiri's **Settings → Domains**, so macOS trusts that authority. Kiri on Linux and Windows has no HTTPS, so the wrapper uses `http` there.
 
-Before `up`, `start`, `restart`, `run` and `reset`, `scripts/dev.ts` does three checks:
+Each worktree runs under its own Compose project with hostnames that carry its slug, so Kiri routes several stacks at once with nothing shared between them. `dev:down` stops this worktree's stack and nothing else.
 
-1. It creates the `devproxy` network when it is absent. It uses the subnet `172.30.0.0/16` when that range is free.
-2. It uses a running container that publishes port `80` on `devproxy`, when one exists. The banner then shows `proxy <name> (shared)`.
-3. Otherwise it starts `docker-compose.proxy.yml`, a Traefik under the Compose project `devproxy-freenary`.
+Before `up`, `start`, `restart`, `run` and `reset`, `scripts/dev.ts` asks `docker info` which engine it talks to. When that engine is not Kiri and `FREENARY_DEV_DOMAIN` is unset, it prints a warning and starts the stack anyway.
 
-A container that holds port `80` off the `devproxy` network stops the start, and the message names it. `docker-compose.yml`, the self-hosting stack, never reads the proxy file.
+### Without Kiri
 
-`dev:down` leaves the proxy running, because another stack can use it. Stop the Freenary proxy yourself when no stack needs it:
-
-```bash
-docker compose -f docker-compose.proxy.yml down
-```
+Kiri is the recommended router, not a requirement. To use your own, route each hostname to its container port: `web` on `3001`, `server` on `3000`, `docs` on `4000` and `mailpit` on `8025`. Each stack's containers sit on the network `freenary-<slug>_default`. Then set `FREENARY_DEV_DOMAIN` to the domain your hostnames end in, and `FREENARY_DEV_SCHEME` to the scheme your router serves. The Kiri labels do nothing outside Kiri. The local path below needs no router at all.
 
 ### File sync
 
@@ -205,7 +201,7 @@ The repository holds no seed script. Open the web app and create the account on 
 
 `bun run dev:up` configures no email provider. Freenary therefore hides every flow that needs mail. Sign-up returns a session at once, and no screen asks for a code.
 
-Work on those flows through `bun run dev:mail`. It sets `EMAIL_PROVIDER` to `smtp` and points the server at Mailpit. Sign-up then asks for a one-time code, and Mailpit holds the message at `http://mail.<slug>.freenary.localhost`.
+Work on those flows through `bun run dev:mail`. It sets `EMAIL_PROVIDER` to `smtp` and points the server at Mailpit. Sign-up then asks for a one-time code, and Mailpit holds the message at `https://mail.<slug>.freenary.kiri.localhost`.
 
 Read the code in that inbox, then type it in the form. The local path sets no email provider either, so a sign-up there returns a session at once.
 
@@ -221,8 +217,10 @@ Read the code in that inbox, then type it in the form. The local path sets no em
 | Prisma methods or types that do not match the schema | A stale generated client | `bun run db:generate` |
 | `bind: address already in use` on `3000` | Another `bun run dev`, or a bare `vite dev` inside `apps/fumadocs` | Stop that process, or start the site through its `dev` script |
 | `bind: address already in use` on `3001` or `4000` | Another host process holds the port | Stop it, or use the containerised path, which publishes no application port |
-| `bind: address already in use` on `80` when the proxy starts | A process outside Docker holds port `80` | Stop that process, then run `bun run dev:up` again |
-| Every hostname answers `404 page not found` | The proxy has no route for that name, because the stack of that slug is not running | `bun scripts/dev.ts ps`, then `bun run dev:up` |
+| A hostname answers with Kiri's list of running containers | No running container carries that name, because the stack of that slug is not running | `bun scripts/dev.ts ps`, then `bun run dev:up` |
+| The browser warns that the certificate is not trusted | HTTPS is off in Kiri, so macOS does not trust its certificate authority | Turn **HTTPS** on in Kiri's **Settings → Domains** |
+| `http://` hostnames answer nothing, or another app answers | Another program holds port `80`, and Kiri leaves that router off | Stop that program, or move Kiri's ports in **Settings → Domains → Ports** |
+| `dev:up` warns that Docker does not run on Kiri | The `docker` context points at another engine | `docker context use kiri`, or route the hostnames yourself and set `FREENARY_DEV_DOMAIN` |
 | The production compose file refuses to parse | An unset or empty `POSTGRES_PASSWORD` or `BETTER_AUTH_SECRET` | Set both in the root `.env` |
 | A route the router does not know, or type errors in `routeTree.gen.ts` | A stale generated route tree | Restart the web development server |
 | Merchant names are never matched, and fewer transactions get a category | The merchant dictionary artifact is absent | `bun run build:data` on the host |
@@ -233,7 +231,7 @@ Read the code in that inbox, then type it in the form. The local path sets no em
 | --- | --- | --- |
 | Bun | `1.3.14` | The runtime, the package manager and the test runner. `packageManager` in the root `package.json` pins it, and CI and the Docker images use the same version. |
 | Docker | Any current release | Both stack paths run PostgreSQL in a container. |
-| Port `80` | Free, or held by a Traefik on the `devproxy` network | The containerised path only. One shared proxy on that port serves every stack. |
+| [Kiri](https://docs.runkiri.com/install/) | Any current release | The containerised path only, and recommended rather than required. It routes the hostname of every stack. |
 | PostgreSQL | `18` | The image `bun run db:start` starts for you. You install nothing by hand. |
 
 The repository holds a `.nvmrc` file with the content `v25.6.1`. No script and no workflow reads it. Bun runs everything here.
@@ -288,11 +286,10 @@ bun run build
 | 6 | Environment | `bun run env:check` | `scripts/env-sync.ts --check`, which compares `.env.example` and the configuration reference against `packages/env/src/schema.ts` |
 | 7 | Build | `bun run build` | `turbo run build`, which builds the three applications |
 
-The `compose` job needs no Bun and no install. It runs `docker compose config --quiet` eight times:
+The `compose` job needs no Bun and no install. It runs `docker compose config --quiet` seven times:
 
 - Against `docker-compose.dev.yml`, the development stack.
 - With `-f docker-compose.mail.yml` added, the Mailpit layer over it.
-- Against `docker-compose.proxy.yml`, the development proxy.
 - Against `docker-compose.yml`, the production stack, with a temporary `.env` that sets `POSTGRES_PASSWORD` and `BETTER_AUTH_SECRET`.
 - Against `docker-compose.yml` with an empty `.env`, which must fail. A pass means the production file accepted two empty secrets, so the job fails.
 - Against `deploy/docker-compose.yml`, with a temporary `deploy/.env` that sets `FREENARY_URL`, `POSTGRES_PASSWORD` and `BETTER_AUTH_SECRET`.

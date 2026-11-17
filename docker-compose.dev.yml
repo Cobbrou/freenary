@@ -32,20 +32,13 @@ x-app-env-file: &app-env-file
 x-app-env: &app-env
   DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-password}@postgres:5432/${POSTGRES_DB:-freenary}
   BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:-dev_secret_change_me_at_least_32chars}
-  # The shared devproxy Traefik serves every *.localhost name over plain HTTP.
-  # Browsers treat *.localhost as a secure context, and web and server share the
-  # parent domain in AUTH_COOKIE_DOMAIN, so a Lax cookie reaches both.
-  BETTER_AUTH_URL: http://${SERVER_HOST:-server.freenary.localhost}
-  CORS_ORIGIN: http://${WEB_HOST:-web.freenary.localhost}
+  # Kiri routes every hostname to its container and ends HTTPS on the host, so
+  # the apps keep serving plain HTTP. Web and server share the parent domain in
+  # AUTH_COOKIE_DOMAIN, so a Lax cookie reaches both.
+  BETTER_AUTH_URL: ${FREENARY_DEV_SCHEME:-https}://${SERVER_HOST:-server.freenary.kiri.localhost}
+  CORS_ORIGIN: ${FREENARY_DEV_SCHEME:-https}://${WEB_HOST:-web.freenary.kiri.localhost}
   AUTH_COOKIE_DOMAIN: ${AUTH_COOKIE_DOMAIN:-}
   NODE_ENV: development
-
-# Joined by every service the browser reaches. `devproxy` is the network of the
-# shared Traefik that `scripts/dev.ts` starts or reuses; the stack's own
-# default network keeps postgres off it.
-x-proxied: &proxied
-  - default
-  - devproxy
 
 services:
   postgres:
@@ -88,18 +81,11 @@ services:
     env_file: *app-env-file
     environment:
       <<: *app-env
-    # Compose also registers `server` on devproxy, where every worktree's API
-    # answers to it. In-stack callers use this alias, which only the stack's
-    # own default network knows.
-    networks:
-      default:
-        aliases: [freenary-server]
-      devproxy: {}
+    # Kiri's router reads these labels: the hostname it answers to, and the
+    # container port it forwards that hostname to.
     labels:
-      - traefik.enable=true
-      - traefik.http.routers.freenary-${FREENARY_SLUG:-dev}-server.rule=Host(`${SERVER_HOST:-server.freenary.localhost}`)
-      - traefik.http.routers.freenary-${FREENARY_SLUG:-dev}-server.entrypoints=web
-      - traefik.http.services.freenary-${FREENARY_SLUG:-dev}-server.loadbalancer.server.port=3000
+      dev.kiri.domain: ${SERVER_HOST:-server.freenary.kiri.localhost}
+      dev.kiri.http.port: "3000"
     develop:
       watch: *app-watch
     depends_on:
@@ -114,17 +100,14 @@ services:
     working_dir: /app/apps/web
     command: bun run dev -- --host 0.0.0.0
     environment:
-      VITE_SERVER_URL: http://${SERVER_HOST:-server.freenary.localhost}
+      VITE_SERVER_URL: ${FREENARY_DEV_SCHEME:-https}://${SERVER_HOST:-server.freenary.kiri.localhost}
       # What the web app's own server calls while rendering a page: the
       # container network, since `*.localhost` resolves to the container itself.
-      SERVER_URL: ${SERVER_URL:-http://freenary-server:3000}
-      DEV_PUBLIC_URL: http://${WEB_HOST:-web.freenary.localhost}
-    networks: *proxied
+      SERVER_URL: ${SERVER_URL:-http://server:3000}
+      DEV_PUBLIC_URL: ${FREENARY_DEV_SCHEME:-https}://${WEB_HOST:-web.freenary.kiri.localhost}
     labels:
-      - traefik.enable=true
-      - traefik.http.routers.freenary-${FREENARY_SLUG:-dev}-web.rule=Host(`${WEB_HOST:-web.freenary.localhost}`)
-      - traefik.http.routers.freenary-${FREENARY_SLUG:-dev}-web.entrypoints=web
-      - traefik.http.services.freenary-${FREENARY_SLUG:-dev}-web.loadbalancer.server.port=3001
+      dev.kiri.domain: ${WEB_HOST:-web.freenary.kiri.localhost}
+      dev.kiri.http.port: "3001"
     develop:
       watch: *app-watch
     depends_on:
@@ -137,21 +120,13 @@ services:
     command: bun run dev -- --host 0.0.0.0
     environment:
       DOCS_PORT: ${DOCS_PORT:-4000}
-      DEV_PUBLIC_URL: http://${DOCS_HOST:-docs.freenary.localhost}
-    networks: *proxied
+      DEV_PUBLIC_URL: ${FREENARY_DEV_SCHEME:-https}://${DOCS_HOST:-docs.freenary.kiri.localhost}
     labels:
-      - traefik.enable=true
-      - traefik.http.routers.freenary-${FREENARY_SLUG:-dev}-docs.rule=Host(`${DOCS_HOST:-docs.freenary.localhost}`)
-      - traefik.http.routers.freenary-${FREENARY_SLUG:-dev}-docs.entrypoints=web
-      - traefik.http.services.freenary-${FREENARY_SLUG:-dev}-docs.loadbalancer.server.port=4000
+      dev.kiri.domain: ${DOCS_HOST:-docs.freenary.kiri.localhost}
+      dev.kiri.http.port: "4000"
     develop:
       watch: *app-watch
     restart: unless-stopped
 
 volumes:
   pgdata:
-
-networks:
-  devproxy:
-    name: devproxy
-    external: true

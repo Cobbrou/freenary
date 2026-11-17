@@ -1,12 +1,17 @@
+export type DevScheme = "http" | "https";
+
 export interface DevIdentityInput {
   branch?: string | null;
   dir?: string | null;
   slugOverride?: string | null;
+  domain?: string | null;
+  scheme?: DevScheme;
 }
 
 export interface DevIdentity {
   slug: string;
   composeProjectName: string;
+  scheme: DevScheme;
   webHost: string;
   serverHost: string;
   docsHost: string;
@@ -22,12 +27,14 @@ export interface DevIdentity {
 const DEFAULT_SLUG = "dev";
 const MAX_SLUG_LENGTH = 40;
 const PROJECT_PREFIX = "freenary";
-const HOST_SUFFIX = "freenary.localhost";
-const SCHEME = "http";
+const PROJECT_LABEL = "freenary";
+const KIRI_DOMAIN = "kiri.localhost";
+const DEFAULT_SCHEME: DevScheme = "https";
 
 const NON_LABEL_RUN = /[^a-z0-9]+/gu;
 const EDGE_DASHES = /^-+|-+$/gu;
 const TRAILING_DASHES = /-+$/gu;
+const EDGE_DOTS = /^\.+|\.+$/gu;
 
 const toDnsLabel = (raw: string | null | undefined): string => {
   if (!raw) {
@@ -42,6 +49,9 @@ const toDnsLabel = (raw: string | null | undefined): string => {
     .replace(TRAILING_DASHES, "");
 };
 
+const toDomain = (raw: string | null | undefined): string =>
+  raw?.trim().toLowerCase().replace(EDGE_DOTS, "") ?? "";
+
 export const deriveDevIdentity = (input: DevIdentityInput): DevIdentity => {
   const slug =
     toDnsLabel(input.slugOverride) ||
@@ -49,24 +59,28 @@ export const deriveDevIdentity = (input: DevIdentityInput): DevIdentity => {
     toDnsLabel(input.dir) ||
     DEFAULT_SLUG;
 
-  const webHost = `web.${slug}.${HOST_SUFFIX}`;
-  const serverHost = `server.${slug}.${HOST_SUFFIX}`;
-  const docsHost = `docs.${slug}.${HOST_SUFFIX}`;
-  const mailHost = `mail.${slug}.${HOST_SUFFIX}`;
-  const parentDomainOfWebAndServerHosts = `.${slug}.${HOST_SUFFIX}`;
+  const domain = toDomain(input.domain) || KIRI_DOMAIN;
+  const scheme = input.scheme ?? DEFAULT_SCHEME;
+  const parentOfEveryHost = `${slug}.${PROJECT_LABEL}.${domain}`;
+
+  const webHost = `web.${parentOfEveryHost}`;
+  const serverHost = `server.${parentOfEveryHost}`;
+  const docsHost = `docs.${parentOfEveryHost}`;
+  const mailHost = `mail.${parentOfEveryHost}`;
 
   return {
-    betterAuthUrl: `${SCHEME}://${serverHost}`,
+    betterAuthUrl: `${scheme}://${serverHost}`,
     composeProjectName: `${PROJECT_PREFIX}-${slug}`,
-    cookieDomain: parentDomainOfWebAndServerHosts,
-    corsOrigin: `${SCHEME}://${webHost}`,
+    cookieDomain: `.${parentOfEveryHost}`,
+    corsOrigin: `${scheme}://${webHost}`,
     docsHost,
-    docsUrl: `${SCHEME}://${docsHost}`,
+    docsUrl: `${scheme}://${docsHost}`,
     mailHost,
-    mailUrl: `${SCHEME}://${mailHost}`,
+    mailUrl: `${scheme}://${mailHost}`,
+    scheme,
     serverHost,
     slug,
-    viteServerUrl: `${SCHEME}://${serverHost}`,
+    viteServerUrl: `${scheme}://${serverHost}`,
     webHost,
   };
 };

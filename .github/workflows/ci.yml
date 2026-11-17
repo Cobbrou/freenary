@@ -72,7 +72,6 @@ jobs:
         run: |
           docker compose -f docker-compose.dev.yml config --quiet
           docker compose -f docker-compose.dev.yml -f docker-compose.mail.yml config --quiet
-          docker compose -f docker-compose.proxy.yml config --quiet
           printf 'POSTGRES_PASSWORD=x\nBETTER_AUTH_SECRET=y\n' > .env
           docker compose -f docker-compose.yml config --quiet
           : > .env
