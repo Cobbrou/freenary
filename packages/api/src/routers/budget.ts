@@ -34,6 +34,8 @@ import { protectedProcedure } from "../index";
 import {
   cashFlowAccountsOf,
   cashFlowAccountTypesSql,
+  SAVING_CATEGORIES,
+  savingCategoriesSql,
 } from "../lib/account-types";
 import { accountsSummary } from "../lib/accounts-summary";
 import { AGGREGATION_MODES } from "../lib/aggregation";
@@ -211,6 +213,7 @@ const cashFlowQuery = ({ labelExpr, truncExpr }: CashFlowGrain) =>
     AND ${cashFlowAccountTypesSql('ba."type"')}
     AND t."date" >= $2
     AND t."date" <= $3
+    AND (NOT t."isInternalTransfer" OR ${savingCategoriesSql('t."resolvedCategory"')})
   GROUP BY ${truncExpr}, ${labelExpr}
   ORDER BY ${truncExpr} ASC`;
 
@@ -311,6 +314,19 @@ const aggregateOutgoing = <T extends { amount: number; date: Date }, K>(
   return aggregateMonthly(monthly, activeMonths, aggregation);
 };
 
+export const countedTransactionsWhere = (
+  userId: string,
+  from: Date,
+  to: Date
+): Prisma.TransactionWhereInput => ({
+  OR: [
+    { isInternalTransfer: false },
+    { resolvedCategory: { in: [...SAVING_CATEGORIES] } },
+  ],
+  account: cashFlowAccountsOf(userId),
+  date: { gte: from, lte: to },
+});
+
 const outgoingRows = (
   userId: string,
   from: Date,
@@ -324,11 +340,7 @@ const outgoingRows = (
       merchantKey: true,
       resolvedCategory: true,
     },
-    where: {
-      account: cashFlowAccountsOf(userId),
-      amount: { lt: 0 },
-      date: { gte: from, lte: to },
-    },
+    where: { ...countedTransactionsWhere(userId, from, to), amount: { lt: 0 } },
   });
 
 const outgoingByCategory = (
@@ -385,11 +397,11 @@ const directionTotals = async (where: Prisma.TransactionWhereInput) => {
   const [incoming, outgoing] = await Promise.all([
     prisma.transaction.aggregate({
       _sum: { amount: true },
-      where: { ...where, amount: { gt: 0 } },
+      where: { ...where, amount: { gt: 0 }, isInternalTransfer: false },
     }),
     prisma.transaction.aggregate({
       _sum: { amount: true },
-      where: { ...where, amount: { lt: 0 } },
+      where: { ...where, amount: { lt: 0 }, isInternalTransfer: false },
     }),
   ]);
 
@@ -434,10 +446,7 @@ const periodRows = (
       merchantKey: true,
       resolvedCategory: true,
     },
-    where: {
-      account: cashFlowAccountsOf(userId),
-      date: { gte: from, lte: to },
-    },
+    where: countedTransactionsWhere(userId, from, to),
   });
 
 const spendingBreakdownOf = (byCategory: Map<SpendingCategory, number>) => ({

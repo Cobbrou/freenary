@@ -13,10 +13,13 @@ export const ASSET_CLASSES = [
 
 export type AssetClass = (typeof ASSET_CLASSES)[number];
 
-export type SavingCategory = Extract<
-  SpendingCategory,
-  "retirement" | "savings" | "securities"
->;
+export const SAVING_CATEGORIES = [
+  "retirement",
+  "savings",
+  "securities",
+] as const satisfies readonly SpendingCategory[];
+
+export type SavingCategory = (typeof SAVING_CATEGORIES)[number];
 
 export interface AccountTypeRule {
   assetClass: AssetClass | null;
@@ -119,6 +122,9 @@ export const cashFlowAccountsOf = (userId: string) => ({
 
 export const cashFlowAccountTypesSql = (column: string): string =>
   `${column}::text IN (${CASH_FLOW_ACCOUNT_TYPES.map((type) => `'${type}'`).join(", ")})`;
+
+export const savingCategoriesSql = (column: string): string =>
+  `${column} IN (${SAVING_CATEGORIES.map((category) => `'${category}'`).join(", ")})`;
 
 export const signedBalanceOf = (type: string, balanceMinor: number): number =>
   accountTypeRule(type).isDebt ? -Math.abs(balanceMinor) : balanceMinor;
