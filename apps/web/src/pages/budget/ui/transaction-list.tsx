@@ -1,4 +1,5 @@
 import type { TransactionFilter } from "@freenary/api/lib/transaction-filters";
+import { Button } from "@freenary/ui/components/button";
 import { Tabs, TabsItem, TabsPanel } from "@freenary/ui/components/tabs";
 import { useId } from "react";
 
@@ -7,10 +8,13 @@ import { m } from "@/paraglide/messages.js";
 import { formatCurrency } from "@/shared/lib/format-currency";
 
 import { useHoverIntent } from "../lib/use-hover-intent";
+import type { MonthChoice } from "../model/filter-menus";
+import type { AccountChoice } from "../model/filter-suggestions";
 import type { TimeRange } from "../model/period";
 import type { SortMode, TransactionDirection } from "../model/search";
+import { FilterMenus } from "./filter-menus";
 import { FilterTokenSearch } from "./filter-token-search";
-import { ListFilterBar, ListSortToggle } from "./list-controls";
+import { ListSortToggle } from "./list-controls";
 import { SavedFiltersMenu } from "./saved-filters-menu";
 import { TransactionRows } from "./transaction-rows";
 
@@ -25,6 +29,9 @@ const SORT_OPTIONS = [
 ] as const satisfies readonly { label: () => string; value: SortMode }[];
 
 export const TransactionList = ({
+  accounts,
+  months,
+  onMonthPick,
   transactions,
   currency,
   totals,
@@ -51,6 +58,9 @@ export const TransactionList = ({
   onTransactionClick,
   range,
 }: {
+  accounts: readonly AccountChoice[];
+  months: readonly MonthChoice[];
+  onMonthPick: (choice: MonthChoice) => void;
   transactions: Transaction[];
   currency: string;
   totals: { incoming: number; outgoing: number };
@@ -81,6 +91,8 @@ export const TransactionList = ({
   range: TimeRange;
 }) => {
   const directionIntent = useHoverIntent(onDirectionIntent);
+  const hasAnything = filters.length > 0 || search.trim() !== "";
+  const clearAll = () => onSearchReplace({ filters: [], search: "" });
   const tabsId = useId();
   const selectedIndex = DIRECTIONS.indexOf(direction);
 
@@ -106,34 +118,52 @@ export const TransactionList = ({
 
   return (
     <div className="flex flex-1 flex-col gap-3">
-      <ListFilterBar>
+      <div className="flex flex-col gap-2">
         <FilterTokenSearch
+          accounts={accounts}
           currency={currency}
           direction={direction}
           filters={filters}
           from={from}
-          onClear={() => onSearchReplace({ filters: [], search: "" })}
+          onClear={clearAll}
           onFiltersChange={onFiltersChange}
           onSearchChange={onSearchChange}
           search={search}
           to={to}
         />
-        <SavedFiltersMenu
-          filters={filters}
-          onApply={onSearchReplace}
-          search={search}
-        />
-        <ListSortToggle
-          label={m.budget_sort_label()}
-          onChange={onSortChange}
-          onIntent={onSortIntent}
-          options={SORT_OPTIONS.map((option) => ({
-            label: option.label(),
-            value: option.value,
-          }))}
-          value={sort}
-        />
-      </ListFilterBar>
+        <div className="flex flex-wrap items-center gap-2">
+          <FilterMenus
+            accounts={accounts}
+            currency={currency}
+            filters={filters}
+            months={months}
+            onFiltersChange={onFiltersChange}
+            onMonthPick={onMonthPick}
+          />
+          <div className="ms-auto flex flex-wrap items-center gap-2">
+            {hasAnything ? (
+              <Button onClick={clearAll} size="compact" variant="ghost">
+                {m.budget_filter_clear_all()}
+              </Button>
+            ) : null}
+            <SavedFiltersMenu
+              filters={filters}
+              onApply={onSearchReplace}
+              search={search}
+            />
+            <ListSortToggle
+              label={m.budget_sort_label()}
+              onChange={onSortChange}
+              onIntent={onSortIntent}
+              options={SORT_OPTIONS.map((option) => ({
+                label: option.label(),
+                value: option.value,
+              }))}
+              value={sort}
+            />
+          </div>
+        </div>
+      </div>
 
       <div className="flex flex-1 flex-col">
         <Tabs

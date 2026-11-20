@@ -11,6 +11,7 @@ import { useCallback, useMemo, useState } from "react";
 import type { CategorySelection } from "@/entities/category";
 import { TransactionDetailDrawer } from "@/features/transaction-details";
 import { m } from "@/paraglide/messages.js";
+import { getLocale } from "@/paraglide/runtime.js";
 import { orpc } from "@/shared/api";
 
 import {
@@ -21,6 +22,8 @@ import {
   transactionsQueryOptions,
 } from "../api/budget-queries";
 import type { PeriodInput, TransactionsInput } from "../api/budget-queries";
+import { recentMonths } from "../model/filter-menus";
+import type { MonthChoice } from "../model/filter-menus";
 import {
   highlightedChartCategories,
   selectChartCategory,
@@ -145,6 +148,35 @@ export const TransactionsPage = () => {
     [applyPatch]
   );
 
+  const accounts = useMemo(
+    () =>
+      (accountsQuery.data?.accounts ?? []).map((account) => ({
+        id: account.id,
+        label: account.name ?? account.institutionName,
+      })),
+    [accountsQuery.data]
+  );
+
+  const months = useMemo(
+    () =>
+      recentMonths({
+        current:
+          range === "1M"
+            ? { month: from.getUTCMonth(), year: from.getUTCFullYear() }
+            : null,
+        first: firstMonth,
+        last: lastMonth ?? new Date(),
+        locale: getLocale(),
+      }),
+    [firstMonth, from, lastMonth, range]
+  );
+
+  const handleMonthPick = useCallback(
+    ({ month, year }: MonthChoice) =>
+      applyPatch({ agg: "total", month, range: "1M", year }),
+    [applyPatch]
+  );
+
   const chartCategories = useMemo(
     () => highlightedChartCategories(filters),
     [filters]
@@ -233,6 +265,9 @@ export const TransactionsPage = () => {
       />
 
       <TransactionList
+        accounts={accounts}
+        months={months}
+        onMonthPick={handleMonthPick}
         transactions={allTransactions}
         currency={currency}
         totals={totals}

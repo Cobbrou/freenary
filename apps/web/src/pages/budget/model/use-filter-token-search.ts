@@ -16,6 +16,7 @@ import {
   draftForField,
   isReadyToApply,
   stepBack,
+  withAccount,
   withCategory,
   withCompany,
   withOperator,
@@ -28,12 +29,13 @@ import {
   lastWordOf,
   withoutLastWord,
 } from "./filter-suggestions";
-import type { FilterSuggestion } from "./filter-suggestions";
+import type { AccountChoice, FilterSuggestion } from "./filter-suggestions";
 import { searchKey, withoutFilterAt } from "./filter-tokens";
 import type { TransactionDirection } from "./search";
 import { parseAmountBound } from "./transaction-filters";
 
 export interface FilterTokenSearchOptions {
+  accounts: readonly AccountChoice[];
   currency: string;
   direction: TransactionDirection;
   filters: TransactionFilter[];
@@ -51,6 +53,7 @@ export const NO_HIGHLIGHT = -1;
 export const filterKey = (filter: TransactionFilter) => searchKey([filter], "");
 
 export const useFilterTokenSearch = ({
+  accounts,
   currency,
   direction,
   filters,
@@ -99,6 +102,7 @@ export const useFilterTokenSearch = ({
   };
 
   const context = {
+    accounts,
     companies,
     currency,
     draft,
@@ -156,6 +160,19 @@ export const useFilterTokenSearch = ({
   const choose = (suggestion: FilterSuggestion) =>
     Match.value(suggestion).pipe(
       Match.discriminatorsExhaustive("kind")({
+        account: ({ accountId }) => {
+          if (draft?.stage !== "values" || draft.field !== "account") {
+            return;
+          }
+
+          const next = withAccount(draft, accountId);
+
+          if (isReadyToApply(next)) {
+            apply(appliedValues(next));
+          } else {
+            enterStage(next);
+          }
+        },
         amount: ({ minorUnits }) => {
           if (draft?.stage === "amount") {
             apply(appliedAmount(draft, minorUnits));

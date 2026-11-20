@@ -6,6 +6,7 @@ import { transactionFilterConditions } from "./transaction-filter-conditions";
 import type { TransactionFilter } from "./transaction-filters";
 
 const ROW_COLUMNS = [
+  "accountId",
   "amount",
   "category",
   "counterpartyName",
@@ -69,6 +70,7 @@ const whereSchema: z.ZodType<Where> = z.lazy(() =>
     .object({
       NOT: z.array(whereSchema).optional(),
       OR: z.array(whereSchema).optional(),
+      accountId: comparisonSchema.optional(),
       amount: comparisonSchema.optional(),
       category: comparisonSchema.optional(),
       counterpartyName: comparisonSchema.optional(),
@@ -155,6 +157,7 @@ const comparing = (
 ): TransactionFilter => ({ field: "amount", operator, value });
 
 const row = (overrides: Partial<Row>): Row => ({
+  accountId: "checking",
   amount: -1000,
   category: null,
   counterpartyName: null,
@@ -331,5 +334,51 @@ describe("amount filters", () => {
     expect(
       postgresWouldKeep(comparing("eq", 1250), row({ amount: 1251 }))
     ).toBe(false);
+  });
+});
+
+describe("account filters", () => {
+  test("is keeps the transactions of that account alone", () => {
+    const filter: TransactionFilter = {
+      field: "account",
+      operator: "is",
+      values: ["savings"],
+    };
+
+    expect(postgresWouldKeep(filter, row({ accountId: "savings" }))).toBe(true);
+
+    expect(postgresWouldKeep(filter, row({ accountId: "checking" }))).toBe(
+      false
+    );
+  });
+
+  test("is any of keeps every listed account", () => {
+    const filter: TransactionFilter = {
+      field: "account",
+      operator: "isAnyOf",
+      values: ["savings", "checking"],
+    };
+
+    expect(postgresWouldKeep(filter, row({ accountId: "checking" }))).toBe(
+      true
+    );
+
+    expect(postgresWouldKeep(filter, row({ accountId: "pea" }))).toBe(false);
+  });
+
+  test("is not drops the listed accounts", () => {
+    const filter: TransactionFilter = {
+      field: "account",
+      operator: "isNot",
+      values: ["savings"],
+    };
+
+    expect(postgresWouldKeep(filter, row({ accountId: "savings" }))).toBe(
+      false
+    );
+
+    expect(postgresWouldKeep(filter, row({ accountId: "checking" }))).toBe(
+      true
+    );
   });
 });

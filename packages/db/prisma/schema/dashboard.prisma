@@ -1,0 +1,19 @@
+/// A page of live widgets the assistant built for the user. `widgets` holds the
+/// `DashboardWidget[]` that `packages/api/src/dashboards/widgets.ts` validates:
+/// each names a view of the user's data and its options, never a figure, so a
+/// dashboard always shows today's numbers.
+model Dashboard {
+  id             String        @id @default(cuid())
+  userId         String
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title          String
+  widgets        Json
+  /// The chat the dashboard was built in, kept when that chat is deleted.
+  conversationId String?
+  conversation   Conversation? @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@index([userId, updatedAt])
+  @@map("dashboard")
+}

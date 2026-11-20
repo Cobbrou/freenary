@@ -20,6 +20,7 @@ import { formatCurrency } from "@/shared/lib/format-currency";
 import { foldForSearch } from "@/shared/lib/text";
 
 import type {
+  AccountDraft,
   AmountDraft,
   CategoryDraft,
   CompanyDraft,
@@ -42,6 +43,7 @@ export type FilterSuggestion =
       operator: AmountFilterOperator | ListFilterOperator;
       symbol: string | null;
     }
+  | { accountId: string; kind: "account"; label: string; picked: boolean }
   | { kind: "company"; label: string; name: string; picked: boolean }
   | {
       isGroup: boolean;
@@ -152,6 +154,29 @@ export const companySuggestions = (
   }));
 };
 
+export interface AccountChoice {
+  id: string;
+  label: string;
+}
+
+export const accountSuggestions = (
+  draft: AccountDraft,
+  accounts: readonly AccountChoice[],
+  query: string
+): FilterSuggestion[] =>
+  accounts.flatMap((account) =>
+    foldForSearch(account.label).includes(foldForSearch(query.trim()))
+      ? [
+          {
+            accountId: account.id,
+            kind: "account" as const,
+            label: account.label,
+            picked: draft.values.includes(account.id),
+          },
+        ]
+      : []
+  );
+
 const amountSuggestion = (
   draft: AmountDraft,
   minorUnits: number,
@@ -168,6 +193,7 @@ const amountSuggestion = (
     : [];
 
 export interface SuggestionContext {
+  accounts: readonly AccountChoice[];
   companies: {
     isError: boolean;
     isPending: boolean;
@@ -183,6 +209,7 @@ export interface SuggestionContext {
 }
 
 export const filterSuggestionsFor = ({
+  accounts,
   companies,
   currency,
   draft,
@@ -201,6 +228,10 @@ export const filterSuggestionsFor = ({
 
   if (draft.stage === "amount") {
     return amountSuggestion(draft, typedAmountMinor, currency);
+  }
+
+  if (draft.field === "account") {
+    return accountSuggestions(draft, accounts, query);
   }
 
   return draft.field === "category"
@@ -241,6 +272,10 @@ export const filterSuggestionStatus = (
 
   if (draft.stage === "operator" || suggestions.length > 0) {
     return null;
+  }
+
+  if (draft.field === "account") {
+    return m.budget_account_search_empty();
   }
 
   return draft.field === "category"

@@ -5,6 +5,7 @@ import { CATEGORY_GROUPS, SPENDING_CATEGORIES } from "./taxonomy";
 export const TRANSACTION_FILTER_FIELDS = [
   "company",
   "category",
+  "account",
   "amount",
 ] as const;
 
@@ -20,6 +21,7 @@ export const CATEGORY_FILTER_VALUES = [
 export const MAX_TRANSACTION_FILTERS = 20;
 export const MAX_FILTER_VALUES = 50;
 export const MAX_COMPANY_NAME_LENGTH = 200;
+export const MAX_ACCOUNT_ID_LENGTH = 64;
 
 export const MAX_FILTER_AMOUNT_MINOR_UNITS = 2_000_000_000;
 export const MAX_SEARCH_TEXT_LENGTH = 200;
@@ -60,6 +62,7 @@ export const transactionFilterSchema = z.discriminatedUnion("field", [
     z.string().trim().min(1).max(MAX_COMPANY_NAME_LENGTH)
   ),
   listFilterSchema("category", z.enum(CATEGORY_FILTER_VALUES)),
+  listFilterSchema("account", z.string().min(1).max(MAX_ACCOUNT_ID_LENGTH)),
   z.object({
     field: z.literal("amount"),
     operator: z.enum(AMOUNT_FILTER_OPERATORS),
@@ -81,6 +84,11 @@ export type CompanyTransactionFilter = Extract<
 export type CategoryTransactionFilter = Extract<
   TransactionFilter,
   { field: "category" }
+>;
+
+export type AccountTransactionFilter = Extract<
+  TransactionFilter,
+  { field: "account" }
 >;
 
 export type AmountTransactionFilter = Extract<

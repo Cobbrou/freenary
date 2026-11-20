@@ -10,6 +10,7 @@
     "./assistant/turn": "./src/assistant/turn.ts",
     "./assistant/ui": "./src/assistant/ui.ts",
     "./context": "./src/context.ts",
+    "./dashboards/widgets": "./src/dashboards/widgets.ts",
     "./instance/update-check": "./src/instance/update-check.ts",
     "./lib/aggregation": "./src/lib/aggregation.ts",
     "./lib/bank-provider-user": "./src/lib/bank-provider-user.ts",

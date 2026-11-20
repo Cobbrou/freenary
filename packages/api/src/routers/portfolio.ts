@@ -1,6 +1,8 @@
 import prisma from "@freenary/db";
+import { z } from "zod";
 
 import { protectedProcedure } from "../index";
+import { balanceHistory, monthEndsBefore } from "../lib/balance-history";
 import {
   currentAccountsOf,
   holdingsSummaryOf,
@@ -9,6 +11,44 @@ import {
 import { userCurrency } from "../lib/user-currency";
 
 export const portfolioRouter = {
+  getBalanceHistory: protectedProcedure
+    .input(
+      z.object({
+        months: z.number().int().min(1).max(24),
+        today: z.coerce.date(),
+      })
+    )
+    .handler(async ({ context, input }) => {
+      const userId = context.session.user.id;
+      const [firstMonthEnd] = monthEndsBefore(input.today, input.months);
+
+      const [accounts, transactions, currency] = await Promise.all([
+        prisma.bankAccount.findMany({
+          select: { balanceMinor: true, currency: true, id: true },
+          where: { connection: { userId } },
+        }),
+        prisma.transaction.findMany({
+          select: { accountId: true, amount: true, date: true },
+          where: {
+            account: { connection: { userId } },
+            date: { gt: firstMonthEnd },
+          },
+        }),
+        userCurrency(userId),
+      ]);
+
+      return {
+        currency,
+        points: balanceHistory(
+          accounts,
+          transactions,
+          currency,
+          input.today,
+          input.months
+        ),
+      };
+    }),
+
   getOverview: protectedProcedure.handler(async ({ context }) => {
     const userId = context.session.user.id;
 

@@ -11,6 +11,7 @@ const ASSISTANT_TOOL_MESSAGES = {
   get_fixed_vs_variable: m.assistant_tool_fixed_vs_variable,
   get_recurring_expenses: m.assistant_tool_recurring,
   get_spending_by_group: m.assistant_tool_spending,
+  save_dashboard: m.assistant_tool_dashboard,
   search_transactions: m.assistant_tool_transactions,
 } satisfies Record<AssistantToolName, () => string>;
 

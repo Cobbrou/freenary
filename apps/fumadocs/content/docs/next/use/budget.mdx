@@ -25,7 +25,8 @@ The list has two tabs: `Outgoing`, where it opens, and `Incoming`. Each tab show
 The search box takes free text and filters together:
 
 - Type to match the bank's label or the other party's name.
-- Pick `Company`, `Category` or `Amount` from the list under the box, then a comparison, then a value. Each filter shows as a chip in the box.
+- Type the start of `Company`, `Category`, `Account` or `Amount` and pick it from the list under the box, then a comparison, then a value. Each filter shows as a chip in the box, such as `category` `Groceries`.
+- Or use the buttons under the box. `Category`, `Account` and `Amount` each set one filter, in place of any filter of that kind: a category, an account, or `Over €50`, `Over €100` or `Under €20`. `Date` shows one of the last six months.
 - Press a part of a chart to filter the list to that category, in place of any category filter you set. On `Flow`, a group's bar filters to every category in it. Press it again to remove that filter.
 - With more than seven categories, the spending breakdown shows the six largest and adds the rest up as `Other`, with the number of categories it holds. Press `Other` to filter the list to those categories and list them under the chart, then press one of them to keep only that category.
 
@@ -33,11 +34,12 @@ The search box takes free text and filters together:
 | ---------- | --------------------------- |
 | `Company`  | `is`, `is not`, `is any of` |
 | `Category` | `is`, `is not`, `is any of` |
+| `Account`  | `is`, `is not`, `is any of` |
 | `Amount`   | `>`, `<`, `=`               |
 
 A transaction has to match every filter. `is any of` takes several values: pick them, then press Enter or `Apply`. A category group, such as `Spending`, stands for every category in it. `Amount` compares how much money moved, whichever way it went.
 
-Press a chip's ✕ to remove it, or press Backspace in an empty box to remove the last one. The ✕ at the end of the box clears the text and every filter.
+Press a chip's ✕ to remove it, or press Backspace in an empty box to remove the last one. `Clear all`, beside the buttons, clears the text and every filter.
 
 The page address holds the period, the text and every filter, so a bookmark brings back exactly what you see. A bookmark from before filters moved into the search box opens with its period, but without its filters.
 

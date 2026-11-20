@@ -76,14 +76,14 @@ const INTEGRATION_TITLES = {
 } satisfies Record<string, Label>;
 
 const INTEGRATION_DESCRIPTIONS = {
-  assistant: m.setup_integration_assistant_api_description,
+  assistant: m.setup_integration_assistant_description,
   banking: m.setup_integration_banking_description,
   categorisation: m.setup_integration_categorisation_description,
   email: m.setup_integration_email_description,
 } satisfies Record<string, Label>;
 
 const SETTINGS_INTEGRATION_DESCRIPTIONS = {
-  assistant: m.settings_integrations_assistant_api_description,
+  assistant: m.settings_integrations_assistant_description,
   banking: m.settings_integrations_banking_description,
   categorisation: m.settings_integrations_categorisation_description,
   email: m.settings_integrations_email_description,

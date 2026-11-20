@@ -128,7 +128,7 @@ One surface has its own limit:
 | --- | --- | --- |
 | `assistant.saveTurn` and `POST /ai/chat`, together | 30 per 300 s | Account |
 
-The other 47 procedures have no limit. Pace `budget.syncAccounts`, `budget.recategorise`, `budget.getPeriodOverview` and `budget.getSankeyData` yourself: each does heavy work.
+The other 57 procedures have no limit. Pace `budget.syncAccounts`, `budget.recategorise`, `budget.getPeriodOverview` and `budget.getSankeyData` yourself: each does heavy work.
 
 The caller address comes from `X-Forwarded-For`. Callers Freenary can't place share one bucket: see [Trusted proxies](/docs/reference/reverse-proxy#trusted-proxies).
 
@@ -143,7 +143,9 @@ The caller address comes from `X-Forwarded-For`. Callers Freenary can't place sh
 
 ## Assistant stream
 
-`POST /ai/chat` takes the session cookie and the AI SDK's UI message request, plus an optional `locale` such as `fr-FR`. It reads only the last message, which must be a user message with text `parts`; earlier turns come from the stored conversation. Success is `200` with an AI SDK UI message stream.
+`POST /ai/chat` takes the session cookie and the AI SDK's UI message request. Its `id` is required: the chat id that [`assistant.createConversation`](/docs/reference/procedures#assistantcreateconversation) returned. Optional fields are `locale`, such as `fr-FR`, `today` as `YYYY-MM-DD`, and `dashboardId`, one of the caller's dashboards that the question is about, so the model can change it. It reads only the last message, which must be a user message with text `parts`; earlier turns come from the stored chat. Success is `200` with an AI SDK UI message stream, and the finished turn is stored in the chat.
+
+The model can call a `save_dashboard` tool, which creates a dashboard linked to the chat or replaces one's widgets, as [`dashboards.create`](/docs/reference/procedures#dashboardscreate) and `dashboards.update` do. A change keeps the dashboard's title unless the model passes a new one.
 
 Refusals are plain text, checked in this order:
 
@@ -156,6 +158,7 @@ Refusals are plain text, checked in this order:
 | 503 | `unavailable` | The limit could not be checked, for example because the database is down |
 | 400 | `bad_request` | Not JSON, or not a text-only user message |
 | 400 | `question_too_long` | A question over 8000 characters |
+| 404 | `not_found` | `id` isn't one of the caller's chats |
 
 The limit is charged before the body is read, so a malformed request still counts.
 

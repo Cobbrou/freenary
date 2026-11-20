@@ -2,6 +2,11 @@ import type { Tool } from "ai";
 import { tool } from "ai";
 import { z } from "zod";
 
+import {
+  dashboardTitleSchema,
+  dashboardWidgetsSchema,
+} from "../dashboards/widgets";
+import type { DashboardWidget } from "../dashboards/widgets";
 import { AGGREGATION_MODES } from "../lib/aggregation";
 import { fromMinor, minorUnitDigits, toMinor } from "../lib/money";
 import { CATEGORY_GROUPS, SPENDING_CATEGORIES } from "../lib/taxonomy";
@@ -79,14 +84,66 @@ const ASSISTANT_TOOL_NAMES = {
   get_fixed_vs_variable: true,
   get_recurring_expenses: true,
   get_spending_by_group: true,
+  save_dashboard: true,
   search_transactions: true,
 } as const;
+
+export interface AssistantToolContext {
+  readonly conversationId?: string;
+}
+
+export interface SaveDashboardInput {
+  dashboardId?: string;
+  title?: string;
+  widgets: DashboardWidget[];
+}
+
+interface SavedDashboard {
+  dashboardId: string;
+  title: string;
+}
+
+export interface DashboardWriter {
+  create: (input: {
+    conversationId?: string;
+    title: string;
+    widgets: DashboardWidget[];
+  }) => Promise<SavedDashboard>;
+  update: (input: {
+    dashboardId: string;
+    title?: string;
+    widgets: DashboardWidget[];
+  }) => Promise<SavedDashboard>;
+}
+
+export const saveDashboard = async (
+  dashboards: DashboardWriter,
+  conversationId: string | undefined,
+  { dashboardId, title, widgets }: SaveDashboardInput
+) => {
+  if (dashboardId !== undefined) {
+    const saved = await dashboards.update({ dashboardId, title, widgets });
+
+    return { ...saved, created: false };
+  }
+
+  if (title === undefined) {
+    throw new Error("A new dashboard needs a title");
+  }
+
+  const saved = await dashboards.create({ conversationId, title, widgets });
+
+  return { ...saved, created: true };
+};
 
 const MAX_TRANSACTION_ROWS = 20;
 
 const DEFAULT_TRANSACTION_ROWS = 10;
 
-export const assistantTools = (api: AppRouterClient) =>
+export const assistantTools = (
+  api: AppRouterClient,
+  { conversationId }: AssistantToolContext = {}
+) =>
   ({
     get_accounts_overview: tool({
       description:
@@ -202,6 +259,26 @@ export const assistantTools = (api: AppRouterClient) =>
         };
       },
       inputSchema: z.object({ aggregation, ...period }),
+    }),
+
+    save_dashboard: tool({
+      description:
+        "Create a dashboard, or replace one's title and widgets when you pass its dashboardId. Widgets read the user's live data themselves, so never pass figures. Returns the dashboard's id.",
+      execute: (input) => saveDashboard(api.dashboards, conversationId, input),
+      inputSchema: z.object({
+        dashboardId: z
+          .string()
+          .optional()
+          .describe("the dashboard to change; leave it out to create one"),
+        title: dashboardTitleSchema
+          .optional()
+          .describe(
+            "the dashboard's name; needed to create one, left out to keep a dashboard's current name"
+          ),
+        widgets: dashboardWidgetsSchema.describe(
+          "every widget the dashboard shows, in order; stats sit three to a row"
+        ),
+      }),
     }),
 
     search_transactions: tool({

@@ -12,24 +12,26 @@ import {
   SidebarTrigger,
 } from "@freenary/ui/components/sidebar";
 import { TooltipProvider } from "@freenary/ui/components/tooltip";
-import { Outlet, useMatches } from "@tanstack/react-router";
+import { cn } from "@freenary/ui/lib/utils";
+import { Outlet } from "@tanstack/react-router";
 import { Fragment } from "react";
 
 import { AuthGate } from "@/features/auth-gate";
 
 import { AppSidebar } from "./app-sidebar";
 import { BOTTOM_TAB_BAR_CLEARANCE, BottomTabBar } from "./bottom-tab-bar";
-import { navTrailOf } from "./nav-items";
+import { AppCommandMenu } from "./command-menu";
+import { isFullWidthRoute } from "./nav-items";
 import { SyncProgressToast } from "./sync-progress-toast";
 import { UpdateBanner } from "./update-banner";
 import { useAvailableUpdate } from "./use-available-update";
+import { useNavTrail } from "./use-nav-trail";
 
 const SHELL_BELOW_THE_BANNER =
   "min-h-[calc(100svh-var(--update-banner-height,0px))]";
 
 export const AuthLayout = () => {
-  const matches = useMatches();
-  const trail = navTrailOf(matches.at(-1)?.routeId);
+  const { routeId, trail } = useNavTrail();
   const latestRelease = useAvailableUpdate();
 
   return (
@@ -51,11 +53,16 @@ export const AuthLayout = () => {
                     const isCurrentPage = depth === trail.length - 1;
 
                     return (
-                      <Fragment key={title}>
+                      <Fragment key={`${depth}-${title}`}>
                         {depth > 0 && <BreadcrumbSeparator />}
                         <BreadcrumbItem>
                           {isCurrentPage ? (
-                            <BreadcrumbPage>{title}</BreadcrumbPage>
+                            <BreadcrumbPage
+                              className="max-w-64 truncate"
+                              title={title}
+                            >
+                              {title}
+                            </BreadcrumbPage>
                           ) : (
                             title
                           )}
@@ -67,7 +74,12 @@ export const AuthLayout = () => {
               </Breadcrumb>
             </header>
             <SyncProgressToast />
-            <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col">
+            <div
+              className={cn(
+                "mx-auto flex w-full flex-1 flex-col",
+                !isFullWidthRoute(routeId) && "max-w-5xl"
+              )}
+            >
               <AuthGate audience="member">
                 <Outlet />
               </AuthGate>
@@ -75,6 +87,7 @@ export const AuthLayout = () => {
           </SidebarInset>
           <BottomTabBar />
         </SidebarProvider>
+        <AppCommandMenu />
       </div>
     </TooltipProvider>
   );

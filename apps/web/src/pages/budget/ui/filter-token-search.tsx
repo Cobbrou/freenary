@@ -7,7 +7,7 @@ import { MAX_SEARCH_TEXT_LENGTH } from "@freenary/api/lib/transaction-filters";
 import type { CategoryFilterValue } from "@freenary/api/lib/transaction-filters";
 import { Button } from "@freenary/ui/components/button";
 import { cn } from "@freenary/ui/lib/utils";
-import { RiCheckLine, RiCloseLine, RiSearchLine } from "@remixicon/react";
+import { RiBankLine, RiCheckLine, RiSearchLine } from "@remixicon/react";
 import { Match } from "effect";
 import { useId } from "react";
 import type { KeyboardEvent, ReactNode } from "react";
@@ -21,12 +21,15 @@ import type { FilterSuggestion } from "../model/filter-suggestions";
 import {
   AMOUNT_OPERATOR_SYMBOLS,
   categoryValueLabel,
+  chipValue,
   FILTER_FIELD_LABELS,
+  filterChipValue,
   filterTokenSentence,
   filterTokenText,
   filterValueList,
   LIST_OPERATOR_LABELS,
 } from "../model/filter-tokens";
+import type { AccountNameOf } from "../model/filter-tokens";
 import {
   filterKey,
   useFilterTokenSearch,
@@ -37,6 +40,7 @@ import { FilterTokenChip } from "./filter-token-chip";
 const suggestionKey = (suggestion: FilterSuggestion): string =>
   Match.value(suggestion).pipe(
     Match.discriminatorsExhaustive("kind")({
+      account: ({ accountId }) => `account:${accountId}`,
       amount: ({ minorUnits }) => `amount:${minorUnits}`,
       category: ({ value }) => `category:${value}`,
       company: ({ name }) => `company:${name}`,
@@ -51,7 +55,9 @@ const categoryAppearanceOf = (value: CategoryFilterValue) =>
     : predefinedCategoryAppearance(value);
 
 const isPicked = (suggestion: FilterSuggestion) =>
-  (suggestion.kind === "company" || suggestion.kind === "category") &&
+  (suggestion.kind === "company" ||
+    suggestion.kind === "category" ||
+    suggestion.kind === "account") &&
   suggestion.picked;
 
 const SuggestionContent = ({
@@ -61,6 +67,15 @@ const SuggestionContent = ({
 }): ReactNode =>
   Match.value(suggestion).pipe(
     Match.discriminatorsExhaustive("kind")({
+      account: ({ label }) => (
+        <span className="flex min-w-0 items-center gap-2">
+          <RiBankLine
+            aria-hidden="true"
+            className="text-muted-foreground size-4 shrink-0"
+          />
+          <span className="truncate">{label}</span>
+        </span>
+      ),
       amount: ({ label }) => <span className="tabular-nums">{label}</span>,
       category: ({ isGroup, label, value }) => (
         <span className={cn("flex items-center gap-2", !isGroup && "ps-3")}>
@@ -86,7 +101,24 @@ const SuggestionContent = ({
     })
   );
 
-const draftChipText = (draft: FilterDraft, locale: string) => {
+const draftValueLabels = (
+  draft: Extract<FilterDraft, { stage: "values" }>,
+  accountName: AccountNameOf
+): string[] => {
+  if (draft.field === "category") {
+    return draft.values.map(categoryValueLabel);
+  }
+
+  return draft.field === "account"
+    ? draft.values.map(accountName)
+    : draft.values;
+};
+
+const draftChipText = (
+  draft: FilterDraft,
+  locale: string,
+  accountName: AccountNameOf
+): { field: string; value?: string } => {
   const field = FILTER_FIELD_LABELS[draft.field]();
 
   if (draft.stage === "operator") {
@@ -94,18 +126,17 @@ const draftChipText = (draft: FilterDraft, locale: string) => {
   }
 
   if (draft.stage === "amount") {
-    return { field, operator: AMOUNT_OPERATOR_SYMBOLS[draft.operator]() };
+    return { field, value: AMOUNT_OPERATOR_SYMBOLS[draft.operator]() };
   }
 
-  const labels =
-    draft.field === "category"
-      ? draft.values.map(categoryValueLabel)
-      : draft.values;
+  const labels = draftValueLabels(draft, accountName);
 
   return {
     field,
-    operator: LIST_OPERATOR_LABELS[draft.operator](),
-    value: labels.length > 0 ? filterValueList(labels, locale) : undefined,
+    value: chipValue(draft.operator, {
+      operator: LIST_OPERATOR_LABELS[draft.operator](),
+      value: labels.length > 0 ? filterValueList(labels, locale) : "",
+    }),
   };
 };
 
@@ -196,7 +227,7 @@ const SuggestionPopup = ({
 );
 
 export const FilterTokenSearch = (options: FilterTokenSearchOptions) => {
-  const { currency, filters } = options;
+  const { accounts, currency, filters } = options;
   const locale = getLocale();
   const listId = useId();
   const pendingId = useId();
@@ -207,12 +238,10 @@ export const FilterTokenSearch = (options: FilterTokenSearchOptions) => {
     handleBlur,
     handleChange,
     handleChoose,
-    handleClear,
     handleFocus,
     handleHighlight,
     handleKeyDown,
     handleRemove,
-    hasAnything,
     inputRef,
     inputValue,
     isChoosingSeveral,
@@ -222,8 +251,13 @@ export const FilterTokenSearch = (options: FilterTokenSearchOptions) => {
     text,
   } = useFilterTokenSearch(options);
 
+  const accountName: AccountNameOf = (accountId) =>
+    accounts.find((account) => account.id === accountId)?.label ??
+    m.budget_filter_account_unknown();
+
   const optionId = (index: number) => `${listId}-option-${index}`;
-  const pendingChip = draft === null ? null : draftChipText(draft, locale);
+  const pendingChip =
+    draft === null ? null : draftChipText(draft, locale, accountName);
 
   const activeOptionId =
     isPopupShown && active >= 0 ? optionId(active) : undefined;
@@ -231,40 +265,43 @@ export const FilterTokenSearch = (options: FilterTokenSearchOptions) => {
   const isEmpty = filters.length === 0 && draft === null;
 
   return (
-    <div className="relative min-w-60 flex-1" onBlur={handleBlur}>
+    <div className="relative w-full" onBlur={handleBlur}>
       <div
-        className="border-input bg-input/20 dark:bg-input/30 focus-within:border-ring focus-within:ring-ring/30 flex min-h-7 w-full cursor-text flex-wrap items-center gap-1 rounded-md border px-2 py-px transition-colors focus-within:ring-2"
+        className="bg-surface-3 shadow-surface-2 focus-within:ring-ring/50 flex min-h-10 w-full cursor-text flex-wrap items-center gap-1.5 rounded-xl py-1.5 ps-2.5 pe-1.5 transition-shadow focus-within:ring-[3px]"
         onClick={() => inputRef.current?.focus()}
         role="presentation"
       >
         <RiSearchLine
           aria-hidden="true"
-          className="text-muted-foreground size-3.5 shrink-0"
+          className="text-foreground size-4 shrink-0"
         />
         {filters.map((filter, index) => {
-          const chip = filterTokenText(filter, locale, currency);
+          const chip = filterTokenText(filter, locale, currency, accountName);
 
           return (
             <FilterTokenChip
               field={chip.field}
               key={filterKey(filter)}
               onRemove={() => handleRemove(index)}
-              operator={chip.operator}
               removeLabel={m.budget_filter_token_remove({
-                filter: filterTokenSentence(filter, locale, currency),
+                filter: filterTokenSentence(
+                  filter,
+                  locale,
+                  currency,
+                  accountName
+                ),
               })}
-              value={chip.value}
+              value={filterChipValue(filter, chip)}
             />
           );
         })}
         {pendingChip && (
           <>
-            {text && <span className="text-xs">{text}</span>}
+            {text && <span className="text-sm">{text}</span>}
             <FilterTokenChip
               field={pendingChip.field}
               id={pendingId}
               isPending
-              operator={pendingChip.operator}
               value={pendingChip.value}
             />
           </>
@@ -278,12 +315,14 @@ export const FilterTokenSearch = (options: FilterTokenSearchOptions) => {
           aria-label={m.budget_filter_search_label()}
           autoComplete="off"
           maxLength={MAX_SEARCH_TEXT_LENGTH}
-          className="placeholder:text-muted-foreground h-6 min-w-24 flex-1 bg-transparent text-xs outline-none"
+          className="placeholder:text-muted-foreground h-7 min-w-40 flex-1 bg-transparent text-sm outline-none"
           onChange={(event) => handleChange(event.target.value)}
           onFocus={handleFocus}
           onKeyDown={handleKeyDown}
           placeholder={
-            isEmpty ? m.budget_filter_search_placeholder() : undefined
+            isEmpty
+              ? m.budget_filter_search_placeholder_empty()
+              : m.budget_filter_search_placeholder_more()
           }
           ref={inputRef}
           role="combobox"
@@ -291,16 +330,6 @@ export const FilterTokenSearch = (options: FilterTokenSearchOptions) => {
           type="text"
           value={inputValue}
         />
-        {hasAnything && (
-          <button
-            aria-label={m.budget_filter_clear_search()}
-            className="text-muted-foreground hover:text-foreground hover:bg-hover flex size-5 shrink-0 items-center justify-center rounded outline-none focus-visible:ring-1 focus-visible:ring-[color:var(--focus-ring,#6B97FF)]"
-            onClick={handleClear}
-            type="button"
-          >
-            <RiCloseLine aria-hidden="true" className="size-3.5" />
-          </button>
-        )}
       </div>
 
       {isPopupShown && (

@@ -1,15 +1,17 @@
-/// One assistant conversation. A user has at most one active thread: starting a
-/// new one stamps `archivedAt` on the old rather than deleting it.
+/// One assistant conversation. A user keeps as many as they start; the Ask page
+/// lists them by `updatedAt`, and the first question names the chat.
 model Conversation {
   id         String                @id @default(cuid())
   userId     String
   user       User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  archivedAt DateTime?
+  /// Taken from the first question, so the chat list has a name to show.
+  title      String?
   createdAt  DateTime              @default(now())
   updatedAt  DateTime              @updatedAt
   messages   ConversationMessage[]
+  dashboards Dashboard[]
 
-  @@index([userId, archivedAt])
+  @@index([userId, updatedAt])
   @@map("conversation")
 }
 

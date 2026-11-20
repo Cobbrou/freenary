@@ -4,7 +4,7 @@ description: Every procedure of the Freenary API, with who can call it, the inpu
 icon: ListTree
 ---
 
-All 48 procedures, grouped by router. [API](/docs/reference/api) covers the base URL, the cookie, the request shapes and the rate limits.
+All 58 procedures, grouped by router. [API](/docs/reference/api) covers the base URL, the cookie, the request shapes and the rate limits.
 
 - **Path.** `budget.getTransactions` is `POST /rpc/budget/getTransactions` or `POST /api-reference/budget/getTransactions`.
 - **Input.** `/api-reference/spec.json` on your instance holds every input schema: types, required fields, enums, bounds and defaults. This page adds only the rules a schema can't express.
@@ -17,9 +17,12 @@ All 48 procedures, grouped by router. [API](/docs/reference/api) covers the base
 | Procedure | Access | Purpose |
 | --- | --- | --- |
 | [`healthCheck`](#healthcheck) | Public | Returns `"OK"` from the router |
-| [`assistant.getConversation`](#assistantgetconversation) | Protected | The active conversation and the instance's model |
+| [`assistant.createConversation`](#assistantcreateconversation) | Protected | Opens a new, empty chat |
+| [`assistant.deleteConversation`](#assistantdeleteconversation) | Protected | Deletes one chat and its messages |
+| [`assistant.getConversation`](#assistantgetconversation) | Protected | One chat's transcript and title |
+| [`assistant.getStatus`](#assistantgetstatus) | Protected | The instance's model |
+| [`assistant.listConversations`](#assistantlistconversations) | Protected | The caller's latest chats |
 | [`assistant.saveTurn`](#assistantsaveturn) | Protected | Stores one finished turn the caller answered itself |
-| [`assistant.startNewConversation`](#assistantstartnewconversation) | Protected | Archives the active conversation |
 | [`auth.capabilities`](#authcapabilities) | Public | The sign-in methods and password rules of the instance |
 | [`auth.viewer`](#authviewer) | Public | Whether the caller is signed in and onboarded |
 | [`bankConnection.disconnect`](#bankconnectiondisconnect) | Protected | Deletes one bank connection and everything under it |
@@ -39,6 +42,7 @@ All 48 procedures, grouped by router. [API](/docs/reference/api) covers the base
 | [`budget.getRecurringExpenses`](#budgetgetrecurringexpenses) | Protected | The merchants detected as regular |
 | [`budget.getSankeyData`](#budgetgetsankeydata) | Protected | The income-to-category flow |
 | [`budget.getSpendingBreakdown`](#budgetgetspendingbreakdown) | Protected | Money out per category |
+| [`budget.getSpendingByWeek`](#budgetgetspendingbyweek) | Protected | Spending per week and category |
 | [`budget.getSyncOutcome`](#budgetgetsyncoutcome) | Protected | What went wrong in a finished sync |
 | [`budget.getSyncStatus`](#budgetgetsyncstatus) | Protected | The sync or recategorisation in flight |
 | [`budget.getTransactions`](#budgetgettransactions) | Protected | One page of transactions, with the range totals |
@@ -47,7 +51,13 @@ All 48 procedures, grouped by router. [API](/docs/reference/api) covers the base
 | [`budget.saveFilter`](#budgetsavefilter) | Protected | Saves a search under a name, or replaces the one with that name |
 | [`budget.syncAccounts`](#budgetsyncaccounts) | Protected | Pulls fresh data from the bank provider |
 | [`budget.updateTransactionCategory`](#budgetupdatetransactioncategory) | Protected | Sets one transaction's category and remembers the merchant |
+| [`dashboards.create`](#dashboardscreate) | Protected | Saves a new dashboard |
+| [`dashboards.delete`](#dashboardsdelete) | Protected | Deletes one dashboard |
+| [`dashboards.get`](#dashboardsget) | Protected | One dashboard with its widgets |
+| [`dashboards.list`](#dashboardslist) | Protected | The caller's dashboards |
+| [`dashboards.update`](#dashboardsupdate) | Protected | Renames a dashboard or replaces its widgets |
 | [`instance.status`](#instancestatus) | Public | The setup state |
+| [`instance.update`](#instanceupdate) | Protected | The running version and, for the operator, a newer release |
 | [`instance.describe`](#instancedescribe) | Operator | Each integration and where its values come from |
 | [`instance.check`](#instancecheck) | Operator | Tests credentials without saving them |
 | [`instance.save`](#instancesave) | Operator | Stores setup values |
@@ -55,6 +65,7 @@ All 48 procedures, grouped by router. [API](/docs/reference/api) covers the base
 | [`instance.bankConnectionCount`](#instancebankconnectioncount) | Operator | Counts every member's bank connections |
 | [`onboarding.completeOnboarding`](#onboardingcompleteonboarding) | Protected | Stores the tax countries and ends the first-run flow |
 | [`onboarding.getStatus`](#onboardinggetstatus) | Protected | Whether the first-run flow is done |
+| [`portfolio.getBalanceHistory`](#portfoliogetbalancehistory) | Protected | Net worth at the end of each past month |
 | [`portfolio.getOverview`](#portfoliogetoverview) | Protected | The caller's accounts with their balances, net worth and holdings |
 | [`settings.createCustomCategory`](#settingscreatecustomcategory) | Protected | Creates a custom category |
 | [`settings.deleteCustomCategory`](#settingsdeletecustomcategory) | Protected | Deletes a custom category and rehomes its budget lines |
@@ -78,17 +89,40 @@ Five procedures take `aggregation`: `getBudgetVsActual`, `getFixedVsVariable`, `
 
 ## `assistant`
 
+A conversation is one chat in **Ask**. Every procedure that takes a `conversationId` acts only on the caller's own chats.
+
+### assistant.createConversation
+
+**Output**: `{ conversationId }`. Pass it as `id` to the [assistant stream](/docs/reference/api#assistant-stream) or as `conversationId` to `saveTurn`. The chat has no title and no message yet, so `listConversations` leaves it out until a turn is stored.
+
+### assistant.deleteConversation
+
+**Input**: `conversationId`. An id that isn't the caller's deletes nothing.
+
+**Output**: `{ ok: true }`. A dashboard built in the chat stays.
+
 ### assistant.getConversation
 
-**Output**: `{ conversationId, messages, serverModel }`.
+**Input**: `{ conversationId }`.
 
-- `conversationId` names the active conversation. The read creates one when the caller has none.
-- `messages` is the stored transcript, oldest first, as `{ id, parts, role }`. `role` is `user` or `assistant`, `parts` is the AI SDK `UIMessage.parts` array, and `id` is what you pass as `messageId` to redo that turn. Archived conversations never appear.
-- `serverModel` is the model id of the instance, or `null` when it has none.
+**Output**: `{ conversationId, messages, title }`.
+
+- `messages` is the stored transcript, oldest first, as `{ id, parts, role }`. `role` is `user` or `assistant`, `parts` is the AI SDK `UIMessage.parts` array, and `id` is what you pass as `messageId` to redo that turn.
+- `title` is the first question, cut to 80 characters, or `null` before the first stored turn.
+
+**Errors**: `NOT_FOUND` (404) `Conversation not found`, when the chat isn't the caller's.
+
+### assistant.getStatus
+
+**Output**: `{ serverModel }`, the model id of the instance, or `null` when it has none.
+
+### assistant.listConversations
+
+**Output**: `{ conversations }` of `{ id, title, updatedAt }`, most recently updated first, at most 50. Only chats that hold at least one message are listed.
 
 ### assistant.saveTurn
 
-**Input**: `conversationId` must name the caller's active conversation. `answer.id` becomes the id of the answer row. `regeneratedMessageId` names the stored answer this turn replaces.
+**Input**: `conversationId` must name one of the caller's chats. `answer.id` becomes the id of the answer row. `regeneratedMessageId` names the stored answer this turn replaces.
 
 **Output**: `{ ok: true }`.
 
@@ -96,12 +130,8 @@ Five procedures take `aggregation`: `getBudgetVsActual`, `getFixedVsVariable`, `
 
 - `TOO_MANY_REQUESTS` (429): over the [rate limit](/docs/reference/api#rate-limits).
 - `BAD_REQUEST` (400) `Turn too large`: the question exceeds 8000 characters, or the answer parts exceed 200000 characters as JSON.
-- `NOT_FOUND` (404) `Conversation is not the active one`.
+- `NOT_FOUND` (404) `Conversation not found`.
 - `BAD_REQUEST` (400) `Empty answer`: no text part and no resolved tool part survived the filter.
-
-### assistant.startNewConversation
-
-**Output**: `{ ok: true }`. Nothing is deleted.
 
 ## `auth`
 
@@ -196,7 +226,7 @@ The provider answers one country at a time and the result is the union. A bank i
 
 ### budget.getAccounts
 
-**Output**: `{ accounts, currency, firstTransactionDate, hasAccounts, lastTransactionDate }`. `accounts` holds `{ iban, id, institutionName, name }` in no set order. `currency` is the code most of the caller's accounts use, or `EUR` when none has one. `getBudgetVsActual`, `getCashFlow`, `getFixedVsVariable`, `getPeriodOverview`, `getSankeyData`, `getSpendingBreakdown`, `getTransactions` and `settings.getBudgetProfile` return the same one. The two dates bound the caller's transactions, and are `null` when there are none.
+**Output**: `{ accounts, currency, firstTransactionDate, hasAccounts, lastTransactionDate }`. `accounts` holds `{ iban, id, institutionName, name }` in no set order. `currency` is the code most of the caller's accounts use, or `EUR` when none has one. `getBudgetVsActual`, `getCashFlow`, `getFixedVsVariable`, `getPeriodOverview`, `getSankeyData`, `getSpendingBreakdown`, `getSpendingByWeek`, `getTransactions`, `settings.getBudgetProfile` and the two `portfolio` procedures return the same one. The two dates bound the caller's transactions, and are `null` when there are none.
 
 ### budget.getBudgetVsActual
 
@@ -206,7 +236,9 @@ With `average` or `median`, `planned` is the monthly plan. With `total`, it's th
 
 ### budget.getCashFlow
 
-**Output**: `{ currency, periods }`, with `periods` of `{ incoming, label, outgoing }`, oldest first. `label` is a day (`YYYY-MM-DD`) for ranges up to 31 days, the Monday of a week up to 93 days, and a month (`YYYY-MM`) beyond.
+**Output**: `{ currency, periods }`, with `periods` of `{ incoming, label, outgoing }`, oldest first. `label` is a day (`YYYY-MM-DD`), the Monday of a week, or a month (`YYYY-MM`).
+
+**Input**: `grain` is `day`, `week` or `month`. Leave it out to let the range decide: days up to 31 days, weeks up to 93 days, and months beyond.
 
 ### budget.getFixedVsVariable
 
@@ -270,6 +302,12 @@ Internal transfers count as income and as spending.
 
 **Output**: `{ categories, currency }`, with `categories` of `{ amount, category }`, largest first.
 
+### budget.getSpendingByWeek
+
+**Input**: `to` is the last day counted. `weeks` is a whole number from 1 to 26.
+
+**Output**: `{ currency, weeks }`, with one entry per week, oldest first, the last one holding `to`. A week is `{ categories, start, totalMinor }`: `start` is its Monday as `YYYY-MM-DD`, `categories` holds `{ amountMinor, category }`, largest first, and `totalMinor` sums them. Only money out in a category of the `spending` group counts, as a positive amount.
+
 ### budget.getSyncOutcome
 
 **Input**: `startedAt`, as `budget.syncAccounts` returned it.
@@ -292,10 +330,11 @@ The one paged procedure: pass `nextCursor` back as `cursor`.
 
 - `limit` is a whole number from 1 to 100.
 - `accountId`, when set, keeps the transactions of that one account. An account of another user matches nothing.
-- `filters` holds up to 20 filters, and a transaction must match all of them, and `direction` and `search` too. A filter is `{ field, operator, values }` for `field` `company` or `category`, and `{ field: "amount", operator, value }` for an amount.
-  - `company` and `category` take `operator` `is`, `isNot` or `isAnyOf`. `is` and `isNot` take exactly one value, `isAnyOf` up to 50.
+- `filters` holds up to 20 filters, and a transaction must match all of them, and `direction` and `search` too. A filter is `{ field, operator, values }` for `field` `company`, `category` or `account`, and `{ field: "amount", operator, value }` for an amount.
+  - `company`, `category` and `account` take `operator` `is`, `isNot` or `isAnyOf`. `is` and `isNot` take exactly one value, `isAnyOf` up to 50.
   - A `company` value is a name as `getMerchants` returns it, matched without case against the counterparty name, or the normalised descriptor when there is none. `isNot` keeps a transaction with no company name.
   - A `category` value is a category slug or a group slug, and a group stands for every category in it. A transaction no step has categorised counts as `uncategorised`.
+  - An `account` value is an account id from `getAccounts`. An id of another user's account matches nothing.
   - `amount` takes `operator` `gt`, `lt` or `eq`, and compares `value`, in minor units, with the absolute amount. `gt` and `lt` are strict, and `eq` matches exactly.
 - `search` is at most 200 characters and matches the description or the counterparty name as a plain substring, without case.
 - `sort: "amount"` puts the largest first: descending for `direction: "incoming"`, most negative first otherwise.
@@ -347,6 +386,42 @@ The category is remembered for the merchant and copied to its other transactions
 
 **Errors**: `NOT_FOUND` (404) `Transaction not found`.
 
+## `dashboards`
+
+A dashboard is a `title`, at most 60 characters, and an ordered `widgets` array of 1 to 12 entries. Each widget is an object whose `type` is `stat`, `spending_by_week`, `income_vs_spending`, `budgets`, `top_categories`, `upcoming_bills`, `net_worth`, `accounts` or `transactions`, with an optional `title` of at most 60 characters. The spec lists the fields and bounds of each. A widget stores no figure: the app reads the data when it shows the dashboard.
+
+### dashboards.create
+
+**Input**: `conversationId`, when set, links the dashboard to that chat. An id that isn't the caller's leaves it unlinked.
+
+**Output**: `{ dashboardId, title }`.
+
+**Errors**: `BAD_REQUEST` (400) `A user keeps at most 30 dashboards`.
+
+### dashboards.delete
+
+**Input**: `dashboardId`. An id that isn't the caller's deletes nothing.
+
+**Output**: `{ ok: true }`. The chat the dashboard came from stays.
+
+### dashboards.get
+
+**Output**: `{ conversation, id, title, updatedAt, widgets }`. `conversation` is `{ id, title }` of the chat the dashboard was built in, or `null`. A stored widget that no longer passes its schema is left out of `widgets`.
+
+**Errors**: `NOT_FOUND` (404) `Dashboard not found`.
+
+### dashboards.list
+
+**Output**: `{ dashboards }` of `{ id, title, updatedAt, widgetTypes }`, most recently updated first. `widgetTypes` lists the `type` of each widget, in order.
+
+### dashboards.update
+
+**Input**: `dashboardId`, plus `title`, `widgets` or both. `widgets` replaces the whole list.
+
+**Output**: `{ dashboardId, title }`.
+
+**Errors**: `NOT_FOUND` (404) `Dashboard not found`.
+
 ## `instance`
 
 The procedures behind the setup screen and Settings, under **Connections** › `Services`. Integrations are `banking` (variants `disabled`, `powens`, `enable-banking`), `email` (variants `disabled`, `resend`, `smtp`), `assistant` (variants `disabled`, `openai-compatible`) and `categorisation` (variants `disabled`, `jev`, `subq-snap`, `llm`, and `von`, `laya`, `system-one` and `zero-shot`, listed only while in use).
@@ -354,6 +429,10 @@ The procedures behind the setup screen and Settings, under **Connections** › `
 ### instance.status
 
 **Output**: `{ claimed, completed, isOperator }`. `claimed` is `true` once an operator exists, `completed` once the operator pressed `Finish setup`.
+
+### instance.update
+
+**Output**: `{ current, latest }`. `current` is the version the server runs, or `null` for a build without one. `latest` is the newest stable release when it's newer than `current`, and `null` otherwise, while the update check is off, and for any account that isn't the operator.
 
 ### instance.describe
 
@@ -415,6 +494,14 @@ Same input as `instance.check`. It stores only the values the environment doesn'
 **Output**: `{ completed, taxCountries }`. `taxCountries` is empty until the caller picks countries.
 
 ## `portfolio`
+
+### portfolio.getBalanceHistory
+
+**Input**: `today` is the last day counted. `months` is a whole number from 1 to 24.
+
+**Output**: `{ currency, points }`. `points` holds `{ balanceMinor, date }`: the net worth at the end of each of the `months` months before the month of `today`, oldest first, then today's. `date` is `YYYY-MM-DD`. `points` is `null` when no account in `currency` reports a balance.
+
+The history starts from today's balances in `currency` and takes back each later transaction of those accounts. An account with no transactions, such as most investment accounts, keeps its latest balance for every month.
 
 ### portfolio.getOverview
 

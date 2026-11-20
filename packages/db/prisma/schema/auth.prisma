@@ -23,6 +23,7 @@ model User {
   budgetLines           BudgetLine[]
   customCategories      CustomCategory[]
   conversations         Conversation[]
+  dashboards            Dashboard[]
   syncRun               SyncRun?
   savedFilters          SavedFilter[]
 

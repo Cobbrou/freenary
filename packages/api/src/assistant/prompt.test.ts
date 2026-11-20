@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 
-import { localDay } from "./prompt";
+import { assistantSystemPrompt, localDay } from "./prompt";
 import { DAY } from "./tools";
 
 describe("localDay", () => {
@@ -17,5 +17,39 @@ describe("DAY", () => {
 
   it("accepts a real day", () => {
     expect(DAY.safeParse("2028-02-29").success).toBe(true);
+  });
+});
+
+describe("assistantSystemPrompt", () => {
+  const accounts = {
+    firstTransactionDate: "2026-01-01",
+    hasAccounts: true,
+    lastTransactionDate: "2026-11-17",
+  };
+
+  it("lists the user's dashboards by id", () => {
+    const prompt = assistantSystemPrompt(accounts, "en", "2026-11-18", {
+      saved: [{ id: "dash_1", title: "Lisbon trip" }],
+    });
+
+    expect(prompt).toContain("- dash_1: Lisbon trip");
+    expect(prompt).not.toContain("The user is looking at");
+  });
+
+  it("names the dashboard on screen with its widgets", () => {
+    const prompt = assistantSystemPrompt(accounts, "en", "2026-11-18", {
+      focused: {
+        id: "dash_1",
+        title: "Monthly check-in",
+        widgets: [{ type: "budgets" }],
+      },
+      saved: [],
+    });
+
+    expect(prompt).toContain(
+      'The user is looking at the dashboard "Monthly check-in" (dashboardId dash_1).'
+    );
+
+    expect(prompt).toContain('[{"type":"budgets"}]');
   });
 });

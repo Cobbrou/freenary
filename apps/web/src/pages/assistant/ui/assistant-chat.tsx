@@ -1,59 +1,32 @@
-import { useChat } from "@ai-sdk/react";
-import { localDay } from "@freenary/api/assistant/prompt";
-import { MAX_QUESTION_CHARS } from "@freenary/api/assistant/turn";
 import { Button } from "@freenary/ui/components/button";
-import { InputMessage } from "@freenary/ui/components/input-message";
 import type { BrandAvatarState } from "@freenary/ui/lib/brand-avatar/states";
-import { RiAddLine, RiRefreshLine } from "@remixicon/react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { RiRefreshLine } from "@remixicon/react";
 import type { UIMessage } from "ai";
-import { DefaultChatTransport } from "ai";
-import {
-  useCallback,
-  useEffect,
-  useId,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
+import {
+  AssistantModelStatus,
+  assistantErrorMessage,
+  useAssistantChat,
+} from "@/features/assistant-chat";
 import { m } from "@/paraglide/messages.js";
-import { getLocale } from "@/paraglide/runtime.js";
-import { client, orpc } from "@/shared/api";
-import { getServerUrl } from "@/shared/config";
 import { remixIcon } from "@/shared/lib/remix-icon";
 
 import { assistantAvatarState } from "../model/avatar-state";
-import type { BrowserModelStatus } from "../model/browser/engine";
-import {
-  loadBrowserModel,
-  useBrowserModel,
-  useWebGpuSupport,
-} from "../model/browser/engine";
-import { createBrowserChatTransport } from "../model/browser/transport";
 import { isToolPart } from "../model/execution";
 import { livenessOf } from "../model/liveness";
-import {
-  rememberModel,
-  resolveModelChoice,
-  SERVER_MODEL,
-  useRememberedModel,
-} from "../model/model-choice";
 import { AssistantActivity } from "./assistant-activity";
 import { AssistantAvatar } from "./assistant-avatar";
-import { AssistantChatSkeleton } from "./assistant-chat-skeleton";
-import { AssistantEmptyState } from "./assistant-empty-state";
+import { AssistantComposer } from "./assistant-composer";
 import { AssistantMessage } from "./assistant-message";
-import { AssistantModelSelector } from "./assistant-model-selector";
-import { AssistantModelStatus } from "./assistant-model-status";
 import { AssistantTranscript } from "./assistant-transcript";
 
 interface AssistantChatProps {
-  conversationId: string | undefined;
-  initialMessages: UIMessage[] | undefined;
-  isPending: boolean;
+  conversationId: string;
+  initialMessages: UIMessage[];
+  onPendingQuestionSent: () => void;
+  pendingQuestion: string | undefined;
   serverModel: string | null;
-  userName: string;
 }
 
 interface TranscriptTailProps {
@@ -64,61 +37,7 @@ interface TranscriptTailProps {
   awaitingFirstChunk: boolean;
 }
 
-interface QuestionLengthProps {
-  chars: number;
-  id: string;
-}
-
 const ACKNOWLEDGE_MS = 1600;
-const QUESTION_COUNTER_FROM_CHARS = MAX_QUESTION_CHARS * 0.9;
-
-const loadProgressOf = (
-  engine: BrowserModelStatus,
-  modelId: string | null
-): number | undefined =>
-  engine.phase === "loading" && engine.modelId === modelId
-    ? engine.progress
-    : undefined;
-
-const errorMessageOf = (message: string): string => {
-  if (message.includes("rate_limited")) {
-    return m.assistant_error_rate_limited();
-  }
-
-  if (message.includes("unavailable")) {
-    return m.assistant_error_unavailable();
-  }
-
-  if (message.includes("unconfigured")) {
-    return m.assistant_unavailable_description();
-  }
-
-  if (message.includes("question_too_long")) {
-    return m.assistant_error_question_too_long({
-      max: MAX_QUESTION_CHARS.toLocaleString(getLocale()),
-    });
-  }
-
-  if (message.includes("browser_model_context")) {
-    return m.assistant_error_browser_context();
-  }
-
-  if (message.includes("browser_model")) {
-    return m.assistant_error_browser_model();
-  }
-
-  return m.assistant_error_generic();
-};
-
-const QuestionLength = ({ chars, id }: QuestionLengthProps) =>
-  chars >= QUESTION_COUNTER_FROM_CHARS && (
-    <span className="text-muted-foreground text-xs tabular-nums" id={id}>
-      {m.assistant_question_length({
-        count: chars.toLocaleString(getLocale()),
-        max: MAX_QUESTION_CHARS.toLocaleString(getLocale()),
-      })}
-    </span>
-  );
 
 const TranscriptTail = ({
   avatarState,
@@ -142,7 +61,7 @@ const TranscriptTail = ({
         className="text-destructive flex items-center gap-2 text-sm"
         role="alert"
       >
-        <span>{errorMessageOf(error.message)}</span>
+        <span>{assistantErrorMessage(error.message)}</span>
         <Button
           leadingIcon={remixIcon(RiRefreshLine)}
           onClick={onRetry}
@@ -159,74 +78,28 @@ const TranscriptTail = ({
 export const AssistantChat = ({
   conversationId,
   initialMessages,
-  isPending,
+  onPendingQuestionSent,
+  pendingQuestion,
   serverModel,
-  userName,
 }: AssistantChatProps) => {
-  const queryClient = useQueryClient();
   const [composerActive, setComposerActive] = useState(false);
   const [draft, setDraft] = useState("");
   const [justFinished, setJustFinished] = useState(false);
   const [turn, setTurn] = useState<{ retrying: boolean; startedAt: number }>();
   const acknowledgeTimer = useRef(0);
   const lastQuestion = useRef("");
-  const questionCounterId = useId();
-  const webGpu = useWebGpuSupport();
-  const browserModel = useBrowserModel();
-  const selected = resolveModelChoice(useRememberedModel(), serverModel);
-  const browserSelected = selected !== null && selected !== SERVER_MODEL;
+  const pendingSent = useRef(false);
 
-  useEffect(() => {
-    const engineBusy = browserModel.phase === "loading";
-    const selectedAlreadyAttempted =
-      browserModel.phase !== "idle" && browserModel.modelId === selected;
-
-    if (
-      browserSelected &&
-      webGpu === true &&
-      !(engineBusy || selectedAlreadyAttempted)
-    ) {
-      loadBrowserModel(selected);
-    }
-  }, [browserModel, browserSelected, selected, webGpu]);
-
-  const ready =
-    selected === SERVER_MODEL ||
-    (browserSelected &&
-      browserModel.phase === "ready" &&
-      browserModel.modelId === selected);
-
-  const transport = useMemo(
-    () =>
-      selected === SERVER_MODEL
-        ? new DefaultChatTransport({
-            api: `${getServerUrl()}/ai/chat`,
-            body: () => ({ locale: getLocale(), today: localDay(new Date()) }),
-            credentials: "include",
-          })
-        : createBrowserChatTransport({ client, locale: getLocale }),
-    [selected]
-  );
-
-  const refreshStoredConversation = useCallback(
-    () =>
-      queryClient.invalidateQueries({
-        queryKey: orpc.assistant.getConversation.key(),
-      }),
-    [queryClient]
-  );
-
-  const { error, messages, regenerate, sendMessage, status, stop } = useChat({
-    id: conversationId,
-    messages: initialMessages,
+  const { chat, model } = useAssistantChat({
+    conversationId,
+    initialMessages,
     onError: () => setDraft((current) => current || lastQuestion.current),
     onFinish: ({ isAbort }) => {
       if (isAbort) {
         return;
       }
 
-      refreshStoredConversation();
-
+      setDraft((current) => (current === lastQuestion.current ? "" : current));
       setJustFinished(true);
       window.clearTimeout(acknowledgeTimer.current);
       acknowledgeTimer.current = window.setTimeout(
@@ -234,24 +107,12 @@ export const AssistantChat = ({
         ACKNOWLEDGE_MS
       );
     },
-    transport,
+    serverModel,
   });
 
+  const { error, messages, regenerate, sendMessage, status, stop } = chat;
+
   useEffect(() => () => window.clearTimeout(acknowledgeTimer.current), []);
-
-  const newConversation = useMutation(
-    orpc.assistant.startNewConversation.mutationOptions({
-      onSuccess: refreshStoredConversation,
-    })
-  );
-
-  const lastMessage = messages.at(-1);
-  const toolRunning =
-    lastMessage?.parts.some(
-      (part) =>
-        isToolPart(part) &&
-        (part.state === "input-streaming" || part.state === "input-available")
-    ) ?? false;
 
   const ask = useCallback(
     (text: string) => {
@@ -262,6 +123,27 @@ export const AssistantChat = ({
     [sendMessage]
   );
 
+  useEffect(() => {
+    if (
+      pendingQuestion === undefined ||
+      pendingSent.current ||
+      !model.ready ||
+      messages.length > 0
+    ) {
+      return;
+    }
+
+    pendingSent.current = true;
+    ask(pendingQuestion);
+    onPendingQuestionSent();
+  }, [
+    ask,
+    messages.length,
+    model.ready,
+    onPendingQuestionSent,
+    pendingQuestion,
+  ]);
+
   const redo = useCallback(
     (messageId: string | null) => {
       setTurn({ retrying: true, startedAt: Date.now() });
@@ -271,6 +153,14 @@ export const AssistantChat = ({
   );
 
   const redoLastTurn = useCallback(() => redo(null), [redo]);
+
+  const lastMessage = messages.at(-1);
+  const toolRunning =
+    lastMessage?.parts.some(
+      (part) =>
+        isToolPart(part) &&
+        (part.state === "input-streaming" || part.state === "input-available")
+    ) ?? false;
 
   const avatarState = assistantAvatarState({
     composerActive,
@@ -287,122 +177,64 @@ export const AssistantChat = ({
   });
 
   const streaming = status === "streaming" || status === "submitted";
-  const conversationKnown = conversationId !== undefined;
-
-  const suggestions = useMemo(
-    () => [
-      m.assistant_suggestion_spending(),
-      m.assistant_suggestion_cash_flow(),
-      m.assistant_suggestion_recurring(),
-    ],
-    []
+  const settled = status === "ready" && model.ready;
+  const makeDashboard = useCallback(
+    () => ask(m.ask_make_dashboard_prompt()),
+    [ask]
   );
 
   return (
-    <div className="flex h-[calc(100svh-4rem-var(--update-banner-height,0px))] min-h-0 flex-col gap-4 p-4">
-      {isPending ? (
-        <AssistantChatSkeleton />
-      ) : (
-        <AssistantTranscript scrollLabel={m.assistant_scroll_to_latest()}>
-          {messages.length === 0 ? (
-            <AssistantEmptyState
-              avatarState={avatarState}
-              userName={userName}
+    <div className="flex min-h-0 flex-1 flex-col gap-4">
+      <AssistantTranscript scrollLabel={m.assistant_scroll_to_latest()}>
+        {messages.map((message, index) => {
+          const live = message.id === streamingMessageId;
+          const isLastAnswer =
+            message.role === "assistant" && index === messages.length - 1;
+
+          return (
+            <AssistantMessage
+              avatarState={
+                message.id === liveMessageId ? avatarState : undefined
+              }
+              key={message.id}
+              latest={isLastAnswer}
+              live={live}
+              message={message}
+              onMakeDashboard={settled ? makeDashboard : undefined}
+              onRetry={isLastAnswer && settled ? redo : undefined}
+              retrying={live && (turn?.retrying ?? false)}
+              startedAt={live ? turn?.startedAt : undefined}
+              status={live ? status : "ready"}
             />
-          ) : (
-            messages.map((message, index) => {
-              const live = message.id === streamingMessageId;
-              const isLastAnswer =
-                message.role === "assistant" && index === messages.length - 1;
-
-              const retryable = isLastAnswer && status === "ready" && ready;
-
-              return (
-                <AssistantMessage
-                  avatarState={
-                    message.id === liveMessageId ? avatarState : undefined
-                  }
-                  key={message.id}
-                  live={live}
-                  message={message}
-                  onRetry={retryable ? redo : undefined}
-                  retrying={live && (turn?.retrying ?? false)}
-                  startedAt={live ? turn?.startedAt : undefined}
-                  status={live ? status : "ready"}
-                />
-              );
-            })
-          )}
-          <TranscriptTail
-            avatarState={avatarState}
-            awaitingFirstChunk={awaitingFirstChunk}
-            error={error}
-            onRetry={redoLastTurn}
-            retrying={turn?.retrying ?? false}
-          />
-        </AssistantTranscript>
-      )}
-      {!isPending && (
-        <AssistantModelStatus
-          browserModel={browserModel}
-          selected={selected}
-          webGpu={webGpu}
+          );
+        })}
+        <TranscriptTail
+          avatarState={avatarState}
+          awaitingFirstChunk={awaitingFirstChunk}
+          error={error}
+          onRetry={redoLastTurn}
+          retrying={turn?.retrying ?? false}
         />
-      )}
-      <InputMessage
-        disabled={!(conversationKnown && ready)}
-        leftSlot={
-          <>
-            {!isPending && (
-              <AssistantModelSelector
-                disabled={streaming}
-                loadingProgress={loadProgressOf(browserModel, selected)}
-                onSelect={rememberModel}
-                selected={selected}
-                serverModel={serverModel}
-                webGpu={webGpu}
-              />
-            )}
-            <Button
-              disabled={newConversation.isPending}
-              leadingIcon={remixIcon(RiAddLine)}
-              onClick={() => newConversation.mutate({})}
-              size="compact"
-              variant="ghost"
-            >
-              {m.assistant_new_conversation()}
-            </Button>
-          </>
-        }
+      </AssistantTranscript>
+      <AssistantModelStatus
+        browserModel={model.browserModel}
+        selected={model.selected}
+        webGpu={model.webGpu}
+      />
+      <AssistantComposer
+        disabled={!model.ready}
+        model={model}
+        onActiveChange={setComposerActive}
         onSend={(text) => {
-          if (streaming) {
-            return;
-          }
-
           ask(text);
           setDraft("");
           setComposerActive(false);
         }}
         onStop={stop}
-        rightSlot={
-          <QuestionLength chars={draft.length} id={questionCounterId} />
-        }
-        onValueChange={(next) => {
-          setDraft(next);
-          setComposerActive(true);
-        }}
-        placeholder={m.assistant_composer_placeholder()}
-        sendLabel={m.assistant_send()}
-        stopLabel={m.assistant_stop()}
-        suggestions={messages.length === 0 && ready ? suggestions : undefined}
-        status={streaming ? "streaming" : "idle"}
-        textareaProps={{
-          "aria-describedby": questionCounterId,
-          "aria-label": m.assistant_composer_placeholder(),
-          maxLength: MAX_QUESTION_CHARS,
-          onBlur: () => setComposerActive(draft.length > 0),
-          onFocus: () => setComposerActive(true),
-        }}
+        onValueChange={setDraft}
+        placeholder={m.ask_follow_up_placeholder()}
+        serverModel={serverModel}
+        streaming={streaming}
         value={draft}
       />
     </div>

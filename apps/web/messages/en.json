@@ -6,6 +6,26 @@
   "account_menu_update_guide": "How to update",
   "account_menu_update_release_notes": "Release notes",
   "account_sign_out": "Sign out",
+  "ask_chat_missing_description": "It may have been deleted. Start a new chat to ask again.",
+  "ask_chat_missing_title": "This chat no longer exists",
+  "ask_chats_empty": "Your chats show up here.",
+  "ask_chats_loading": "Loading your chats",
+  "ask_composer_placeholder": "Ask anything, or ask for a dashboard…",
+  "ask_dashboard_created": "New dashboard",
+  "ask_dashboard_open": "Open",
+  "ask_dashboard_updated": "Dashboard updated",
+  "ask_dashboards_empty": "No dashboards yet. Ask for one.",
+  "ask_follow_up_placeholder": "Ask a follow-up, or ask for a dashboard…",
+  "ask_history_label": "Chats and dashboards",
+  "ask_make_dashboard": "Make it a dashboard",
+  "ask_make_dashboard_prompt": "Make this answer a dashboard I can come back to.",
+  "ask_new_chat": "New chat",
+  "ask_new_chat_description": "Ask about your accounts, spending or budget, or ask for a dashboard.",
+  "ask_new_chat_title": "What do you want to know, {name}?",
+  "ask_suggestion_dashboard": "Build me a dashboard to check in on my month",
+  "ask_tab_chats": "Chats",
+  "ask_tab_dashboards": "Dashboards",
+  "ask_untitled_chat": "New chat",
   "assistant_activity_drawing": "Drawing a chart…",
   "assistant_activity_preparing": "Preparing a lookup…",
   "assistant_activity_retrying": "Asking again…",
@@ -33,7 +53,6 @@
   "assistant_chart_expand": "View larger",
   "assistant_chart_failed": "The chart could not be drawn.",
   "assistant_chart_label": "Chart",
-  "assistant_composer_placeholder": "Ask about your money…",
   "assistant_copy": "Copy",
   "assistant_empty_description": "Ask anything about your accounts, spending or budget.",
   "assistant_error_browser_context": "This conversation is too long for the model on this device. Start a new conversation.",
@@ -51,7 +70,6 @@
   "assistant_model_none_chosen": "Choose a model to start. It downloads once from Hugging Face and runs on your graphics card. Your questions are never sent to an outside model provider, and the conversation is saved on this instance.",
   "assistant_model_search": "Search models…",
   "assistant_model_server_group": "On your instance",
-  "assistant_new_conversation": "New conversation",
   "assistant_param_aggregation": "Aggregation",
   "assistant_param_categories": "Categories",
   "assistant_param_direction": "Direction",
@@ -84,6 +102,7 @@
       }
     }
   ],
+  "assistant_result_dashboard": "Dashboard saved",
   "assistant_result_figures": "Two figures: fixed and variable",
   "assistant_result_periods": [
     {
@@ -147,6 +166,8 @@
   "assistant_tool_budget_vs_actual_purpose": "Your budgeting profile against the real figures, per category",
   "assistant_tool_cash_flow": "Reading your cash flow",
   "assistant_tool_cash_flow_purpose": "Money in and money out over time",
+  "assistant_tool_dashboard": "Building your dashboard",
+  "assistant_tool_dashboard_purpose": "Saves a dashboard of live widgets you can open from the sidebar",
   "assistant_tool_error": "Error",
   "assistant_tool_fixed_vs_variable": "Splitting fixed and variable spending",
   "assistant_tool_fixed_vs_variable_purpose": "Which part of your outgoings repeats, and which part does not",
@@ -392,6 +413,7 @@
   "bank_search_placeholder": "Search banks…",
   "bank_sync_already_running": "A sync is already in progress",
   "bank_sync_success": "{institution} re-synced",
+  "budget_account_search_empty": "No account matches.",
   "budget_aggregation_average": "Monthly avg.",
   "budget_aggregation_median": "Monthly median",
   "budget_aggregation_total": "Total",
@@ -416,6 +438,7 @@
   "budget_detail_description_label": "Description",
   "budget_detail_sr_description": "View and edit transaction details",
   "budget_detail_title": "Transaction details",
+  "budget_filter_account_unknown": "Removed account",
   "budget_filter_amount_any": "Any",
   "budget_filter_amount_between": "{min} – {max}",
   "budget_filter_amount_clear": "Clear",
@@ -423,15 +446,18 @@
   "budget_filter_amount_impossible": "The minimum is above the maximum.",
   "budget_filter_amount_max": "Maximum",
   "budget_filter_amount_min": "Minimum",
+  "budget_filter_amount_over": "Over {amount}",
   "budget_filter_amount_prompt": "Type an amount in euros.",
   "budget_filter_amount_too_large": "Type an amount up to {amount}.",
+  "budget_filter_amount_under": "Under {amount}",
   "budget_filter_amount_upto": "Up to {amount}",
   "budget_filter_category": "Category",
   "budget_filter_clear_all": "Clear all",
-  "budget_filter_clear_search": "Clear search and filters",
+  "budget_filter_field_account": "Account",
   "budget_filter_field_amount": "Amount",
   "budget_filter_field_category": "Category",
   "budget_filter_field_company": "Company",
+  "budget_filter_field_date": "Date",
   "budget_filter_limit": [
     {
       "declarations": ["input count", "local countPlural = count: plural"],
@@ -454,7 +480,8 @@
   "budget_filter_recurrence": "Recurrence",
   "budget_filter_remove": "Remove {label} filter",
   "budget_filter_search_label": "Search and filter transactions",
-  "budget_filter_search_placeholder": "Search or filter transactions…",
+  "budget_filter_search_placeholder_empty": "Search transactions, or filter by category, account or amount",
+  "budget_filter_search_placeholder_more": "Add a filter or text…",
   "budget_filter_token_remove": "Remove filter: {filter}",
   "budget_filter_token_sentence": "{field} {operator} {value}",
   "budget_filter_values_apply": "Apply",
@@ -772,6 +799,65 @@
   "category_transport_travel": "Transport & travel",
   "category_uncategorised": "Uncategorised",
   "chart_total": "Total",
+  "command_menu_all_transactions": "See all transactions matching “{search}”",
+  "command_menu_ask": "Ask: “{question}”",
+  "command_menu_ask_description": "Opens a new chat in Ask",
+  "command_menu_description": "Search your transactions, accounts, categories, dashboards and chats, or ask anything.",
+  "command_menu_empty": "Nothing matches. Press Enter to ask about it instead.",
+  "command_menu_group_accounts": "Accounts",
+  "command_menu_group_ask": "Ask",
+  "command_menu_group_categories": "Categories",
+  "command_menu_group_chats": "Chats",
+  "command_menu_group_dashboards": "Dashboards",
+  "command_menu_group_pages": "Pages",
+  "command_menu_group_recurring": "Recurring",
+  "command_menu_group_transactions": "Transactions",
+  "command_menu_hint_all_transactions": "all matching transactions",
+  "command_menu_hint_filter": "filter",
+  "command_menu_hint_move": "move",
+  "command_menu_hint_open": "open or ask",
+  "command_menu_placeholder": "Search or ask anything…",
+  "command_menu_settings_appearance": "Appearance",
+  "command_menu_settings_budget": "Budget",
+  "command_menu_settings_connections": "Connections",
+  "command_menu_settings_security": "Security",
+  "command_menu_tab_accounts": "Accounts",
+  "command_menu_tab_all": "All",
+  "command_menu_tab_categories": "Categories",
+  "command_menu_tab_chats": "Chats",
+  "command_menu_tab_dashboards": "Dashboards",
+  "command_menu_tab_pages": "Pages",
+  "command_menu_tab_recurring": "Recurring",
+  "command_menu_tab_transactions": "Transactions",
+  "command_menu_title": "Search or ask",
+  "command_menu_trigger": "Search or ask",
+  "dashboard_actions": "Dashboard actions",
+  "dashboard_change_dismiss": "Dismiss the reply",
+  "dashboard_change_label": "What should change on this dashboard?",
+  "dashboard_change_open_chat": "Open the chat",
+  "dashboard_change_placeholder": "Ask to change this dashboard…",
+  "dashboard_change_submit": "Change",
+  "dashboard_change_unavailable": "Set up an assistant model to change dashboards",
+  "dashboard_change_working": "Changing…",
+  "dashboard_delete": "Delete…",
+  "dashboard_delete_confirm": "Delete dashboard",
+  "dashboard_delete_description": "The dashboard goes away for good. The chat it came from stays in Ask.",
+  "dashboard_delete_title": "Delete “{title}”?",
+  "dashboard_from_chat": "From",
+  "dashboard_loading": "Loading the dashboard",
+  "dashboard_missing_description": "It may have been deleted. Ask for it again in Ask.",
+  "dashboard_missing_home": "Back to Home",
+  "dashboard_missing_title": "This dashboard no longer exists",
+  "dashboard_refresh": "Refresh from your banks",
+  "dashboard_rename": "Rename",
+  "dashboard_rename_confirm": "Save",
+  "dashboard_rename_label": "Name",
+  "dashboard_rename_required": "Give the dashboard a name.",
+  "dashboard_rename_title": "Rename dashboard",
+  "dashboard_rename_too_long": "Keep it under {max} characters.",
+  "dashboard_updated": "Updated {time}",
+  "dashboards_loading": "Loading your dashboards",
+  "dashboards_new_prompt": "Build me a dashboard that shows ",
   "first_steps_budgeting_profile": "Set up your budget",
   "first_steps_connect_bank": "Connect your bank",
   "first_steps_progress": "{done}/{total}",
@@ -795,19 +881,14 @@
   "home_accounts_meta": "{institution} · {type}",
   "home_accounts_no_balance": "No balance reported",
   "home_accounts_title": "Accounts",
-  "home_asset_class_cash": "Cash",
-  "home_asset_class_investments": "Investments",
-  "home_asset_class_other": "Other",
-  "home_asset_class_property": "Property",
-  "home_asset_class_savings": "Savings",
-  "home_available_description": "Left in your current accounts once the bills due by {date} are paid.",
-  "home_available_empty": "Your banks have not reported a current-account balance yet.",
+  "home_accounts_total": "{amount} in total",
+  "home_add_account": "Add an account",
+  "home_add_account_description": "Link a bank",
+  "home_ask_label": "Ask me anything",
+  "home_ask_placeholder": "Ask me anything. A new chat opens in Ask.",
   "home_available_error": "Could not load what you have available to spend.",
-  "home_available_loading": "Loading what you have available to spend",
-  "home_available_short": "Your current accounts do not cover the bills due by {date}.",
   "home_available_title": "Available to spend",
   "home_balance_error": "Could not load your balance.",
-  "home_balance_loading": "Loading your balance",
   "home_balance_title": "Current accounts",
   "home_balance_updated": "Updated {date}",
   "home_categories_empty": "Nothing spent this month yet.",
@@ -816,64 +897,29 @@
   "home_categories_title": "Top categories this month",
   "home_categories_unsorted": "{amount} not sorted into a category yet.",
   "home_categories_unsorted_review": "Review unsorted transactions",
-  "home_insights_description": "Your net worth, your spending pace and your investments.",
-  "home_insights_title": "In detail",
-  "home_investments_empty": "No investment account connected. Connect a brokerage account or a life insurance contract to follow it here.",
-  "home_investments_error": "Could not load your investments.",
-  "home_investments_gain_down": "{amount} ({ratio}) unrealised loss",
-  "home_investments_gain_up": "{amount} ({ratio}) unrealised gain",
-  "home_investments_loading": "Loading your investments",
-  "home_investments_title": "Investments",
-  "home_investments_top": [
-    {
-      "declarations": ["input count", "local countPlural = count: plural"],
-      "selectors": ["countPlural"],
-      "match": {
-        "countPlural=one": "Your holding",
-        "countPlural=other": "Largest of your {count} holdings"
-      }
-    }
-  ],
-  "home_link_connections": "Bank connections",
+  "home_dashboards_ask": "Ask for one",
+  "home_dashboards_first": "Ask for your first dashboard",
+  "home_greeting_afternoon": "Good afternoon, {name}",
+  "home_greeting_evening": "Good evening, {name}",
+  "home_greeting_morning": "Good morning, {name}",
   "home_net_worth_assets_and_debts": "{assets} in assets, {debts} in debts",
-  "home_net_worth_balances_at": "Balances as of {date}",
   "home_net_worth_empty": "Your banks have not reported a balance yet. It appears after the next sync.",
   "home_net_worth_error": "Could not load your net worth.",
-  "home_net_worth_excluded": [
-    {
-      "declarations": [
-        "input count",
-        "input currency",
-        "local countPlural = count: plural"
-      ],
-      "selectors": ["countPlural"],
-      "match": {
-        "countPlural=one": "{count} account is not counted: it has no balance or is not in {currency}.",
-        "countPlural=other": "{count} accounts are not counted: they have no balance or are not in {currency}."
-      }
-    }
-  ],
   "home_net_worth_loading": "Loading your net worth",
   "home_net_worth_title": "Net worth",
   "home_no_account_description": "Connect a bank account to see your net worth, what you have left to spend and where your money goes.",
   "home_no_account_title": "Connect a bank account",
-  "home_pace_empty": "The comparison starts on the second day of the month.",
-  "home_pace_title": "Spending pace",
+  "home_overview_hint": "So far in {month}, across all your accounts",
+  "home_overview_title": "Overview",
   "home_recent_all": "All transactions",
-  "home_recent_empty": "No transactions yet. They appear after your bank's next sync.",
   "home_recent_error": "Could not load your latest transactions.",
   "home_recent_loading": "Loading your latest transactions",
   "home_recent_title": "Recent transactions",
   "home_retry": "Retry",
-  "home_spent_chart_label": "Spending so far this month, day by day, against the same days last month",
   "home_spent_error": "Could not load this month's spending.",
-  "home_spent_last_month_series": "Last month",
-  "home_spent_last_month_total": "Last month, {amount} in total",
   "home_spent_less": "{amount} less than by this day last month",
-  "home_spent_loading": "Loading this month's spending",
   "home_spent_more": "{amount} more than by this day last month",
   "home_spent_same": "Same as by this day last month",
-  "home_spent_this_month_series": "This month",
   "home_spent_title": "Spent this month",
   "home_upcoming_empty": "No bill falls due in the next {days} days.",
   "home_upcoming_error": "Could not load your upcoming payments.",
@@ -906,11 +952,13 @@
   "home_upcoming_title": "Upcoming bills",
   "locale_switcher_label": "Language",
   "mutation_error_generic": "Something went wrong. Try again.",
+  "nav_ask": "Ask",
   "nav_bank_account": "Bank account",
   "nav_budget_recurring": "Recurring",
   "nav_budget_transactions": "Transactions",
-  "nav_group_application": "Application",
+  "nav_dashboards": "Dashboards",
   "nav_home": "Home",
+  "nav_new_dashboard": "New dashboard",
   "nav_settings": "Settings",
   "nav_tab_bar_label": "Main",
   "onboarding_back": "Back",
@@ -1162,7 +1210,7 @@
   "settings_integrations_apply": "Apply now",
   "settings_integrations_apply_failed": "The settings could not be applied. Try again.",
   "settings_integrations_apply_needs_bank_provider": "Set up the bank provider before you apply these settings.",
-  "settings_integrations_assistant_api_description": "Answers questions sent to the assistant API. The app doesn't show the assistant yet.",
+  "settings_integrations_assistant_description": "Answers your chats in Ask and builds and changes your dashboards.",
   "settings_integrations_banking_description": "Links members' banks so their transactions arrive on their own.",
   "settings_integrations_categorisation_description": "Puts new transactions in the right category for everyone.",
   "settings_integrations_email_description": "Sends sign-up and password-reset codes, so members can get back into their account.",
@@ -1357,7 +1405,7 @@
   "setup_finish_error_bank": "Set up a bank provider on the Bank step before you finish.",
   "setup_finish_error_generic": "Setup could not be finished. Try again.",
   "setup_finish_title": "Review and finish",
-  "setup_integration_assistant_api_description": "Answers questions sent to the assistant API. The app doesn't show the assistant yet.",
+  "setup_integration_assistant_description": "Answers your chats in Ask and builds and changes your dashboards.",
   "setup_integration_assistant_title": "Assistant model",
   "setup_integration_banking_description": "Pick the service that connects bank accounts.",
   "setup_integration_banking_title": "Bank provider",
@@ -1483,5 +1531,138 @@
   "update_banner_dismiss": "Dismiss the notice for v{version}",
   "update_banner_new_tab": "(opens in a new tab)",
   "update_banner_title": "Freenary v{version} is available",
+  "widget_accounts_empty": "No bank account connected yet.",
+  "widget_ask_category": "Why did I spend {amount} on {category} this month?",
+  "widget_budget_amounts": "{spent} / {planned}",
+  "widget_budget_days_left": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} day left",
+        "countPlural=other": "{count} days left"
+      }
+    }
+  ],
+  "widget_budget_over": ", {amount} over budget",
+  "widget_budgets_empty": "No budget set yet.",
+  "widget_budgets_error": "Could not load your budgets.",
+  "widget_budgets_loading": "Loading your budgets",
+  "widget_budgets_set_up": "Set up your budget",
+  "widget_budgets_title": "Budgets",
+  "widget_income_chart_label": "Money in and money out, month by month",
+  "widget_income_empty": "No money moved in these months.",
+  "widget_income_error": "Could not load your income and spending.",
+  "widget_income_loading": "Loading your income and spending",
+  "widget_income_overspent": "{amount} more out than in",
+  "widget_income_saved": "Saved {amount}",
+  "widget_income_title": "Income vs spending",
+  "widget_last_weeks": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "Last {count} week",
+        "countPlural=other": "Last {count} weeks"
+      }
+    }
+  ],
+  "widget_money_in": "In",
+  "widget_money_out": "Out",
+  "widget_net_worth_chart_label": "Net worth at the end of each month",
+  "widget_net_worth_down": [
+    {
+      "declarations": [
+        "input amount",
+        "input count",
+        "local countPlural = count: plural"
+      ],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "−{amount} over {count} month",
+        "countPlural=other": "−{amount} over {count} months"
+      }
+    }
+  ],
+  "widget_net_worth_note": "Rebuilt from your transactions. Investments count at their latest value.",
+  "widget_net_worth_series": "Net worth",
+  "widget_net_worth_up": [
+    {
+      "declarations": [
+        "input amount",
+        "input count",
+        "local countPlural = count: plural"
+      ],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "+{amount} over {count} month",
+        "countPlural=other": "+{amount} over {count} months"
+      }
+    }
+  ],
+  "widget_range_label": "Period",
+  "widget_range_months": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count}M",
+        "countPlural=other": "{count}M"
+      }
+    }
+  ],
+  "widget_range_months_name": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} month",
+        "countPlural=other": "{count} months"
+      }
+    }
+  ],
+  "widget_spending_by_week_title": "Spending by week",
+  "widget_spending_chart_label": "Spending each week, split by category",
+  "widget_spending_empty": "Nothing spent in these weeks.",
+  "widget_spending_error": "Could not load your weekly spending.",
+  "widget_spending_loading": "Loading your weekly spending",
+  "widget_spending_other": "Other",
+  "widget_spending_week_total": "Total",
+  "widget_stat_available_caption": [
+    {
+      "declarations": [
+        "input date",
+        "input count",
+        "local countPlural = count: plural"
+      ],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "After {count} bill due by {date}",
+        "countPlural=other": "After {count} bills due by {date}"
+      }
+    }
+  ],
+  "widget_stat_income_caption": "{amount} came in last month",
+  "widget_stat_income_error": "Could not load this month's income.",
+  "widget_stat_income_title": "Income this month",
+  "widget_stat_loading": "Loading {label}",
+  "widget_stat_net_worth_caption": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "Across {count} account",
+        "countPlural=other": "Across {count} accounts"
+      }
+    }
+  ],
+  "widget_stat_saved_error": "Could not load what you saved this month.",
+  "widget_stat_saved_no_income": "Nothing came in this month yet",
+  "widget_stat_saved_share": "{share} of what came in",
+  "widget_stat_saved_short": "{amount} more went out than came in",
+  "widget_stat_saved_title": "Saved this month",
+  "widget_stat_unavailable": "Your banks have not reported this yet.",
+  "widget_top_categories_hint": "Pick one to ask why",
+  "widget_transactions_empty": "No matching transactions in this period.",
   "wizard_step_done": "{step} (done)"
 }

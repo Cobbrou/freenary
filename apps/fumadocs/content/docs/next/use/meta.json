@@ -1,6 +1,13 @@
 {
   "title": "Use Freenary",
-  "description": "Home, your budget, your bank connections and your account.",
+  "description": "Home, chats and dashboards with the assistant, your budget, your bank connections and your account.",
   "icon": "Compass",
-  "pages": ["home", "budget", "bank-connections", "account"]
+  "pages": [
+    "home",
+    "ask",
+    "dashboards",
+    "budget",
+    "bank-connections",
+    "account"
+  ]
 }

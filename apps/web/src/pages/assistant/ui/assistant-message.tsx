@@ -3,12 +3,23 @@ import { Tooltip } from "@freenary/ui/components/tooltip";
 import type { BrandAvatarState } from "@freenary/ui/lib/brand-avatar/states";
 import { useSize } from "@freenary/ui/lib/size-context";
 import { cn } from "@freenary/ui/lib/utils";
-import { RiFileCopyLine, RiRefreshLine } from "@remixicon/react";
+import {
+  RiArrowRightSLine,
+  RiDashboardLine,
+  RiFileCopyLine,
+  RiRefreshLine,
+} from "@remixicon/react";
+import { Link } from "@tanstack/react-router";
 import type { UIMessage } from "ai";
 import type { ReactNode } from "react";
-import { memo } from "react";
+import { memo, useRef } from "react";
 
+import { savedDashboardsOf, useDashboardUpdates } from "@/entities/dashboard";
+import type { SavedDashboard } from "@/entities/dashboard";
 import { m } from "@/paraglide/messages.js";
+import { remixIcon } from "@/shared/lib/remix-icon";
+import { AiUpdateScope } from "@/shared/ui/ai-update-scope";
+import type { AiUpdateScopeHandle } from "@/shared/ui/ai-update-scope";
 
 import type { AnswerSegment } from "../model/answer-segments";
 import { activityOf, traceOf } from "../model/execution";
@@ -27,8 +38,14 @@ interface AssistantMessageProps {
   status: ChatStatus;
   retrying: boolean;
   startedAt?: number;
+  latest?: boolean;
+  onMakeDashboard?: () => void;
   onRetry?: (messageId: string) => void;
 }
+
+const DashboardIcon = remixIcon(RiDashboardLine);
+
+const OpenIcon = remixIcon(RiArrowRightSLine);
 
 const bubblePad = { compact: "px-3 py-2", default: "px-4 py-3" } as const;
 
@@ -80,6 +97,62 @@ const AnswerAction = ({
   </Tooltip>
 );
 
+const SavedDashboardLink = ({ dashboard }: { dashboard: SavedDashboard }) => (
+  <Link
+    className="bg-card hover:bg-accent focus-visible:ring-ring/50 flex items-center gap-3 rounded-lg border px-3 py-2.5 outline-none focus-visible:ring-[3px]"
+    params={{ dashboardId: dashboard.dashboardId }}
+    to="/dashboards/$dashboardId"
+  >
+    <RiDashboardLine
+      aria-hidden="true"
+      className="text-muted-foreground size-4 shrink-0"
+    />
+    <span className="flex min-w-0 flex-1 flex-col">
+      <span className="truncate font-medium">{dashboard.title}</span>
+      <span className="text-muted-foreground text-xs">
+        {dashboard.created
+          ? m.ask_dashboard_created()
+          : m.ask_dashboard_updated()}
+      </span>
+    </span>
+    <span className="text-muted-foreground flex items-center gap-0.5 text-xs">
+      {m.ask_dashboard_open()}
+      <OpenIcon aria-hidden="true" className="size-4" />
+    </span>
+  </Link>
+);
+
+const SavedDashboardList = ({ dashboards }: { dashboards: SavedDashboard[] }) =>
+  dashboards.map((dashboard) => (
+    <SavedDashboardLink dashboard={dashboard} key={dashboard.dashboardId} />
+  ));
+
+const AnnouncedDashboardList = ({
+  dashboards,
+}: {
+  dashboards: SavedDashboard[];
+}) => {
+  const scope = useRef<AiUpdateScopeHandle>(null);
+
+  useDashboardUpdates(({ dashboardIds }) => {
+    if (
+      dashboards.some((dashboard) =>
+        dashboardIds.includes(dashboard.dashboardId)
+      )
+    ) {
+      scope.current?.play({});
+    }
+  });
+
+  return (
+    <AiUpdateScope ref={scope} size="element">
+      <div className="flex flex-col gap-2">
+        <SavedDashboardList dashboards={dashboards} />
+      </div>
+    </AiUpdateScope>
+  );
+};
+
 const UserMessage = ({ message }: { message: UIMessage }) => {
   const size = useSize();
   const text = message.parts
@@ -102,8 +175,10 @@ const UserMessage = ({ message }: { message: UIMessage }) => {
 
 const AnswerMessage = ({
   avatarState,
+  latest = false,
   live,
   message,
+  onMakeDashboard,
   onRetry,
   retrying,
   startedAt,
@@ -117,6 +192,11 @@ const AnswerMessage = ({
   const traced = trace.steps.some(
     (step) => step.tools.length > 0 || step.thinking !== null
   );
+
+  const savedDashboards = savedDashboardsOf(message.parts);
+  const charted = answer.some((segment) => segment.kind === "chart");
+  const canMakeDashboard =
+    onMakeDashboard !== undefined && charted && savedDashboards.length === 0;
 
   return (
     <div className="flex w-full gap-3">
@@ -135,6 +215,11 @@ const AnswerMessage = ({
           />
         )}
         <AnswerSegments prefix={message.id} segments={answer} />
+        {latest && savedDashboards.length > 0 ? (
+          <AnnouncedDashboardList dashboards={savedDashboards} />
+        ) : (
+          <SavedDashboardList dashboards={savedDashboards} />
+        )}
         {live && (
           <AssistantActivity
             activity={activityOf(trace, status)}
@@ -153,6 +238,18 @@ const AnswerMessage = ({
               <AnswerAction label={m.assistant_retry()} onClick={retry}>
                 <RiRefreshLine />
               </AnswerAction>
+            )}
+            {canMakeDashboard && (
+              <Button
+                className="ms-auto"
+                leadingIcon={DashboardIcon}
+                onClick={onMakeDashboard}
+                size="compact"
+                type="button"
+                variant="secondary"
+              >
+                {m.ask_make_dashboard()}
+              </Button>
             )}
           </div>
         )}

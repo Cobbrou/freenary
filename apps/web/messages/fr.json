@@ -6,6 +6,26 @@
   "account_menu_update_guide": "Comment mettre à jour",
   "account_menu_update_release_notes": "Notes de version",
   "account_sign_out": "Se déconnecter",
+  "ask_chat_missing_description": "Elle a peut-être été supprimée. Lancez une nouvelle discussion pour reposer la question.",
+  "ask_chat_missing_title": "Cette discussion n’existe plus",
+  "ask_chats_empty": "Vos discussions apparaissent ici.",
+  "ask_chats_loading": "Chargement de vos discussions",
+  "ask_composer_placeholder": "Posez une question, ou demandez un tableau de bord…",
+  "ask_dashboard_created": "Nouveau tableau de bord",
+  "ask_dashboard_open": "Ouvrir",
+  "ask_dashboard_updated": "Tableau de bord mis à jour",
+  "ask_dashboards_empty": "Aucun tableau de bord pour l’instant. Demandez-en un.",
+  "ask_follow_up_placeholder": "Posez une autre question, ou demandez un tableau de bord…",
+  "ask_history_label": "Discussions et tableaux de bord",
+  "ask_make_dashboard": "En faire un tableau de bord",
+  "ask_make_dashboard_prompt": "Fais de cette réponse un tableau de bord que je pourrai rouvrir.",
+  "ask_new_chat": "Nouvelle discussion",
+  "ask_new_chat_description": "Posez vos questions sur vos comptes, vos dépenses ou votre budget, ou demandez un tableau de bord.",
+  "ask_new_chat_title": "Que voulez-vous savoir, {name} ?",
+  "ask_suggestion_dashboard": "Crée-moi un tableau de bord pour suivre mon mois",
+  "ask_tab_chats": "Discussions",
+  "ask_tab_dashboards": "Tableaux de bord",
+  "ask_untitled_chat": "Nouvelle discussion",
   "assistant_activity_drawing": "Tracé du graphique…",
   "assistant_activity_preparing": "Préparation d’une recherche…",
   "assistant_activity_retrying": "Nouvelle tentative…",
@@ -33,7 +53,6 @@
   "assistant_chart_expand": "Agrandir",
   "assistant_chart_failed": "Le graphique n’a pas pu être tracé.",
   "assistant_chart_label": "Graphique",
-  "assistant_composer_placeholder": "Posez une question sur vos finances…",
   "assistant_copy": "Copier",
   "assistant_empty_description": "Posez n’importe quelle question sur vos comptes, vos dépenses ou votre budget.",
   "assistant_error_browser_context": "Cette conversation est trop longue pour le modèle sur cet appareil. Commencez une nouvelle conversation.",
@@ -51,7 +70,6 @@
   "assistant_model_none_chosen": "Choisissez un modèle pour commencer. Il se télécharge une fois depuis Hugging Face et s’exécute sur votre carte graphique. Vos questions ne sont jamais envoyées à un fournisseur de modèles externe, et la conversation est enregistrée sur cette instance.",
   "assistant_model_search": "Rechercher un modèle…",
   "assistant_model_server_group": "Sur votre instance",
-  "assistant_new_conversation": "Nouvelle conversation",
   "assistant_param_aggregation": "Agrégation",
   "assistant_param_categories": "Catégories",
   "assistant_param_direction": "Sens",
@@ -84,6 +102,7 @@
       }
     }
   ],
+  "assistant_result_dashboard": "Tableau de bord enregistré",
   "assistant_result_figures": "Deux chiffres : fixe et variable",
   "assistant_result_periods": [
     {
@@ -147,6 +166,8 @@
   "assistant_tool_budget_vs_actual_purpose": "Votre profil budgétaire face aux chiffres réels, par catégorie",
   "assistant_tool_cash_flow": "Lecture de vos flux de trésorerie",
   "assistant_tool_cash_flow_purpose": "Les entrées et les sorties d’argent au fil du temps",
+  "assistant_tool_dashboard": "Création de votre tableau de bord",
+  "assistant_tool_dashboard_purpose": "Enregistre un tableau de bord de widgets à jour, à ouvrir depuis la barre latérale",
   "assistant_tool_error": "Erreur",
   "assistant_tool_fixed_vs_variable": "Répartition entre dépenses fixes et variables",
   "assistant_tool_fixed_vs_variable_purpose": "La part de vos sorties qui se répète, et celle qui ne se répète pas",
@@ -401,6 +422,7 @@
   "bank_search_placeholder": "Rechercher une banque…",
   "bank_sync_already_running": "Une synchronisation est déjà en cours",
   "bank_sync_success": "{institution} resynchronisé",
+  "budget_account_search_empty": "Aucun compte ne correspond.",
   "budget_aggregation_average": "Moy. mensuelle",
   "budget_aggregation_median": "Médiane mensuelle",
   "budget_aggregation_total": "Total",
@@ -425,6 +447,7 @@
   "budget_detail_description_label": "Description",
   "budget_detail_sr_description": "Consulter et modifier les détails de la transaction",
   "budget_detail_title": "Détails de la transaction",
+  "budget_filter_account_unknown": "Compte supprimé",
   "budget_filter_amount_any": "Indifférent",
   "budget_filter_amount_between": "{min} – {max}",
   "budget_filter_amount_clear": "Effacer",
@@ -432,15 +455,18 @@
   "budget_filter_amount_impossible": "Le minimum dépasse le maximum.",
   "budget_filter_amount_max": "Maximum",
   "budget_filter_amount_min": "Minimum",
+  "budget_filter_amount_over": "Plus de {amount}",
   "budget_filter_amount_prompt": "Saisissez un montant en euros.",
   "budget_filter_amount_too_large": "Saisissez un montant jusqu’à {amount}.",
+  "budget_filter_amount_under": "Moins de {amount}",
   "budget_filter_amount_upto": "Jusqu’à {amount}",
   "budget_filter_category": "Catégorie",
   "budget_filter_clear_all": "Tout effacer",
-  "budget_filter_clear_search": "Effacer la recherche et les filtres",
+  "budget_filter_field_account": "Compte",
   "budget_filter_field_amount": "Montant",
   "budget_filter_field_category": "Catégorie",
   "budget_filter_field_company": "Entreprise",
+  "budget_filter_field_date": "Date",
   "budget_filter_limit": [
     {
       "declarations": ["input count", "local countPlural = count: plural"],
@@ -463,7 +489,8 @@
   "budget_filter_recurrence": "Récurrence",
   "budget_filter_remove": "Retirer le filtre {label}",
   "budget_filter_search_label": "Rechercher et filtrer les transactions",
-  "budget_filter_search_placeholder": "Rechercher ou filtrer les transactions…",
+  "budget_filter_search_placeholder_empty": "Rechercher des transactions, ou filtrer par catégorie, compte ou montant",
+  "budget_filter_search_placeholder_more": "Ajouter un filtre ou du texte…",
   "budget_filter_token_remove": "Retirer le filtre : {filter}",
   "budget_filter_token_sentence": "{field} {operator} {value}",
   "budget_filter_values_apply": "Appliquer",
@@ -781,6 +808,65 @@
   "category_transport_travel": "Transports et voyages",
   "category_uncategorised": "Non catégorisé",
   "chart_total": "Total",
+  "command_menu_all_transactions": "Voir toutes les transactions correspondant à « {search} »",
+  "command_menu_ask": "Demander : « {question} »",
+  "command_menu_ask_description": "Ouvre une nouvelle discussion dans Demander",
+  "command_menu_description": "Cherchez dans vos transactions, comptes, catégories, tableaux de bord et discussions, ou posez une question.",
+  "command_menu_empty": "Aucun résultat. Appuyez sur Entrée pour poser la question.",
+  "command_menu_group_accounts": "Comptes",
+  "command_menu_group_ask": "Demander",
+  "command_menu_group_categories": "Catégories",
+  "command_menu_group_chats": "Discussions",
+  "command_menu_group_dashboards": "Tableaux de bord",
+  "command_menu_group_pages": "Pages",
+  "command_menu_group_recurring": "Récurrent",
+  "command_menu_group_transactions": "Transactions",
+  "command_menu_hint_all_transactions": "toutes les transactions correspondantes",
+  "command_menu_hint_filter": "filtrer",
+  "command_menu_hint_move": "naviguer",
+  "command_menu_hint_open": "ouvrir ou demander",
+  "command_menu_placeholder": "Rechercher ou demander n’importe quoi…",
+  "command_menu_settings_appearance": "Apparence",
+  "command_menu_settings_budget": "Budget",
+  "command_menu_settings_connections": "Connexions",
+  "command_menu_settings_security": "Sécurité",
+  "command_menu_tab_accounts": "Comptes",
+  "command_menu_tab_all": "Tout",
+  "command_menu_tab_categories": "Catégories",
+  "command_menu_tab_chats": "Discussions",
+  "command_menu_tab_dashboards": "Tableaux de bord",
+  "command_menu_tab_pages": "Pages",
+  "command_menu_tab_recurring": "Récurrent",
+  "command_menu_tab_transactions": "Transactions",
+  "command_menu_title": "Rechercher ou demander",
+  "command_menu_trigger": "Rechercher ou demander",
+  "dashboard_actions": "Actions du tableau de bord",
+  "dashboard_change_dismiss": "Masquer la réponse",
+  "dashboard_change_label": "Que faut-il changer sur ce tableau de bord ?",
+  "dashboard_change_open_chat": "Ouvrir la discussion",
+  "dashboard_change_placeholder": "Demandez à modifier ce tableau de bord…",
+  "dashboard_change_submit": "Modifier",
+  "dashboard_change_unavailable": "Configurez un modèle d’assistant pour modifier les tableaux de bord",
+  "dashboard_change_working": "Modification…",
+  "dashboard_delete": "Supprimer…",
+  "dashboard_delete_confirm": "Supprimer le tableau de bord",
+  "dashboard_delete_description": "Le tableau de bord disparaît définitivement. La discussion dont il vient reste dans Demander.",
+  "dashboard_delete_title": "Supprimer « {title} » ?",
+  "dashboard_from_chat": "Depuis",
+  "dashboard_loading": "Chargement du tableau de bord",
+  "dashboard_missing_description": "Il a peut-être été supprimé. Redemandez-le dans Demander.",
+  "dashboard_missing_home": "Retour à l’accueil",
+  "dashboard_missing_title": "Ce tableau de bord n’existe plus",
+  "dashboard_refresh": "Actualiser depuis vos banques",
+  "dashboard_rename": "Renommer",
+  "dashboard_rename_confirm": "Enregistrer",
+  "dashboard_rename_label": "Nom",
+  "dashboard_rename_required": "Donnez un nom au tableau de bord.",
+  "dashboard_rename_title": "Renommer le tableau de bord",
+  "dashboard_rename_too_long": "Restez sous les {max} caractères.",
+  "dashboard_updated": "Mis à jour à {time}",
+  "dashboards_loading": "Chargement de vos tableaux de bord",
+  "dashboards_new_prompt": "Crée-moi un tableau de bord qui montre ",
   "first_steps_budgeting_profile": "Définir votre budget",
   "first_steps_connect_bank": "Connecter votre banque",
   "first_steps_progress": "{done}/{total}",
@@ -804,19 +890,14 @@
   "home_accounts_meta": "{institution} · {type}",
   "home_accounts_no_balance": "Aucun solde transmis",
   "home_accounts_title": "Comptes",
-  "home_asset_class_cash": "Liquidités",
-  "home_asset_class_investments": "Placements",
-  "home_asset_class_other": "Autres",
-  "home_asset_class_property": "Immobilier",
-  "home_asset_class_savings": "Épargne",
-  "home_available_description": "Ce qui reste sur vos comptes courants une fois réglées les charges fixes dues d’ici le {date}.",
-  "home_available_empty": "Vos banques n’ont pas encore transmis de solde de compte courant.",
+  "home_accounts_total": "{amount} au total",
+  "home_add_account": "Ajouter un compte",
+  "home_add_account_description": "Connecter une banque",
+  "home_ask_label": "Posez-moi une question",
+  "home_ask_placeholder": "Posez-moi une question. Une nouvelle discussion s’ouvre dans Demander.",
   "home_available_error": "Impossible de charger ce qu’il vous reste à dépenser.",
-  "home_available_loading": "Chargement de ce qu’il vous reste à dépenser",
-  "home_available_short": "Vos comptes courants ne couvrent pas les charges fixes dues d’ici le {date}.",
   "home_available_title": "Reste à dépenser",
   "home_balance_error": "Impossible de charger votre solde.",
-  "home_balance_loading": "Chargement de votre solde",
   "home_balance_title": "Comptes courants",
   "home_balance_updated": "Mis à jour le {date}",
   "home_categories_empty": "Aucune dépense ce mois-ci pour l’instant.",
@@ -825,64 +906,29 @@
   "home_categories_title": "Principales catégories du mois",
   "home_categories_unsorted": "{amount} pas encore classés dans une catégorie.",
   "home_categories_unsorted_review": "Voir les transactions à classer",
-  "home_insights_description": "Votre patrimoine net, le rythme de vos dépenses et vos placements.",
-  "home_insights_title": "En détail",
-  "home_investments_empty": "Aucun compte de placement connecté. Connectez un compte-titres ou un contrat d’assurance vie pour le suivre ici.",
-  "home_investments_error": "Impossible de charger vos placements.",
-  "home_investments_gain_down": "{amount} ({ratio}) de moins-value latente",
-  "home_investments_gain_up": "{amount} ({ratio}) de plus-value latente",
-  "home_investments_loading": "Chargement de vos placements",
-  "home_investments_title": "Placements",
-  "home_investments_top": [
-    {
-      "declarations": ["input count", "local countPlural = count: plural"],
-      "selectors": ["countPlural"],
-      "match": {
-        "countPlural=one": "Votre ligne",
-        "countPlural=other": "Les plus grosses de vos {count} lignes"
-      }
-    }
-  ],
-  "home_link_connections": "Connexions bancaires",
+  "home_dashboards_ask": "En demander un",
+  "home_dashboards_first": "Demandez votre premier tableau de bord",
+  "home_greeting_afternoon": "Bon après-midi, {name}",
+  "home_greeting_evening": "Bonsoir, {name}",
+  "home_greeting_morning": "Bonjour, {name}",
   "home_net_worth_assets_and_debts": "{assets} d’actifs, {debts} de dettes",
-  "home_net_worth_balances_at": "Soldes au {date}",
   "home_net_worth_empty": "Vos banques n’ont pas encore transmis de solde. Il apparaîtra après la prochaine synchronisation.",
   "home_net_worth_error": "Impossible de charger votre patrimoine net.",
-  "home_net_worth_excluded": [
-    {
-      "declarations": [
-        "input count",
-        "input currency",
-        "local countPlural = count: plural"
-      ],
-      "selectors": ["countPlural"],
-      "match": {
-        "countPlural=one": "{count} compte n’est pas compté : il n’a pas de solde ou n’est pas en {currency}.",
-        "countPlural=other": "{count} comptes ne sont pas comptés : ils n’ont pas de solde ou ne sont pas en {currency}."
-      }
-    }
-  ],
   "home_net_worth_loading": "Chargement de votre patrimoine net",
   "home_net_worth_title": "Patrimoine net",
   "home_no_account_description": "Connectez un compte bancaire pour voir votre patrimoine net, ce qu’il vous reste à dépenser et où va votre argent.",
   "home_no_account_title": "Connecter un compte bancaire",
-  "home_pace_empty": "La comparaison commence le deuxième jour du mois.",
-  "home_pace_title": "Rythme des dépenses",
+  "home_overview_hint": "Depuis le début de {month}, sur tous vos comptes",
+  "home_overview_title": "Vue d’ensemble",
   "home_recent_all": "Toutes les transactions",
-  "home_recent_empty": "Aucune transaction pour l’instant. Elles apparaissent à la prochaine synchronisation de votre banque.",
   "home_recent_error": "Impossible de charger vos dernières transactions.",
   "home_recent_loading": "Chargement de vos dernières transactions",
   "home_recent_title": "Transactions récentes",
   "home_retry": "Réessayer",
-  "home_spent_chart_label": "Dépenses du mois jusqu’à aujourd’hui, jour par jour, face aux mêmes jours du mois dernier",
   "home_spent_error": "Impossible de charger les dépenses du mois.",
-  "home_spent_last_month_series": "Mois dernier",
-  "home_spent_last_month_total": "Mois dernier, {amount} au total",
   "home_spent_less": "{amount} de moins qu’à la même date le mois dernier",
-  "home_spent_loading": "Chargement des dépenses du mois",
   "home_spent_more": "{amount} de plus qu’à la même date le mois dernier",
   "home_spent_same": "Autant qu’à la même date le mois dernier",
-  "home_spent_this_month_series": "Ce mois-ci",
   "home_spent_title": "Dépensé ce mois-ci",
   "home_upcoming_empty": "Aucune charge fixe à payer dans les {days} prochains jours.",
   "home_upcoming_error": "Impossible de charger vos prochains paiements.",
@@ -915,11 +961,13 @@
   "home_upcoming_title": "Prochaines charges fixes",
   "locale_switcher_label": "Langue",
   "mutation_error_generic": "Une erreur est survenue. Réessayez.",
+  "nav_ask": "Demander",
   "nav_bank_account": "Compte bancaire",
   "nav_budget_recurring": "Récurrent",
   "nav_budget_transactions": "Transactions",
-  "nav_group_application": "Application",
+  "nav_dashboards": "Tableaux de bord",
   "nav_home": "Accueil",
+  "nav_new_dashboard": "Nouveau tableau de bord",
   "nav_settings": "Paramètres",
   "nav_tab_bar_label": "Principale",
   "onboarding_back": "Retour",
@@ -1171,7 +1219,7 @@
   "settings_integrations_apply": "Appliquer maintenant",
   "settings_integrations_apply_failed": "Les réglages n’ont pas pu être appliqués. Réessayez.",
   "settings_integrations_apply_needs_bank_provider": "Configurez le fournisseur bancaire avant d’appliquer ces réglages.",
-  "settings_integrations_assistant_api_description": "Répond aux questions envoyées à l’API de l’assistant. L’application n’affiche pas encore l’assistant.",
+  "settings_integrations_assistant_description": "Répond à vos discussions dans Demander, et crée et modifie vos tableaux de bord.",
   "settings_integrations_banking_description": "Relie les banques des membres pour que leurs transactions arrivent toutes seules.",
   "settings_integrations_categorisation_description": "Range les nouvelles transactions dans la bonne catégorie pour tout le monde.",
   "settings_integrations_email_description": "Envoie les codes d’inscription et de réinitialisation, pour que les membres puissent retrouver l’accès à leur compte.",
@@ -1366,7 +1414,7 @@
   "setup_finish_error_bank": "Configurez un fournisseur bancaire à l’étape Banque avant de terminer.",
   "setup_finish_error_generic": "La configuration n’a pas pu être terminée. Réessayez.",
   "setup_finish_title": "Vérifier et terminer",
-  "setup_integration_assistant_api_description": "Répond aux questions envoyées à l’API de l’assistant. L’application n’affiche pas encore l’assistant.",
+  "setup_integration_assistant_description": "Répond à vos discussions dans Demander, et crée et modifie vos tableaux de bord.",
   "setup_integration_assistant_title": "Modèle de l'assistant",
   "setup_integration_banking_description": "Choisissez le service qui connecte les comptes bancaires.",
   "setup_integration_banking_title": "Fournisseur bancaire",
@@ -1492,5 +1540,138 @@
   "update_banner_dismiss": "Masquer l’avis pour la v{version}",
   "update_banner_new_tab": "(s’ouvre dans un nouvel onglet)",
   "update_banner_title": "Freenary v{version} est disponible",
+  "widget_accounts_empty": "Aucun compte bancaire connecté pour l’instant.",
+  "widget_ask_category": "Pourquoi ai-je dépensé {amount} en {category} ce mois-ci ?",
+  "widget_budget_amounts": "{spent} / {planned}",
+  "widget_budget_days_left": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "Encore {count} jour",
+        "countPlural=other": "Encore {count} jours"
+      }
+    }
+  ],
+  "widget_budget_over": ", {amount} au-dessus du budget",
+  "widget_budgets_empty": "Aucun budget défini pour l’instant.",
+  "widget_budgets_error": "Impossible de charger vos budgets.",
+  "widget_budgets_loading": "Chargement de vos budgets",
+  "widget_budgets_set_up": "Définir votre budget",
+  "widget_budgets_title": "Budgets",
+  "widget_income_chart_label": "Entrées et sorties d’argent, mois par mois",
+  "widget_income_empty": "Aucun mouvement d’argent sur ces mois.",
+  "widget_income_error": "Impossible de charger vos revenus et vos dépenses.",
+  "widget_income_loading": "Chargement de vos revenus et de vos dépenses",
+  "widget_income_overspent": "{amount} de plus en sorties qu’en entrées",
+  "widget_income_saved": "{amount} épargnés",
+  "widget_income_title": "Revenus et dépenses",
+  "widget_last_weeks": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} dernière semaine",
+        "countPlural=other": "{count} dernières semaines"
+      }
+    }
+  ],
+  "widget_money_in": "Entrées",
+  "widget_money_out": "Sorties",
+  "widget_net_worth_chart_label": "Patrimoine net à la fin de chaque mois",
+  "widget_net_worth_down": [
+    {
+      "declarations": [
+        "input amount",
+        "input count",
+        "local countPlural = count: plural"
+      ],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "−{amount} sur {count} mois",
+        "countPlural=other": "−{amount} sur {count} mois"
+      }
+    }
+  ],
+  "widget_net_worth_note": "Reconstitué à partir de vos transactions. Les placements comptent pour leur dernière valeur.",
+  "widget_net_worth_series": "Patrimoine net",
+  "widget_net_worth_up": [
+    {
+      "declarations": [
+        "input amount",
+        "input count",
+        "local countPlural = count: plural"
+      ],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "+{amount} sur {count} mois",
+        "countPlural=other": "+{amount} sur {count} mois"
+      }
+    }
+  ],
+  "widget_range_label": "Période",
+  "widget_range_months": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} M",
+        "countPlural=other": "{count} M"
+      }
+    }
+  ],
+  "widget_range_months_name": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} mois",
+        "countPlural=other": "{count} mois"
+      }
+    }
+  ],
+  "widget_spending_by_week_title": "Dépenses par semaine",
+  "widget_spending_chart_label": "Dépenses de chaque semaine, par catégorie",
+  "widget_spending_empty": "Aucune dépense sur ces semaines.",
+  "widget_spending_error": "Impossible de charger vos dépenses par semaine.",
+  "widget_spending_loading": "Chargement de vos dépenses par semaine",
+  "widget_spending_other": "Autres",
+  "widget_spending_week_total": "Total",
+  "widget_stat_available_caption": [
+    {
+      "declarations": [
+        "input date",
+        "input count",
+        "local countPlural = count: plural"
+      ],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "Après {count} facture due d’ici le {date}",
+        "countPlural=other": "Après {count} factures dues d’ici le {date}"
+      }
+    }
+  ],
+  "widget_stat_income_caption": "{amount} sont entrés le mois dernier",
+  "widget_stat_income_error": "Impossible de charger les revenus du mois.",
+  "widget_stat_income_title": "Revenus ce mois-ci",
+  "widget_stat_loading": "Chargement : {label}",
+  "widget_stat_net_worth_caption": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "Sur {count} compte",
+        "countPlural=other": "Sur {count} comptes"
+      }
+    }
+  ],
+  "widget_stat_saved_error": "Impossible de charger votre épargne du mois.",
+  "widget_stat_saved_no_income": "Rien n’est encore entré ce mois-ci",
+  "widget_stat_saved_share": "{share} de ce qui est entré",
+  "widget_stat_saved_short": "{amount} de plus sont sortis qu’entrés",
+  "widget_stat_saved_title": "Épargné ce mois-ci",
+  "widget_stat_unavailable": "Vos banques ne l’ont pas encore communiqué.",
+  "widget_top_categories_hint": "Choisissez-en une pour demander pourquoi",
+  "widget_transactions_empty": "Aucune transaction correspondante sur cette période.",
   "wizard_step_done": "{step} (terminé)"
 }

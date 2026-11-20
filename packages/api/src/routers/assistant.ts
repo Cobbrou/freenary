@@ -4,10 +4,12 @@ import type { UIMessage } from "ai";
 import { z } from "zod";
 
 import {
-  activeConversation,
   appendTurn,
-  archiveActiveConversation,
   conversationMessages,
+  createConversation,
+  deleteConversation,
+  listConversations,
+  ownedConversation,
 } from "../assistant/conversation";
 import { assistantModelId } from "../assistant/provider";
 import {
@@ -46,22 +48,64 @@ const answerPartSchema = z.union([
   }),
 ]);
 
-export const assistantRouter = {
-  getConversation: protectedProcedure.handler(async ({ context }) => {
-    const conversation = await activeConversation(context.session.user.id);
-    const messages = await conversationMessages(conversation.id);
+const conversationInput = z.object({ conversationId: z.string().max(64) });
 
-    return {
-      conversationId: conversation.id,
-      messages: messages.map((message) => ({
-        id: message.id,
-        parts: message.parts,
-        role:
-          message.role === "USER" ? ("user" as const) : ("assistant" as const),
-      })),
-      serverModel: assistantModelId(),
-    };
+const requireConversation = async (userId: string, conversationId: string) => {
+  const conversation = await ownedConversation(userId, conversationId);
+
+  if (!conversation) {
+    throw new ORPCError("NOT_FOUND", { message: "Conversation not found" });
+  }
+
+  return conversation;
+};
+
+export const assistantRouter = {
+  createConversation: protectedProcedure.handler(async ({ context }) => {
+    const { id } = await createConversation(context.session.user.id);
+
+    return { conversationId: id };
   }),
+
+  deleteConversation: protectedProcedure
+    .input(conversationInput)
+    .handler(async ({ context, input }) => {
+      await deleteConversation(context.session.user.id, input.conversationId);
+
+      return { ok: true };
+    }),
+
+  getConversation: protectedProcedure
+    .input(conversationInput)
+    .handler(async ({ context, input }) => {
+      const conversation = await requireConversation(
+        context.session.user.id,
+        input.conversationId
+      );
+
+      const messages = await conversationMessages(conversation.id);
+
+      return {
+        conversationId: conversation.id,
+        messages: messages.map((message) => ({
+          id: message.id,
+          parts: message.parts,
+          role:
+            message.role === "USER"
+              ? ("user" as const)
+              : ("assistant" as const),
+        })),
+        title: conversation.title,
+      };
+    }),
+
+  getStatus: protectedProcedure.handler(() => ({
+    serverModel: assistantModelId(),
+  })),
+
+  listConversations: protectedProcedure.handler(async ({ context }) => ({
+    conversations: await listConversations(context.session.user.id),
+  })),
 
   saveTurn: protectedProcedure
     .input(
@@ -93,13 +137,10 @@ export const assistantRouter = {
         throw new ORPCError("BAD_REQUEST", { message: "Turn too large" });
       }
 
-      const conversation = await activeConversation(context.session.user.id);
-
-      if (conversation.id !== input.conversationId) {
-        throw new ORPCError("NOT_FOUND", {
-          message: "Conversation is not the active one",
-        });
-      }
+      const conversation = await requireConversation(
+        context.session.user.id,
+        input.conversationId
+      );
 
       /* SAFETY: each part is a plain JSON object whose `type` is a string, which is the whole of what `UIMessage["parts"]` guarantees structurally. */
       const parts = answerableParts(input.answer.parts as UIMessage["parts"]);
@@ -120,10 +161,4 @@ export const assistantRouter = {
 
       return { ok: true };
     }),
-
-  startNewConversation: protectedProcedure.handler(async ({ context }) => {
-    await archiveActiveConversation(context.session.user.id);
-
-    return { ok: true };
-  }),
 };

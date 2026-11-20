@@ -6,50 +6,45 @@ interface FilterTokenChipProps {
   id?: string;
   isPending?: boolean;
   onRemove?: () => void;
-  operator?: string;
   removeLabel?: string;
   value?: string;
 }
-
-const SEGMENT = "flex h-full min-w-0 items-center px-1.5";
 
 export const FilterTokenChip = ({
   field,
   id,
   isPending = false,
   onRemove,
-  operator,
   removeLabel,
   value,
 }: FilterTokenChipProps) => (
   <span
-    id={id}
     className={cn(
-      "inline-flex h-5 max-w-full shrink-0 items-center overflow-hidden rounded text-[11px] leading-none",
-      isPending && "ring-border ring-1 ring-inset"
+      "inline-flex h-6 max-w-full shrink-0 items-center overflow-hidden rounded-md text-xs",
+      isPending
+        ? "border-border border border-dashed"
+        : "ring-border ring-1 ring-inset"
     )}
+    id={id}
   >
-    <span className={cn(SEGMENT, "bg-active text-foreground font-medium")}>
+    <span className="bg-muted text-muted-foreground flex h-full items-center px-1.5 lowercase">
       {field}
     </span>
-    {operator && (
-      <span className={cn(SEGMENT, "bg-hover text-muted-foreground")}>
-        {operator}
-      </span>
-    )}
     {value && (
-      <span className={cn(SEGMENT, "bg-hover text-foreground max-w-56")}>
-        <span className="truncate">{value}</span>
+      <span className="text-foreground flex h-full max-w-56 min-w-0 items-center ps-1.5 pe-1">
+        <span className="truncate" title={value}>
+          {value}
+        </span>
       </span>
     )}
     {onRemove && (
       <button
         aria-label={removeLabel}
-        className="bg-hover text-muted-foreground hover:text-foreground hover:bg-active flex h-full items-center pr-1 pl-0.5 outline-none focus-visible:ring-1 focus-visible:ring-[color:var(--focus-ring,#6B97FF)] focus-visible:ring-inset"
+        className="text-muted-foreground hover:text-foreground focus-visible:ring-ring/50 flex h-full items-center px-1.5 outline-none focus-visible:ring-2 focus-visible:ring-inset"
         onClick={onRemove}
         type="button"
       >
-        <RiCloseLine aria-hidden="true" className="size-3" />
+        <RiCloseLine aria-hidden="true" className="size-3.5" />
       </button>
     )}
   </span>

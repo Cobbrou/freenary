@@ -26,6 +26,7 @@ const TOOL_PURPOSES = {
   get_fixed_vs_variable: m.assistant_tool_fixed_vs_variable_purpose,
   get_recurring_expenses: m.assistant_tool_recurring_purpose,
   get_spending_by_group: m.assistant_tool_spending_purpose,
+  save_dashboard: m.assistant_tool_dashboard_purpose,
   search_transactions: m.assistant_tool_transactions_purpose,
 } satisfies Record<AssistantToolName, () => string>;
 
@@ -91,6 +92,7 @@ const RESULT_SUMMARIES = {
     expenses && ROW_COUNT_MESSAGES.expenses({ count: expenses.length }),
   get_spending_by_group: ({ categories }: ToolOutput) =>
     categories && ROW_COUNT_MESSAGES.categories({ count: categories.length }),
+  save_dashboard: () => m.assistant_result_dashboard(),
   search_transactions: ({ transactions }: ToolOutput) =>
     transactions &&
     ROW_COUNT_MESSAGES.transactions({ count: transactions.length }),

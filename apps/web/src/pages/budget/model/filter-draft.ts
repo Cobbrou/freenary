@@ -9,6 +9,7 @@ import type {
   TransactionFilter,
   TransactionFilterField,
 } from "@freenary/api/lib/transaction-filters";
+import { Match } from "effect";
 
 export interface OperatorDraft {
   field: TransactionFilterField;
@@ -35,7 +36,14 @@ export interface CompanyDraft {
   values: string[];
 }
 
-export type ValuesDraft = CategoryDraft | CompanyDraft;
+export interface AccountDraft {
+  field: "account";
+  operator: ListFilterOperator;
+  stage: "values";
+  values: string[];
+}
+
+export type ValuesDraft = AccountDraft | CategoryDraft | CompanyDraft;
 
 export type FilterDraft = AmountDraft | OperatorDraft | ValuesDraft;
 
@@ -59,7 +67,7 @@ export const withOperator = (
     return { field: "amount", operator, stage: "amount" };
   }
 
-  if (field === "category") {
+  if (field === "category" || field === "account") {
     return { field, operator, stage: "values", values: [] };
   }
 
@@ -95,6 +103,11 @@ export const withCategory = (
 export const withCompany = (draft: CompanyDraft, name: string): CompanyDraft =>
   withPicked(draft, name);
 
+export const withAccount = (
+  draft: AccountDraft,
+  accountId: string
+): AccountDraft => withPicked(draft, accountId);
+
 export const isReadyToApply = (draft: ValuesDraft) =>
   !takesSeveralValues(draft.operator) && draft.values.length === 1;
 
@@ -103,9 +116,25 @@ export const appliedValues = (draft: ValuesDraft): TransactionFilter | null => {
     return null;
   }
 
-  return draft.field === "category"
-    ? { field: "category", operator: draft.operator, values: draft.values }
-    : { field: "company", operator: draft.operator, values: draft.values };
+  return Match.value(draft).pipe(
+    Match.discriminatorsExhaustive("field")({
+      account: ({ operator, values }): TransactionFilter => ({
+        field: "account",
+        operator,
+        values,
+      }),
+      category: ({ operator, values }): TransactionFilter => ({
+        field: "category",
+        operator,
+        values,
+      }),
+      company: ({ operator, values }): TransactionFilter => ({
+        field: "company",
+        operator,
+        values,
+      }),
+    })
+  );
 };
 
 export const appliedAmount = (
@@ -118,9 +147,22 @@ export const appliedAmount = (
 });
 
 const withoutLastValue = (draft: ValuesDraft): ValuesDraft =>
-  draft.field === "category"
-    ? { ...draft, values: draft.values.slice(0, -1) }
-    : { ...draft, values: draft.values.slice(0, -1) };
+  Match.value(draft).pipe(
+    Match.discriminatorsExhaustive("field")({
+      account: (account) => ({
+        ...account,
+        values: account.values.slice(0, -1),
+      }),
+      category: (category) => ({
+        ...category,
+        values: category.values.slice(0, -1),
+      }),
+      company: (company) => ({
+        ...company,
+        values: company.values.slice(0, -1),
+      }),
+    })
+  );
 
 export const stepBack = (draft: FilterDraft): FilterDraft | null => {
   if (draft.stage === "operator") {

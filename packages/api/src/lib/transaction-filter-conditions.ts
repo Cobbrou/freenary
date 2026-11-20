@@ -4,6 +4,7 @@ import { Match } from "effect";
 import { categoriesInGroup, isCategoryGroup } from "./taxonomy";
 import type { SpendingCategory } from "./taxonomy";
 import type {
+  AccountTransactionFilter,
   AmountFilterOperator,
   AmountTransactionFilter,
   CategoryFilterValue,
@@ -109,6 +110,14 @@ const categoryCondition = ({ operator, values }: CategoryTransactionFilter) => {
     : categoryIsOneOf(categories);
 };
 
+const accountCondition = ({
+  operator,
+  values,
+}: AccountTransactionFilter): Condition =>
+  operator === "isNot"
+    ? { accountId: { notIn: [...values] } }
+    : { accountId: { in: [...values] } };
+
 const ABSOLUTE_AMOUNT_CONDITIONS = {
   eq: (minorUnits) => ({ amount: { in: [minorUnits, -minorUnits] } }),
   gt: (minorUnits) => ({
@@ -122,6 +131,7 @@ const amountCondition = ({ operator, value }: AmountTransactionFilter) =>
 
 const conditionOf = Match.type<TransactionFilter>().pipe(
   Match.discriminatorsExhaustive("field")({
+    account: accountCondition,
     amount: amountCondition,
     category: categoryCondition,
     company: companyCondition,

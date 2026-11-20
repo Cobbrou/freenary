@@ -4,6 +4,7 @@ import type { TransactionFilter } from "@freenary/api/lib/transaction-filters";
 
 import {
   companySuggestions,
+  accountSuggestions,
   fieldSuggestions,
   highlightsByDefault,
   lastWordOf,
@@ -138,11 +139,34 @@ describe("suggestions", () => {
     expect(fieldSuggestions("").map((s) => s.label)).toEqual([
       "Company",
       "Category",
+      "Account",
       "Amount",
     ]);
 
     expect(fieldSuggestions("CA").map((s) => s.label)).toEqual(["Category"]);
     expect(fieldSuggestions("uber")).toEqual([]);
+  });
+
+  it("offers the accounts whose name matches, marking the picked ones", () => {
+    const draft = {
+      field: "account" as const,
+      operator: "isAnyOf" as const,
+      stage: "values" as const,
+      values: ["livret"],
+    };
+
+    expect(
+      accountSuggestions(
+        draft,
+        [
+          { id: "checking", label: "Compte de chèques" },
+          { id: "livret", label: "Livret A" },
+        ],
+        "liv"
+      )
+    ).toEqual([
+      { accountId: "livret", kind: "account", label: "Livret A", picked: true },
+    ]);
   });
 
   it("reads and drops the last word of the free text", () => {

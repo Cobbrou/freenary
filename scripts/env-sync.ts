@@ -130,8 +130,8 @@ const SECTIONS: Section[] = [
     preamble: [
       "AI assistant — optional. Any OpenAI-compatible chat-completions endpoint: a",
       "gateway (OpenRouter, Groq), OpenAI itself, or a local runtime (Ollama, vLLM).",
-      "Set, it answers the assistant API (POST /ai/chat); the app does not show the",
-      "assistant at the moment.",
+      "Set, it answers chats in Ask, builds and changes dashboards, and serves the",
+      "assistant API (POST /ai/chat).",
     ],
     title: "Assistant",
   },

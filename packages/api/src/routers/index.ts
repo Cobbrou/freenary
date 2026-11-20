@@ -5,6 +5,7 @@ import { assistantRouter } from "./assistant";
 import { authRouter } from "./auth";
 import { bankConnectionRouter } from "./bank-connection";
 import { budgetRouter } from "./budget";
+import { dashboardsRouter } from "./dashboards";
 import { instanceRouter } from "./instance";
 import { onboardingRouter } from "./onboarding";
 import { portfolioRouter } from "./portfolio";
@@ -15,6 +16,7 @@ export const appRouter = {
   auth: authRouter,
   bankConnection: bankConnectionRouter,
   budget: budgetRouter,
+  dashboards: dashboardsRouter,
   healthCheck: publicProcedure.handler(() => "OK"),
   instance: instanceRouter,
   onboarding: onboardingRouter,

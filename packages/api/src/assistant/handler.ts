@@ -12,11 +12,11 @@ import { isJsonRequest } from "../lib/json-request";
 import { consumeRateLimit } from "../lib/rate-limit";
 import { appRouter } from "../routers/index";
 import {
-  activeConversation,
   appendTurn,
   conversationMessages,
+  ownedConversation,
 } from "./conversation";
-import { assistantSystemPrompt } from "./prompt";
+import { assistantSystemPrompt, promptDashboards } from "./prompt";
 import { assistantModel } from "./provider";
 import { assistantTools } from "./tools";
 import {
@@ -50,6 +50,8 @@ const questionSchema = z.looseObject({
 });
 
 const chatRequestSchema = z.object({
+  dashboardId: z.string().max(64).optional(),
+  id: z.string().max(64),
   locale: z.string().regex(LOCALE).optional(),
   messageId: z.string().optional(),
   messages: z.array(z.looseObject({ role: z.string() })).default([]),
@@ -159,10 +161,15 @@ export const handleAssistantChat = async ({
     context: { auth: null, headers: request.headers, session },
   });
 
-  const [conversation, accounts] = await Promise.all([
-    activeConversation(session.user.id),
+  const [conversation, accounts, dashboards] = await Promise.all([
+    ownedConversation(session.user.id, body.id),
     api.budget.getAccounts(),
+    promptDashboards(api, body.dashboardId),
   ]);
+
+  if (!conversation) {
+    return new Response("not_found", { status: 404 });
+  }
 
   const stored = await conversationMessages(conversation.id);
 
@@ -199,13 +206,14 @@ export const handleAssistantChat = async ({
     instructions: assistantSystemPrompt(
       accounts,
       body.locale ?? "en",
-      body.today ?? new Date().toISOString().slice(0, 10)
+      body.today ?? new Date().toISOString().slice(0, 10),
+      dashboards
     ),
     messages: await convertToModelMessages(originalMessages),
     model: ai.wrap(model),
     stopWhen: stepCountIs(MAX_STEPS),
     toolChoice: "auto",
-    tools: assistantTools(api),
+    tools: assistantTools(api, { conversationId: conversation.id }),
   });
 
   const answerId = crypto.randomUUID();

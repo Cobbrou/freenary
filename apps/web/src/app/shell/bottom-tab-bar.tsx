@@ -18,7 +18,7 @@ export const BottomTabBar = () => {
       data-slot="bottom-tab-bar"
       className="bg-background/95 supports-[backdrop-filter]:bg-background/80 border-border fixed inset-x-0 bottom-0 z-40 border-t backdrop-blur md:hidden"
     >
-      <ul className="mx-auto grid max-w-md grid-cols-4">
+      <ul className="mx-auto grid max-w-md grid-cols-5">
         {NAV_ITEMS.map((item) => {
           const isCurrent = isCurrentNav(pathname, item.to);
 
