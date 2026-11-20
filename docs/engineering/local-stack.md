@@ -11,13 +11,13 @@ Two paths run Freenary on your machine. The containerised path runs every part i
 
 ## The containerised path
 
-`bun run dev:up` is `bun scripts/dev.ts up --build --watch`. One command builds the images, applies the migrations and starts five services. `bun run dev:mail` adds a sixth service, Mailpit.
+`bun run dev:up` is `bun scripts/dev.ts up --build --watch`. One command builds the images, applies the migrations and starts five services. `bun run dev:mail` adds Mailpit, and `bun run dev:ai` adds `ai`, a scripted model for the assistant.
 
 The stack needs no `.env` file. The `server` service declares `env_file` with `path: .env` and `required: false`, so an absent file is valid. Its `environment` block holds the six values the stack derives: `DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `CORS_ORIGIN`, `AUTH_COOKIE_DOMAIN` and `NODE_ENV`. Compose gives `environment` precedence over `env_file`, so those six always win. Every other variable of a root `.env` reaches the container. The stack sets no bank provider: with no `BANKING_PROVIDER` in the root `.env`, the setup screen's **Bank** step makes the operator pick one, `mock` included.
 
 ### The services
 
-`docker-compose.dev.yml` declares five services. Every service but `postgres` builds from `.docker/dockerfile.dev`. `docker-compose.mail.yml` adds the sixth, `mailpit`.
+`docker-compose.dev.yml` declares five services. Every service but `postgres` builds from `.docker/dockerfile.dev`. `docker-compose.mail.yml` adds `mailpit`, and `docker-compose.ai.yml` adds `ai`.
 
 | Service | Image or build | Working directory | Command | Reachability |
 | --- | --- | --- | --- | --- |
@@ -27,6 +27,7 @@ The stack needs no `.env` file. The `server` service declares `env_file` with `p
 | `web` | `.docker/dockerfile.dev` | `/app/apps/web` | `bun run dev -- --host 0.0.0.0` | Kiri labels, port `3001` |
 | `docs` | `.docker/dockerfile.dev` | `/app/apps/fumadocs` | `bun run dev -- --host 0.0.0.0` | Kiri labels, port `4000` |
 | `mailpit` | `axllent/mailpit:v1.28` | image default | image default | Kiri labels, port `8025`. Only with `--mail` |
+| `ai` | `node:22-alpine` | image default | `npx emulate@0.14.0 start --service ai` | `expose` `4000`, no Kiri labels. Only with `--ai` |
 
 Only `server` loads the root `.env` and the derived values. The `web` service gets `VITE_SERVER_URL` and `SERVER_URL`, which defaults to `http://server:3000`. A server-rendered page therefore reaches the API over the container network. Each stack has a network of its own, so that name never reaches the API of another worktree. The `docs` service gets `DOCS_PORT`, which no code reads.
 
@@ -34,17 +35,18 @@ The `web` and `docs` services also get `DEV_PUBLIC_URL`, their public address. T
 
 The `bootstrap` service is one-shot. It waits for `postgres` to report healthy, then applies the migrations. The `server` service waits for it with the condition `service_completed_successfully`, so the schema lands first. Bootstrap re-runs on every `up`, and it exits `0` when the schema is already current.
 
-### The five scripts
+### The scripts
 
 | Script | Literal command | The `docker compose` call |
 | --- | --- | --- |
 | `bun run dev:up` | `bun scripts/dev.ts up --build --watch` | `docker compose -p freenary-<slug> -f docker-compose.dev.yml up --build --watch` |
 | `bun run dev:mail` | `bun scripts/dev.ts --mail up --build --watch` | the same prefix with a second `-f docker-compose.mail.yml`, then `up --build --watch` |
+| `bun run dev:ai` | `bun scripts/dev.ts --ai up --build --watch` | the same prefix with `-f docker-compose.ai.yml`, then `up --build --watch` |
 | `bun run dev:down` | `bun scripts/dev.ts down` | the same prefix, then `down` |
 | `bun run dev:logs` | `bun scripts/dev.ts logs -f` | the same prefix, then `logs -f` |
 | `bun run dev:reset` | `bun scripts/dev.ts reset` | `down -v`, then `up --build --watch` |
 
-`reset` and `--mail` are the two arguments the wrapper owns. Every other argument reaches `docker compose` unchanged, always with the project name of this worktree:
+`reset`, `--mail` and `--ai` are the three arguments the wrapper owns. Every other argument reaches `docker compose` unchanged, always with the project name of this worktree:
 
 ```bash
 bun scripts/dev.ts ps
@@ -205,6 +207,8 @@ Work on those flows through `bun run dev:mail`. It sets `EMAIL_PROVIDER` to `smt
 
 Read the code in that inbox, then type it in the form. The local path sets no email provider either, so a sign-up there returns a session at once.
 
+`bun run dev:ai` sets `AI_BASE_URL` to `http://ai:4000/v1` and `AI_MODEL` to `emulated`, which win over a model saved in Settings. The `ai` service runs the [emulate](https://emulate.dev/docs/ai) AI service with `--base-url http://ai:4000`, because the emulator answers only loopback names and the host of its base URL. The rules in `.docker/ai-rules.yaml` decide every reply, and `develop.watch` restarts the service when that file changes.
+
 ## Reset
 
 `bun run dev:reset` destroys the `pgdata` volume of this worktree, so every row goes. The next `up` re-runs `bootstrap`, and you get an empty database with a current schema. The command touches no other project name, so the volume of another worktree survives.
@@ -286,10 +290,11 @@ bun run build
 | 6 | Environment | `bun run env:check` | `scripts/env-sync.ts --check`, which compares `.env.example` and the configuration reference against `packages/env/src/schema.ts` |
 | 7 | Build | `bun run build` | `turbo run build`, which builds the three applications |
 
-The `compose` job needs no Bun and no install. It runs `docker compose config --quiet` seven times:
+The `compose` job needs no Bun and no install. It runs `docker compose config --quiet` eight times:
 
 - Against `docker-compose.dev.yml`, the development stack.
 - With `-f docker-compose.mail.yml` added, the Mailpit layer over it.
+- With `-f docker-compose.ai.yml` added, the scripted-model layer over it.
 - Against `docker-compose.yml`, the production stack, with a temporary `.env` that sets `POSTGRES_PASSWORD` and `BETTER_AUTH_SECRET`.
 - Against `docker-compose.yml` with an empty `.env`, which must fail. A pass means the production file accepted two empty secrets, so the job fails.
 - Against `deploy/docker-compose.yml`, with a temporary `deploy/.env` that sets `FREENARY_URL`, `POSTGRES_PASSWORD` and `BETTER_AUTH_SECRET`.

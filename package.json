@@ -52,6 +52,7 @@
     "db:down": "docker compose down postgres",
     "dev:up": "bun scripts/dev.ts up --build --watch",
     "dev:mail": "bun scripts/dev.ts --mail up --build --watch",
+    "dev:ai": "bun scripts/dev.ts --ai up --build --watch",
     "dev:down": "bun scripts/dev.ts down",
     "dev:logs": "bun scripts/dev.ts logs -f",
     "dev:reset": "bun scripts/dev.ts reset",

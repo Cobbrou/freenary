@@ -1,0 +1,45 @@
+ai:
+  rules:
+    - id: overview-call
+      match:
+        {
+          textContains: accounts,
+          tool: get_accounts_overview,
+          hasToolResult: false,
+        }
+      reply:
+        - type: tool_call
+          name: get_accounts_overview
+          arguments: {}
+    - id: overview-answer
+      match: { hasToolResult: true }
+      reply:
+        - type: text
+          text: Here are your accounts, as the overview tool returned them.
+    - id: slow
+      match: { textContains: "[slow]" }
+      timing: { ttftMs: 3000, chunkDelayMs: 150 }
+      reply:
+        - type: text
+          text: This answer starts late and streams slowly, so you can watch the waiting and streaming states.
+    - id: rate-limited
+      match: { textContains: "[429]" }
+      error: { status: 429, message: Slow down. }
+    - id: cut-short
+      match: { textContains: "[length]" }
+      finish: length
+      reply:
+        - type: text
+          text: This answer stops early
+    - id: stall
+      match: { textContains: "[stall]", stream: true }
+      fault: { kind: stall, afterChunks: 2, stallMs: 30000 }
+      reply:
+        - type: text
+          text: This answer pauses for thirty seconds after a few words, then finishes.
+    - id: disconnect
+      match: { textContains: "[disconnect]", stream: true }
+      fault: { kind: disconnect, afterChunks: 2 }
+      reply:
+        - type: text
+          text: This answer loses its connection after a few words.

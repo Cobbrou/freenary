@@ -10,6 +10,8 @@ import type { DevScheme } from "./dev-identity";
 const DEV_COMPOSE_FILE = "docker-compose.dev.yml";
 const MAIL_COMPOSE_FILE = "docker-compose.mail.yml";
 const MAIL_FLAG = "--mail";
+const AI_COMPOSE_FILE = "docker-compose.ai.yml";
+const AI_FLAG = "--ai";
 const WORKTREE_ENV_FILE = ".env";
 const DETACHED_HEAD_REF = "HEAD";
 const RESET_VERB = "reset";
@@ -115,7 +117,11 @@ const resolveScheme = (): DevScheme | null => {
 const main = (): number => {
   const argv = process.argv.slice(2);
   const withMail = argv.includes(MAIL_FLAG);
-  const rest = argv.filter((argument) => argument !== MAIL_FLAG);
+  const withAi = argv.includes(AI_FLAG);
+  const rest = argv.filter(
+    (argument) => argument !== MAIL_FLAG && argument !== AI_FLAG
+  );
+
   const scheme = resolveScheme();
 
   if (scheme === null) {
@@ -152,10 +158,11 @@ const main = (): number => {
     "-f",
     DEV_COMPOSE_FILE,
     ...(withMail ? ["-f", MAIL_COMPOSE_FILE] : []),
+    ...(withAi ? ["-f", AI_COMPOSE_FILE] : []),
   ];
 
   process.stdout.write(
-    `[freenary dev] worktree "${identity.slug}"\n  web     ${identity.corsOrigin}\n  server  ${identity.betterAuthUrl}\n  docs    ${identity.docsUrl}\n${withMail ? `  mail    ${identity.mailUrl}\n` : ""}  project ${identity.composeProjectName}\n`
+    `[freenary dev] worktree "${identity.slug}"\n  web     ${identity.corsOrigin}\n  server  ${identity.betterAuthUrl}\n  docs    ${identity.docsUrl}\n${withMail ? `  mail    ${identity.mailUrl}\n` : ""}${withAi ? `  ai      scripted model, rules in .docker/ai-rules.yaml\n` : ""}  project ${identity.composeProjectName}\n`
   );
 
   const startsTheStack = STARTING_VERBS[rest[0] ?? ""] === true;

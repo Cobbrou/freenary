@@ -40,6 +40,7 @@ const COMPOSE_FILES = [
   "docker-compose.yml",
   "docker-compose.dev.yml",
   "docker-compose.mail.yml",
+  "docker-compose.ai.yml",
   "deploy/docker-compose.yml",
 ];
 

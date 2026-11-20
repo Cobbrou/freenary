@@ -1,0 +1,43 @@
+name: freenary
+
+# A scripted model for the assistant, with no API key and no model download:
+# the emulate AI service answers OpenAI chat completions from the rules in
+# .docker/ai-rules.yaml, the same way on every run. `bun run dev:ai` layers
+# this file over docker-compose.dev.yml.
+
+services:
+  ai:
+    image: node:22-alpine
+    command:
+      - npx
+      - --yes
+      - emulate@0.14.0
+      - start
+      - --service
+      - ai
+      - --port
+      - "4000"
+      - --host
+      - 0.0.0.0
+      - --base-url
+      - http://ai:4000
+      - --seed
+      - /rules/ai-rules.yaml
+    volumes:
+      - ./.docker/ai-rules.yaml:/rules/ai-rules.yaml:ro
+    expose:
+      - "4000"
+    restart: unless-stopped
+    develop:
+      watch:
+        - action: sync+restart
+          path: ./.docker/ai-rules.yaml
+          target: /rules/ai-rules.yaml
+
+  server:
+    environment:
+      AI_BASE_URL: http://ai:4000/v1
+      AI_MODEL: emulated
+    depends_on:
+      ai:
+        condition: service_started

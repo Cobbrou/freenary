@@ -50,6 +50,8 @@ There's no seed data. Create an account on the sign-in screen: with no email pro
 
 To work on emailed codes, start with `bun run dev:mail` instead. It adds a Mailpit inbox at `https://mail.<slug>.freenary.kiri.localhost`, and the server sends every email there.
 
+To work on Ask without an API key or a model download, start with `bun run dev:ai`. It adds a scripted model and points `AI_BASE_URL` and `AI_MODEL` at it. The model is not a language model: the rules in `.docker/ai-rules.yaml` decide every reply, and a question that no rule matches comes back as written. A question containing `accounts`, in lowercase, calls the accounts tool. Put `[slow]`, `[429]`, `[length]`, `[stall]` or `[disconnect]` in a question to see a slow answer, a refused request, an answer cut short, a stream that pauses for 30 seconds, or a stream that drops. The stack reloads the rules file when you save it.
+
 ### Bank data without credentials
 
 The first account you create lands on the setup screen, and its **Bank** step asks you to pick one bank provider before you can go on. Outside production it offers **Mock bank (development only)** beside Powens and Enable Banking. The step opens on Powens; switch to the mock bank to get bank data with no credentials. `bun run dev:up` sets no bank provider: set `BANKING_PROVIDER` in `.env` only when you want the environment to choose it instead of the setup screen.
