@@ -324,14 +324,20 @@ export const checkGaps = (runs: readonly CheckRun[]): Gap[] =>
         ];
   });
 
-const DOCS_PATH = /^apps\/fumadocs\/content\/docs\/next\//u;
+const DOCS_PATH = /^docs\//u;
+
+const GENERATED_DOCS_PATH =
+  /^docs\/reference\/(?:configuration\.md|api\.md|commands\.md|compose-files\.md|openapi\.json)$/u;
+
+const isWrittenDoc = (file: string): boolean =>
+  DOCS_PATH.test(file) && !GENERATED_DOCS_PATH.test(file);
 
 const DOCUMENTED_BEHAVIOUR_PATH =
   /^(?:apps\/web\/src\/|apps\/server\/src\/|packages\/(?:api|auth|db|email|env|instance-config)\/src\/|packages\/db\/prisma\/|docker-compose[^/]*\.yml$|\.github\/workflows\/|package\.json$)/u;
 
 export const docsExpected = (files: readonly string[]): boolean =>
   files.some((file) => DOCUMENTED_BEHAVIOUR_PATH.test(file)) &&
-  !files.some((file) => DOCS_PATH.test(file));
+  !files.some(isWrittenDoc);
 
 export type ReadinessStatus =
   | "blocked"

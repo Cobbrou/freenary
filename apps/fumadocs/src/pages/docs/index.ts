@@ -1,6 +1,2 @@
-export {
-  loadDoc,
-  type LoadedDoc,
-  type NewestReleaseLink,
-} from "./api/load-doc";
+export { loadDoc, type LoadedDoc } from "./api/load-doc";
 export { DocumentationPage } from "./ui/documentation-page";

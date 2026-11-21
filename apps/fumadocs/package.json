@@ -10,13 +10,12 @@
     "build": "vite build",
     "start": "vite preview",
     "preview": "vite preview",
-    "docs:check": "bun scripts/check-docs.ts",
-    "docs:snapshot": "bun scripts/snapshot-version.ts",
     "lint": "oxlint",
     "lint:fsd": "steiger src --fail-on-warnings"
   },
   "dependencies": {
     "@ai-sdk/react": "^4.0.65",
+    "@freenary/ui": "workspace:*",
     "@openrouter/ai-sdk-provider": "^3.0.0",
     "@tanstack/react-router": "1.170.46",
     "@tanstack/react-router-devtools": "1.167.3",

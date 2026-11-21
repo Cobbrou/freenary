@@ -7,59 +7,48 @@ import {
 import { isMarkdownPreferred } from "fumadocs-core/negotiation";
 
 import { docsRoute } from "@/shared/config";
-import { newestRelease } from "@/shared/content";
+import { markdownUrlOf, source, versionedRedirectOf } from "@/shared/content";
 import { encodeMarkdownUrl } from "@/shared/lib/markdown-url";
-import { isVersionId } from "@/shared/lib/versions";
 
-const LEADING_SLASH = /^\//;
-
-const MARKDOWN_EXTENSION = /\.md$/;
+const FILE_EXTENSION = /\.[a-z]+$/i;
 
 const csrfMiddleware = createCsrfMiddleware({
   filter: (ctx) => ctx.handlerType === "serverFn",
 });
 
-const unversionedDocsRedirect = createMiddleware().server(
-  ({ next, request }) => {
-    const url = new URL(request.url);
-    const insideDocs =
-      url.pathname === docsRoute || url.pathname.startsWith(`${docsRoute}/`);
+const isInsideDocs = (pathname: string) =>
+  pathname === docsRoute || pathname.startsWith(`${docsRoute}/`);
 
-    if (!insideDocs) {
-      return next();
-    }
+const versionedDocsRedirect = createMiddleware().server(({ next, request }) => {
+  const url = new URL(request.url);
+  const target = versionedRedirectOf(url.pathname);
 
-    const rest = url.pathname
-      .slice(docsRoute.length)
-      .replace(LEADING_SLASH, "");
-
-    const [firstSegment] = rest.split("/");
-
-    if (isVersionId(firstSegment.replace(MARKDOWN_EXTENSION, ""))) {
-      return next();
-    }
-
-    url.pathname = [docsRoute, newestRelease(), rest].filter(Boolean).join("/");
-
-    throw redirect({ href: url.href });
+  if (target === undefined) {
+    return next();
   }
-);
+
+  url.pathname = target;
+
+  throw redirect({ href: url.href });
+});
 
 const markdownRepresentationRedirect = createMiddleware().server(
   ({ next, request }) => {
     const url = new URL(request.url);
 
     if (
-      url.pathname.startsWith(docsRoute) &&
-      !url.pathname.endsWith(".md") &&
+      isInsideDocs(url.pathname) &&
+      !FILE_EXTENSION.test(url.pathname) &&
       isMarkdownPreferred(request)
     ) {
       const slugs = url.pathname
         .slice(docsRoute.length)
         .split("/")
-        .filter((v) => v.length > 0);
+        .filter((segment) => segment.length > 0);
 
-      url.pathname = encodeMarkdownUrl(slugs);
+      const page = source.getPage(slugs);
+
+      url.pathname = page ? markdownUrlOf(page) : encodeMarkdownUrl(slugs);
 
       throw redirect({ href: url.href, headers: { Vary: "Accept" } });
     }
@@ -72,7 +61,7 @@ export const startInstance = createStart(() => {
   return {
     requestMiddleware: [
       csrfMiddleware,
-      unversionedDocsRedirect,
+      versionedDocsRedirect,
       markdownRepresentationRedirect,
     ],
   };

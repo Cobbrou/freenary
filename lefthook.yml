@@ -15,8 +15,14 @@ pre-commit:
       run: bun oxfmt --write {staged_files}
       stage_fixed: true
     - name: env-sync
-      # The schema is the only authored source: .env.example and the
-      # configuration reference are generated from it.
-      glob: "{packages/env/src/schema*.ts,docker-compose*.yml,scripts/env-sync.ts}"
-      run: bun run env:sync
-      stage_fixed: true
+      # The schema is the only authored source: .env.example and
+      # docs/reference/configuration.md are generated from it. stage_fixed
+      # restages only the matched files, so the outputs are added explicitly.
+      glob: "{packages/env/src/schema*.ts,docker-compose*.yml,deploy/docker-compose.yml,scripts/env-sync.ts,scripts/docs-markdown.ts}"
+      run: bun run env:sync && git add .env.example docs/reference/configuration.md
+    - name: docs-reference
+      # The API, commands and compose-file reference pages and the OpenAPI
+      # document are generated from the router, the server entry, the root
+      # package.json and the compose files.
+      glob: "{package.json,docker-compose*.yml,deploy/docker-compose.yml,apps/server/src/index.ts,packages/api/src/**/*.ts,scripts/docs-reference.ts,scripts/docs-markdown.ts}"
+      run: bun run docs:generate && git add docs/reference/openapi.json docs/reference/api.md docs/reference/commands.md docs/reference/compose-files.md

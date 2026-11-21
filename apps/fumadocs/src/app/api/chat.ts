@@ -9,7 +9,7 @@ import {
 } from "ai";
 import { z } from "zod";
 
-import { listVersions, newestRelease, source } from "@/shared/content";
+import { source } from "@/shared/content";
 import { ChatUIMessage, SearchTool } from "@/shared/ui/ai-search";
 
 import { guardChatRequest } from "./chat-guard";
@@ -28,10 +28,7 @@ const MAX_OUTPUT_TOKENS = 1024;
 
 const DEFAULT_MODEL = "anthropic/claude-3.5-sonnet";
 
-const indexByVersion = new Map<
-  string,
-  Promise<ReturnType<typeof createSectionIndex>>
->();
+let searchServer: Promise<ReturnType<typeof createSectionIndex>> | undefined;
 
 const openrouter = createOpenRouter({
   apiKey: process.env.OPENROUTER_API_KEY,
@@ -44,41 +41,34 @@ const systemPrompt = [
   "If you cannot find the answer in search results, say you do not know and suggest a better search query.",
 ].join("\n");
 
-const searchTool = (version: string) =>
-  tool({
-    description:
-      "Search the docs and return the matching sections, each with a short excerpt.",
-    inputSchema: z.object({
-      query: z.string(),
-      limit: z
-        .number()
-        .int()
-        .min(1)
-        .max(MAX_SEARCH_RESULTS)
-        .default(MAX_SEARCH_RESULTS),
-    }),
-    async execute({ query, limit }) {
-      return await searchSections(await searchServerFor(version), query, limit);
-    },
-  }) satisfies SearchTool;
+const searchTool = tool({
+  description:
+    "Search the docs and return the matching sections, each with a short excerpt.",
+  inputSchema: z.object({
+    query: z.string(),
+    limit: z
+      .number()
+      .int()
+      .min(1)
+      .max(MAX_SEARCH_RESULTS)
+      .default(MAX_SEARCH_RESULTS),
+  }),
+  async execute({ query, limit }) {
+    return await searchSections(await getSearchServer(), query, limit);
+  },
+}) satisfies SearchTool;
 
 export const chatHandler = async (ctx: { request: Request }) => {
   const chatRequest = await guardChatRequest(ctx.request);
 
   if (chatRequest instanceof Response) return chatRequest;
 
-  const requestedVersion = chatRequest.version;
-  const version =
-    requestedVersion !== undefined && listVersions().includes(requestedVersion)
-      ? requestedVersion
-      : newestRelease();
-
   const stream = streamText({
     model: openrouter.chat(process.env.OPENROUTER_MODEL ?? DEFAULT_MODEL),
     stopWhen: stepCountIs(MAX_TOOL_STEPS),
     maxOutputTokens: MAX_OUTPUT_TOKENS,
     tools: {
-      search: searchTool(version),
+      search: searchTool,
     },
     messages: [
       { role: "system", content: systemPrompt },
@@ -100,31 +90,20 @@ export const chatHandler = async (ctx: { request: Request }) => {
   });
 };
 
-function searchServerFor(version: string) {
-  let server = indexByVersion.get(version);
+function getSearchServer() {
+  searchServer ??= createSearchServer();
 
-  if (!server) {
-    server = createSearchServer(version);
-    indexByVersion.set(version, server);
-  }
-
-  return server;
+  return searchServer;
 }
 
-async function createSearchServer(version: string) {
+async function createSearchServer() {
   const pages = await chunkedAll(
-    source.getPages().flatMap((page) =>
-      page.slugs[0] === version
-        ? [
-            (async (): Promise<IndexedPage> => ({
-              title: page.data.title,
-              description: page.data.description,
-              url: page.url,
-              structuredData: await page.data.structuredData(),
-            }))(),
-          ]
-        : []
-    )
+    source.getPages().map(async (page): Promise<IndexedPage> => ({
+      title: page.data.title,
+      description: page.data.description,
+      url: page.url,
+      structuredData: await page.data.structuredData(),
+    }))
   );
 
   return createSectionIndex(pages);

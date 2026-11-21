@@ -38,13 +38,14 @@ jobs:
       - name: Architecture
         run: bun run check:fsd
 
-      # The build catches a missing title and an unknown fence language. This
-      # catches the icons, components, links, navigation and language rules it
-      # does not.
+      # The Markdown under docs/: frontmatter, headings, links and anchors,
+      # fence languages, meta.json navigation and llms.txt. It also refuses a
+      # generated reference page (API, OpenAPI spec, commands, compose files)
+      # that no longer matches its source.
       - name: Documentation
         run: bun run docs:check
 
-      # .env.example and the configuration reference are generated from
+      # .env.example and docs/reference/configuration.md are generated from
       # packages/env/src/schema.ts. This also refuses a variable the code reads
       # and nothing declares.
       - name: Environment

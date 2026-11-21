@@ -1,0 +1,23 @@
+{
+  "title": "How-to guides",
+  "pages": [
+    "---Install another way---",
+    "install-with-dokploy",
+    "install-with-coolify",
+    "use-an-existing-reverse-proxy",
+    "build-images-from-source",
+    "---Configure---",
+    "configure-powens",
+    "configure-enable-banking",
+    "configure-email",
+    "add-sign-in-providers",
+    "enable-the-assistant",
+    "enable-transaction-categorisation",
+    "---Operate---",
+    "update-freenary",
+    "back-up-and-restore",
+    "troubleshoot",
+    "---Contribute---",
+    "contribute"
+  ]
+}

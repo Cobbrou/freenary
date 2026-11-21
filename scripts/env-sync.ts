@@ -4,6 +4,15 @@ import { clientEnvSchema } from "@freenary/env/schema-web";
 import { Glob } from "bun";
 import { z } from "zod";
 
+import {
+  code,
+  escapeCell,
+  escapeProse,
+  formatted,
+  generatedPage,
+  table,
+} from "./docs-markdown";
+
 type Kind = "compose" | "compose-dev" | "raw" | "client" | "inert";
 
 type Placement = "required" | "commented" | "none";
@@ -31,8 +40,7 @@ interface Section {
 const ENV_EXAMPLE_FILE = ".env.example";
 const GENERATOR_FILE = "scripts/env-sync.ts";
 
-const CONFIGURATION_PAGE =
-  "apps/fumadocs/content/docs/next/reference/configuration.mdx";
+const CONFIGURATION_PAGE = "docs/reference/configuration.md";
 
 const REPOSITORY_BLOB = "https://github.com/suiramdev/freenary/blob/main";
 
@@ -62,10 +70,9 @@ const ENV_READ =
 
 const COMPOSE_INTERPOLATION = /\$\{(?<name>[A-Z][A-Z0-9_]*)/gu;
 
-const MARKER =
-  /\{\/\* env-sync:start (?<id>[a-z-]+) \*\/\}[\s\S]*?\{\/\* env-sync:end \*\/\}/gu;
-
-const TABLE_CELL_PIPE = /\|/gu;
+const PREAMBLE_CODE_INDENT = "  ";
+const PREAMBLE_LABELLED_LINE = /^[A-Z][A-Za-z ]*: /u;
+const PREAMBLE_PLACEHOLDER = /[^\s`]*<[^<>`]+>[^\s`]*/gu;
 const BLANK_RUN = /\n{3,}/gu;
 const YAML_FILE = /\.ya?ml$/u;
 const PLATFORM_PREFIX = "VERCEL_";
@@ -404,9 +411,6 @@ const defaultOf = (schema: z.ZodType): string | undefined => {
     : undefined;
 };
 
-const escapeCell = (value: string): string =>
-  value.replace(TABLE_CELL_PIPE, "\\|");
-
 const describedOrFail = ([name, schema]: SchemaEntry): string => {
   const { description } = schema;
 
@@ -439,13 +443,6 @@ const entriesOfSection = (id: string): SchemaEntry[] =>
 const externalOfKind = (kind: Kind): ExternalVariable[] =>
   EXTERNAL.filter((entry) => entry.kind === kind);
 
-const table = (header: string[], rows: string[]): string =>
-  [
-    `| ${header.join(" | ")} |`,
-    `| ${header.map(() => "---").join(" | ")} |`,
-    ...rows,
-  ].join("\n");
-
 const schemaTable = (id: string): string =>
   table(
     ["Variable", "Default", "What it does", "Absent or wrong"],
@@ -459,7 +456,12 @@ const schemaTable = (id: string): string =>
         );
       }
 
-      return `| \`${name}\` | ${defaultCell(schema)} | ${escapeCell(describedOrFail(entry))} | ${escapeCell(onError ?? "")} |`;
+      return [
+        code(name),
+        defaultCell(schema),
+        escapeCell(describedOrFail(entry)),
+        escapeCell(onError ?? ""),
+      ];
     })
   );
 
@@ -473,22 +475,23 @@ const externalTable = (kind: Kind, header: string[]): string =>
           : [entry.default ?? "unset", escapeCell(entry.description)];
 
       return header.length === 4
-        ? `| \`${entry.name}\` | ${cells.join(" | ")} | ${escapeCell(entry.onError ?? "—")} |`
-        : `| \`${entry.name}\` | ${cells.join(" | ")} |`;
+        ? [code(entry.name), ...cells, escapeCell(entry.onError ?? "—")]
+        : [code(entry.name), ...cells];
     })
   );
 
-const BLOCKS = {
-  assistant: () => schemaTable("assistant"),
-  bank: () => schemaTable("bank"),
-  categorisation: () => schemaTable("categorisation"),
+const countParagraph = (): string =>
+  `The API server checks its environment once, at startup. The schema is [\`packages/env/src/schema.ts\`](${REPOSITORY_BLOB}/packages/env/src/schema.ts). It declares ${schemaEntries.length} variables with Zod, and \`packages/env/src/server.ts\` hands them to \`@t3-oss/env-core\`. The reference below, and \`${ENV_EXAMPLE_FILE}\`, are generated from that one file.`;
+
+const EXTERNAL_BLOCKS = {
   client: () =>
     table(
       ["Variable", "Default", "What it does"],
-      clientEntries.map(
-        ([name, schema]) =>
-          `| \`${name}\` | ${defaultOf(schema) ?? "none"} | ${escapeCell(describedOrFail([name, schema]))} |`
-      )
+      clientEntries.map(([name, schema]) => [
+        code(name),
+        defaultOf(schema) ?? "none",
+        escapeCell(describedOrFail([name, schema])),
+      ])
     ),
   compose: () =>
     externalTable("compose", [
@@ -499,24 +502,16 @@ const BLOCKS = {
     ]),
   "compose-dev": () =>
     externalTable("compose-dev", ["Variable", "Default", "What it does"]),
-  core: () => schemaTable("core"),
-  count: () =>
-    `The API server checks its environment once, at startup. The schema is [\`packages/env/src/schema.ts\`](${REPOSITORY_BLOB}/packages/env/src/schema.ts). It declares ${schemaEntries.length} variables with Zod, and \`packages/env/src/server.ts\` hands them to \`@t3-oss/env-core\`. The reference below, and \`${ENV_EXAMPLE_FILE}\`, are generated from that one file.`,
-  database: () => schemaTable("database"),
-  email: () => schemaTable("email"),
   inert: () =>
     table(
       ["Variable", "Why it does nothing"],
-      externalOfKind("inert").map(
-        (entry) => `| \`${entry.name}\` | ${escapeCell(entry.description)} |`
-      )
+      externalOfKind("inert").map((entry) => [
+        code(entry.name),
+        escapeCell(entry.description),
+      ])
     ),
-  origins: () => schemaTable("origins"),
   raw: () => externalTable("raw", ["Variable", "Read by", "What it does"]),
-  "sign-in": () => schemaTable("sign-in"),
 } satisfies Record<string, () => string>;
-
-const BLOCK_BY_ID = new Map<string, () => string>(Object.entries(BLOCKS));
 
 const envFileEntry = (
   name: string,
@@ -596,17 +591,89 @@ const envExampleBody = (): string => {
   return `${lines.join("\n").replaceAll(BLANK_RUN, "\n\n").trimEnd()}\n`;
 };
 
-const renderPage = (source: string): string =>
-  source.replaceAll(MARKER, (match: string, id: string): string => {
-    const block = BLOCK_BY_ID.get(id);
+const preambleBlocks = (preamble: string[]): string[] => {
+  const groups: { code: boolean; lines: string[] }[] = [];
 
-    if (block === undefined) {
-      fail(`${CONFIGURATION_PAGE}: no generator for the block "${id}".`);
+  for (const line of preamble) {
+    const isCode = line.startsWith(PREAMBLE_CODE_INDENT);
+    const last = groups.at(-1);
+    const text = isCode ? line.slice(PREAMBLE_CODE_INDENT.length) : line;
 
-      return match;
+    const startsParagraph = !isCode && PREAMBLE_LABELLED_LINE.test(line);
+
+    if (last?.code === isCode && !startsParagraph) {
+      last.lines.push(text);
+    } else {
+      groups.push({ code: isCode, lines: [text] });
     }
+  }
 
-    return `{/* env-sync:start ${id} */}\n\n${block()}\n\n{/* env-sync:end */}`;
+  return groups.map((group) =>
+    group.code
+      ? ["```text", ...group.lines, "```"].join("\n")
+      : escapeProse(
+          group.lines
+            .join(" ")
+            .replace(PREAMBLE_PLACEHOLDER, (token) => code(token))
+        )
+  );
+};
+
+const schemaSection = (section: Section): string =>
+  [
+    `## ${section.title}`,
+    ...preambleBlocks(section.preamble),
+    schemaTable(section.id),
+  ].join("\n\n");
+
+const EXTERNAL_SECTIONS: {
+  title: string;
+  intro: string;
+  block: keyof typeof EXTERNAL_BLOCKS;
+}[] = [
+  {
+    block: "compose",
+    intro: "Only Compose reads these.",
+    title: "Compose variables",
+  },
+  {
+    block: "raw",
+    intro:
+      "The web app at runtime and the repository tooling read these from `process.env` directly, outside the schema, so a typo raises no startup error.",
+    title: "Read outside the schema",
+  },
+  {
+    block: "client",
+    intro:
+      "The web app's client schema, `packages/env/src/schema-web.ts`. Vite inlines them at build time, and the image build fixes their values.",
+    title: "Web app build variables",
+  },
+  {
+    block: "compose-dev",
+    intro:
+      "The development stack reads these, and the production Compose files ignore them.",
+    title: "Development stack variables",
+  },
+  {
+    block: "inert",
+    intro: "These appear in templates but do nothing in production.",
+    title: "Inert variables",
+  },
+];
+
+const configurationPage = (): string =>
+  generatedPage({
+    body: [
+      countParagraph(),
+      ...SECTIONS.map(schemaSection),
+      ...EXTERNAL_SECTIONS.map(({ block, intro, title }) =>
+        [`## ${title}`, intro, EXTERNAL_BLOCKS[block]()].join("\n\n")
+      ),
+    ].join("\n\n"),
+    command: "bun run env:sync",
+    description: "Every environment variable Freenary reads.",
+    source: `${code("packages/env/src/schema.ts")} and ${code(GENERATOR_FILE)}`,
+    title: "Configuration",
   });
 
 const readSources = async (): Promise<Map<string, string>> => {
@@ -628,6 +695,20 @@ const readSources = async (): Promise<Map<string, string>> => {
   );
 
   return new Map(ordered.map((file, index) => [file, contents[index] ?? ""]));
+};
+
+const auditSections = (): void => {
+  const known = new Set(SECTIONS.map((section) => section.id));
+
+  for (const [name, schema] of schemaEntries) {
+    const section = schema.meta()?.section;
+
+    if (section === undefined || !known.has(section)) {
+      fail(
+        `${name}: its .meta() section "${section ?? ""}" is none of SECTIONS in ${GENERATOR_FILE}, so neither artifact would list it.`
+      );
+    }
+  }
 };
 
 const auditSources = (sources: Map<string, string>): void => {
@@ -669,7 +750,8 @@ const sync = async (
   contents: string,
   checkOnly: boolean
 ): Promise<boolean> => {
-  const current = await Bun.file(file).text();
+  const target = Bun.file(file);
+  const current = (await target.exists()) ? await target.text() : "";
 
   if (current === contents) {
     return false;
@@ -688,12 +770,12 @@ const sync = async (
 
 const main = async (): Promise<number> => {
   const checkOnly = process.argv.includes("--check");
-  const page = await Bun.file(CONFIGURATION_PAGE).text();
-  const nextPage = renderPage(page);
+  const nextPage = await formatted(CONFIGURATION_PAGE, configurationPage());
   const nextExample = envExampleBody();
 
   const sources = await readSources();
 
+  auditSections();
   auditSources(sources);
 
   const outcomes = await Promise.all([

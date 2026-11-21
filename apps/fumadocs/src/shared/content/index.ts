@@ -1,9 +1,11 @@
+export { pageUrlOfLinkAt } from "./links";
+export { llmsIndex, withAbsoluteLlmsLinks } from "./llms-index";
+export { getLLMText } from "./markdown";
+export { movedPageOf, versionedRedirectOf } from "./redirects";
 export {
   docs,
-  findMovedPage,
-  getLLMText,
-  listVersions,
-  newestRelease,
+  type DocsPage,
+  markdownUrlOf,
+  pageAtFile,
   source,
-  versionNode,
 } from "./source";

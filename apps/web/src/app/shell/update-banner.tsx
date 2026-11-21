@@ -109,7 +109,7 @@ const Banner = ({ latest }: { latest: string }) => {
               label={m.account_menu_update_release_notes()}
             />
             <NewTabLink
-              href={updateGuideUrl(latest)}
+              href={updateGuideUrl()}
               label={m.account_menu_update_guide()}
             />
           </div>

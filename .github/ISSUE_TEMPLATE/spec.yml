@@ -43,8 +43,8 @@ body:
       label: Relevant files
       description: Where to start. Paths, modules or pages, with a line on why each matters.
       placeholder: |
-        - `apps/web/src/pages/budget/ui/page.tsx`: renders the category list
-        - `apps/fumadocs/content/docs/next/use/budget.mdx`: documents the screen
+        - `packages/email/src/registry.ts`: picks the email provider
+        - `docs/how-to/configure-email.md`: documents its settings
     validations:
       required: true
 

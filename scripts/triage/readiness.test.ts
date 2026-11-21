@@ -296,11 +296,21 @@ describe("docsExpected", () => {
     expect(
       docsExpected([
         "apps/web/src/pages/budget/ui/page.tsx",
-        "apps/fumadocs/content/docs/next/use/budget.mdx",
+        "docs/how-to/configure-email.md",
       ])
     ).toBe(false);
 
     expect(docsExpected(["scripts/triage/plan.ts"])).toBe(false);
+  });
+
+  it("does not count a regenerated reference page as a docs change", () => {
+    expect(
+      docsExpected([
+        "packages/env/src/schema.ts",
+        "docs/reference/configuration.md",
+        "docs/reference/openapi.json",
+      ])
+    ).toBe(true);
   });
 });
 

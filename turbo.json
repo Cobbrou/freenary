@@ -16,16 +16,6 @@
     "check-types": {
       "dependsOn": ["^check-types"]
     },
-    "docs:check": {
-      "inputs": [
-        "content/**",
-        "scripts/**",
-        "src/shared/ui/mdx.tsx",
-        "src/shared/lib/versions.ts",
-        "src/shared/config/moved-pages.ts",
-        "src/shared/config/site.ts"
-      ]
-    },
     "lint:fsd": {
       "inputs": ["src/**", "steiger.config.ts", "tsconfig.json"]
     },

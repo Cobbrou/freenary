@@ -1,21 +1,21 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { flattenTree } from "fumadocs-core/page-tree";
 
-import { getLLMText, newestRelease, source } from "@/shared/content";
+import { getLLMText, source } from "@/shared/content";
 
 export const Route = createFileRoute("/llms-full.txt")({
   server: {
     handlers: {
       GET: async () => {
-        const newest = newestRelease();
-        const scan = source
-          .getPages()
-          .flatMap((page) =>
-            page.slugs[0] === newest ? [getLLMText(page)] : []
-          );
+        const pages = flattenTree(source.getPageTree().children).flatMap(
+          (item) => source.getNodePage(item) ?? []
+        );
 
-        const scanned = await Promise.all(scan);
+        const texts = await Promise.all(pages.map(getLLMText));
 
-        return new Response(scanned.join("\n\n"));
+        return new Response(texts.join("\n"), {
+          headers: { "Content-Type": "text/plain; charset=utf-8" },
+        });
       },
     },
   },

@@ -1,5 +1,11 @@
 name: freenary
 
+# The development stack: PostgreSQL, the database migrations, the API server,
+# the web app and the documentation site, built from the working tree. Compose
+# watch syncs every edit under apps/, packages/ and docs/ into the containers.
+# `bun run dev:up` starts it under a project named after the worktree. No
+# service publishes a host port: Kiri routes each hostname from its labels.
+
 x-app-build: &app-build
   context: .
   dockerfile: .docker/dockerfile.dev
@@ -19,6 +25,9 @@ x-app-watch: &app-watch
     target: /app/packages
     ignore:
       - node_modules/
+  - action: sync
+    path: ./docs
+    target: /app/docs
   - action: rebuild
     path: ./bun.lock
 

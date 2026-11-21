@@ -12,28 +12,29 @@ import {
   searchSections,
 } from "./docs-search";
 
-const NEXT_DOCS = path.join(import.meta.dir, "../../../content/docs/next");
+const DOCS = path.join(import.meta.dir, "../../../../../docs");
 
 const FRONTMATTER = /^---\n([\s\S]*?)\n---\n/;
 
 const frontmatterField = (frontmatter: string, field: string) =>
   frontmatter.match(new RegExp(`^${field}: (.*)$`, "m"))?.[1] ?? "";
 
-const nextPages = async (): Promise<IndexedPage[]> => {
-  const files = (await readdir(NEXT_DOCS, { recursive: true })).filter((file) =>
-    file.endsWith(".mdx")
+const docsPages = async (): Promise<IndexedPage[]> => {
+  const files = (await readdir(DOCS, { recursive: true })).filter((file) =>
+    file.endsWith(".md")
   );
 
   return Promise.all(
     files.map(async (file) => {
-      const source = (
-        await readFile(path.join(NEXT_DOCS, file), "utf8")
-      ).replaceAll("\r\n", "\n");
+      const source = (await readFile(path.join(DOCS, file), "utf8")).replaceAll(
+        "\r\n",
+        "\n"
+      );
 
       const frontmatter = source.match(FRONTMATTER)?.[1] ?? "";
 
       return {
-        url: `/docs/next/${file.replaceAll("\\", "/").replace(/\.mdx$/, "")}`,
+        url: `/docs/${file.replaceAll("\\", "/").replace(/\.md$/, "")}`,
         title: frontmatterField(frontmatter, "title"),
         description: frontmatterField(frontmatter, "description"),
         structuredData: structure(source.replace(FRONTMATTER, "")),
@@ -59,9 +60,9 @@ const text = (role: string, content: string) => ({
 });
 
 describe("a follow-up question after a docs search", async () => {
-  const index = createSectionIndex(await nextPages());
+  const index = createSectionIndex(await docsPages());
 
-  for (const query of ["install", "docker compose", "bank", "password"]) {
+  for (const query of ["install", "docker compose", "bank", "email"]) {
     test(`passes the guard after searching "${query}"`, async () => {
       const results = await searchSections(index, query, 100);
 

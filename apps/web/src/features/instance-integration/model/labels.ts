@@ -132,18 +132,18 @@ const VARIANT_DESCRIPTIONS = {
 } satisfies Record<string, Label>;
 
 const VARIANT_GUIDE_PATHS: Record<string, string> = {
-  "enable-banking": "/reference/bank-providers#enable-banking",
-  jev: "/run/models#jev",
-  laya: "/run/models#classifiers-no-longer-offered",
-  llm: "/run/models#an-openai-compatible-endpoint",
-  "openai-compatible": "/run/models#assistant",
-  powens: "/reference/bank-providers#powens",
-  resend: "/run/email#resend",
-  smtp: "/run/email#smtp",
-  "subq-snap": "/run/models#subq-snap",
-  "system-one": "/run/models#classifiers-no-longer-offered",
-  von: "/run/models#classifiers-no-longer-offered",
-  "zero-shot": "/run/models#classifiers-no-longer-offered",
+  "enable-banking": "/how-to/configure-enable-banking",
+  jev: "/how-to/enable-transaction-categorisation#in-the-app",
+  laya: "/how-to/enable-transaction-categorisation#in-env",
+  llm: "/how-to/enable-transaction-categorisation#in-the-app",
+  "openai-compatible": "/how-to/enable-the-assistant",
+  powens: "/how-to/configure-powens",
+  resend: "/how-to/configure-email",
+  smtp: "/how-to/configure-email",
+  "subq-snap": "/how-to/enable-transaction-categorisation#in-the-app",
+  "system-one": "/how-to/enable-transaction-categorisation#in-env",
+  von: "/how-to/enable-transaction-categorisation#in-env",
+  "zero-shot": "/how-to/enable-transaction-categorisation#in-env",
 };
 
 const read = (table: Record<string, Label>, key: string): string =>
@@ -184,10 +184,10 @@ export const variantDescription = (
 export const stateLabel = (id: string): string => read(STATE_LABELS, id);
 
 const ENVIRONMENT_DOCS_PATH =
-  "/reference/configuration#a-value-in-the-environment-wins";
+  "/explanation/settings-sources#the-environment-wins-key-by-key";
 
 const RESTART_DOCS_PATH =
-  "/run/troubleshooting#the-server-does-not-restart-after-setup";
+  "/how-to/troubleshoot#the-server-does-not-come-back-after-saving-settings";
 
 export const environmentDocsUrl = (): string =>
   `${docsUrl()}${ENVIRONMENT_DOCS_PATH}`;

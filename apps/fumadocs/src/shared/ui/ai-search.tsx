@@ -1,6 +1,7 @@
 "use client";
 
 import { useChat, type UseChatHelpers } from "@ai-sdk/react";
+import { BrandAvatar } from "@freenary/ui/components/brand-avatar";
 import {
   DefaultChatTransport,
   type Tool,
@@ -8,14 +9,7 @@ import {
   type UIToolInvocation,
 } from "ai";
 import { cn } from "cn";
-import {
-  Loader2,
-  MessageCircleIcon,
-  RefreshCw,
-  SearchIcon,
-  Send,
-  X,
-} from "lucide-react";
+import { Loader2, RefreshCw, SearchIcon, Send, X } from "lucide-react";
 import {
   type ComponentProps,
   createContext,
@@ -362,19 +356,12 @@ function Message({
   );
 }
 
-export function AISearch({
-  children,
-  version,
-}: {
-  children: ReactNode;
-  version: string;
-}) {
+export function AISearch({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
   const chat = useChat<ChatUIMessage>({
     id: "search",
     transport: new DefaultChatTransport({
       api: "/api/chat",
-      body: { version },
       prepareSendMessagesRequest: ({
         body,
         id,
@@ -515,7 +502,7 @@ export function AISearchPanelList({
     >
       {messages.length === 0 ? (
         <div className="text-fd-muted-foreground/80 flex size-full flex-col items-center justify-center gap-2 text-center text-sm">
-          <MessageCircleIcon fill="currentColor" stroke="none" />
+          <BrandAvatar aria-hidden size={40} state="idle" />
           <p onClick={(e) => e.stopPropagation()}>Start a new chat below.</p>
         </div>
       ) : (

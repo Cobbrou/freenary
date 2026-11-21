@@ -102,7 +102,7 @@ describe("UpdateBanner", () => {
         target: "_blank",
       },
       {
-        href: "https://freenary.dev/docs/1.3/run/updates-and-backups",
+        href: "https://freenary.dev/docs/how-to/update-freenary",
         name: "How to update(opens in a new tab)",
         target: "_blank",
       },

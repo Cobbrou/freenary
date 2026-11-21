@@ -34,9 +34,10 @@
 
   customManagers: [
     {
-      // Renovate has no Bun catalog support yet, so the 20 shared versions in
-      // workspaces.catalog are extracted by hand. docs/engineering/platform.md
-      // carries why, and what to delete once upstream lands it.
+      // Renovate has no Bun catalog support yet: its bun manager reads the
+      // workspace manifests but not workspaces.catalog, so the 20 shared
+      // versions there are extracted by hand. Delete this block once
+      // renovatebot/renovate#42909 lands, or the catalog has two sources of truth.
       description: "The Bun workspace catalog in the root package.json",
       customType: "regex",
       managerFilePatterns: ["/^package\\.json$/"],

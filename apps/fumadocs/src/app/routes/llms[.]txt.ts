@@ -1,19 +1,18 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { llms } from "fumadocs-core/source";
 
-import { newestRelease, source, versionNode } from "@/shared/content";
+import { llmsIndex, withAbsoluteLlmsLinks } from "@/shared/content";
+
+import { notFoundResponse } from "../api/not-found";
 
 export const Route = createFileRoute("/llms.txt")({
   server: {
     handlers: {
-      GET() {
-        const tree = source.getPageTree();
-        const node = versionNode(newestRelease());
+      GET({ request }) {
+        if (llmsIndex === undefined) return notFoundResponse();
 
         return new Response(
-          node
-            ? `# ${String(tree.name)}\n\n${llms(source).indexNode(node)}`
-            : llms(source).index()
+          withAbsoluteLlmsLinks(llmsIndex, new URL(request.url).origin),
+          { headers: { "Content-Type": "text/plain; charset=utf-8" } }
         );
       },
     },

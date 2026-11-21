@@ -1,0 +1,11 @@
+{
+  "title": "Reference",
+  "pages": [
+    "configuration",
+    "compose-files",
+    "images",
+    "commands",
+    "api",
+    "code-conventions"
+  ]
+}

@@ -15,7 +15,6 @@ const MAX_REQUESTS_PER_CALLER = 20;
 const MAX_REQUESTS_PER_WINDOW = 300;
 
 const chatRequestBody = z.object({
-  version: z.string().optional(),
   messages: z
     .array(z.looseObject({ role: z.enum(["user", "assistant"]) }))
     .min(1)
@@ -23,7 +22,6 @@ const chatRequestBody = z.object({
 });
 
 export type ChatRequest = {
-  version: string | undefined;
   messages: ChatUIMessage[];
 };
 
@@ -86,7 +84,6 @@ export const guardChatRequest = async (
   }
 
   return {
-    version: body.data.version,
     messages: withoutToolParts(messages.data),
   };
 };

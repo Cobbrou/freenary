@@ -140,7 +140,7 @@ export const SidebarUserMenu = () => {
                     label={m.account_menu_update_guide()}
                     trailingIcon={remixIcon(RiExternalLinkLine)}
                     onSelect={() => {
-                      openInNewTab(updateGuideUrl(update));
+                      openInNewTab(updateGuideUrl());
                     }}
                   />
                 </DropdownGroup>

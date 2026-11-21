@@ -24,7 +24,7 @@
     "@openuidev/react-lang": "0.2.15",
     "@orpc/client": "catalog:",
     "@orpc/server": "catalog:",
-    "@orpc/tanstack-query": "^1.14.12",
+    "@orpc/tanstack-query": "^1.16.4",
     "@radix-ui/react-use-controllable-state": "^1.2.6",
     "@remixicon/react": "^4.9.0",
     "@tailwindcss/vite": "^4.3.3",

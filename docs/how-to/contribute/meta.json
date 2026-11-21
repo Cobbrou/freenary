@@ -1,0 +1,14 @@
+{
+  "title": "Contribute",
+  "pages": [
+    "run-from-source",
+    "run-checks",
+    "add-an-environment-variable",
+    "change-the-database-schema",
+    "add-an-api-procedure",
+    "add-a-bank-provider",
+    "update-the-docs",
+    "open-a-pull-request",
+    "release-a-version"
+  ]
+}

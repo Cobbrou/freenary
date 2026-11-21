@@ -1,0 +1,57 @@
+# Freenary
+
+> Freenary is a self-hosted, open-source personal finance app (AGPL-3.0-or-later). It runs as four Docker Compose services (postgres, migrate, server, web), connects to banks through Powens or Enable Banking, and stores everything in PostgreSQL. The web app on port 3001 forwards /api/auth, /rpc, /ai/chat and /api-reference to the API server, so a deployment has one public address. Only POSTGRES_PASSWORD and BETTER_AUTH_SECRET are required to start; the first account to sign in becomes the operator.
+
+Every page is plain Markdown.
+
+## Tutorials
+
+- [Get it running](tutorials/get-it-running.md): start the stack locally with Docker Compose, verify it, create the operator account
+- [Self-host on a server](tutorials/self-host-on-a-server.md): domain, HTTPS with Caddy, WEB_PORT and TRUSTED_PROXIES
+- [Connect your first bank](tutorials/connect-your-first-bank.md): finish the setup screen with a Powens sandbox
+
+## How-to guides
+
+- [Install with Dokploy](how-to/install-with-dokploy.md): deploy from deploy/dokploy
+- [Install with Coolify](how-to/install-with-coolify.md): deploy from deploy/coolify.yml
+- [Use an existing reverse proxy](how-to/use-an-existing-reverse-proxy.md): deploy/docker-compose.yml behind Caddy or nginx
+- [Build the images from source](how-to/build-images-from-source.md): docker build and build: in Compose
+- [Configure Powens](how-to/configure-powens.md): default bank provider, in the app or in .env
+- [Configure Enable Banking](how-to/configure-enable-banking.md): alternative bank provider
+- [Configure email](how-to/configure-email.md): Resend or SMTP
+- [Add sign-in providers](how-to/add-sign-in-providers.md): Google, Apple, OIDC
+- [Enable the assistant](how-to/enable-the-assistant.md): OpenAI-compatible model
+- [Enable transaction categorisation](how-to/enable-transaction-categorisation.md): classifier settings
+- [Update Freenary](how-to/update-freenary.md): image tags, pull, migrations
+- [Back up and restore](how-to/back-up-and-restore.md): pg_dump, pg_restore, keep .env
+- [Troubleshoot](how-to/troubleshoot.md): real error messages and fixes
+
+## Reference
+
+- [Configuration](reference/configuration.md): every environment variable, generated from packages/env/src/schema.ts
+- [Compose files](reference/compose-files.md): generated from the Compose files
+- [Container images](reference/images.md): names, tags, platforms, build arguments
+- [Commands](reference/commands.md): root package.json scripts, generated
+- [API](reference/api.md): every procedure, generated from the oRPC router; spec in reference/openapi.json
+- [Code conventions](reference/code-conventions.md): lint, format, architecture and message rules
+
+## Explanation
+
+- [Architecture](explanation/architecture.md): services, request flow, update notice, packages
+- [First run and the operator](explanation/first-run-and-operator.md): claim, setup screen, onboarding
+- [Where settings come from](explanation/settings-sources.md): environment vs settings saved in the app
+- [Sign-in and email](explanation/sign-in-and-email.md): what changes when email is on
+- [How the assistant finds a model](explanation/assistant.md): server model vs in-browser model
+- [How transactions get categories](explanation/categorisation.md): the categorisation order
+
+## Optional
+
+- [Run from source](how-to/contribute/run-from-source.md): development stack
+- [Run the checks](how-to/contribute/run-checks.md): the CI steps locally
+- [Add an environment variable](how-to/contribute/add-an-environment-variable.md)
+- [Change the database schema](how-to/contribute/change-the-database-schema.md)
+- [Add an API procedure](how-to/contribute/add-an-api-procedure.md)
+- [Add a bank provider](how-to/contribute/add-a-bank-provider.md)
+- [Update the docs](how-to/contribute/update-the-docs.md)
+- [Open a pull request](how-to/contribute/open-a-pull-request.md)
+- [Release a version](how-to/contribute/release-a-version.md)

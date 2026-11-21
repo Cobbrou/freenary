@@ -1,43 +1,45 @@
 # Freenary
 
-Freenary is an open-source personal finance app you host yourself. It connects your banks, imports your accounts and transactions, sorts them into categories, and shows your plan against your actual spending on the Budget screen. An assistant answers questions about your money. Your data stays in your own PostgreSQL database.
+![Freenary logo: a pink piggy-bank head with a coin slot](apps/web/public/favicon.svg)
 
-## Get started
+Freenary is an open-source personal finance app that you host yourself. It connects to your banks through a bank provider (Powens or Enable Banking), imports your accounts and transactions, puts them into categories, and shows a budget. An optional assistant answers questions about your money. Your data stays in your own PostgreSQL database.
 
-Follow [Install Freenary](https://freenary.dev/docs/get-started/install). In short:
+## Get it running
 
-1. Point one domain at your server, for example `freenary.example.com`.
-2. Deploy Freenary on a hosting panel (Dokploy, Coolify) or with Docker Compose behind your own HTTPS proxy.
-3. Create the first account, which makes you the operator, then enter your bank and email credentials on the setup screen.
+You need Docker with Compose v2 and a Unix shell (on Windows, a WSL 2 terminal).
+
+```bash
+mkdir -p ~/freenary && cd ~/freenary
+curl -fsSLo docker-compose.yml https://raw.githubusercontent.com/suiramdev/freenary/main/docker-compose.yml
+cat > .env <<EOF
+POSTGRES_PASSWORD=$(openssl rand -hex 16)
+BETTER_AUTH_SECRET=$(openssl rand -hex 32)
+EOF
+docker compose up -d --wait
+```
+
+Open `http://localhost:3001` and create the first account: it becomes the operator.
+
+The full tutorial, with checks after each step and fixes for common errors, is [Get it running](docs/tutorials/get-it-running.md). To run Freenary under your own domain with HTTPS, follow [Self-host on a server](docs/tutorials/self-host-on-a-server.md).
 
 ## Documentation
 
-The full documentation lives at [freenary.dev](https://freenary.dev) (source in [`apps/fumadocs`](apps/fumadocs)):
+All documentation is in [`docs/`](docs/index.md):
 
-- [Get started](https://freenary.dev/docs/get-started/before-you-install): install your instance and connect a bank
-- [Use Freenary](https://freenary.dev/docs/use/budget): budget, bank connections, assistant, account
-- [Run your instance](https://freenary.dev/docs/run/email): email, sign-in, updates, backups, troubleshooting
-- [Reference](https://freenary.dev/docs/reference/configuration): configuration, bank providers, reverse proxy, API
-- [Contribute](apps/fumadocs/content/docs/next/contribute.mdx): run the code, run the checks, open a pull request
+- **Tutorials:** [Get it running](docs/tutorials/get-it-running.md), [Self-host on a server](docs/tutorials/self-host-on-a-server.md), [Connect your first bank](docs/tutorials/connect-your-first-bank.md)
+- **How-to guides:** install another way, configure banks, email, sign-in, the assistant and categorisation, update, back up, troubleshoot
+- **Reference:** [configuration](docs/reference/configuration.md), [Compose files](docs/reference/compose-files.md), [images](docs/reference/images.md), [commands](docs/reference/commands.md), [API](docs/reference/api.md)
+- **Explanation:** [architecture](docs/explanation/architecture.md), [first run](docs/explanation/first-run-and-operator.md), [settings](docs/explanation/settings-sources.md), [sign-in and email](docs/explanation/sign-in-and-email.md), [assistant](docs/explanation/assistant.md), [categorisation](docs/explanation/categorisation.md)
 
-## Development
-
-```bash
-git clone https://github.com/suiramdev/freenary.git
-cd freenary
-bun install
-bun run dev:up
-```
-
-`dev:up` runs everything in Docker at `https://web.<slug>.freenary.kiri.localhost` (`http://` on Linux and Windows), routed by [Kiri](https://docs.runkiri.com/), which we recommend; any router of your own works too. [Contribute](apps/fumadocs/content/docs/next/contribute.mdx) covers the local setup without Docker and the checks to run before a pull request.
+For AI tools: [`docs/llms.txt`](docs/llms.txt) and [`AGENTS.md`](AGENTS.md).
 
 ## Contributing
 
-Read [`.github/CONTRIBUTING.md`](.github/CONTRIBUTING.md), then [`CONTEXT.md`](CONTEXT.md) for the product vocabulary. Pull requests target `dev`.
+Read [`.github/CONTRIBUTING.md`](.github/CONTRIBUTING.md). Pull requests target `dev`.
 
 ## Support
 
-Report a problem or request a feature: [GitHub Issues](https://github.com/suiramdev/freenary/issues/new/choose).
+Report a problem or request a feature in [GitHub Issues](https://github.com/suiramdev/freenary/issues/new/choose).
 
 ## License
 

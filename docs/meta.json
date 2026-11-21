@@ -1,0 +1,5 @@
+{
+  "title": "Freenary",
+  "root": true,
+  "pages": ["index", "tutorials", "how-to", "reference", "explanation"]
+}

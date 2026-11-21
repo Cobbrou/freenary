@@ -1,6 +1,0 @@
-{
-  "title": "next",
-  "root": true,
-  "defaultOpen": true,
-  "pages": ["index", "get-started", "use", "run", "reference", "contribute"]
-}

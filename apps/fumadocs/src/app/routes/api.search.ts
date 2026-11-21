@@ -5,18 +5,6 @@ import { source } from "@/shared/content";
 
 const server = createFromSource(source, {
   language: "english",
-  buildIndex: async (page) => {
-    const [version] = page.slugs;
-
-    return {
-      id: page.url,
-      url: page.url,
-      title: page.data.title,
-      description: page.data.description,
-      structuredData: await page.data.structuredData(),
-      tag: version,
-    };
-  },
 });
 
 export const Route = createFileRoute("/api/search")({

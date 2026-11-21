@@ -1,11 +1,8 @@
 name: Release
 
 # Cuts a release from main: tags vX.Y.Z, publishes the versioned images, then
-# opens a GitHub release with generated notes. Run it from the Actions tab.
-#
-# A stable release needs `apps/fumadocs/content/docs/X.Y` in the tree already,
-# which a pull request to dev writes with `bun run docs:snapshot X.Y.Z`. Merge
-# that, merge dev into main, then run this workflow from main.
+# opens a GitHub release with generated notes. Merge dev into main, then run
+# it from main in the Actions tab.
 
 on:
   workflow_dispatch:
@@ -53,20 +50,6 @@ jobs:
         run: |
           if git rev-parse -q --verify "refs/tags/v$VERSION" >/dev/null; then
             echo "v$VERSION already exists" >&2
-            exit 1
-          fi
-
-      - name: Refuse a release without its documentation snapshot
-        env:
-          VERSION: ${{ inputs.version }}
-        run: |
-          if [[ "$VERSION" == *-* ]]; then
-            echo "Pre-release: the documentation stays on next"
-            exit 0
-          fi
-          folder="apps/fumadocs/content/docs/${VERSION%.*}"
-          if [[ ! -d "$folder" ]]; then
-            echo "$folder is missing. Run 'cd apps/fumadocs && bun run docs:snapshot $VERSION' in a pull request to dev, merge it into main, then release." >&2
             exit 1
           fi
 

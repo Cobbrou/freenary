@@ -15,6 +15,7 @@ import { Route as LlmsDottxtRouteImport } from './app/routes/llms[.]txt'
 import { Route as ApiChatRouteImport } from './app/routes/api.chat'
 import { Route as ApiSearchRouteImport } from './app/routes/api.search'
 import { Route as DocsSplatRouteImport } from './app/routes/docs/$'
+import { Route as DocsLlmsDottxtRouteImport } from './app/routes/docs/llms[.]txt'
 import { Route as DocsChar123Char125DotmdRouteImport } from './app/routes/docs/{$}[.]md'
 
 const IndexRoute = IndexRouteImport.update({
@@ -47,6 +48,11 @@ const DocsSplatRoute = DocsSplatRouteImport.update({
   path: '/docs/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DocsLlmsDottxtRoute = DocsLlmsDottxtRouteImport.update({
+  id: '/docs/llms.txt',
+  path: '/docs/llms.txt',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DocsChar123Char125DotmdRoute = DocsChar123Char125DotmdRouteImport.update({
   id: '/docs/{$}.md',
   path: '/docs/{$}.md',
@@ -60,6 +66,7 @@ export interface FileRoutesByFullPath {
   '/api/chat': typeof ApiChatRoute
   '/api/search': typeof ApiSearchRoute
   '/docs/$': typeof DocsSplatRoute
+  '/docs/llms.txt': typeof DocsLlmsDottxtRoute
   '/docs/{$}.md': typeof DocsChar123Char125DotmdRoute
 }
 export interface FileRoutesByTo {
@@ -69,6 +76,7 @@ export interface FileRoutesByTo {
   '/api/chat': typeof ApiChatRoute
   '/api/search': typeof ApiSearchRoute
   '/docs/$': typeof DocsSplatRoute
+  '/docs/llms.txt': typeof DocsLlmsDottxtRoute
   '/docs/{$}.md': typeof DocsChar123Char125DotmdRoute
 }
 export interface FileRoutesById {
@@ -79,6 +87,7 @@ export interface FileRoutesById {
   '/api/chat': typeof ApiChatRoute
   '/api/search': typeof ApiSearchRoute
   '/docs/$': typeof DocsSplatRoute
+  '/docs/llms.txt': typeof DocsLlmsDottxtRoute
   '/docs/{$}.md': typeof DocsChar123Char125DotmdRoute
 }
 export interface FileRouteTypes {
@@ -90,6 +99,7 @@ export interface FileRouteTypes {
     | '/api/chat'
     | '/api/search'
     | '/docs/$'
+    | '/docs/llms.txt'
     | '/docs/{$}.md'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -99,6 +109,7 @@ export interface FileRouteTypes {
     | '/api/chat'
     | '/api/search'
     | '/docs/$'
+    | '/docs/llms.txt'
     | '/docs/{$}.md'
   id:
     | '__root__'
@@ -108,6 +119,7 @@ export interface FileRouteTypes {
     | '/api/chat'
     | '/api/search'
     | '/docs/$'
+    | '/docs/llms.txt'
     | '/docs/{$}.md'
   fileRoutesById: FileRoutesById
 }
@@ -118,6 +130,7 @@ export interface RootRouteChildren {
   ApiChatRoute: typeof ApiChatRoute
   ApiSearchRoute: typeof ApiSearchRoute
   DocsSplatRoute: typeof DocsSplatRoute
+  DocsLlmsDottxtRoute: typeof DocsLlmsDottxtRoute
   DocsChar123Char125DotmdRoute: typeof DocsChar123Char125DotmdRoute
 }
 
@@ -165,6 +178,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DocsSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/docs/llms.txt': {
+      id: '/docs/llms.txt'
+      path: '/docs/llms.txt'
+      fullPath: '/docs/llms.txt'
+      preLoaderRoute: typeof DocsLlmsDottxtRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/docs/{$}.md': {
       id: '/docs/{$}.md'
       path: '/docs/{$}.md'
@@ -182,6 +202,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiChatRoute: ApiChatRoute,
   ApiSearchRoute: ApiSearchRoute,
   DocsSplatRoute: DocsSplatRoute,
+  DocsLlmsDottxtRoute: DocsLlmsDottxtRoute,
   DocsChar123Char125DotmdRoute: DocsChar123Char125DotmdRoute,
 }
 export const routeTree = rootRouteImport
