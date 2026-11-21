@@ -30,6 +30,13 @@ const PASSKEY_MESSAGES = {
   SESSION_NOT_FRESH: m.settings_accounts_error_session_not_fresh,
 } satisfies Record<string, () => string>;
 
+const API_KEY_MESSAGES = {
+  INVALID_NAME_LENGTH: m.settings_api_keys_error_name,
+  KEY_NOT_FOUND: m.settings_api_keys_error_not_found,
+  NAME_REQUIRED: m.settings_api_keys_error_name,
+  SESSION_NOT_FRESH: m.settings_accounts_error_session_not_fresh,
+} satisfies Record<string, () => string>;
+
 const isTwoFactorCode = (
   code: string
 ): code is keyof typeof TWO_FACTOR_MESSAGES =>
@@ -42,6 +49,9 @@ const isLinkedAccountCode = (
 
 const isPasskeyCode = (code: string): code is keyof typeof PASSKEY_MESSAGES =>
   Object.hasOwn(PASSKEY_MESSAGES, code);
+
+const isApiKeyCode = (code: string): code is keyof typeof API_KEY_MESSAGES =>
+  Object.hasOwn(API_KEY_MESSAGES, code);
 
 const isRateLimited = (error: SecurityRequestError): boolean =>
   error.status === TOO_MANY_REQUESTS;
@@ -82,4 +92,16 @@ export const passkeyErrorMessage = (error: SecurityRequestError): string => {
   return isPasskeyCode(code)
     ? PASSKEY_MESSAGES[code]()
     : m.settings_passkeys_error_generic();
+};
+
+export const apiKeyErrorMessage = (error: SecurityRequestError): string => {
+  if (isRateLimited(error)) {
+    return m.auth_error_rate_limited();
+  }
+
+  const code = error.code ?? "";
+
+  return isApiKeyCode(code)
+    ? API_KEY_MESSAGES[code]()
+    : m.settings_api_keys_error_generic();
 };

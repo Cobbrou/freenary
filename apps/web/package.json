@@ -14,6 +14,7 @@
   "dependencies": {
     "@ai-sdk/provider": "^4.0.10",
     "@ai-sdk/react": "^4.0.65",
+    "@better-auth/api-key": "1.7.25",
     "@better-auth/core": "1.7.25",
     "@better-auth/passkey": "1.7.25",
     "@freenary/api": "workspace:*",

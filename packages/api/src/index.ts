@@ -1,3 +1,4 @@
+import { carriesApiKey } from "@freenary/auth/api-key";
 import prisma from "@freenary/db";
 import { ORPCError, os } from "@orpc/server";
 
@@ -36,6 +37,12 @@ const requireOperator = (
   o.middleware(async ({ context, next }) => {
     if (!context.session?.user) {
       throw new ORPCError("UNAUTHORIZED");
+    }
+
+    if (carriesApiKey(context.headers)) {
+      throw new ORPCError("FORBIDDEN", {
+        message: "An API key cannot call an operator procedure",
+      });
     }
 
     if (!(await isOperatorAccount(context.session.user.id))) {

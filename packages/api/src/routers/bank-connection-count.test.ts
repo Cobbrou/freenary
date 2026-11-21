@@ -15,9 +15,9 @@ const bankConnectionCount = bankConnectionCountWith({
 
 const SIGNED_IN_AT = new Date("2026-01-01T00:00:00.000Z");
 
-const contextOf = (userId: string): Context => ({
+const contextOf = (userId: string, headers = new Headers()): Context => ({
   auth: null,
-  headers: new Headers(),
+  headers,
   session: {
     session: {
       createdAt: SIGNED_IN_AT,
@@ -53,6 +53,17 @@ describe("instance.bankConnectionCount", () => {
     });
 
     await expect(refused).rejects.toBeInstanceOf(ORPCError);
+    await expect(refused).rejects.toMatchObject({ code: "FORBIDDEN" });
+  });
+
+  it("refuses the operator's own API key", async () => {
+    const refused = call(bankConnectionCount, undefined, {
+      context: contextOf(
+        OPERATOR,
+        new Headers({ authorization: "Bearer fny_operator_key" })
+      ),
+    });
+
     await expect(refused).rejects.toMatchObject({ code: "FORBIDDEN" });
   });
 });

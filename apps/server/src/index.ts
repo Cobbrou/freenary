@@ -2,8 +2,10 @@ import { cors } from "@elysiajs/cors";
 import { handleAssistantChat } from "@freenary/api/assistant/handler";
 import { createContext } from "@freenary/api/context";
 import { updateCheck } from "@freenary/api/instance/update-check";
+import { refusedApiKeyResponse } from "@freenary/api/lib/api-key-refusal";
 import { sealLegacyProviderTokens } from "@freenary/api/lib/bank-provider-user";
 import { isJsonRequest } from "@freenary/api/lib/json-request";
+import { handleMcpRequest } from "@freenary/api/mcp/handler";
 import {
   handleMockConsent,
   MOCK_CONSENT_PATH,
@@ -71,6 +73,13 @@ initLogger({
   env: { service: "freenary-server" },
 });
 
+const SURFACES_THAT_ANSWER_AN_API_KEY = ["/rpc", "/api-reference", "/ai/chat"];
+
+const answersAnApiKey = (pathname: string) =>
+  SURFACES_THAT_ANSWER_AN_API_KEY.some(
+    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
+  );
+
 const sessionResolvedOncePerRequest = {
   api: {
     getSession: ({ headers }: { headers: Headers }) => requestSession(headers),
@@ -93,6 +102,17 @@ new Elysia()
     await identifyUser(log, request.headers, new URL(request.url).pathname);
 
     return {};
+  })
+  .onBeforeHandle(async ({ request, set }) => {
+    if (!answersAnApiKey(new URL(request.url).pathname)) {
+      return;
+    }
+
+    const refusal = await refusedApiKeyResponse(request.headers);
+
+    if (refusal) {
+      return copyResponseStatusOntoWideEvent(set, refusal);
+    }
   })
   .use(
     cors({
@@ -132,6 +152,17 @@ new Elysia()
     "/ai/chat",
     (context) =>
       handleAssistantChat({ log: context.log, request: context.request }),
+    {
+      parse: "none",
+    }
+  )
+  .all(
+    "/mcp",
+    async (context) =>
+      copyResponseStatusOntoWideEvent(
+        context.set,
+        await handleMcpRequest(context.request)
+      ),
     {
       parse: "none",
     }

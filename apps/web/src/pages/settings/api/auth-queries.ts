@@ -21,10 +21,20 @@ export interface LinkedAccount {
   updatedAt: Date;
 }
 
+export interface ApiKeySummary {
+  createdAt: Date;
+  expiresAt: Date | null;
+  id: string;
+  lastRequest: Date | null;
+  name: string | null;
+  start: string | null;
+}
+
 export const CREDENTIAL_PROVIDER_ID = "credential";
 
 export const AUTH_SESSIONS_QUERY_KEY = ["auth", "sessions"];
 export const AUTH_ACCOUNTS_QUERY_KEY = ["auth", "accounts"];
+export const AUTH_API_KEYS_QUERY_KEY = ["auth", "api-keys"];
 
 export const authSessionsQueryOptions = () =>
   queryOptions<UserSession[]>({
@@ -52,4 +62,27 @@ export const authAccountsQueryOptions = () =>
       return accounts;
     },
     queryKey: AUTH_ACCOUNTS_QUERY_KEY,
+  });
+
+export const authApiKeysQueryOptions = () =>
+  queryOptions<ApiKeySummary[]>({
+    queryFn: async () => {
+      const { data: listing, error } = await authClient.apiKey.list();
+
+      if (error) {
+        throw new Error(error.message ?? m.settings_api_keys_load_error());
+      }
+
+      return listing.apiKeys.map((apiKey) => ({
+        createdAt: new Date(apiKey.createdAt),
+        expiresAt:
+          apiKey.expiresAt === null ? null : new Date(apiKey.expiresAt),
+        id: apiKey.id,
+        lastRequest:
+          apiKey.lastRequest === null ? null : new Date(apiKey.lastRequest),
+        name: apiKey.name,
+        start: apiKey.start,
+      }));
+    },
+    queryKey: AUTH_API_KEYS_QUERY_KEY,
   });

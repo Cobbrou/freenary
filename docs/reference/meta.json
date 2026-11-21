@@ -6,6 +6,7 @@
     "images",
     "commands",
     "api",
+    "mcp-server",
     "code-conventions"
   ]
 }

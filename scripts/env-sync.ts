@@ -306,7 +306,7 @@ const EXTERNAL: ExternalVariable[] = [
   },
   {
     description:
-      "The origin the web app itself calls while it renders a page. It wins over `PUBLIC_SERVER_URL` there. The web app also forwards the API paths it receives (`/api/auth`, `/rpc`, `/ai/chat` and `/api-reference`) to it, so one public origin can serve both apps. Compose sets `http://server:3000`.",
+      "The origin the web app itself calls while it renders a page. It wins over `PUBLIC_SERVER_URL` there. The web app also forwards the API paths it receives (`/api/auth`, `/rpc`, `/ai/chat`, `/api-reference` and `/mcp`) to it, so one public origin can serve both apps. Compose sets `http://server:3000`.",
     envFile: "none",
     kind: "raw",
     name: "SERVER_URL",

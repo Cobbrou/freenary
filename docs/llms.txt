@@ -1,6 +1,6 @@
 # Freenary
 
-> Freenary is a self-hosted, open-source personal finance app (AGPL-3.0-or-later). It runs as four Docker Compose services (postgres, migrate, server, web), connects to banks through Powens or Enable Banking, and stores everything in PostgreSQL. The web app on port 3001 forwards /api/auth, /rpc, /ai/chat and /api-reference to the API server, so a deployment has one public address. Only POSTGRES_PASSWORD and BETTER_AUTH_SECRET are required to start; the first account to sign in becomes the operator.
+> Freenary is a self-hosted, open-source personal finance app (AGPL-3.0-or-later). It runs as four Docker Compose services (postgres, migrate, server, web), connects to banks through Powens or Enable Banking, and stores everything in PostgreSQL. The web app on port 3001 forwards /api/auth, /rpc, /ai/chat, /api-reference and /mcp to the API server, so a deployment has one public address. Only POSTGRES_PASSWORD and BETTER_AUTH_SECRET are required to start; the first account to sign in becomes the operator.
 
 Every page is plain Markdown.
 
@@ -22,6 +22,8 @@ Every page is plain Markdown.
 - [Add sign-in providers](how-to/add-sign-in-providers.md): Google, Apple, OIDC
 - [Enable the assistant](how-to/enable-the-assistant.md): OpenAI-compatible model
 - [Enable transaction categorisation](how-to/enable-transaction-categorisation.md): classifier settings
+- [Call the API with an API key](how-to/call-the-api.md): create a key in Settings → Security, send it as a bearer token
+- [Connect an AI agent over MCP](how-to/connect-an-ai-agent.md): point Claude Code or another agent at /mcp with an API key
 - [Update Freenary](how-to/update-freenary.md): image tags, pull, migrations
 - [Back up and restore](how-to/back-up-and-restore.md): pg_dump, pg_restore, keep .env
 - [Troubleshoot](how-to/troubleshoot.md): real error messages and fixes
@@ -33,6 +35,7 @@ Every page is plain Markdown.
 - [Container images](reference/images.md): names, tags, platforms, build arguments
 - [Commands](reference/commands.md): root package.json scripts, generated
 - [API](reference/api.md): every procedure, generated from the oRPC router; spec in reference/openapi.json
+- [MCP server](reference/mcp-server.md): the /mcp endpoint, its credential, tools and refusals
 - [Code conventions](reference/code-conventions.md): lint, format, architecture and message rules
 
 ## Explanation

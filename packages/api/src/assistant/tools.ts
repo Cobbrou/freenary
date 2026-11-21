@@ -92,6 +92,19 @@ export interface AssistantToolContext {
   readonly conversationId?: string;
 }
 
+export interface AssistantToolDefinition<
+  Input extends z.ZodObject = z.ZodObject,
+  Output = unknown,
+> {
+  readonly description: string;
+  readonly inputSchema: Input;
+  readonly execute: (input: z.output<Input>) => Promise<Output>;
+}
+
+const defineTool = <Input extends z.ZodObject, Output>(
+  definition: AssistantToolDefinition<Input, Output>
+) => definition;
+
 export interface SaveDashboardInput {
   dashboardId?: string;
   title?: string;
@@ -140,224 +153,256 @@ const MAX_TRANSACTION_ROWS = 20;
 
 const DEFAULT_TRANSACTION_ROWS = 10;
 
-export const assistantTools = (
-  api: AppRouterClient,
+export interface AssistantToolApi {
+  readonly budget: Pick<
+    AppRouterClient["budget"],
+    | "getAccounts"
+    | "getBudgetVsActual"
+    | "getCashFlow"
+    | "getFixedVsVariable"
+    | "getRecurringExpenses"
+    | "getSpendingBreakdown"
+    | "getTransactions"
+  >;
+  readonly dashboards: DashboardWriter;
+}
+
+export const assistantToolDefinitions = (
+  api: AssistantToolApi,
   { conversationId }: AssistantToolContext = {}
-) =>
-  ({
-    get_accounts_overview: tool({
-      description:
-        "List the user's bank accounts and the date range transaction data covers. Call this first when you do not know whether any account is connected.",
-      execute: async () => {
-        const { accounts, ...range } = await api.budget.getAccounts();
+) => ({
+  get_accounts_overview: defineTool({
+    description:
+      "List the user's bank accounts and the date range transaction data covers. Call this first when you do not know whether any account is connected.",
+    execute: async () => {
+      const { accounts, ...range } = await api.budget.getAccounts();
 
-        return {
-          ...range,
-          accounts: accounts.map(({ id, institutionName, name }) => ({
-            id,
-            institutionName,
-            name,
-          })),
-        };
-      },
-      inputSchema: z.object({}),
-    }),
+      return {
+        ...range,
+        accounts: accounts.map(({ id, institutionName, name }) => ({
+          id,
+          institutionName,
+          name,
+        })),
+      };
+    },
+    inputSchema: z.object({}),
+  }),
 
-    get_budget_vs_actual: tool({
-      description:
-        "Compare the user's declared monthly budget with what they actually spent, per category.",
-      execute: async ({ aggregation: mode, from, to }) => {
-        const { categories, currency, hasPlan } =
-          await api.budget.getBudgetVsActual({
-            aggregation: mode,
-            ...inclusiveDayRange(from, to),
-          });
-
-        return {
-          categories: categories.map(({ actual, category, planned }) => ({
-            actual: decimalAmount(actual, currency),
-            category,
-            planned: decimalAmount(planned, currency),
-          })),
-          currency,
-          hasPlan,
-        };
-      },
-      inputSchema: z.object({ aggregation, ...period }),
-    }),
-
-    get_cash_flow: tool({
-      description:
-        "Incoming and outgoing totals over time for a period, bucketed by day, week or month depending on its length.",
-      execute: async ({ from, to }) => {
-        const { currency, periods } = await api.budget.getCashFlow(
-          inclusiveDayRange(from, to)
-        );
-
-        return {
-          currency,
-          periods: periods.map(({ incoming, label, outgoing }) => ({
-            incoming: decimalAmount(incoming, currency),
-            label,
-            outgoing: decimalAmount(outgoing, currency),
-          })),
-        };
-      },
-      inputSchema: z.object(period),
-    }),
-
-    get_fixed_vs_variable: tool({
-      description:
-        "Split outgoings into the part that recurs (rent, subscriptions, insurance) and the part that does not.",
-      execute: async ({ aggregation: mode, from, to }) => {
-        const { currency, fixed, variable } =
-          await api.budget.getFixedVsVariable({
-            aggregation: mode,
-            ...inclusiveDayRange(from, to),
-          });
-
-        return {
-          currency,
-          fixed: decimalAmount(fixed, currency),
-          variable: decimalAmount(variable, currency),
-        };
-      },
-      inputSchema: z.object({ aggregation, ...period }),
-    }),
-
-    get_recurring_expenses: tool({
-      description:
-        "Recurring payments detected over the trailing year, with their cadence, typical amount and next expected date.",
-      execute: async () => {
-        const { expenses } = await api.budget.getRecurringExpenses();
-
-        return {
-          expenses: expenses.map(({ typicalAmountMinor, ...rest }) => ({
-            ...rest,
-            typicalAmount: decimalAmount(typicalAmountMinor, rest.currency),
-          })),
-        };
-      },
-      inputSchema: z.object({}),
-    }),
-
-    get_spending_by_group: tool({
-      description:
-        "Outgoing totals per category for a period. The cheapest way to answer 'where did my money go'.",
-      execute: async ({ aggregation: mode, from, to }) => {
-        const { categories, currency } = await api.budget.getSpendingBreakdown({
+  get_budget_vs_actual: defineTool({
+    description:
+      "Compare the user's declared monthly budget with what they actually spent, per category.",
+    execute: async ({ aggregation: mode, from, to }) => {
+      const { categories, currency, hasPlan } =
+        await api.budget.getBudgetVsActual({
           aggregation: mode,
           ...inclusiveDayRange(from, to),
         });
 
-        return {
-          categories: categories.map(({ amount, category }) => ({
-            category,
-            total: decimalAmount(amount, currency),
-          })),
-          currency,
-        };
-      },
-      inputSchema: z.object({ aggregation, ...period }),
-    }),
+      return {
+        categories: categories.map(({ actual, category, planned }) => ({
+          actual: decimalAmount(actual, currency),
+          category,
+          planned: decimalAmount(planned, currency),
+        })),
+        currency,
+        hasPlan,
+      };
+    },
+    inputSchema: z.object({ aggregation, ...period }),
+  }),
 
-    save_dashboard: tool({
-      description:
-        "Create a dashboard, or replace one's title and widgets when you pass its dashboardId. Widgets read the user's live data themselves, so never pass figures. Returns the dashboard's id.",
-      execute: (input) => saveDashboard(api.dashboards, conversationId, input),
-      inputSchema: z.object({
-        dashboardId: z
-          .string()
-          .optional()
-          .describe("the dashboard to change; leave it out to create one"),
-        title: dashboardTitleSchema
-          .optional()
-          .describe(
-            "the dashboard's name; needed to create one, left out to keep a dashboard's current name"
-          ),
-        widgets: dashboardWidgetsSchema.describe(
-          "every widget the dashboard shows, in order; stats sit three to a row"
-        ),
-      }),
-    }),
+  get_cash_flow: defineTool({
+    description:
+      "Incoming and outgoing totals over time for a period, bucketed by day, week or month depending on its length.",
+    execute: async ({ from, to }) => {
+      const { currency, periods } = await api.budget.getCashFlow(
+        inclusiveDayRange(from, to)
+      );
 
-    search_transactions: tool({
-      description:
-        "Individual transactions in a period, optionally filtered by free text, category, category group, direction or how much money moved. Returns ids so an answer can point at the rows behind it.",
-      execute: async ({
-        categories,
-        direction,
-        from,
-        groups,
-        limit,
-        maxAmount,
-        minAmount,
-        search,
-        sort,
-        to,
-      }) => {
-        const { currency: boundsCurrency } = await api.budget.getAccounts();
-        const filters = searchFilters(
-          { categories, groups, maxAmount, minAmount },
-          boundsCurrency
-        );
+      return {
+        currency,
+        periods: periods.map(({ incoming, label, outgoing }) => ({
+          incoming: decimalAmount(incoming, currency),
+          label,
+          outgoing: decimalAmount(outgoing, currency),
+        })),
+      };
+    },
+    inputSchema: z.object(period),
+  }),
 
-        const { currency, totals, transactions } =
-          await api.budget.getTransactions({
-            direction,
-            filters: filters.length > 0 ? filters : undefined,
-            limit,
-            search,
-            sort,
-            ...inclusiveDayRange(from, to),
-          });
-
-        if (totals === null) {
-          throw new Error(
-            "A first page of transactions came back without totals"
-          );
+  get_fixed_vs_variable: defineTool({
+    description:
+      "Split outgoings into the part that recurs (rent, subscriptions, insurance) and the part that does not.",
+    execute: async ({ aggregation: mode, from, to }) => {
+      const { currency, fixed, variable } = await api.budget.getFixedVsVariable(
+        {
+          aggregation: mode,
+          ...inclusiveDayRange(from, to),
         }
+      );
 
-        return {
-          totals: {
-            currency,
-            incoming: decimalAmount(totals.incoming, currency),
-            outgoing: decimalAmount(totals.outgoing, currency),
-          },
-          transactions: transactions.map(({ amount, ...rest }) => ({
-            ...rest,
-            amount: decimalAmount(amount, rest.currency),
-          })),
-        };
-      },
-      inputSchema: z.object({
-        categories: z.array(z.enum(SPENDING_CATEGORIES)).optional(),
-        direction: z.enum(["incoming", "outgoing"]).optional(),
-        groups: z.array(z.enum(CATEGORY_GROUPS)).optional(),
-        limit: z
-          .number()
-          .int()
-          .min(1)
-          .max(MAX_TRANSACTION_ROWS)
-          .default(DEFAULT_TRANSACTION_ROWS),
-        maxAmount: z
-          .number()
-          .min(0)
-          .optional()
-          .describe("largest amount to return, in units of currency"),
-        minAmount: z
-          .number()
-          .min(0)
-          .optional()
-          .describe(
-            "smallest amount to return, in units of currency; both bounds ignore the sign"
-          ),
-        search: z.string().optional(),
-        sort: z.enum(["date", "amount"]).default("date"),
-        ...period,
-      }),
+      return {
+        currency,
+        fixed: decimalAmount(fixed, currency),
+        variable: decimalAmount(variable, currency),
+      };
+    },
+    inputSchema: z.object({ aggregation, ...period }),
+  }),
+
+  get_recurring_expenses: defineTool({
+    description:
+      "Recurring payments detected over the trailing year, with their cadence, typical amount and next expected date.",
+    execute: async () => {
+      const { expenses } = await api.budget.getRecurringExpenses();
+
+      return {
+        expenses: expenses.map(({ typicalAmountMinor, ...rest }) => ({
+          ...rest,
+          typicalAmount: decimalAmount(typicalAmountMinor, rest.currency),
+        })),
+      };
+    },
+    inputSchema: z.object({}),
+  }),
+
+  get_spending_by_group: defineTool({
+    description:
+      "Outgoing totals per category for a period. The cheapest way to answer 'where did my money go'.",
+    execute: async ({ aggregation: mode, from, to }) => {
+      const { categories, currency } = await api.budget.getSpendingBreakdown({
+        aggregation: mode,
+        ...inclusiveDayRange(from, to),
+      });
+
+      return {
+        categories: categories.map(({ amount, category }) => ({
+          category,
+          total: decimalAmount(amount, currency),
+        })),
+        currency,
+      };
+    },
+    inputSchema: z.object({ aggregation, ...period }),
+  }),
+
+  save_dashboard: defineTool({
+    description:
+      "Create a dashboard, or replace one's title and widgets when you pass its dashboardId. Widgets read the user's live data themselves, so never pass figures. Returns the dashboard's id.",
+    execute: (input) => saveDashboard(api.dashboards, conversationId, input),
+    inputSchema: z.object({
+      dashboardId: z
+        .string()
+        .optional()
+        .describe("the dashboard to change; leave it out to create one"),
+      title: dashboardTitleSchema
+        .optional()
+        .describe(
+          "the dashboard's name; needed to create one, left out to keep a dashboard's current name"
+        ),
+      widgets: dashboardWidgetsSchema.describe(
+        "every widget the dashboard shows, in order; stats sit three to a row"
+      ),
     }),
-  }) satisfies Record<AssistantToolName, Tool>;
+  }),
+
+  search_transactions: defineTool({
+    description:
+      "Individual transactions in a period, optionally filtered by free text, category, category group, direction or how much money moved. Returns ids so an answer can point at the rows behind it.",
+    execute: async ({
+      categories,
+      direction,
+      from,
+      groups,
+      limit,
+      maxAmount,
+      minAmount,
+      search,
+      sort,
+      to,
+    }) => {
+      const { currency: boundsCurrency } = await api.budget.getAccounts();
+      const filters = searchFilters(
+        { categories, groups, maxAmount, minAmount },
+        boundsCurrency
+      );
+
+      const { currency, totals, transactions } =
+        await api.budget.getTransactions({
+          direction,
+          filters: filters.length > 0 ? filters : undefined,
+          limit,
+          search,
+          sort,
+          ...inclusiveDayRange(from, to),
+        });
+
+      if (totals === null) {
+        throw new Error(
+          "A first page of transactions came back without totals"
+        );
+      }
+
+      return {
+        totals: {
+          currency,
+          incoming: decimalAmount(totals.incoming, currency),
+          outgoing: decimalAmount(totals.outgoing, currency),
+        },
+        transactions: transactions.map(({ amount, ...rest }) => ({
+          ...rest,
+          amount: decimalAmount(amount, rest.currency),
+        })),
+      };
+    },
+    inputSchema: z.object({
+      categories: z.array(z.enum(SPENDING_CATEGORIES)).optional(),
+      direction: z.enum(["incoming", "outgoing"]).optional(),
+      groups: z.array(z.enum(CATEGORY_GROUPS)).optional(),
+      limit: z
+        .number()
+        .int()
+        .min(1)
+        .max(MAX_TRANSACTION_ROWS)
+        .default(DEFAULT_TRANSACTION_ROWS),
+      maxAmount: z
+        .number()
+        .min(0)
+        .optional()
+        .describe("largest amount to return, in units of currency"),
+      minAmount: z
+        .number()
+        .min(0)
+        .optional()
+        .describe(
+          "smallest amount to return, in units of currency; both bounds ignore the sign"
+        ),
+      search: z.string().optional(),
+      sort: z.enum(["date", "amount"]).default("date"),
+      ...period,
+    }),
+  }),
+});
+
+export const assistantTools = (
+  api: AssistantToolApi,
+  context: AssistantToolContext = {}
+) => {
+  const definitions = assistantToolDefinitions(api, context);
+
+  return {
+    get_accounts_overview: tool(definitions.get_accounts_overview),
+    get_budget_vs_actual: tool(definitions.get_budget_vs_actual),
+    get_cash_flow: tool(definitions.get_cash_flow),
+    get_fixed_vs_variable: tool(definitions.get_fixed_vs_variable),
+    get_recurring_expenses: tool(definitions.get_recurring_expenses),
+    get_spending_by_group: tool(definitions.get_spending_by_group),
+    save_dashboard: tool(definitions.save_dashboard),
+    search_transactions: tool(definitions.search_transactions),
+  } satisfies Record<AssistantToolName, Tool>;
+};
 
 export const isAssistantToolName = (
   value: string

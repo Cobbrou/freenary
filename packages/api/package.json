@@ -13,6 +13,7 @@
     "./dashboards/widgets": "./src/dashboards/widgets.ts",
     "./instance/update-check": "./src/instance/update-check.ts",
     "./lib/aggregation": "./src/lib/aggregation.ts",
+    "./lib/api-key-refusal": "./src/lib/api-key-refusal.ts",
     "./lib/bank-provider-user": "./src/lib/bank-provider-user.ts",
     "./lib/budget-profile": "./src/lib/budget-profile.ts",
     "./lib/categories": "./src/lib/categories.ts",
@@ -20,6 +21,7 @@
     "./lib/money": "./src/lib/money.ts",
     "./lib/taxonomy": "./src/lib/taxonomy.ts",
     "./lib/transaction-filters": "./src/lib/transaction-filters.ts",
+    "./mcp/handler": "./src/mcp/handler.ts",
     "./providers/mock/consent": "./src/providers/mock/consent.ts",
     "./routers/index": "./src/routers/index.ts"
   },
@@ -38,6 +40,7 @@
     "@freenary/email": "workspace:*",
     "@freenary/env": "workspace:*",
     "@freenary/instance-config": "workspace:*",
+    "@modelcontextprotocol/sdk": "1.32.2",
     "@openuidev/lang-core": "0.2.17",
     "@orpc/client": "catalog:",
     "@orpc/openapi": "catalog:",

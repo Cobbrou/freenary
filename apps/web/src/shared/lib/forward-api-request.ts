@@ -10,6 +10,7 @@ export const FORWARDED_PATH_PREFIXES = [
   "/rpc",
   "/ai/chat",
   "/api-reference",
+  "/mcp",
 ] as const;
 
 const DROPPED_REQUEST_HEADERS = [

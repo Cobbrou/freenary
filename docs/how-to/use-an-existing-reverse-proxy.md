@@ -3,7 +3,7 @@ title: Use an existing reverse proxy
 description: Run the stack that publishes no host port, behind Caddy or nginx.
 ---
 
-This page puts Freenary behind a reverse proxy you already run in Docker, such as Caddy or nginx. A reverse proxy is the server that receives the visitors' HTTPS requests and passes them on to the right container. You run `deploy/docker-compose.yml`, which publishes no host port, and route one public hostname to the `web` service on port `3001`. The web app forwards the API paths (`/api/auth`, `/rpc`, `/ai/chat` and `/api-reference`) to the `server` service, so the browser sees a single address.
+This page puts Freenary behind a reverse proxy you already run in Docker, such as Caddy or nginx. A reverse proxy is the server that receives the visitors' HTTPS requests and passes them on to the right container. You run `deploy/docker-compose.yml`, which publishes no host port, and route one public hostname to the `web` service on port `3001`. The web app forwards the API paths (`/api/auth`, `/rpc`, `/ai/chat`, `/api-reference` and `/mcp`) to the `server` service, so the browser sees a single address.
 
 ## Before you start
 

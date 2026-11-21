@@ -14,9 +14,24 @@ The API server answers on these paths. It allows cross-origin calls from `CORS_O
 | `/api-reference` | `GET` | The interactive API reference, rendered by oRPC's OpenAPI reference plugin. |
 | `/api-reference/spec.json` | `GET` | The OpenAPI document, built per request. Its `servers` entry is the origin of that request. |
 | `/api/auth/*` | `GET`, `POST` | Better Auth: sign-up, sign-in, sessions and the sign-in callbacks. Any other method gets `405`. |
-| `/ai/chat` | `POST` | The assistant chat. It needs a JSON body (`415 unsupported_media_type` otherwise) and a session (`401 unauthorized`), and answers `503 unconfigured` while no assistant model is set. |
+| `/ai/chat` | `POST` | The assistant chat. It needs a JSON body (`415 unsupported_media_type` otherwise) and a session or an API key (`401 unauthorized`), and answers `503 unconfigured` while no assistant model is set. |
+| `/mcp` | `POST` | The MCP server for AI agents, over Streamable HTTP without sessions; each answer is one JSON body. It needs an API key: `401 unauthorized` without one, even with a session cookie. A request whose `Origin` is not `CORS_ORIGIN` gets `403 forbidden_origin`, and another method gets `405`. [MCP server](mcp-server.md) lists its tools. |
 | `/mock-bank/consent` | `GET` | The consent page of the `mock` bank provider. It answers `404` when `NODE_ENV` is `production`. |
 | `/` | `GET` | The health check. It answers `OK`. |
+
+## Credentials
+
+A call acts for one account. It proves which one with either credential:
+
+- The Better Auth session cookie the web app receives at sign-in.
+- An API key, which the account creates and revokes in **Settings → Security → API keys**. Send it as `Authorization: Bearer <key>` or in the `x-api-key` header. A key starts with `fny_`, and the server keeps only its hash.
+
+An API key acts as its account on `/rpc/*`, `/api-reference/*`, `/ai/chat` and `/mcp`, with these limits:
+
+- A key may make at most 120 requests per 60 seconds. Past that, a call gets `429 rate_limited`.
+- An unknown, revoked or expired key gets `401 invalid_api_key`.
+- A key cannot call an `Operator` procedure.
+- A key cannot call `/api/auth/*`, except `/api/auth/get-session`: Better Auth answers `403` with the code `API_KEY_NOT_ALLOWED`. Creating a key needs a session cookie from a sign-in less than 15 minutes old.
 
 ## Procedures
 
@@ -25,8 +40,8 @@ Each procedure below answers over both protocols. The HTTP route is the OpenAPI 
 The Access column comes from the middleware of each procedure in `packages/api/src/index.ts`:
 
 - `Public`: no session needed.
-- `Signed in`: a Better Auth session; without one the call fails with `UNAUTHORIZED` (401).
-- `Operator`: a session of the operator account; without a session the call fails with `UNAUTHORIZED` (401), and with another account with `FORBIDDEN` (403).
+- `Signed in`: a Better Auth session or an API key; without one the call fails with `UNAUTHORIZED` (401).
+- `Operator`: a session of the operator account; without a session the call fails with `UNAUTHORIZED` (401), and with another account or with an API key with `FORBIDDEN` (403).
 
 ## assistant
 

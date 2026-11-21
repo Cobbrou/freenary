@@ -72,6 +72,7 @@
   },
   "devDependencies": {
     "@freenary/api": "workspace:*",
+    "@freenary/auth": "workspace:*",
     "@freenary/config": "workspace:*",
     "@orpc/openapi": "catalog:",
     "@orpc/server": "catalog:",

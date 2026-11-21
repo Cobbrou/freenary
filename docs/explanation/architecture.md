@@ -26,6 +26,7 @@ The browser only ever talks to `web`. The web app's request handler ([`apps/web/
 - `/rpc` — the calls the web app makes for its data
 - `/ai/chat` — the assistant
 - `/api-reference` — the OpenAPI version of the API and its interactive reference
+- `/mcp` — the MCP server that AI agents connect to
 
 Every other path is a page that the web app renders. When it renders a page, the web app's own server also calls the API at `SERVER_URL`.
 
@@ -47,6 +48,7 @@ The API server ([`apps/server/src/index.ts`](https://github.com/suiramdev/freena
 - **`/api/auth/*`** through [better-auth](https://www.better-auth.com/), which handles accounts, sessions, passkeys, two-factor codes and the optional Google, Apple and OIDC sign-in.
 - **`/rpc/*`** and **`/api-reference/*`**: the same procedures through two [oRPC](https://orpc.unnoq.com/) handlers. `/rpc` uses oRPC's own protocol and a CSRF check. `/api-reference` is the OpenAPI version. [API](../reference/api.md) lists every procedure.
 - **`POST /ai/chat`**: the assistant.
+- **`POST /mcp`**: the [MCP server](../reference/mcp-server.md), which gives AI agents the assistant's tools. It answers only an API key.
 - **`GET /`**: answers `OK`, for healthchecks.
 
 At startup it checks its environment against the schema in `packages/env/src/schema.ts` and stops if a value is wrong, then reads settings saved from the app (see [Where settings come from](settings-sources.md)). It also checks for a newer release, as described in [Update notice](#update-notice).

@@ -1,4 +1,11 @@
 #!/usr/bin/env bun
+import {
+  API_KEY_HEADER,
+  API_KEY_PREFIX,
+  API_KEY_RATE_LIMIT,
+  API_KEY_SESSION_PATH,
+} from "@freenary/auth/api-key";
+import { REAUTH_WINDOW_SECONDS } from "@freenary/auth/policy";
 import type { OpenAPI } from "@orpc/openapi";
 import { OpenAPIGenerator } from "@orpc/openapi";
 import type {
@@ -290,6 +297,11 @@ const SERVER_FACTS: readonly [string, RegExp][] = [
   [
     "the JSON-only POST rule of /api-reference",
     /!isJsonRequest\(context\.request\)/u,
+  ],
+  ["the MCP endpoint on /mcp", /\.all\(\s*"\/mcp"/u],
+  [
+    "the API key refusal on /rpc, /api-reference and /ai/chat",
+    /refusedApiKeyResponse\(request\.headers\)/u,
   ],
   ["the mock bank consent page", /\.get\(MOCK_CONSENT_PATH/u],
   ["the health check on GET /", /\.get\("\/", \(\) => "OK"\)/u],
@@ -649,7 +661,12 @@ const endpointTable = (api: Api): string =>
       [
         code("/ai/chat"),
         code("POST"),
-        `The assistant chat. It needs a JSON body (${code("415 unsupported_media_type")} otherwise) and a session (${code("401 unauthorized")}), and answers ${code("503 unconfigured")} while no assistant model is set.`,
+        `The assistant chat. It needs a JSON body (${code("415 unsupported_media_type")} otherwise) and a session or an API key (${code("401 unauthorized")}), and answers ${code("503 unconfigured")} while no assistant model is set.`,
+      ],
+      [
+        code("/mcp"),
+        code("POST"),
+        `The MCP server for AI agents, over Streamable HTTP without sessions; each answer is one JSON body. It needs an API key: ${code("401 unauthorized")} without one, even with a session cookie. A request whose ${code("Origin")} is not ${code("CORS_ORIGIN")} gets ${code("403 forbidden_origin")}, and another method gets ${code("405")}. [MCP server](mcp-server.md) lists its tools.`,
       ],
       [
         code(api.consent.MOCK_CONSENT_PATH),
@@ -662,9 +679,28 @@ const endpointTable = (api: Api): string =>
 
 const ACCESS_LEGEND = [
   `${code("Public")}: no session needed.`,
-  `${code("Signed in")}: a Better Auth session; without one the call fails with ${code("UNAUTHORIZED")} (401).`,
-  `${code("Operator")}: a session of the operator account; without a session the call fails with ${code("UNAUTHORIZED")} (401), and with another account with ${code("FORBIDDEN")} (403).`,
+  `${code("Signed in")}: a Better Auth session or an API key; without one the call fails with ${code("UNAUTHORIZED")} (401).`,
+  `${code("Operator")}: a session of the operator account; without a session the call fails with ${code("UNAUTHORIZED")} (401), and with another account or with an API key with ${code("FORBIDDEN")} (403).`,
 ];
+
+const MILLISECONDS_PER_SECOND = 1000;
+const SECONDS_PER_MINUTE = 60;
+
+const CREDENTIALS = [
+  "## Credentials",
+  "A call acts for one account. It proves which one with either credential:",
+  [
+    `- The Better Auth session cookie the web app receives at sign-in.`,
+    `- An API key, which the account creates and revokes in **Settings → Security → API keys**. Send it as ${code("Authorization: Bearer <key>")} or in the ${code(API_KEY_HEADER)} header. A key starts with ${code(API_KEY_PREFIX)}, and the server keeps only its hash.`,
+  ].join("\n"),
+  `An API key acts as its account on ${code(`${RPC_PREFIX}/*`)}, ${code(`${OPENAPI_PREFIX}/*`)}, ${code("/ai/chat")} and ${code("/mcp")}, with these limits:`,
+  [
+    `- A key may make at most ${API_KEY_RATE_LIMIT.maxRequests} requests per ${API_KEY_RATE_LIMIT.timeWindowMs / MILLISECONDS_PER_SECOND} seconds. Past that, a call gets ${code("429 rate_limited")}.`,
+    `- An unknown, revoked or expired key gets ${code("401 invalid_api_key")}.`,
+    `- A key cannot call an ${code("Operator")} procedure.`,
+    `- A key cannot call ${code("/api/auth/*")}, except ${code(`/api/auth${API_KEY_SESSION_PATH}`)}: Better Auth answers ${code("403")} with the code ${code("API_KEY_NOT_ALLOWED")}. Creating a key needs a session cookie from a sign-in less than ${REAUTH_WINDOW_SECONDS / SECONDS_PER_MINUTE} minutes old.`,
+  ].join("\n"),
+].join("\n\n");
 
 const renderApiPage = async (
   api: Api,
@@ -721,6 +757,7 @@ const renderApiPage = async (
     body: [
       `The API server answers on these paths. It allows cross-origin calls from ${code("CORS_ORIGIN")} alone, with credentials.`,
       endpointTable(api),
+      CREDENTIALS,
       "## Procedures",
       `Each procedure below answers over both protocols. The HTTP route is the OpenAPI one; the input is the JSON body, and a field without ${code("required")} may be left out. [${code(OPENAPI_FILE)}](https://github.com/suiramdev/freenary/blob/dev/${OPENAPI_FILE}) holds the full schemas, the same document ${code(`${OPENAPI_PREFIX}/spec.json`)} serves.`,
       `The Access column comes from the middleware of each procedure in ${code(API_ACCESS_SOURCE)}:`,

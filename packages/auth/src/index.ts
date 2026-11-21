@@ -1,3 +1,4 @@
+import { apiKey } from "@better-auth/api-key";
 import { passkey } from "@better-auth/passkey";
 import { createPrismaClient } from "@freenary/db";
 import { isEmailEnabled } from "@freenary/email";
@@ -10,6 +11,7 @@ import {
   APIError,
   createAuthMiddleware,
   getSessionFromCtx,
+  isAPIError,
 } from "better-auth/api";
 import {
   emailOTP,
@@ -17,8 +19,18 @@ import {
   haveIBeenPwned,
   twoFactor,
 } from "better-auth/plugins";
-import { Effect } from "effect";
+import { Data, Effect } from "effect";
 
+import {
+  API_KEY_LENGTH,
+  API_KEY_MAX_EXPIRY_DAYS,
+  API_KEY_NAME_MAX_LENGTH,
+  API_KEY_PREFIX,
+  API_KEY_RATE_LIMIT,
+  API_KEY_SESSION_PATH,
+  apiKeyFromHeaders,
+  carriesApiKey,
+} from "./api-key";
 import { sendOtpEmail } from "./emails";
 import {
   DISABLED_OTP_TYPES,
@@ -61,6 +73,20 @@ const buildPlugins = (): BetterAuthPlugin[] => {
       rpID: passkeyRelyingPartyId,
       rpName: APP_NAME,
     }),
+    apiKey({
+      customAPIKeyGetter: (ctx) => apiKeyFromHeaders(ctx.headers),
+      defaultKeyLength: API_KEY_LENGTH,
+      defaultPrefix: API_KEY_PREFIX,
+      enableSessionForAPIKeys: true,
+      keyExpiration: { maxExpiresIn: API_KEY_MAX_EXPIRY_DAYS },
+      maximumNameLength: API_KEY_NAME_MAX_LENGTH,
+      rateLimit: {
+        enabled: true,
+        maxRequests: API_KEY_RATE_LIMIT.maxRequests,
+        timeWindow: API_KEY_RATE_LIMIT.timeWindowMs,
+      },
+      requireName: true,
+    }),
   ];
 
   if (isEmailEnabled) {
@@ -89,6 +115,13 @@ const buildPlugins = (): BetterAuthPlugin[] => {
 };
 
 const enforceAuthPolicy = createAuthMiddleware(async (ctx) => {
+  if (carriesApiKey(ctx.headers) && ctx.path !== API_KEY_SESSION_PATH) {
+    throw APIError.from("FORBIDDEN", {
+      code: "API_KEY_NOT_ALLOWED",
+      message: "An API key cannot call this endpoint",
+    });
+  }
+
   if (Object.hasOwn(DISABLED_PATHS, ctx.path)) {
     throw APIError.from("NOT_FOUND", {
       code: "NOT_FOUND",
@@ -229,24 +262,71 @@ export const createAuth = () => {
 
 export const auth = createAuth();
 
-type RequestSession = ReturnType<typeof auth.api.getSession>;
+export type ResolvedSession = Awaited<ReturnType<typeof auth.api.getSession>>;
 
-const sessionsByRequestHeaders = new WeakMap<Headers, RequestSession>();
+export type ApiKeyRefusal = "invalid" | "rate-limited";
 
-export const requestSession = (headers: Headers): RequestSession => {
-  const known = sessionsByRequestHeaders.get(headers);
+export type RequestCredential =
+  | { readonly kind: "resolved"; readonly session: ResolvedSession }
+  | { readonly kind: "api-key-refused"; readonly refusal: ApiKeyRefusal };
+
+const TOO_MANY_REQUESTS = 429;
+
+export const apiKeyRefusalOf = (cause: {
+  statusCode: number;
+}): ApiKeyRefusal =>
+  cause.statusCode === TOO_MANY_REQUESTS ? "rate-limited" : "invalid";
+
+class SessionLookupFailed extends Data.TaggedError("SessionLookupFailed")<{
+  readonly cause: unknown;
+}> {}
+
+const resolveCredential = (headers: Headers) =>
+  Effect.tryPromise({
+    catch: (cause) => new SessionLookupFailed({ cause }),
+    try: () => auth.api.getSession({ headers }),
+  }).pipe(
+    Effect.map((session): RequestCredential => ({ kind: "resolved", session })),
+    Effect.catchTag("SessionLookupFailed", ({ cause }) =>
+      carriesApiKey(headers) && isAPIError(cause)
+        ? Effect.succeed<RequestCredential>({
+            kind: "api-key-refused",
+            refusal: apiKeyRefusalOf(cause),
+          })
+        : Effect.die(cause)
+    )
+  );
+
+const credentialsByRequestHeaders = new WeakMap<
+  Headers,
+  Promise<RequestCredential>
+>();
+
+export const requestCredential = (
+  headers: Headers
+): Promise<RequestCredential> => {
+  const known = credentialsByRequestHeaders.get(headers);
 
   if (known) {
     return known;
   }
 
-  const resolving = auth.api.getSession({ headers });
+  const resolving = Effect.runPromise(resolveCredential(headers));
 
-  sessionsByRequestHeaders.set(headers, resolving);
+  credentialsByRequestHeaders.set(headers, resolving);
 
   return resolving;
+};
+
+export const requestSession = async (
+  headers: Headers
+): Promise<ResolvedSession> => {
+  const credential = await requestCredential(headers);
+
+  return credential.kind === "resolved" ? credential.session : null;
 };
 
 export type { AuthCapabilities, OAuthProviderDescriptor } from "./providers";
 export { authCapabilities } from "./providers";
 export { resolveCookiePolicy } from "./cookies";
+export { carriesApiKey } from "./api-key";

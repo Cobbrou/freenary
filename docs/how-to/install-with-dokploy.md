@@ -44,7 +44,7 @@ This page deploys Freenary on Dokploy, a self-hosted panel that runs Docker Comp
 
    > **TODO (unverified):** how you turn HTTPS on for a domain in Dokploy.
 
-5. Check the domain. The template routes it to the `web` service on port `3001`. The web app forwards the API paths `/api/auth`, `/rpc`, `/ai/chat` and `/api-reference` to the `server` service, so you need no second domain for the API.
+5. Check the domain. The template routes it to the `web` service on port `3001`. The web app forwards the API paths `/api/auth`, `/rpc`, `/ai/chat`, `/api-reference` and `/mcp` to the `server` service, so you need no second domain for the API.
 6. Deploy the service.
 
    > **TODO (unverified):** the name of the deploy button in Dokploy, and where the panel shows the logs of each container.

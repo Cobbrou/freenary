@@ -30,6 +30,7 @@ export const DISABLED_OTP_TYPES = {
 export const REAUTH_WINDOW_SECONDS = 900;
 
 export const REAUTH_PATHS = {
+  "/api-key/create": true,
   "/link-social": true,
   "/passkey/delete-passkey": true,
   "/passkey/generate-register-options": true,

@@ -39,6 +39,7 @@ import { CategoriesSection } from "./categories-section";
 import { ConnectionsPane } from "./connections-pane";
 import { SecurityAccountsSection } from "./security-accounts-section";
 import type { OAuthProviderOption } from "./security-accounts-section";
+import { SecurityApiKeysSection } from "./security-api-keys-section";
 import { SecurityPasskeysSection } from "./security-passkeys-section";
 import { SecuritySessionsSection } from "./security-sessions-section";
 import { SecurityTwoFactorSection } from "./security-two-factor-section";
@@ -139,6 +140,8 @@ const SecurityPane = ({
     />
 
     <SecurityPasskeysSection />
+
+    <SecurityApiKeysSection />
 
     <SecuritySessionsSection
       isPending={isSessionsPending}
