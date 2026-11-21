@@ -1,22 +1,10 @@
-FROM oven/bun:1-slim
+# syntax=docker/dockerfile:1
+FROM oven/bun:1.4.2-slim
 
 WORKDIR /app
 
-COPY package.json bun.lock tsconfig.json turbo.json ./
-
-COPY apps/server/package.json ./apps/server/
-COPY apps/web/package.json ./apps/web/
-COPY apps/fumadocs/package.json ./apps/fumadocs/
-
-COPY packages/api/package.json ./packages/api/
-COPY packages/auth/package.json ./packages/auth/
-COPY packages/config/package.json ./packages/config/
-COPY packages/config/tsconfig.base.json ./packages/config/
-COPY packages/db/package.json ./packages/db/
-COPY packages/email/package.json ./packages/email/
-COPY packages/env/package.json ./packages/env/
-COPY packages/instance-config/package.json ./packages/instance-config/
-COPY packages/ui/package.json ./packages/ui/
+COPY --parents package.json bun.lock tsconfig.json turbo.json \
+    apps/*/package.json packages/*/package.json packages/config/tsconfig.base.json ./
 
 RUN bun install --frozen-lockfile --ignore-scripts
 
