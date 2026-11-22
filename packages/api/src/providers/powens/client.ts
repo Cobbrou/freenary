@@ -211,6 +211,9 @@ export const PowensCurrencySchema = Schema.Struct({
 export const PowensConnectorSchema = Schema.Struct({
   beta: NullableBoolean,
   capabilities: Schema.optional(Schema.NullOr(Schema.Array(Schema.String))),
+  countries: Schema.optional(
+    Schema.NullOr(Schema.Array(Schema.Struct({ id: Schema.String })))
+  ),
   hidden: NullableBoolean,
   id: Schema.optional(Schema.Number),
   name: NullableString,

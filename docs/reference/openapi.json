@@ -469,26 +469,6 @@
     "/bankConnection/listInstitutions": {
       "post": {
         "operationId": "bankConnection.listInstitutions",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "countries": {
-                    "type": "array",
-                    "maxItems": 10,
-                    "items": {
-                      "type": "string",
-                      "pattern": "^[A-Z]{2}$"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
         "responses": {
           "200": {
             "description": "OK",

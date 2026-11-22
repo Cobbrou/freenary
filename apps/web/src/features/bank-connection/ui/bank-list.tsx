@@ -12,8 +12,6 @@ import { RiBankLine, RiErrorWarningLine } from "@remixicon/react";
 import { useRef } from "react";
 
 import { m } from "@/paraglide/messages.js";
-import { getLocale } from "@/paraglide/runtime.js";
-import { countryName } from "@/shared/lib/countries";
 
 import { institutionKey } from "../model/bank-rows";
 import type { BankRow } from "../model/bank-rows";
@@ -32,29 +30,9 @@ interface BankListProps {
   onSync: (connection: BankConnection) => void;
   rows: BankRow[];
   syncingId: string | null;
-  unavailableCountries: string[];
 }
 
 const LIST_VIEWPORT_CLASS = "max-h-64 scroll-fade";
-
-const UnavailableCountriesNotice = ({ countries }: { countries: string[] }) => {
-  const locale = getLocale();
-
-  if (countries.length === 0) {
-    return null;
-  }
-
-  return (
-    <output className="text-muted-foreground flex items-start gap-1.5 text-xs">
-      <RiErrorWarningLine aria-hidden="true" className="size-4 shrink-0" />
-      {m.bank_list_unavailable_countries({
-        countries: new Intl.ListFormat(locale, { type: "conjunction" }).format(
-          countries.map((code) => countryName(code, locale))
-        ),
-      })}
-    </output>
-  );
-};
 
 export const BankList = ({
   connecting,
@@ -67,7 +45,6 @@ export const BankList = ({
   onSync,
   rows,
   syncingId,
-  unavailableCountries,
 }: BankListProps) => {
   const listRef = useRef<HTMLDivElement>(null);
   const hover = useFluidHover(listRef, {
@@ -106,7 +83,6 @@ export const BankList = ({
   if (rows.length === 0) {
     return (
       <div className="flex flex-col gap-2.5">
-        <UnavailableCountriesNotice countries={unavailableCountries} />
         <Empty>
           <EmptyHeader>
             <EmptyMedia variant="icon">
@@ -125,7 +101,6 @@ export const BankList = ({
 
   return (
     <div className="flex flex-col gap-2.5">
-      <UnavailableCountriesNotice countries={unavailableCountries} />
       <ScrollArea viewportClassName={LIST_VIEWPORT_CLASS}>
         <div className="relative" ref={listRef} {...hover.handlers}>
           <FluidHoverHighlight className="rounded-md" hover={hover} />

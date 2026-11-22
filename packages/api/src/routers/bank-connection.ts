@@ -20,10 +20,7 @@ import {
   ensureProviderUser,
   releaseProviderUser,
 } from "../lib/bank-provider-user";
-import {
-  isoAlpha2CountryCode,
-  taxResidencyCountries,
-} from "../lib/country-code";
+import { isoAlpha2CountryCode } from "../lib/country-code";
 import { getDefaultProvider, getProvider } from "../providers/registry";
 import type { BankingProvider, ProviderInstitution } from "../providers/types";
 import { startAccountSync } from "./budget";
@@ -35,8 +32,6 @@ class FirstSyncNotStarted extends Data.TaggedError("FirstSyncNotStarted")<{
 const providerById = Option.liftThrowable(getProvider);
 
 const decodeConnectionState = Option.liftThrowable(parseBankConnectionState);
-
-const LIST_INSTITUTIONS_CONCURRENCY = 3;
 
 const BANK_CONNECTION_STATE_IDENTIFIER = "bank-connection-state";
 const BANK_CONNECTION_STATE_TTL_MS = 60 * 60 * 1000;
@@ -125,27 +120,24 @@ const consumeStateNonce = async (
   }
 };
 
-const requireInstitutionsOf = async (
-  provider: BankingProvider,
-  country: string
+const loadInstitutions = async (
+  provider: BankingProvider
 ): Promise<ProviderInstitution[]> => {
   const institutions = await Effect.runPromise(
     provider
-      .listInstitutions(country)
+      .listInstitutions()
       .pipe(
         Effect.catchTag("BankInstitutionsUnavailable", (cause) =>
-          Effect.logWarning(
-            "Bank institutions unavailable",
-            country,
-            cause
-          ).pipe(Effect.as(null))
+          Effect.logWarning("Bank institutions unavailable", cause).pipe(
+            Effect.as(null)
+          )
         )
       )
   );
 
   if (institutions === null) {
     throw new ORPCError("SERVICE_UNAVAILABLE", {
-      message: "Could not load banks for this country",
+      message: "Could not load banks",
     });
   }
 
@@ -225,10 +217,7 @@ export const bankConnectionRouter = {
 
       const connectionState = readConnectionState(state, provider.id, userId);
 
-      const institutions = await requireInstitutionsOf(
-        provider,
-        connectionState.institution.country
-      );
+      const institutions = await loadInstitutions(provider);
 
       const institution = findInstitution(
         institutions,
@@ -344,81 +333,34 @@ export const bankConnectionRouter = {
     return { connections };
   }),
 
-  listInstitutions: protectedProcedure
-    .input(z.object({ countries: taxResidencyCountries.optional() }))
-    .handler(async ({ context, input }) => {
-      let { countries } = input;
+  listInstitutions: protectedProcedure.handler(async () => {
+    const institutions = await loadInstitutions(getDefaultProvider());
+    const seen = new Set<string>();
+    const banks: {
+      bic: string | null;
+      country: string;
+      id: string;
+      logo: string | null;
+      name: string;
+    }[] = [];
 
-      if (!countries?.length) {
-        const user = await prisma.user.findUniqueOrThrow({
-          select: { taxCountries: true },
-          where: { id: context.session.user.id },
+    for (const inst of institutions) {
+      const key = `${inst.country}:${inst.id}`;
+
+      if (!seen.has(key)) {
+        seen.add(key);
+        banks.push({
+          bic: inst.bic ?? null,
+          country: inst.country,
+          id: inst.id,
+          logo: inst.logoUrl ?? null,
+          name: inst.name,
         });
-
-        countries = user.taxCountries;
       }
+    }
 
-      if (countries.length === 0) {
-        throw new ORPCError("BAD_REQUEST", {
-          message: "No country to list banks for",
-        });
-      }
-
-      const provider = getDefaultProvider();
-      const perCountry = await Effect.runPromise(
-        Effect.forEach(
-          [...new Set(countries)],
-          (country) =>
-            provider.listInstitutions(country).pipe(
-              Effect.catchTag("BankInstitutionsUnavailable", (cause) =>
-                Effect.logWarning(
-                  "Bank institutions unavailable",
-                  country,
-                  cause
-                ).pipe(Effect.as(null))
-              ),
-              Effect.map((institutions) => ({ country, institutions }))
-            ),
-          { concurrency: LIST_INSTITUTIONS_CONCURRENCY }
-        )
-      );
-
-      const seen = new Set<string>();
-      const banks: {
-        bic: string | null;
-        country: string;
-        id: string;
-        logo: string | null;
-        name: string;
-      }[] = [];
-
-      const unavailableCountries: string[] = [];
-
-      for (const listed of perCountry) {
-        if (listed.institutions === null) {
-          unavailableCountries.push(listed.country);
-
-          continue;
-        }
-
-        for (const inst of listed.institutions) {
-          const key = `${inst.country}:${inst.id}`;
-
-          if (!seen.has(key)) {
-            seen.add(key);
-            banks.push({
-              bic: inst.bic ?? null,
-              country: inst.country,
-              id: inst.id,
-              logo: inst.logoUrl ?? null,
-              name: inst.name,
-            });
-          }
-        }
-      }
-
-      return { banks, unavailableCountries };
-    }),
+    return { banks };
+  }),
 
   startConnection: protectedProcedure
     .input(
@@ -432,10 +374,7 @@ export const bankConnectionRouter = {
     .handler(async ({ context, input }) => {
       const userId = context.session.user.id;
       const provider = getDefaultProvider();
-      const institutions = await requireInstitutionsOf(
-        provider,
-        input.bankCountry
-      );
+      const institutions = await loadInstitutions(provider);
 
       const institution = findInstitution(
         institutions,

@@ -17,6 +17,7 @@ Every page is plain Markdown.
 - [Use an existing reverse proxy](how-to/use-an-existing-reverse-proxy.md): deploy/docker-compose.yml behind Caddy or nginx
 - [Build the images from source](how-to/build-images-from-source.md): docker build and build: in Compose
 - [Configure Powens](how-to/configure-powens.md): default bank provider, in the app or in .env
+- [Choose which banks members can connect with Powens](how-to/choose-powens-banks.md): activate connectors in the Powens console; only activated ones reach Freenary
 - [Configure Enable Banking](how-to/configure-enable-banking.md): alternative bank provider
 - [Configure email](how-to/configure-email.md): Resend or SMTP
 - [Add sign-in providers](how-to/add-sign-in-providers.md): Google, Apple, OIDC
@@ -43,6 +44,7 @@ Every page is plain Markdown.
 - [Architecture](explanation/architecture.md): services, request flow, update notice, packages
 - [First run and the operator](explanation/first-run-and-operator.md): claim, setup screen, onboarding
 - [Where settings come from](explanation/settings-sources.md): environment vs settings saved in the app
+- [How the bank list is built](explanation/bank-list.md): every bank the provider returns, not filtered by country
 - [Sign-in and email](explanation/sign-in-and-email.md): what changes when email is on
 - [How the assistant finds a model](explanation/assistant.md): server model vs in-browser model
 - [How transactions get categories](explanation/categorisation.md): the categorisation order

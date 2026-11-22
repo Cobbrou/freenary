@@ -227,25 +227,23 @@ const fetchTransactions = Effect.fn("powens.fetchTransactions")(
 );
 
 const listInstitutions = Effect.fn("powens.listInstitutions")(
-  function* listInstitutions(country: string) {
+  function* listInstitutions() {
     const listed = yield* Effect.mapError(
       powensJson(
         "connectors",
         PowensConnectorsSchema,
-        `/connectors?country_codes=${encodeURIComponent(country)}`
+        "/connectors?expand=countries"
       ),
-      () => new BankInstitutionsUnavailable({ country })
+      (cause) => new BankInstitutionsUnavailable({ cause })
     );
 
     return (listed.connectors ?? []).flatMap((connector) =>
       offersBankData(connector)
-        ? [
-            {
-              country,
-              id: connector.uuid,
-              name: connector.name ?? connector.uuid,
-            },
-          ]
+        ? (connector.countries ?? []).slice(0, 1).map(({ id }) => ({
+            country: id.toUpperCase(),
+            id: connector.uuid,
+            name: connector.name ?? connector.uuid,
+          }))
         : []
     );
   }

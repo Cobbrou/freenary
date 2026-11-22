@@ -14,15 +14,12 @@ import { ConnectBankDialog } from "./connect-bank-dialog";
 import { SettingsListSurface } from "./settings-list-surface";
 import { SettingsSubgroup } from "./settings-subgroup";
 
-const INSTITUTIONS_FOR_THE_USERS_OWN_JURISDICTIONS = {};
-
 export const BankAccountsSection = () => {
   const bankLinking = useBankLinking();
 
   const banksQuery = useQuery(
     orpc.bankConnection.listInstitutions.queryOptions({
       enabled: bankLinking === "available",
-      input: INSTITUTIONS_FOR_THE_USERS_OWN_JURISDICTIONS,
     })
   );
 

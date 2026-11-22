@@ -118,9 +118,10 @@ export interface BankingProvider {
   isConfigured: () => boolean;
   createUser?: () => Promise<ProviderUserSession>;
   deleteUser?: (user: ProviderUserSession) => Promise<void>;
-  listInstitutions: (
-    country: string
-  ) => Effect.Effect<ProviderInstitution[], BankInstitutionsUnavailable>;
+  listInstitutions: () => Effect.Effect<
+    ProviderInstitution[],
+    BankInstitutionsUnavailable
+  >;
   startConnection: (
     request: StartConnectionRequest
   ) => Promise<{ url: string }>;
@@ -150,8 +151,8 @@ export type ProviderAccountType =
 
 export class BankInstitutionsUnavailable extends Data.TaggedError(
   "BankInstitutionsUnavailable"
-)<{ country: string }> {
-  override readonly message = "Could not load banks for this country";
+)<{ cause?: unknown }> {
+  override readonly message = "Could not load banks";
 }
 
 const ACCOUNT_TYPES_HOLDING_POSITIONS_NOT_CASH = {

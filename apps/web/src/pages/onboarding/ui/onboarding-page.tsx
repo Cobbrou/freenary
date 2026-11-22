@@ -1,4 +1,4 @@
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 
 import { AuthGate } from "@/features/auth-gate";
 import { useBankLinking } from "@/features/bank-connection";
@@ -14,9 +14,7 @@ const OnboardingContent = () => {
 
   const banksQuery = useQuery(
     orpc.bankConnection.listInstitutions.queryOptions({
-      enabled: wizard.taxCountries.length > 0 && bankLinking === "available",
-      input: { countries: wizard.taxCountries },
-      placeholderData: keepPreviousData,
+      enabled: bankLinking === "available",
     })
   );
 
@@ -31,7 +29,7 @@ const OnboardingContent = () => {
       connectedCount={connectionsQuery.data?.connections.length ?? 0}
       direction={wizard.direction}
       isBanksError={banksQuery.isError}
-      isBanksPending={banksQuery.isPending || banksQuery.isPlaceholderData}
+      isBanksPending={banksQuery.isPending}
       isCompleting={wizard.isCompleting}
       isPending={bankLinking === "pending"}
       onBack={wizard.handleBack}
@@ -41,7 +39,6 @@ const OnboardingContent = () => {
       onSignOut={wizard.handleSignOut}
       step={wizard.step}
       taxCountries={wizard.taxCountries}
-      unavailableCountries={banksQuery.data?.unavailableCountries ?? []}
     />
   );
 };

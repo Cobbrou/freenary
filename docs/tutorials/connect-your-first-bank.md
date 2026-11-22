@@ -48,7 +48,7 @@ The page now shows **Connect Powens** and **Step 1 of 4**.
 
       ![The new application in the Powens console, with its Client ID, a hidden Client secret and the redirect URI](../images/11-powens-console-application.png)
 
-   4. Select **Connectors** in the left menu, and type `Connecteur de test` in **Filter connectors by name or UUID**. **Connecteur de test** must read **Activated**. If it reads **Activate**, select it. Turn on any other bank the same way.
+   4. Select **Connectors** in the left menu, and type `Connecteur de test` in **Filter connectors by name or UUID**. **Connecteur de test** must read **Activated**. If it reads **Activate**, select it. Freenary only lists the banks whose connector is activated here, so turn on any other bank the same way. [Choose which banks members can connect with Powens](../how-to/choose-powens-banks.md) covers this in detail.
 
       ![The Powens Connectors page filtered on Connecteur de test, which reads Activated](../images/12-powens-console-connectors.png)
 
@@ -86,7 +86,7 @@ The page shows **Applying your settings…** and **This page reconnects on its o
 
 Every member, including you, now sets up their own account.
 
-1. **What’s your tax residency?** Add **France**, the country of **Connecteur de test**, then select **Continue**. The countries you pick decide which banks you can link.
+1. **What’s your tax residency?** Add your country, for example **France**, then select **Continue**. This choice does not filter the bank list: the next step lists every bank your bank provider makes available.
 
    ![The onboarding step What’s your tax residency? with an Add a country… field](../images/09-onboarding-tax-residency.png)
 

@@ -69,7 +69,7 @@ The Access column comes from the middleware of each procedure in `packages/api/s
 | `bankConnection.exchangeCode` | `POST /api-reference/bankConnection/exchangeCode` | Signed in | `params` object, required; `providerId` string, required |
 | `bankConnection.getProviderAvailability` | `POST /api-reference/bankConnection/getProviderAvailability` | Signed in | none |
 | `bankConnection.listConnections` | `POST /api-reference/bankConnection/listConnections` | Signed in | none |
-| `bankConnection.listInstitutions` | `POST /api-reference/bankConnection/listInstitutions` | Signed in | `countries` array of string |
+| `bankConnection.listInstitutions` | `POST /api-reference/bankConnection/listInstitutions` | Signed in | none |
 | `bankConnection.startConnection` | `POST /api-reference/bankConnection/startConnection` | Signed in | `bankCountry` string, required; `institutionId` string, required; `returnTo` `"onboarding"` or `"settings"`, required; `state` string |
 
 ## budget

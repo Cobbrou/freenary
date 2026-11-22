@@ -69,14 +69,10 @@ const fetchTransactions = Effect.fn("enableBanking.fetchTransactions")(
 );
 
 const listInstitutions = Effect.fn("enableBanking.listInstitutions")(
-  function* listInstitutions(country: string) {
+  function* listInstitutions() {
     const listed = yield* Effect.mapError(
-      ebJson(
-        "institutions",
-        EBInstitutionsSchema,
-        `/aspsps?country=${encodeURIComponent(country)}`
-      ),
-      () => new BankInstitutionsUnavailable({ country })
+      ebJson("institutions", EBInstitutionsSchema, "/aspsps"),
+      (cause) => new BankInstitutionsUnavailable({ cause })
     );
 
     return listed.aspsps.map((aspsp) => ({
