@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-FROM oven/bun:1.4.2 AS builder
+FROM oven/bun:1.4.5 AS builder
 WORKDIR /app
 ENV SKIP_ENV_VALIDATION=1
 # prisma generate resolves DATABASE_URL at install time; the real value comes from compose at runtime
@@ -20,7 +20,7 @@ RUN --mount=type=secret,id=GITHUB_TOKEN \
     bun run build:data
 RUN cd apps/server && bun run build
 
-FROM oven/bun:1.4.2 AS runner
+FROM oven/bun:1.4.5 AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 # Under its own name: the stack's `.env` sets `FREENARY_VERSION` to the image

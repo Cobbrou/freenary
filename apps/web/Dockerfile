@@ -1,4 +1,4 @@
-FROM oven/bun:1.4.2 AS builder
+FROM oven/bun:1.4.5 AS builder
 WORKDIR /app
 # prisma generate resolves DATABASE_URL at install time; the real value comes from compose at runtime
 ENV DATABASE_URL=postgresql://build:build@localhost:5432/build
@@ -13,7 +13,7 @@ ENV NODE_ENV=production
 RUN cd apps/web && bun run build
 ENV DATABASE_URL=
 
-FROM oven/bun:1.4.2 AS runner
+FROM oven/bun:1.4.5 AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 COPY --from=builder /app /app

@@ -87,7 +87,7 @@
     "typescript": "catalog:",
     "ultracite": "7.10.6"
   },
-  "packageManager": "bun@1.4.2",
+  "packageManager": "bun@1.4.5",
   "registries": {
     "@fluid": "https://www.fluidfunctionalism.com/r/{name}.json"
   }
