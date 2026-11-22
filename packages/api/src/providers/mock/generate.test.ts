@@ -94,7 +94,7 @@ describe("mock bank data", () => {
 
   it("values holdings for investment accounts only", () => {
     const brokerage = generateAccounts(SESSION, TODAY).find(
-      (account) => account.type === "BROKERAGE"
+      (account) => account.type === "PEA"
     );
 
     const holdings = generateHoldings(`${SESSION}:pea`, TODAY);

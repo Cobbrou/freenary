@@ -24,7 +24,7 @@ export const portfolioRouter = {
 
       const [accounts, transactions, currency] = await Promise.all([
         prisma.bankAccount.findMany({
-          select: { balanceMinor: true, currency: true, id: true },
+          select: { balanceMinor: true, currency: true, id: true, type: true },
           where: { connection: { userId } },
         }),
         prisma.transaction.findMany({

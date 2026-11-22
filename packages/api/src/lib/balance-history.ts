@@ -1,7 +1,10 @@
+import { signedBalanceOf } from "./account-types";
+
 export interface HistoryAccount {
   balanceMinor: number | null;
   currency: string | null;
   id: string;
+  type: string;
 }
 
 export interface HistoryTransaction {
@@ -41,26 +44,29 @@ export const balanceHistory = (
   today: Date,
   months: number
 ): BalancePoint[] | null => {
-  const valued = new Map<string, number>();
+  const ledgerSign = new Map<string, number>();
+  let balanceNow = 0;
 
   for (const account of accounts) {
     if (account.balanceMinor !== null && account.currency === currency) {
-      valued.set(account.id, account.balanceMinor);
+      const signed = signedBalanceOf(account.type, account.balanceMinor);
+
+      ledgerSign.set(account.id, signed === account.balanceMinor ? 1 : -1);
+      balanceNow += signed;
     }
   }
 
-  if (valued.size === 0) {
+  if (ledgerSign.size === 0) {
     return null;
   }
 
-  const balanceNow = [...valued.values()].reduce(
-    (sum, balance) => sum + balance,
-    0
-  );
+  const counted = transactions.flatMap((transaction) => {
+    const sign = ledgerSign.get(transaction.accountId);
 
-  const counted = transactions.filter((transaction) =>
-    valued.has(transaction.accountId)
-  );
+    return sign === undefined
+      ? []
+      : [{ amount: sign * transaction.amount, date: transaction.date }];
+  });
 
   const history = monthEndsBefore(today, months).map((monthEnd) => ({
     balanceMinor:

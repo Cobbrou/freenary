@@ -1,29 +1,11 @@
 import type { ProviderAccountType } from "../providers/types";
+import type { AssetClass } from "./account-types";
+import {
+  ASSET_CLASSES,
+  accountTypeRule,
+  signedBalanceOf,
+} from "./account-types";
 import { accountsSummary } from "./accounts-summary";
-
-export const ASSET_CLASSES = [
-  "cash",
-  "savings",
-  "investments",
-  "property",
-  "other",
-] as const;
-
-export type AssetClass = (typeof ASSET_CLASSES)[number];
-
-const ASSET_CLASS_OF = {
-  BROKERAGE: "investments",
-  CARD: "cash",
-  CHECKING: "cash",
-  CROWDLENDING: "investments",
-  EMPLOYEE_SAVINGS: "investments",
-  LIFE_INSURANCE: "investments",
-  LOAN: "other",
-  REAL_ESTATE: "property",
-  RETIREMENT: "investments",
-  SAVINGS: "savings",
-  UNKNOWN: "other",
-} as const satisfies Record<ProviderAccountType, AssetClass>;
 
 export interface ValuedAccount {
   balanceAt: Date | null;
@@ -63,7 +45,7 @@ export const currentAccountsOf = (
 
   for (const account of accounts) {
     const isCounted =
-      account.type === "CHECKING" &&
+      accountTypeRule(account.type).countsInAvailableBalance &&
       account.currency === currency &&
       account.balanceMinor !== null;
 
@@ -74,9 +56,6 @@ export const currentAccountsOf = (
 
   return { balanceMinor: availableBalanceMinor, balancesAt, currency };
 };
-
-export const assetClassOf = (type: ProviderAccountType): AssetClass =>
-  ASSET_CLASS_OF[type];
 
 export const netWorthOf = (
   accounts: ValuedAccount[],
@@ -90,9 +69,7 @@ export const netWorthOf = (
   let balancesAt: Date | null = null;
 
   for (const account of accounts) {
-    const { balanceMinor } = account;
-
-    if (balanceMinor === null || account.currency !== currency) {
+    if (account.balanceMinor === null || account.currency !== currency) {
       excludedAccountCount += 1;
 
       continue;
@@ -101,13 +78,15 @@ export const netWorthOf = (
     valuedAccountCount += 1;
     balancesAt = laterOf(balancesAt, account.balanceAt);
 
-    if (balanceMinor < 0) {
-      liabilitiesMinor += -balanceMinor;
+    const balanceMinor = signedBalanceOf(account.type, account.balanceMinor);
+    const { assetClass } = accountTypeRule(account.type);
+
+    if (balanceMinor < 0 || assetClass === null) {
+      liabilitiesMinor += Math.abs(balanceMinor);
 
       continue;
     }
 
-    const assetClass = assetClassOf(account.type);
     assetsMinor += balanceMinor;
     byClass.set(assetClass, (byClass.get(assetClass) ?? 0) + balanceMinor);
   }

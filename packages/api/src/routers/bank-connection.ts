@@ -271,6 +271,7 @@ export const bankConnectionRouter = {
             identificationHash: account.identificationHash ?? null,
             name: account.name ?? null,
             providerAccountId: account.providerAccountId,
+            type: account.type,
           })),
         });
 

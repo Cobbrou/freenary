@@ -83,17 +83,26 @@ model BankAccount {
   @@map("bank_account")
 }
 
+/// Kind of account. packages/api/src/lib/account-types.ts decides which
+/// calculations count each kind.
 enum BankAccountType {
   CHECKING
-  SAVINGS
   CARD
-  LOAN
+  SAVINGS
+  LIVRET_A
+  LDDS
+  LEP
+  CEL
+  PEL
+  TERM_DEPOSIT
   BROKERAGE
+  PEA
   LIFE_INSURANCE
   RETIREMENT
   EMPLOYEE_SAVINGS
   REAL_ESTATE
   CROWDLENDING
+  LOAN
   UNKNOWN
 }
 

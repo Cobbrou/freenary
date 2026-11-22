@@ -31,6 +31,10 @@ import {
   upsertUserOverride,
 } from "../categorisation/user-override";
 import { protectedProcedure } from "../index";
+import {
+  cashFlowAccountsOf,
+  cashFlowAccountTypesSql,
+} from "../lib/account-types";
 import { accountsSummary } from "../lib/accounts-summary";
 import { AGGREGATION_MODES } from "../lib/aggregation";
 import type { AggregationMode } from "../lib/aggregation";
@@ -167,6 +171,7 @@ const cashFlowQuery = ({ labelExpr, truncExpr }: CashFlowGrain) =>
   JOIN "bank_account" ba ON ba."id" = t."accountId"
   JOIN "bank_connection" bc ON bc."id" = ba."connectionId"
   WHERE bc."userId" = $1
+    AND ${cashFlowAccountTypesSql('ba."type"')}
     AND t."date" >= $2
     AND t."date" <= $3
   GROUP BY ${truncExpr}, ${labelExpr}
@@ -290,7 +295,7 @@ const outgoingRows = (
       resolvedCategory: true,
     },
     where: {
-      account: { connection: { userId } },
+      account: cashFlowAccountsOf(userId),
       amount: { lt: 0 },
       date: { gte: from, lte: to },
     },
@@ -403,7 +408,7 @@ const periodRows = (
       resolvedCategory: true,
     },
     where: {
-      account: { connection: { userId } },
+      account: cashFlowAccountsOf(userId),
       date: { gte: from, lte: to },
     },
   });
@@ -1184,7 +1189,7 @@ export const budgetRouter = {
         _min: { date: true },
         _sum: { amount: true },
         where: {
-          account: { connection: { userId } },
+          account: cashFlowAccountsOf(userId),
           amount: { gt: 0 },
           date: { gte: observed.from, lte: observed.to },
           isInternalTransfer: false,

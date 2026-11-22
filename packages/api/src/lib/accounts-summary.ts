@@ -1,3 +1,5 @@
+import { accountTypeRule, signedBalanceOf } from "./account-types";
+
 const FALLBACK_CURRENCY = "EUR";
 
 export interface AccountsSummary {
@@ -23,6 +25,9 @@ export const mostFrequentCurrency = (
   return currency;
 };
 
+const holdsMoney = (account: { type: string }) =>
+  !accountTypeRule(account.type).isDebt;
+
 export const accountsSummary = (
   accounts: {
     balanceMinor: number | null;
@@ -30,11 +35,14 @@ export const accountsSummary = (
     type: string;
   }[]
 ): AccountsSummary => {
-  const checking = accounts.filter((account) => account.type === "CHECKING");
+  const available = accounts.filter(
+    (account) => accountTypeRule(account.type).countsInAvailableBalance
+  );
+
   const currencyCounts = new Map<string, number>();
 
-  for (const account of checking) {
-    if (account.currency) {
+  for (const account of available) {
+    if (account.currency && holdsMoney(account)) {
       currencyCounts.set(
         account.currency,
         (currencyCounts.get(account.currency) ?? 0) + 1
@@ -46,10 +54,10 @@ export const accountsSummary = (
   let balance = 0;
   let valued = false;
 
-  for (const account of checking) {
+  for (const account of available) {
     if (account.currency === currency && account.balanceMinor !== null) {
-      balance += account.balanceMinor;
-      valued = true;
+      balance += signedBalanceOf(account.type, account.balanceMinor);
+      valued ||= holdsMoney(account);
     }
   }
 

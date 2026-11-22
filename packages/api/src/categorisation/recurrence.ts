@@ -1,6 +1,7 @@
 import prisma from "@freenary/db";
 import { Array as Arr } from "effect";
 
+import { cashFlowAccountsOf } from "../lib/account-types";
 import type { SpendingCategory } from "../lib/taxonomy";
 import { resolveCategorySlug } from "../lib/taxonomy";
 import type { Iso4217Currency, OutgoingNegativeMinorUnits } from "./types";
@@ -403,9 +404,7 @@ const outgoingInWindow = async (
 ): Promise<RecurrenceTransaction[]> => {
   const accounts = await prisma.bankAccount.findMany({
     select: { id: true },
-    where: {
-      connection: { userId },
-    },
+    where: cashFlowAccountsOf(userId),
   });
 
   if (accounts.length === 0) {

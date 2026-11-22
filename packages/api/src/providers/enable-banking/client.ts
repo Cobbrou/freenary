@@ -284,7 +284,9 @@ export const EBCompletedConnectionSchema = Schema.Struct({
           identification_hash: OptionalString,
         })
       ),
+      cash_account_type: Schema.optional(Schema.NullOr(Schema.String)),
       name: OptionalString,
+      product: Schema.optional(Schema.NullOr(Schema.String)),
       uid: Schema.String,
     })
   ),

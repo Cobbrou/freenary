@@ -10,18 +10,37 @@ describe("mapPowensAccount", () => {
     );
   });
 
-  test("groups the French account kinds onto the core's types", () => {
-    expect(mapPowensAccount({ id: 1, type: "pea" }).type).toBe("BROKERAGE");
-    expect(mapPowensAccount({ id: 1, type: "livret_a" }).type).toBe("SAVINGS");
+  test("keeps the French savings and investment wrappers apart", () => {
+    expect(mapPowensAccount({ id: 1, type: "pea" }).type).toBe("PEA");
+    expect(mapPowensAccount({ id: 1, type: "market" }).type).toBe("BROKERAGE");
+    expect(mapPowensAccount({ id: 1, type: "livret_a" }).type).toBe("LIVRET_A");
+    expect(mapPowensAccount({ id: 1, type: "ldds" }).type).toBe("LDDS");
+    expect(mapPowensAccount({ id: 1, type: "pel" }).type).toBe("PEL");
+    expect(mapPowensAccount({ id: 1, type: "cel" }).type).toBe("CEL");
+    expect(mapPowensAccount({ id: 1, type: "cat" }).type).toBe("TERM_DEPOSIT");
     expect(mapPowensAccount({ id: 1, type: "lifeinsurance" }).type).toBe(
       "LIFE_INSURANCE"
     );
+
+    expect(mapPowensAccount({ id: 1, type: "joint" }).type).toBe("CHECKING");
   });
 
-  test("falls back to UNKNOWN for a type it does not know", () => {
-    expect(mapPowensAccount({ id: 1, type: "joint" }).type).toBe("UNKNOWN");
-    expect(mapPowensAccount({ id: 1, type: "unknown" }).type).toBe("UNKNOWN");
-    expect(mapPowensAccount({ id: 1 }).type).toBe("UNKNOWN");
+  test("recognises a regulated savings account the bank files as plain savings", () => {
+    expect(
+      mapPowensAccount({ id: 1, name: "LIVRET A", type: "savings" }).type
+    ).toBe("LIVRET_A");
+
+    expect(
+      mapPowensAccount({
+        id: 1,
+        name: "Livret d'Épargne Populaire",
+        type: "savings",
+      }).type
+    ).toBe("LEP");
+
+    expect(
+      mapPowensAccount({ id: 1, name: "Super Livret", type: "savings" }).type
+    ).toBe("SAVINGS");
   });
 
   test("converts the balance with the currency's precision", () => {

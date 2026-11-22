@@ -75,6 +75,82 @@ describe("netWorthOf", () => {
     expect(worth.netWorthMinor).toBe(-5000);
   });
 
+  it("counts a loan and a deferred card as debts whatever sign the bank reports", () => {
+    const worth = netWorthOf(
+      [
+        {
+          balanceAt: null,
+          balanceMinor: 100_000,
+          currency: "EUR",
+          type: "CHECKING",
+        },
+        {
+          balanceAt: null,
+          balanceMinor: 900_000,
+          currency: "EUR",
+          type: "LOAN",
+        },
+        {
+          balanceAt: null,
+          balanceMinor: -30_000,
+          currency: "EUR",
+          type: "CARD",
+        },
+      ],
+      "EUR"
+    );
+
+    expect(worth.assetsMinor).toBe(100_000);
+    expect(worth.liabilitiesMinor).toBe(930_000);
+    expect(worth.netWorthMinor).toBe(-830_000);
+  });
+
+  it("keeps locked retirement savings apart from what can be withdrawn", () => {
+    const worth = netWorthOf(
+      [
+        {
+          balanceAt: null,
+          balanceMinor: 400_000,
+          currency: "EUR",
+          type: "LIVRET_A",
+        },
+        {
+          balanceAt: null,
+          balanceMinor: 200_000,
+          currency: "EUR",
+          type: "PEL",
+        },
+        {
+          balanceAt: null,
+          balanceMinor: 300_000,
+          currency: "EUR",
+          type: "PEA",
+        },
+        {
+          balanceAt: null,
+          balanceMinor: 150_000,
+          currency: "EUR",
+          type: "RETIREMENT",
+        },
+        {
+          balanceAt: null,
+          balanceMinor: 50_000,
+          currency: "EUR",
+          type: "EMPLOYEE_SAVINGS",
+        },
+      ],
+      "EUR"
+    );
+
+    expect(worth.assetClasses).toEqual([
+      { amountMinor: 600_000, assetClass: "savings" },
+      { amountMinor: 300_000, assetClass: "investments" },
+      { amountMinor: 200_000, assetClass: "retirement" },
+    ]);
+
+    expect(worth.netWorthMinor).toBe(1_100_000);
+  });
+
   it("leaves out accounts in another currency or with no balance", () => {
     const worth = netWorthOf(
       [
@@ -215,6 +291,35 @@ describe("currentAccountsOf", () => {
     ).toEqual({
       balanceMinor: 120_000,
       balancesAt: MAY_FIRST,
+      currency: "EUR",
+    });
+  });
+
+  it("takes off what a deferred card has spent but leaves savings out", () => {
+    expect(
+      currentAccountsOf([
+        {
+          balanceAt: MAY_FIRST,
+          balanceMinor: 120_000,
+          currency: "EUR",
+          type: "CHECKING",
+        },
+        {
+          balanceAt: MAY_SECOND,
+          balanceMinor: -20_000,
+          currency: "EUR",
+          type: "CARD",
+        },
+        {
+          balanceAt: MAY_SECOND,
+          balanceMinor: 500_000,
+          currency: "EUR",
+          type: "LIVRET_A",
+        },
+      ])
+    ).toEqual({
+      balanceMinor: 100_000,
+      balancesAt: MAY_SECOND,
       currency: "EUR",
     });
   });
