@@ -14,8 +14,8 @@
     "check-types": "tsc --noEmit"
   },
   "dependencies": {
-    "@better-auth/api-key": "1.7.25",
-    "@better-auth/passkey": "1.7.25",
+    "@better-auth/api-key": "1.7.26",
+    "@better-auth/passkey": "1.7.26",
     "@freenary/db": "workspace:*",
     "@freenary/email": "workspace:*",
     "@freenary/env": "workspace:*",
