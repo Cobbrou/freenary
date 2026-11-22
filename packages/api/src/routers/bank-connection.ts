@@ -21,8 +21,9 @@ import {
   releaseProviderUser,
 } from "../lib/bank-provider-user";
 import { isoAlpha2CountryCode } from "../lib/country-code";
+import { institutionsLoaderWith } from "../lib/institutions-cache";
 import { getDefaultProvider, getProvider } from "../providers/registry";
-import type { BankingProvider, ProviderInstitution } from "../providers/types";
+import type { BankingProvider } from "../providers/types";
 import { startAccountSync } from "./budget";
 
 class FirstSyncNotStarted extends Data.TaggedError("FirstSyncNotStarted")<{
@@ -120,29 +121,7 @@ const consumeStateNonce = async (
   }
 };
 
-const loadInstitutions = async (
-  provider: BankingProvider
-): Promise<ProviderInstitution[]> => {
-  const institutions = await Effect.runPromise(
-    provider
-      .listInstitutions()
-      .pipe(
-        Effect.catchTag("BankInstitutionsUnavailable", (cause) =>
-          Effect.logWarning("Bank institutions unavailable", cause).pipe(
-            Effect.as(null)
-          )
-        )
-      )
-  );
-
-  if (institutions === null) {
-    throw new ORPCError("SERVICE_UNAVAILABLE", {
-      message: "Could not load banks",
-    });
-  }
-
-  return institutions;
-};
+const loadInstitutions = institutionsLoaderWith();
 
 export const bankConnectionRouter = {
   disconnect: protectedProcedure
