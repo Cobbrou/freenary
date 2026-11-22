@@ -1,16 +1,26 @@
 export const SETTINGS_SECTIONS = [
   "appearance",
-  "connections",
+  "bank-accounts",
   "budget",
-  "security",
+  "categories",
+  "sign-in",
+  "sessions",
+  "api-keys",
+  "services",
 ] as const;
 
 export type SettingsSection = (typeof SETTINGS_SECTIONS)[number];
 
 export const DEFAULT_SETTINGS_SECTION = "appearance" satisfies SettingsSection;
 
+export const OPERATOR_SETTINGS_SECTIONS: ReadonlySet<SettingsSection> = new Set(
+  ["services"]
+);
+
 const MERGED_SETTINGS_SECTIONS: ReadonlyMap<string, SettingsSection> = new Map([
-  ["integrations", "connections"],
+  ["connections", "bank-accounts"],
+  ["integrations", "services"],
+  ["security", "sign-in"],
 ]);
 
 export const isSettingsSection = (

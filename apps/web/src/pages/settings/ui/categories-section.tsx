@@ -22,7 +22,7 @@ import { SizeProvider, useSize } from "@freenary/ui/lib/size-context";
 import type { SizeVariant } from "@freenary/ui/lib/size-context";
 import { cn } from "@freenary/ui/lib/utils";
 import { useMemo, useRef, useState } from "react";
-import type { TransitionEvent } from "react";
+import type { ReactNode, TransitionEvent } from "react";
 
 import {
   categoryEntryLabel,
@@ -43,13 +43,14 @@ import {
   ROW_ABOVE_HOVER_FILL,
 } from "./category-row";
 import { CustomCategoryDialog } from "./custom-category-dialog";
-import { SETTINGS_BLEED, SettingsSection } from "./settings-section";
+import { SETTINGS_BLEED, SettingsPane } from "./settings-section";
 
 type CategoryEditorState = EditedCustomCategory | "new" | null;
 
 interface CategoriesSectionProps {
   categories: CategoryEntry[];
   isPending: boolean;
+  loadError: ReactNode;
 }
 
 interface CategoryGroupHeaderProps {
@@ -176,6 +177,7 @@ const CustomCategoryParentRow = ({
 export const CategoriesSection = ({
   categories,
   isPending,
+  loadError,
 }: CategoriesSectionProps) => {
   const { deleteCategory, isDeleting, isMoving, moveCategory } =
     useCustomCategoryActions();
@@ -239,8 +241,19 @@ export const CategoriesSection = ({
     });
   }, [categories, categoryEditor, tree]);
 
+  if (loadError) {
+    return (
+      <SettingsPane
+        description={m.settings_categories_description()}
+        title={m.settings_tab_categories()}
+      >
+        {loadError}
+      </SettingsPane>
+    );
+  }
+
   return (
-    <SettingsSection
+    <SettingsPane
       action={
         <Button
           disabled={isPending}
@@ -252,7 +265,7 @@ export const CategoriesSection = ({
         </Button>
       }
       description={m.settings_categories_description()}
-      title={m.settings_categories_title()}
+      title={m.settings_tab_categories()}
     >
       {isPending ? (
         <div aria-busy="true">
@@ -385,6 +398,6 @@ export const CategoriesSection = ({
         open={categoryEditor !== null}
         parentOptions={parentOptions}
       />
-    </SettingsSection>
+    </SettingsPane>
   );
 };

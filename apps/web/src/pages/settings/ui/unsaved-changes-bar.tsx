@@ -10,6 +10,7 @@ interface UnsavedChangesBarProps {
   hasErrors: boolean;
   isSaving: boolean;
   onCancel: () => void;
+  onReview?: () => void;
   onSave: () => void;
 }
 
@@ -18,6 +19,7 @@ export const UnsavedChangesBar = ({
   hasErrors,
   isSaving,
   onCancel,
+  onReview,
   onSave,
 }: UnsavedChangesBarProps) => (
   <AnimatePresence initial={false}>
@@ -41,6 +43,11 @@ export const UnsavedChangesBar = ({
           <span className="text-muted-foreground px-1 text-xs font-medium">
             {m.settings_unsaved_change({ count: changeCount })}
           </span>
+          {onReview ? (
+            <Button onClick={onReview} variant="ghost">
+              {m.settings_unsaved_review()}
+            </Button>
+          ) : null}
           <Button disabled={isSaving} onClick={onCancel} variant="ghost">
             {m.settings_cancel()}
           </Button>

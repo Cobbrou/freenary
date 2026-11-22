@@ -23,7 +23,7 @@ Every page is plain Markdown.
 - [Add sign-in providers](how-to/add-sign-in-providers.md): Google, Apple, OIDC
 - [Enable the assistant](how-to/enable-the-assistant.md): OpenAI-compatible model
 - [Enable transaction categorisation](how-to/enable-transaction-categorisation.md): classifier settings
-- [Call the API with an API key](how-to/call-the-api.md): create a key in Settings → Security, send it as a bearer token
+- [Call the API with an API key](how-to/call-the-api.md): create a key in Settings › API keys, send it as a bearer token
 - [Connect an AI agent over MCP](how-to/connect-an-ai-agent.md): point Claude Code or another agent at /mcp with an API key
 - [Update Freenary](how-to/update-freenary.md): image tags, pull, migrations
 - [Back up and restore](how-to/back-up-and-restore.md): pg_dump, pg_restore, keep .env

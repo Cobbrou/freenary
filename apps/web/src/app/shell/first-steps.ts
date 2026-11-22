@@ -29,7 +29,7 @@ export const FIRST_STEPS = [
     id: "bank-connection",
     isDone: (state) => state.hasBankConnection,
     label: m.first_steps_connect_bank,
-    section: "connections",
+    section: "bank-accounts",
     to: "/settings",
   },
   {
@@ -47,7 +47,7 @@ export const FIRST_STEPS = [
     id: "account-protection",
     isDone: (state) => state.hasAccountProtection,
     label: m.first_steps_protect_account,
-    section: "security",
+    section: "sign-in",
     to: "/settings",
   },
 ] as const satisfies readonly FirstStep[];

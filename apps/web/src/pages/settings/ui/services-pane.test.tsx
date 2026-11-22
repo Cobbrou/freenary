@@ -41,7 +41,7 @@ const recordRequest = (input: RequestInfo | URL): Promise<Response> => {
   return Promise.withResolvers<Response>().promise;
 };
 
-const renderFor = async (standing: "member" | "operator") => {
+const renderServicesPane = async () => {
   requestedUrls.length = 0;
   globalThis.fetch = Object.assign(recordRequest, {
     preconnect: globalThis.fetch.preconnect,
@@ -51,14 +51,14 @@ const renderFor = async (standing: "member" | "operator") => {
     await import("@tanstack/react-query");
 
   const { render } = await import("@testing-library/react/pure");
-  const { ConnectionsPane } = await import("./connections-pane");
+  const { ServicesPane } = await import("./services-pane");
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
 
   const view = render(
     <QueryClientProvider client={queryClient}>
-      <ConnectionsPane standing={standing} />
+      <ServicesPane />
     </QueryClientProvider>
   );
 
@@ -67,24 +67,9 @@ const renderFor = async (standing: "member" | "operator") => {
   return { requested: [...requestedUrls], view };
 };
 
-describe("ConnectionsPane", () => {
-  it("shows a member their bank accounts and no Services group", async () => {
-    const { requested, view } = await renderFor("member");
-
-    expect(
-      view.queryByRole("heading", { name: "Bank accounts" })
-    ).not.toBeNull();
-
-    expect(view.queryByRole("heading", { name: "Services" })).toBeNull();
-    expect(requested.some((key) => key.includes("instance/describe"))).toBe(
-      false
-    );
-
-    view.unmount();
-  });
-
-  it("shows the operator the Services group and asks for the integrations", async () => {
-    const { requested, view } = await renderFor("operator");
+describe("ServicesPane", () => {
+  it("titles the tab Services and asks for the integrations", async () => {
+    const { requested, view } = await renderServicesPane();
 
     expect(view.queryByRole("heading", { name: "Services" })).not.toBeNull();
     expect(requested.some((key) => key.includes("instance/describe"))).toBe(

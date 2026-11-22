@@ -11,8 +11,7 @@ import { m } from "@/paraglide/messages.js";
 import { orpc } from "@/shared/api";
 
 import { ConnectBankDialog } from "./connect-bank-dialog";
-import { SettingsListSurface } from "./settings-list-surface";
-import { SettingsSubgroup } from "./settings-subgroup";
+import { SettingsList, SettingsPane } from "./settings-section";
 
 export const BankAccountsSection = () => {
   const bankLinking = useBankLinking();
@@ -49,12 +48,12 @@ export const BankAccountsSection = () => {
   };
 
   return (
-    <SettingsSubgroup
+    <SettingsPane
       action={bankLinking === "available" ? <ConnectBankDialog /> : null}
       description={m.settings_bank_accounts_description()}
-      title={m.settings_bank_accounts_title()}
+      title={m.settings_tab_bank_accounts()}
     >
-      <SettingsListSurface>{renderList()}</SettingsListSurface>
-    </SettingsSubgroup>
+      <SettingsList>{renderList()}</SettingsList>
+    </SettingsPane>
   );
 };

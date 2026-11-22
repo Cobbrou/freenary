@@ -32,7 +32,7 @@ export const NoBankAccount = ({
         <EmptyDescription>{description}</EmptyDescription>
       </EmptyHeader>
       <Button asChild>
-        <Link search={{ section: "connections" }} to="/settings">
+        <Link search={{ section: "bank-accounts" }} to="/settings">
           {actionLabel}
         </Link>
       </Button>

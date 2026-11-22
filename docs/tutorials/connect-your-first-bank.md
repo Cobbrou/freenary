@@ -64,7 +64,7 @@ Freenary tests the details with Powens before it saves them. If the test passes,
 
 The **Categories** step connects a model that sorts new transactions into categories. You can add one later.
 
-1. Read the note next to the button: **Without a model, new transactions stay uncategorised until you add one in Settings › Connections.**
+1. Read the note next to the button: **Without a model, new transactions stay uncategorised until you add one in Settings › Services.**
 2. Select **Skip for now**.
 
    ![The Categorisation model step with Jev by TypeSafe, SubQ Snap and OpenAI-compatible endpoint, and the Skip for now button](../images/06-categories-step.png)
@@ -117,7 +117,7 @@ Every member, including you, now sets up their own account.
 
    ![The Freenary home page with three Connecteur de test accounts and their balances](../images/17-home.png)
 
-2. Open **Settings**, then **Connections**. Under **Bank accounts**, **Connecteur de test** reads **3 accounts · Synced** with the date. Under **Services**, **Bank provider** reads **Configured · Powens**.
+2. Open **Settings**, then **Bank accounts**. **Connecteur de test** reads **3 accounts · Synced** with the date. Then open **Services**: **Bank provider** reads **Configured · Powens**.
 
    ![Settings, Connections: the Connecteur de test bank with 3 accounts, and the Bank provider row reading Configured · Powens](../images/18-settings-connections.png)
 

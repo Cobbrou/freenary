@@ -31,7 +31,7 @@ This page helps you choose which banks Freenary offers when it uses Powens. In P
 
 ## Check that it works
 
-1. In Freenary, open **Settings** › **Connections** and select **Connect a bank**, or reach **Connect your bank** during onboarding.
+1. In Freenary, open **Settings** › **Bank accounts** and select **Connect a bank**, or reach **Connect your bank** during onboarding.
 2. Type the bank name in **Search banks…**. The bank you activated is in the list, with a **Connect** button.
 
 Freenary asks Powens for the list when the bank list loads, so a change in the console shows after you reload the page, without a server restart.

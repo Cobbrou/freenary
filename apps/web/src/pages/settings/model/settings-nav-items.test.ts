@@ -1,19 +1,55 @@
 import { describe, expect, it } from "bun:test";
 
+import { SETTINGS_SECTIONS } from "@/shared/config";
+
 import {
+  isSectionShownTo,
   operatorStandingOf,
   SETTINGS_NAV_ITEMS,
+  settingsNavCategoriesFor,
   showsServices,
 } from "./settings-nav-items";
 
+const sectionsByCategory = (standing: "member" | "operator" | "pending") =>
+  settingsNavCategoriesFor(standing).map((category) => [
+    category.id,
+    category.items.map((item) => item.section),
+  ]);
+
 describe("SETTINGS_NAV_ITEMS", () => {
-  it("lists one Connections item and no Integrations item", () => {
-    expect(SETTINGS_NAV_ITEMS.map((item) => item.section)).toEqual([
-      "appearance",
-      "connections",
-      "budget",
-      "security",
+  it("gives every section exactly one tab", () => {
+    expect(SETTINGS_NAV_ITEMS.map((item) => item.section).toSorted()).toEqual(
+      [...SETTINGS_SECTIONS].toSorted()
+    );
+  });
+});
+
+describe("settingsNavCategoriesFor", () => {
+  it("groups the operator's tabs under four categories", () => {
+    expect(sectionsByCategory("operator")).toEqual([
+      ["preferences", ["appearance"]],
+      ["finances", ["bank-accounts", "budget", "categories"]],
+      ["security", ["sign-in", "sessions", "api-keys"]],
+      ["instance", ["services"]],
     ]);
+  });
+
+  it("drops the Instance category for a member and while pending", () => {
+    for (const standing of ["member", "pending"] as const) {
+      expect(sectionsByCategory(standing).map(([id]) => id)).toEqual([
+        "preferences",
+        "finances",
+        "security",
+      ]);
+    }
+  });
+});
+
+describe("isSectionShownTo", () => {
+  it("keeps Services for the operator only", () => {
+    expect(isSectionShownTo("services", "operator")).toBe(true);
+    expect(isSectionShownTo("services", "member")).toBe(false);
+    expect(isSectionShownTo("budget", "member")).toBe(true);
   });
 });
 

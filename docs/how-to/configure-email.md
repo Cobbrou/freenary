@@ -18,7 +18,7 @@ This page connects Freenary to an email provider, so it can send one-time codes:
 
 ### In the app
 
-1. Open **Settings** › **Connections**. Under **Services**, find **Email delivery** and select **Set up**.
+1. Open **Settings** › **Services**. Find **Email delivery** and select **Set up**.
 2. Select **Resend** or **SMTP**, then select **Continue**.
 3. Enter the sender in **Sender address**.
 4. For Resend, paste the key in **API key**. For SMTP, enter the mail server in **Host**, then open **More options** to fill **Port**, **Implicit TLS**, **User** and **Password** if your server needs them.
@@ -64,7 +64,7 @@ This page connects Freenary to an email provider, so it can send one-time codes:
    The answer contains `"emailDelivery":true`. Before you set up email, it contains `"emailDelivery":false`.
 
 2. Sign out. The sign-in form now shows **Forgot password?**. Select it and send a reset code to your own address. The email arrives with the subject `Reset your Freenary password`.
-3. In **Settings** › **Connections**, the **Email delivery** row reads **Configured · Resend** or **Configured · SMTP**, or **Set by your server · …** when the values come from `.env`.
+3. In **Settings** › **Services**, the **Email delivery** row reads **Configured · Resend** or **Configured · SMTP**, or **Set by your server · …** when the values come from `.env`.
 
 ## If something goes wrong
 

@@ -7,7 +7,7 @@ This page explains where the banks in **Connect your bank** come from. The bank 
 
 ## One request for every bank
 
-The `bankConnection.listInstitutions` procedure in `packages/api/src/routers/bank-connection.ts` takes no input. It asks the provider once for its full list, drops duplicates that share a country and an identifier, and returns the rest. Onboarding and **Settings** › **Connections** › **Connect a bank** call the same procedure, so both show the same list. **Search banks…** filters that list in the browser by bank name or BIC, so it reaches every bank.
+The `bankConnection.listInstitutions` procedure in `packages/api/src/routers/bank-connection.ts` takes no input. It asks the provider once for its full list, drops duplicates that share a country and an identifier, and returns the rest. Onboarding and **Settings** › **Bank accounts** › **Connect a bank** call the same procedure, so both show the same list. **Search banks…** filters that list in the browser by bank name or BIC, so it reaches every bank.
 
 When the provider does not answer, the server logs `Bank institutions unavailable` and the list shows **Could not load banks**.
 

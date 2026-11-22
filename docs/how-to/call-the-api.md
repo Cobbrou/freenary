@@ -13,8 +13,8 @@ This page gets a script talking to your Freenary account. You create an API key,
 
 ## Steps
 
-1. In Freenary, open **Settings**, then **Security**.
-2. Under **API keys**, select **Create a key**.
+1. In Freenary, open **Settings**, then **API keys**.
+2. Select **Create a key**.
 3. In **Name**, enter what will use the key, such as `Budget export`. Pick a duration in **Expires after**, then select **Create key**.
 4. Under **Copy your key now**, select **Copy**, then **Done**. Freenary shows the key only once.
 5. Call a procedure. Every procedure is a `POST` with a JSON body, at `/api-reference/` followed by its router and name. Send the key as a bearer token:
@@ -44,7 +44,7 @@ The `budget.getAccounts` call above prints your accounts as JSON:
 }
 ```
 
-An account with a connected bank lists its bank accounts in `accounts`. In **Settings → Security → API keys**, the key's row now shows **Last used** with today's date.
+An account with a connected bank lists its bank accounts in `accounts`. In **Settings** › **API keys**, the key's row now shows **Last used** with today's date.
 
 ## If something goes wrong
 

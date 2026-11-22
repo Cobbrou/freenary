@@ -12,7 +12,7 @@ import { SecurityApiKeyCreateDialog } from "./security-api-key-create-dialog";
 import { SecurityApiKeyRow } from "./security-api-key-row";
 import { SecurityRowsSkeleton } from "./security-rows-skeleton";
 import { SettingsRowList } from "./settings-row-list";
-import { SettingsSection } from "./settings-section";
+import { SettingsPane } from "./settings-section";
 
 export const SecurityApiKeysSection = () => {
   const {
@@ -78,14 +78,14 @@ export const SecurityApiKeysSection = () => {
   };
 
   return (
-    <SettingsSection
+    <SettingsPane
       action={
         <Button onClick={() => setIsCreateOpen(true)}>
           {m.settings_api_keys_create()}
         </Button>
       }
       description={m.settings_api_keys_description()}
-      title={m.settings_api_keys_title()}
+      title={m.settings_tab_api_keys()}
     >
       {renderRows()}
 
@@ -95,6 +95,6 @@ export const SecurityApiKeysSection = () => {
         onOpenChange={setIsCreateOpen}
         open={isCreateOpen}
       />
-    </SettingsSection>
+    </SettingsPane>
   );
 };

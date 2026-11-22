@@ -24,7 +24,7 @@ import { merchantLabel } from "@/entities/recurring";
 import { m } from "@/paraglide/messages.js";
 import { getLocale } from "@/paraglide/runtime.js";
 import { client, orpc } from "@/shared/api";
-import { SETTINGS_SECTIONS } from "@/shared/config";
+import { OPERATOR_SETTINGS_SECTIONS, SETTINGS_SECTIONS } from "@/shared/config";
 import { CHART_COLOR_VARS } from "@/shared/lib/chart-colors";
 import { formatCurrency } from "@/shared/lib/format-currency";
 import { kubaiIcon } from "@/shared/lib/kubai-icon";
@@ -87,10 +87,14 @@ const RECURRING_ICON = remixIcon(RiRepeatLine);
 const SETTINGS_ICON = remixIcon(RiSettings3Line);
 
 const SETTINGS_SECTION_LABELS = {
-  appearance: m.command_menu_settings_appearance,
-  budget: m.command_menu_settings_budget,
-  connections: m.command_menu_settings_connections,
-  security: m.command_menu_settings_security,
+  "api-keys": m.settings_tab_api_keys,
+  appearance: m.settings_tab_appearance,
+  "bank-accounts": m.settings_tab_bank_accounts,
+  budget: m.settings_tab_budget,
+  categories: m.settings_tab_categories,
+  services: m.settings_tab_services,
+  sessions: m.settings_tab_sessions,
+  "sign-in": m.settings_tab_sign_in,
 } satisfies Record<(typeof SETTINGS_SECTIONS)[number], () => string>;
 
 const SPENDING_ONLY = SPENDING_CATEGORIES.filter(
@@ -127,6 +131,13 @@ export const useCommandMenuItems = (query: string, open: boolean) => {
   const dashboards = useQuery({ ...dashboardsQueryOptions(), enabled: open });
 
   const chats = useQuery({ ...conversationsQueryOptions(), enabled: open });
+
+  const instanceStatus = useQuery({
+    ...orpc.instance.status.queryOptions(),
+    enabled: open,
+  });
+
+  const isOperator = instanceStatus.data?.isOperator === true;
 
   const items = useMemo((): CommandItem[] => {
     const locale = getLocale();
@@ -234,19 +245,26 @@ export const useCommandMenuItems = (query: string, open: boolean) => {
         target: { kind: "page" as const, to: item.to },
         value: `page:${item.to}`,
       })),
-      ...SETTINGS_SECTIONS.map((section) => ({
-        description: m.nav_settings(),
-        group: m.command_menu_group_pages(),
-        icon: SETTINGS_ICON,
-        label: SETTINGS_SECTION_LABELS[section](),
-        tab: "pages" as const,
-        target: { kind: "settings" as const, section },
-        value: `settings:${section}`,
-      })),
+      ...SETTINGS_SECTIONS.flatMap((section) =>
+        OPERATOR_SETTINGS_SECTIONS.has(section) && !isOperator
+          ? []
+          : [
+              {
+                description: m.nav_settings(),
+                group: m.command_menu_group_pages(),
+                icon: SETTINGS_ICON,
+                label: SETTINGS_SECTION_LABELS[section](),
+                tab: "pages" as const,
+                target: { kind: "settings" as const, section },
+                value: `settings:${section}`,
+              },
+            ]
+      ),
     ];
   }, [
     chats.data,
     dashboards.data,
+    isOperator,
     overview.data,
     query,
     recurring.data,
