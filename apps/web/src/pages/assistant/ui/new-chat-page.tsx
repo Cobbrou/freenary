@@ -64,6 +64,7 @@ export const NewChatPage = () => {
       </div>
       <AssistantModelStatus
         browserModel={model.browserModel}
+        deferred={model.deferred}
         selected={model.selected}
         webGpu={model.webGpu}
       />

@@ -31,11 +31,12 @@ export const rememberModel = (modelId: string) => {
 
 export const resolveModelChoice = (
   remembered: string | null,
-  serverModel: string | null
+  serverModel: string | null,
+  deviceDefault: string | null
 ): string | null => {
   if (remembered !== null && remembered !== SERVER_MODEL) {
     return remembered;
   }
 
-  return serverModel === null ? null : SERVER_MODEL;
+  return serverModel === null ? deviceDefault : SERVER_MODEL;
 };

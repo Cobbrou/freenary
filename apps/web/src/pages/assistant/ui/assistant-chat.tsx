@@ -86,9 +86,11 @@ export const AssistantChat = ({
   const [draft, setDraft] = useState("");
   const [justFinished, setJustFinished] = useState(false);
   const [turn, setTurn] = useState<{ retrying: boolean; startedAt: number }>();
+  const [queuedQuestion, setQueuedQuestion] = useState<string>();
   const acknowledgeTimer = useRef(0);
   const lastQuestion = useRef("");
   const pendingSent = useRef(false);
+  const queuedSent = useRef(false);
 
   const { chat, model } = useAssistantChat({
     conversationId,
@@ -111,6 +113,7 @@ export const AssistantChat = ({
   });
 
   const { error, messages, regenerate, sendMessage, status, stop } = chat;
+  const { commit } = model;
 
   useEffect(() => () => window.clearTimeout(acknowledgeTimer.current), []);
 
@@ -122,6 +125,21 @@ export const AssistantChat = ({
     },
     [sendMessage]
   );
+
+  useEffect(() => {
+    if (pendingQuestion !== undefined && !pendingSent.current) {
+      commit();
+    }
+  }, [commit, pendingQuestion]);
+
+  useEffect(() => {
+    if (queuedQuestion === undefined || queuedSent.current || !model.ready) {
+      return;
+    }
+
+    queuedSent.current = true;
+    ask(queuedQuestion);
+  }, [ask, model.ready, queuedQuestion]);
 
   useEffect(() => {
     if (
@@ -218,17 +236,27 @@ export const AssistantChat = ({
       </AssistantTranscript>
       <AssistantModelStatus
         browserModel={model.browserModel}
+        deferred={model.deferred}
         selected={model.selected}
         webGpu={model.webGpu}
       />
       <AssistantComposer
-        disabled={!model.ready}
+        disabled={!(model.ready || model.deferred)}
         model={model}
         onActiveChange={setComposerActive}
         onSend={(text) => {
-          ask(text);
           setDraft("");
           setComposerActive(false);
+
+          if (model.ready) {
+            ask(text);
+
+            return;
+          }
+
+          commit();
+          queuedSent.current = false;
+          setQueuedQuestion(text);
         }}
         onStop={stop}
         onValueChange={setDraft}

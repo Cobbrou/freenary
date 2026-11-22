@@ -1,9 +1,9 @@
 import { useChat } from "@ai-sdk/react";
 import { localDay } from "@freenary/api/assistant/prompt";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { UIMessage } from "ai";
 import { DefaultChatTransport } from "ai";
-import { useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 
 import {
   publishDashboardUpdate,
@@ -15,12 +15,16 @@ import { getServerUrl } from "@/shared/config";
 
 import type { BrowserModelStatus } from "./browser/engine";
 import {
+  BROWSER_MODELS_QUERY_KEY,
+  browserModelCatalog,
   loadBrowserModel,
   useBrowserModel,
   useWebGpuSupport,
 } from "./browser/engine";
+import { defaultBrowserModel } from "./browser/models";
 import { createBrowserChatTransport } from "./browser/transport";
 import {
+  rememberModel,
   resolveModelChoice,
   SERVER_MODEL,
   useRememberedModel,
@@ -37,6 +41,8 @@ export interface AssistantChatOptions {
 
 export interface AssistantModelState {
   browserModel: BrowserModelStatus;
+  commit: () => void;
+  deferred: boolean;
   ready: boolean;
   selected: string | null;
   webGpu: boolean | null;
@@ -55,8 +61,27 @@ export const useAssistantModel = (
 ): AssistantModelState => {
   const webGpu = useWebGpuSupport();
   const browserModel = useBrowserModel();
-  const selected = resolveModelChoice(useRememberedModel(), serverModel);
+  const remembered = useRememberedModel();
+  const needsDeviceDefault =
+    serverModel === null &&
+    webGpu === true &&
+    (remembered === null || remembered === SERVER_MODEL);
+
+  const catalog = useQuery({
+    enabled: needsDeviceDefault,
+    queryFn: browserModelCatalog,
+    queryKey: BROWSER_MODELS_QUERY_KEY,
+    staleTime: Number.POSITIVE_INFINITY,
+  });
+
+  const deviceDefault =
+    needsDeviceDefault && catalog.data
+      ? (defaultBrowserModel(catalog.data)?.id ?? null)
+      : null;
+
+  const selected = resolveModelChoice(remembered, serverModel, deviceDefault);
   const browserSelected = selected !== null && selected !== SERVER_MODEL;
+  const deferred = browserSelected && selected !== remembered;
 
   useEffect(() => {
     const engineBusy = browserModel.phase === "loading";
@@ -65,12 +90,19 @@ export const useAssistantModel = (
 
     if (
       browserSelected &&
+      !deferred &&
       webGpu === true &&
       !(engineBusy || selectedAlreadyAttempted)
     ) {
       loadBrowserModel(selected);
     }
-  }, [browserModel, browserSelected, selected, webGpu]);
+  }, [browserModel, browserSelected, deferred, selected, webGpu]);
+
+  const commit = useCallback(() => {
+    if (deferred && selected !== null) {
+      rememberModel(selected);
+    }
+  }, [deferred, selected]);
 
   const ready =
     selected === SERVER_MODEL ||
@@ -78,7 +110,7 @@ export const useAssistantModel = (
       browserModel.phase === "ready" &&
       browserModel.modelId === selected);
 
-  return { browserModel, ready, selected, webGpu };
+  return { browserModel, commit, deferred, ready, selected, webGpu };
 };
 
 export const useAssistantChat = ({
