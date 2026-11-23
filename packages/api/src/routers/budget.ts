@@ -78,6 +78,10 @@ import {
 import { transactionPage } from "../lib/transaction-page";
 import { userCurrency } from "../lib/user-currency";
 import { spendingWeeksStart, weeklySpending } from "../lib/weekly-spending";
+import {
+  lowConfidenceTransactionIds,
+  notifyTransactionsToCheck,
+} from "../notifications/transactions-to-check";
 import { getProvider } from "../providers/registry";
 import { categorySuggestionProcedures } from "./category-suggestions";
 import { savedFilterProcedures } from "./saved-filters";
@@ -544,6 +548,24 @@ const writeResolutions = (
   ).pipe(Effect.map((written) => written.reduce((sum, one) => sum + one, 0)));
 };
 
+const raiseTransactionsToCheck = (
+  userId: string,
+  transactionIds: readonly string[]
+): Effect.Effect<void> =>
+  Effect.tryPromise(() =>
+    notifyTransactionsToCheck(userId, transactionIds)
+  ).pipe(
+    Effect.matchEffect({
+      onFailure: (cause) =>
+        Effect.logWarning(
+          "Raising the transactions to check notification failed",
+          transactionIds.length,
+          cause
+        ),
+      onSuccess: () => Effect.void,
+    })
+  );
+
 const categoriseUncategorised = async (
   userId: string,
   reporter: SyncReporter
@@ -664,7 +686,21 @@ const categoriseUncategorised = async (
 
   await reporter.categorised(inputs.length - resolutions.length);
 
-  return await Effect.runPromise(writeResolutions(resolutions, reporter));
+  const written = await Effect.runPromise(
+    writeResolutions(resolutions, reporter)
+  );
+
+  await Effect.runPromise(
+    raiseTransactionsToCheck(
+      userId,
+      lowConfidenceTransactionIds(
+        inputs.map((input) => input.txId),
+        results
+      )
+    )
+  );
+
+  return written;
 };
 
 const calendarMonthKey = (date: Date) =>

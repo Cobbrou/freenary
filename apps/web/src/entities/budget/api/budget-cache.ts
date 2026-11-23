@@ -20,4 +20,5 @@ export const invalidateBudgetData = (queryClient: QueryClient) =>
     }),
     queryClient.invalidateQueries({ queryKey: TRANSACTIONS_QUERY_KEY }),
     queryClient.invalidateQueries({ queryKey: orpc.portfolio.key() }),
+    queryClient.invalidateQueries({ queryKey: orpc.notifications.key() }),
   ]);

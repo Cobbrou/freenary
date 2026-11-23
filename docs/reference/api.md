@@ -121,6 +121,19 @@ The Access column comes from the middleware of each procedure in `packages/api/s
 | `instance.status` | `POST /api-reference/instance/status` | Public | none |
 | `instance.update` | `POST /api-reference/instance/update` | Signed in | none |
 
+## notifications
+
+| Procedure | HTTP route | Access | Input fields |
+| --- | --- | --- | --- |
+| `notifications.clearTransactionsToCheck` | `POST /api-reference/notifications/clearTransactionsToCheck` | Signed in | `id` string, required |
+| `notifications.dismiss` | `POST /api-reference/notifications/dismiss` | Signed in | `id` string, required |
+| `notifications.dismissAll` | `POST /api-reference/notifications/dismissAll` | Signed in | none |
+| `notifications.list` | `POST /api-reference/notifications/list` | Signed in | none |
+| `notifications.markAllRead` | `POST /api-reference/notifications/markAllRead` | Signed in | none |
+| `notifications.markRead` | `POST /api-reference/notifications/markRead` | Signed in | `id` string, required |
+| `notifications.restore` | `POST /api-reference/notifications/restore` | Signed in | `id` string, required |
+| `notifications.transactionsToCheck` | `POST /api-reference/notifications/transactionsToCheck` | Signed in | `id` string, required |
+
 ## onboarding
 
 | Procedure | HTTP route | Access | Input fields |

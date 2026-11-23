@@ -11,6 +11,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarMenuSkeleton,
+  SidebarSeparator,
 } from "@freenary/ui/components/sidebar";
 import { RiSearchLine } from "@remixicon/react";
 import { useQuery } from "@tanstack/react-query";
@@ -29,10 +30,11 @@ import { AiUpdateScope } from "@/shared/ui/ai-update-scope";
 import type { AiUpdateScopeHandle } from "@/shared/ui/ai-update-scope";
 
 import { setCommandMenuOpen } from "./command-menu-state";
-import { isCurrentNav, NAV_ITEMS } from "./nav-items";
+import { isCurrentNav, MAIN_NAV_ITEMS, SETTINGS_NAV_ITEM } from "./nav-items";
 import type { NavEntry } from "./nav-items";
 import { SidebarBrand } from "./sidebar-brand";
 import { SidebarFirstSteps } from "./sidebar-first-steps";
+import { SidebarNotifications } from "./sidebar-notifications";
 import { SidebarUserMenu } from "./sidebar-user-menu";
 
 const DASHBOARD_SKELETON_ROWS = 3;
@@ -147,7 +149,7 @@ export const AppSidebar = () => {
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
-              {NAV_ITEMS.map((item) => (
+              {MAIN_NAV_ITEMS.map((item) => (
                 <NavRow item={item} key={item.to} pathname={pathname} />
               ))}
             </SidebarMenu>
@@ -158,6 +160,11 @@ export const AppSidebar = () => {
 
       <SidebarFooter>
         <SidebarFirstSteps />
+        <SidebarSeparator />
+        <SidebarMenu>
+          <SidebarNotifications />
+          <NavRow item={SETTINGS_NAV_ITEM} pathname={pathname} />
+        </SidebarMenu>
         <SidebarUserMenu />
       </SidebarFooter>
     </Sidebar>

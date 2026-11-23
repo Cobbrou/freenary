@@ -7,6 +7,7 @@ import { bankConnectionRouter } from "./bank-connection";
 import { budgetRouter } from "./budget";
 import { dashboardsRouter } from "./dashboards";
 import { instanceRouter } from "./instance";
+import { notificationsRouter } from "./notifications";
 import { onboardingRouter } from "./onboarding";
 import { portfolioRouter } from "./portfolio";
 import { settingsRouter } from "./settings";
@@ -19,6 +20,7 @@ export const appRouter = {
   dashboards: dashboardsRouter,
   healthCheck: publicProcedure.handler(() => "OK"),
   instance: instanceRouter,
+  notifications: notificationsRouter,
   onboarding: onboardingRouter,
   portfolio: portfolioRouter,
   settings: settingsRouter,

@@ -38,6 +38,14 @@ Steps 2 and 3 need a merchant key. A step never puts money coming in under a cat
 
 When no step gives a category, the transaction stays uncategorised.
 
+## Transactions to check
+
+A classifier answer under the confidence that would make it automatic, `0.85`, still gives the transaction its category, but Freenary flags it as low confidence. After each categorisation that flags such transactions, Freenary sends the member one notification, such as **7 transactions to check**, that holds the transactions flagged in that run. A transaction already held by another notification is not added again.
+
+The notification center sits at the bottom of the sidebar, under **Notifications**, with the number of unread notifications next to it. Opening this notification opens the **Transactions to check** panel. Each row has a category picker and a check mark. The check mark keeps the category and picking another category changes it: both record a correction, as below, so the row leaves the list. **Dismiss all** in the panel empties the list without changing any transaction. Once the list is empty, the notification goes away.
+
+Dismissing the notification leaves the transactions as they are, and **Undo** in the message that follows brings it back. Freenary deletes read notifications after 30 days.
+
 ## Corrections
 
 When a member sets the category of a transaction, Freenary keeps that category on the transaction and records a correction for the member and the merchant key. It copies the category to the member's other transactions with the same merchant key, except those set by hand. Every later transaction from that merchant gets the category at step 2.

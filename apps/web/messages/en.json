@@ -966,8 +966,55 @@
   "nav_dashboards": "Dashboards",
   "nav_home": "Home",
   "nav_new_dashboard": "New dashboard",
+  "nav_notifications": "Notifications",
+  "nav_notifications_unread": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "Notifications, {count} unread",
+        "countPlural=other": "Notifications, {count} unread"
+      }
+    }
+  ],
   "nav_settings": "Settings",
   "nav_tab_bar_label": "Main",
+  "notifications_dismiss": "Dismiss “{title}”",
+  "notifications_dismiss_all": "Dismiss all",
+  "notifications_dismiss_tooltip": "Dismiss",
+  "notifications_dismissed": "Notification dismissed",
+  "notifications_dismissed_all": "Notifications dismissed",
+  "notifications_empty_description": "You’re all caught up.",
+  "notifications_empty_title": "No notifications",
+  "notifications_error": "Could not load your notifications.",
+  "notifications_group_read": "Read",
+  "notifications_group_unread": "Unread",
+  "notifications_loading": "Loading notifications",
+  "notifications_retry": "Retry",
+  "notifications_title": "Notifications",
+  "notifications_to_check_body": "Categorised automatically with low confidence.",
+  "notifications_to_check_bundle": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} more transaction check",
+        "countPlural=other": "{count} more transaction checks"
+      }
+    }
+  ],
+  "notifications_to_check_title": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} transaction to check",
+        "countPlural=other": "{count} transactions to check"
+      }
+    }
+  ],
+  "notifications_undo": "Undo",
+  "notifications_update_error": "Could not update your notifications. Try again.",
   "onboarding_back": "Back",
   "onboarding_bank_description": "Connect at least one bank account to import your transactions and balances.",
   "onboarding_bank_title": "Connect your bank",
@@ -1537,6 +1584,26 @@
   "theme_light": "Light",
   "theme_switcher_label": "Theme",
   "theme_system": "System",
+  "to_check_clear_error": "Could not clear the transactions to check. Try again.",
+  "to_check_close": "Close",
+  "to_check_description": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} transaction was categorised automatically with low confidence.",
+        "countPlural=other": "{count} transactions were categorised automatically with low confidence."
+      }
+    }
+  ],
+  "to_check_dismiss_all": "Dismiss all",
+  "to_check_error": "Could not load the transactions to check.",
+  "to_check_loading": "Loading the transactions to check",
+  "to_check_looks_right": "Category looks right for {title}",
+  "to_check_looks_right_tooltip": "Looks right",
+  "to_check_retry": "Retry",
+  "to_check_row_meta": "{day} · {account}",
+  "to_check_title": "Transactions to check",
   "ui_booked": "booked",
   "ui_breadcrumb": "Breadcrumb",
   "ui_clear": "Clear",

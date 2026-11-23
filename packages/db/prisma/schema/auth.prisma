@@ -27,6 +27,7 @@ model User {
   dashboards            Dashboard[]
   syncRun               SyncRun?
   savedFilters          SavedFilter[]
+  notifications         Notification[]
 
   @@unique([email])
   @@map("user")

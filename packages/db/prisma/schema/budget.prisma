@@ -214,6 +214,7 @@ model Transaction {
   /// True when this transaction is one leg of a movement between the user's own accounts.
   isInternalTransfer   Boolean     @default(false)
   createdAt         DateTime    @default(now())
+  notifications     NotificationTransaction[]
 
   @@unique([accountId, providerTransactionId])
   @@index([accountId, date])

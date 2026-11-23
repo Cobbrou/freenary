@@ -975,8 +975,55 @@
   "nav_dashboards": "Tableaux de bord",
   "nav_home": "Accueil",
   "nav_new_dashboard": "Nouveau tableau de bord",
+  "nav_notifications": "Notifications",
+  "nav_notifications_unread": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "Notifications, {count} non lue",
+        "countPlural=other": "Notifications, {count} non lues"
+      }
+    }
+  ],
   "nav_settings": "Paramètres",
   "nav_tab_bar_label": "Principale",
+  "notifications_dismiss": "Effacer « {title} »",
+  "notifications_dismiss_all": "Tout effacer",
+  "notifications_dismiss_tooltip": "Effacer",
+  "notifications_dismissed": "Notification effacée",
+  "notifications_dismissed_all": "Notifications effacées",
+  "notifications_empty_description": "Vous êtes à jour.",
+  "notifications_empty_title": "Aucune notification",
+  "notifications_error": "Impossible de charger vos notifications.",
+  "notifications_group_read": "Lues",
+  "notifications_group_unread": "Non lues",
+  "notifications_loading": "Chargement des notifications",
+  "notifications_retry": "Réessayer",
+  "notifications_title": "Notifications",
+  "notifications_to_check_body": "Catégorisées automatiquement avec une confiance faible.",
+  "notifications_to_check_bundle": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} autre vérification de transactions",
+        "countPlural=other": "{count} autres vérifications de transactions"
+      }
+    }
+  ],
+  "notifications_to_check_title": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} transaction à vérifier",
+        "countPlural=other": "{count} transactions à vérifier"
+      }
+    }
+  ],
+  "notifications_undo": "Annuler",
+  "notifications_update_error": "Impossible de mettre à jour vos notifications. Réessayez.",
   "onboarding_back": "Retour",
   "onboarding_bank_description": "Connectez au moins un compte bancaire pour importer vos transactions et vos soldes.",
   "onboarding_bank_title": "Connectez votre banque",
@@ -1546,6 +1593,26 @@
   "theme_light": "Clair",
   "theme_switcher_label": "Thème",
   "theme_system": "Système",
+  "to_check_clear_error": "Impossible d’effacer les transactions à vérifier. Réessayez.",
+  "to_check_close": "Fermer",
+  "to_check_description": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} transaction a été catégorisée automatiquement avec une confiance faible.",
+        "countPlural=other": "{count} transactions ont été catégorisées automatiquement avec une confiance faible."
+      }
+    }
+  ],
+  "to_check_dismiss_all": "Tout effacer",
+  "to_check_error": "Impossible de charger les transactions à vérifier.",
+  "to_check_loading": "Chargement des transactions à vérifier",
+  "to_check_looks_right": "La catégorie de {title} est correcte",
+  "to_check_looks_right_tooltip": "C’est correct",
+  "to_check_retry": "Réessayer",
+  "to_check_row_meta": "{day} · {account}",
+  "to_check_title": "Transactions à vérifier",
   "ui_booked": "réservé",
   "ui_breadcrumb": "Fil d’Ariane",
   "ui_clear": "Effacer",

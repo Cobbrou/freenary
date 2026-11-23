@@ -1,0 +1,31 @@
+/// Something Freenary tells one user, shown in the notification center.
+/// `type` names what it is about and decides its text and where a click goes.
+model Notification {
+  id           String                    @id @default(cuid())
+  userId       String
+  user         User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// The kind of notification, such as "transactions_to_check".
+  type         String
+  /// When the user opened it or marked it read; null while unread.
+  readAt       DateTime?
+  /// When the user dismissed it; kept for a short while so Undo can restore it.
+  dismissedAt  DateTime?
+  createdAt    DateTime                  @default(now())
+  transactions NotificationTransaction[]
+
+  @@index([userId, createdAt])
+  @@map("notification")
+}
+
+/// A transaction a notification is about, such as one categorised with low
+/// confidence during the sync that raised a "transactions_to_check" notification.
+model NotificationTransaction {
+  notificationId String
+  notification   Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+  transactionId  String
+  transaction    Transaction  @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+
+  @@id([notificationId, transactionId])
+  @@index([transactionId])
+  @@map("notification_transaction")
+}
