@@ -1,16 +1,12 @@
 import { Data, Effect, Match, Schema } from "effect";
 
 import type { SpendingCategory } from "../../../lib/taxonomy";
-import {
-  ACCEPT_CONFIDENCE,
-  concentration,
-  NEUTRAL_TEMPERATURE,
-} from "../confidence";
+import { concentration, NEUTRAL_TEMPERATURE } from "../confidence";
 import { endpointHeaders, unreachableDetail } from "../endpoint";
 import {
+  assignableCategories,
   CATEGORY_QUESTION_ID,
-  isOfferedCategory,
-  offeredCategories,
+  isAssignableCategory,
   QUESTIONS_BY_DIRECTION,
 } from "../questions";
 import type {
@@ -168,22 +164,49 @@ const runAnswered = <A>(
     )
   );
 
+type ChoiceAnswer = typeof ChoiceAnswerSchema.Type;
+
+const likeliestAssignable = (
+  answer: ChoiceAnswer,
+  direction: ClassificationInput["direction"]
+): { category: SpendingCategory; probability: number } | null => {
+  if (isAssignableCategory(answer.choice, direction)) {
+    return {
+      category: answer.choice,
+      probability: answer.certainty ?? answer.confidence,
+    };
+  }
+
+  let likeliest: { category: SpendingCategory; probability: number } | null =
+    null;
+
+  for (const [category, probability] of Object.entries(
+    answer.probabilities ?? {}
+  )) {
+    if (
+      isAssignableCategory(category, direction) &&
+      Number.isFinite(probability) &&
+      probability > (likeliest?.probability ?? 0)
+    ) {
+      likeliest = { category, probability };
+    }
+  }
+
+  return likeliest;
+};
+
 const readPrediction = Effect.fnUntraced(function* readPrediction(
   settings: SystemOneSettings,
   answered: SystemOneResponse,
   direction: ClassificationInput["direction"]
 ) {
   const answer = yield* categoryAnswerOf(answered);
-  const category = answer.choice;
+  const picked = likeliestAssignable(answer, direction);
 
-  if (!isOfferedCategory(category, direction)) {
+  if (!picked) {
     return yield* new SystemOneClassificationFailed({
-      reason: { kind: "unoffered-category", value: category },
+      reason: { kind: "unoffered-category", value: answer.choice },
     });
-  }
-
-  if (category === "uncategorised") {
-    return null;
   }
 
   const distribution = answer.probabilities;
@@ -193,20 +216,16 @@ const readPrediction = Effect.fnUntraced(function* readPrediction(
   const confidence = sharpenable
     ? concentration(
         Object.values(distribution),
-        offeredCategories(direction).length,
+        assignableCategories(direction).length,
         settings.temperature
       )
-    : (answer.certainty ?? answer.confidence);
-
-  if (confidence < ACCEPT_CONFIDENCE) {
-    return null;
-  }
+    : picked.probability;
 
   return {
     answeredBy: answered.model,
-    category,
+    category: picked.category,
     confidence,
-  };
+  } satisfies ClassificationPrediction;
 });
 
 const classifyWith = (
@@ -234,8 +253,7 @@ const rankSuggestions = Effect.fnUntraced(function* rankSuggestions(
 
   for (const [category, score] of candidates) {
     if (
-      isOfferedCategory(category, direction) &&
-      category !== "uncategorised" &&
+      isAssignableCategory(category, direction) &&
       score >= SUGGESTION_FLOOR
     ) {
       scores.set(category, Math.max(score, scores.get(category) ?? 0));

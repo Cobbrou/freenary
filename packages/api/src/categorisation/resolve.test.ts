@@ -67,14 +67,28 @@ describe("categoriseTransaction", () => {
       expect(categorised.category).toBe("loans-bank-fees");
     });
 
-    it("returns uncategorised for cheque channel", async () => {
+    it("leaves a cheque to the later steps instead of writing uncategorised", async () => {
       const categorised = await categoriseTransaction({
         ...baseInput,
         channel: "cheque",
+        merchantKey: "",
+        normalisedDescriptor: "cheque 1234567",
       });
 
-      expect(categorised.stage).toBe("channel");
-      expect(categorised.category).toBe("uncategorised");
+      expect(categorised.stage).toBe("none");
+      expect(categorised.category).toBeNull();
+    });
+
+    it("treats an uncategorised merchant category code as no match", async () => {
+      const categorised = await categoriseTransaction({
+        ...baseInput,
+        merchantCategoryCode: "9402",
+        merchantKey: "",
+        normalisedDescriptor: "",
+      });
+
+      expect(categorised.stage).toBe("none");
+      expect(categorised.category).toBeNull();
     });
   });
 
@@ -710,7 +724,7 @@ describe("categoriseBatch", () => {
     await categoriseBatch([unresolved], options);
     await categoriseBatch([unresolved], {
       ...options,
-      retryFailedMerchants: true,
+      askedForByUser: true,
     });
 
     expect(failing.calls).toBe(2);
@@ -735,6 +749,72 @@ describe("categoriseBatch", () => {
     expect(
       results.filter((resolution) => resolution.stage === "none")
     ).toHaveLength(1);
+  });
+
+  it("asks again about a cached abstention when the user asks for it", async () => {
+    const store = memoryStore();
+    const abstaining = scriptedClassifier(() => Promise.resolve(null));
+
+    await categoriseBatch([unresolved], {
+      classifiers: [abstaining],
+      countries: undefined,
+      store,
+    });
+
+    const answering = scriptedClassifier(strong);
+    const [categorised] = await categoriseBatch([unresolved], {
+      askedForByUser: true,
+      classifiers: [answering],
+      countries: undefined,
+      store,
+    });
+
+    expect(answering.calls).toBe(1);
+    expect(categorised?.stage).toBe("model");
+  });
+
+  it("asks about every merchant when the user asks for it", async () => {
+    const classifier = scriptedClassifier(strong);
+    const merchants = Array.from({ length: 250 }, (_, index) => ({
+      ...unresolved,
+      merchantKey: `merchant ${index}`,
+      normalisedDescriptor: `merchant ${index}`,
+    }));
+
+    const results = await categoriseBatch(merchants, {
+      askedForByUser: true,
+      classifiers: [classifier],
+      countries: undefined,
+      store: memoryStore(),
+    });
+
+    expect(classifier.calls).toBe(merchants.length);
+    expect(
+      results.filter((resolution) => resolution.stage === "none")
+    ).toHaveLength(0);
+  });
+
+  it("never applies a cached uncategorised answer", async () => {
+    const classifier = scriptedClassifier(strong);
+    const store = {
+      ...memoryStore(),
+      find: () =>
+        Promise.resolve({
+          category: "uncategorised" as const,
+          classifiedAt: new Date(),
+          confidence: 0.9,
+        }),
+    };
+
+    const [categorised] = await categoriseBatch([unresolved], {
+      askedForByUser: true,
+      classifiers: [classifier],
+      countries: undefined,
+      store,
+    });
+
+    expect(classifier.calls).toBe(1);
+    expect(categorised?.category).not.toBe("uncategorised");
   });
 
   it("stops asking once the classifier keeps failing", async () => {

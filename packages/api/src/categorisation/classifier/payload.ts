@@ -29,8 +29,11 @@ export const classificationInputFrom = (
   input: CategoriseInput
 ): ClassificationInput | null => {
   const merchantKey = input.path === "iban" ? "" : input.merchantKey;
+  const normalisedDescriptor =
+    input.normalisedDescriptor ||
+    (input.counterpartyName ?? "").trim().toLowerCase();
 
-  if (!(merchantKey || input.normalisedDescriptor)) {
+  if (!(merchantKey || normalisedDescriptor)) {
     return null;
   }
 
@@ -43,7 +46,7 @@ export const classificationInputFrom = (
     direction: input.amountMinor > 0 ? "credit" : "debit",
     merchantCategoryCode: input.merchantCategoryCode ?? null,
     merchantKey: merchantKey || null,
-    normalisedDescriptor: input.normalisedDescriptor,
+    normalisedDescriptor,
     path: input.path,
   };
 };

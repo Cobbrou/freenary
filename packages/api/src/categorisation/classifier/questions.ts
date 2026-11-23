@@ -78,6 +78,25 @@ export const isOfferedCategory = (
 ): value is SpendingCategory =>
   OFFERED_BY_DIRECTION[direction].some((category) => category === value);
 
+const ASSIGNABLE_BY_DIRECTION = {
+  credit: OFFERED_BY_DIRECTION.credit.filter(
+    (category) => category !== "uncategorised"
+  ),
+  debit: OFFERED_BY_DIRECTION.debit.filter(
+    (category) => category !== "uncategorised"
+  ),
+} as const satisfies Record<TransactionDirection, readonly SpendingCategory[]>;
+
+export const assignableCategories = (
+  direction: TransactionDirection
+): readonly SpendingCategory[] => ASSIGNABLE_BY_DIRECTION[direction];
+
+export const isAssignableCategory = (
+  value: string,
+  direction: TransactionDirection
+): value is SpendingCategory =>
+  ASSIGNABLE_BY_DIRECTION[direction].some((category) => category === value);
+
 const questionsFor = (offered: readonly SpendingCategory[]) => ({
   [CATEGORY_QUESTION_ID]: {
     criteria: Object.fromEntries(
@@ -89,8 +108,8 @@ const questionsFor = (offered: readonly SpendingCategory[]) => ({
 });
 
 export const QUESTIONS_BY_DIRECTION = {
-  credit: questionsFor(OFFERED_BY_DIRECTION.credit),
-  debit: questionsFor(OFFERED_BY_DIRECTION.debit),
+  credit: questionsFor(ASSIGNABLE_BY_DIRECTION.credit),
+  debit: questionsFor(ASSIGNABLE_BY_DIRECTION.debit),
 } as const satisfies Record<
   TransactionDirection,
   Record<string, ChoiceQuestion>

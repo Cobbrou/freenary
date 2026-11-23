@@ -93,6 +93,7 @@ describe("classificationInputFrom", () => {
     expect(
       classificationInputFrom(
         input({
+          counterpartyName: null,
           merchantKey: "FR7630006000011234567890189",
           normalisedDescriptor: "",
           path: "iban",
@@ -101,11 +102,30 @@ describe("classificationInputFrom", () => {
     ).toBeNull();
   });
 
-  it("refuses a transaction with neither a key nor a descriptor", () => {
+  it("refuses a transaction with neither a key, a descriptor nor a counterparty", () => {
     expect(
       classificationInputFrom(
-        input({ merchantKey: "", normalisedDescriptor: "" })
+        input({
+          counterpartyName: null,
+          merchantKey: "",
+          normalisedDescriptor: "",
+        })
       )
     ).toBeNull();
+  });
+
+  it("describes a transaction by its counterparty when nothing else names it", () => {
+    expect(
+      classificationInputFrom(
+        input({
+          merchantKey: "FR7630006000011234567890189",
+          normalisedDescriptor: "",
+          path: "iban",
+        })
+      )
+    ).toMatchObject({
+      merchantKey: null,
+      normalisedDescriptor: "carrefour market",
+    });
   });
 });

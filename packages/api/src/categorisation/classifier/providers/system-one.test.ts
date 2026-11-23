@@ -96,9 +96,11 @@ describe("createSystemOneClassifier", () => {
     expect(call?.body.state).toEqual(payload);
     expect(Object.keys(call?.body.questions ?? {})).toEqual(["category"]);
     expect(call?.body.questions.category?.type).toBe("choice");
-    expect(Object.keys(call?.body.questions.category?.criteria ?? {})).toEqual([
-      ...categoriesForDirection("outgoing"),
-    ]);
+    expect(Object.keys(call?.body.questions.category?.criteria ?? {})).toEqual(
+      categoriesForDirection("outgoing").filter(
+        (category) => category !== "uncategorised"
+      )
+    );
   });
 
   it("offers the incoming categories on a credit", async () => {
@@ -112,7 +114,11 @@ describe("createSystemOneClassifier", () => {
 
     expect(
       Object.keys(calls[0]?.body.questions.category?.criteria ?? {})
-    ).toEqual([...categoriesForDirection("incoming")]);
+    ).toEqual(
+      categoriesForDirection("incoming").filter(
+        (category) => category !== "uncategorised"
+      )
+    );
   });
 
   it("describes every offered category rather than naming it", async () => {
@@ -207,22 +213,54 @@ describe("createSystemOneClassifier", () => {
     expect(softened?.category).toBe("bills-utilities");
   });
 
-  it("abstains when the answer is below the acceptance bar", async () => {
+  it("keeps a low-confidence answer instead of abstaining", async () => {
     const classifier = createSystemOneClassifier(
       hosted,
-      answering({ category: choice("bills-utilities", 0.4) })
+      answering({ category: choice("bills-utilities", 0.2) })
     );
 
-    expect(await classifier.classify(payload)).toBeNull();
+    expect(await classifier.classify(payload)).toEqual({
+      answeredBy: ANSWERED_BY,
+      category: "bills-utilities",
+      confidence: 0.2,
+    });
   });
 
-  it("abstains when the model says no category fits", async () => {
+  it("takes the likeliest real category when the model still answers uncategorised", async () => {
     const classifier = createSystemOneClassifier(
       hosted,
-      answering({ category: choice("uncategorised", 0.95) })
+      answering({
+        category: {
+          ...choice("uncategorised", 0.6),
+          probabilities: {
+            entertainment: 0.25,
+            restaurants: 0.15,
+            uncategorised: 0.6,
+          },
+        },
+      })
     );
 
-    expect(await classifier.classify(payload)).toBeNull();
+    expect(await classifier.classify(payload)).toEqual({
+      answeredBy: ANSWERED_BY,
+      category: "entertainment",
+      confidence: 0.25,
+    });
+  });
+
+  it("fails when the model answers uncategorised with no distribution to fall back on", async () => {
+    const classifier = createSystemOneClassifier(hosted, () =>
+      Promise.resolve(
+        Response.json({
+          answers: { category: { choice: "uncategorised", confidence: 0.9 } },
+          model: ANSWERED_BY,
+        })
+      )
+    );
+
+    await expect(classifier.classify(payload)).rejects.toThrow(
+      /cannot take: uncategorised/u
+    );
   });
 
   it("fails on a category the direction does not allow", async () => {

@@ -29,16 +29,16 @@ For each remaining transaction, Freenary tries these steps and stops at the firs
 
 | Order | Stage | Source | Confidence |
 | --- | --- | --- | --- |
-| 1 | `channel` | The kind of transaction: a cash withdrawal becomes `cash-withdrawal`, a bank fee `loans-bank-fees`, and a cheque stays `uncategorised` | 0.9 |
+| 1 | `channel` | The kind of transaction: a cash withdrawal becomes `cash-withdrawal` and a bank fee `loans-bank-fees` | 0.9 |
 | 2 | `user-override` | The member's own correction for this merchant key | 1 |
 | 3 | `dictionary` | The merchant dictionary | 0.85 |
 | 4 | `mcc` | The merchant category code, a four-digit code card networks attach to a payment | 0.8 |
 | 5 | `rules` | Keyword rules on the bank's transaction code, such as `loyer` for rent in France | 0.75 |
 | 6 | `model` or `cached-model` | The classifier, when one is configured | From the classifier |
 
-Steps 2 and 3 need a merchant key. A step never puts money coming in under a category meant for spending only: such a match counts as no match, and the next step runs.
+Steps 2 and 3 need a merchant key. A step never puts money coming in under a category meant for spending only: such a match counts as no match, and the next step runs. A dictionary entry or a merchant category code that gives `uncategorised` also counts as no match, so the transaction still reaches the classifier.
 
-When no step gives a category, the transaction stays uncategorised.
+When no step gives a category, the transaction stays uncategorised. With a `system-one` classifier, that only happens when the classifier fails or the transaction carries no merchant key, description or counterparty name.
 
 ## Transactions to check
 
@@ -74,17 +74,19 @@ The classifier is optional. [Enable transaction categorisation](../how-to/enable
 
 ### What it receives
 
-Freenary groups the waiting transactions: transactions that share the merchant key (or, without one, the description), the country, the direction and the merchant category code make one question. It asks up to four questions at a time. A request carries the merchant key, the normalised description, the counterparty name, the country, the currency, the direction (money in or out), the merchant category code, the channel, whether it is a card or a bank-transfer payment, and a size band for the amount instead of the amount itself. For a bank transfer identified by account number, the merchant key is left out.
+A transaction with neither a merchant key nor a description is described by its counterparty name instead. Freenary groups the waiting transactions: transactions that share the merchant key (or, without one, the description), the country, the direction and the merchant category code make one question. It asks up to four questions at a time. A request carries the merchant key, the normalised description, the counterparty name, the country, the currency, the direction (money in or out), the merchant category code, the channel, whether it is a card or a bank-transfer payment, and a size band for the amount instead of the amount itself. For a bank transfer identified by account number, the merchant key is left out.
 
 ### Answers, abstentions and failures
 
-Freenary drops an answer below 0.5 confidence, which counts as an abstention: the classifier declines to answer. It also refuses an answer with an unknown category, a confidence outside 0 to 1, or a category that contradicts the direction of the money, and logs `answered outside the contract`.
+With `llm` or `zero-shot`, Freenary drops an answer below 0.5 confidence or an answer of `uncategorised`, which counts as an abstention: the classifier declines to answer.
 
-Each answer and each abstention is cached in the `merchant_classification` table, shared by the whole instance. The cache key covers the classifier protocol, the model, the version of the category list, the merchant key or description, the country, the direction and the merchant category code. So changing `TRANSACTION_CLASSIFIER_MODEL` asks every merchant again. A cached answer gives the stage `cached-model`. A cached abstention stops Freenary from asking about that merchant again for 30 days.
+A `system-one` classifier does not abstain. Freenary does not offer it `uncategorised`, and keeps its answer whatever the confidence: an answer under `0.85` lands in **Transactions to check**. When the classifier still answers `uncategorised`, Freenary takes the most probable other category from the probabilities it returned. Without probabilities, the answer is outside the contract. It also refuses an answer with an unknown category, a confidence outside 0 to 1, or a category that contradicts the direction of the money, and logs `answered outside the contract`.
+
+Each answer and each abstention is cached in the `merchant_classification` table, shared by the whole instance. The cache key covers the classifier protocol, the model, the version of the category list, the merchant key or description, the country, the direction and the merchant category code. So changing `TRANSACTION_CLASSIFIER_MODEL` asks every merchant again. A cached answer gives the stage `cached-model`. A cached abstention stops Freenary from asking about that merchant again for 30 days, unless the member asks, as below.
 
 A call that fails, runs past the time limit, or answers outside the contract leaves the transaction uncategorised, logs a `[categorisation] classifier` warning, and is not cached. The time limit is `TRANSACTION_CLASSIFIER_TIMEOUT_MS` plus a five-second margin. The server remembers the failure in memory and does not ask about that merchant again for one hour, unless the member asks: **Sync transactions**, **Re-categorise all**, connecting a bank and the `budget.recategorise` procedure ask again at once. A restart forgets the failures.
 
-One categorisation asks at most 200 questions and stops asking after 5 failures in a row. It logs `[categorisation] classifier phase skipped` with the number of questions it left out, and the next categorisation asks them.
+A categorisation the member did not ask for asks at most 200 questions. Any categorisation stops asking after 5 failures in a row. It logs `[categorisation] classifier phase skipped` with the number of questions it left out, and the next categorisation asks them.
 
 ### The fallback
 

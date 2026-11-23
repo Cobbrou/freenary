@@ -68,8 +68,8 @@ interface ClassificationRun {
 interface ClassificationPhase {
   classifiers: readonly TransactionClassifier[];
   escalateBelow: number;
+  askedForByUser: boolean;
   onSignatureSettled: () => Promise<void>;
-  retryFailedMerchants: boolean;
   run: ClassificationRun;
   store: ClassificationStore;
   timeoutMs: number;
@@ -84,19 +84,18 @@ type ProviderOutcome =
   | { readonly kind: "silent" };
 
 export interface CategoriseBatchOptions {
+  askedForByUser?: boolean;
   countries: Iso3166Alpha2Country[] | undefined;
   classifiers: readonly TransactionClassifier[];
   escalateBelow?: number;
   maxCalls?: number;
   onSignatureSettled?: () => Promise<void>;
-  retryFailedMerchants?: boolean;
   store: ClassificationStore;
   timeoutMs?: number;
 }
 
 const CHANNEL_CATEGORY = {
   atm: "cash-withdrawal",
-  cheque: "uncategorised",
   fee: "loans-bank-fees",
 } as const satisfies Partial<Record<TransactionChannel, SpendingCategory>>;
 
@@ -249,6 +248,11 @@ const inDirection = (
     ? null
     : resolution;
 
+const assigning = (
+  resolution: ResolutionResult | null
+): ResolutionResult | null =>
+  resolution?.category === "uncategorised" ? null : resolution;
+
 const categoriseInternal = async (
   input: CategoriseInput,
   overrides: UserOverrides
@@ -269,9 +273,8 @@ const categoriseInternal = async (
       return byOverride;
     }
 
-    const byDictionary = inDirection(
-      await fromDictionary(input),
-      input.amountMinor
+    const byDictionary = assigning(
+      inDirection(await fromDictionary(input), input.amountMinor)
     );
 
     if (byDictionary) {
@@ -279,7 +282,7 @@ const categoriseInternal = async (
     }
   }
 
-  return fromDeterministicRules(input) ?? UNKNOWN_RESULT;
+  return assigning(fromDeterministicRules(input)) ?? UNKNOWN_RESULT;
 };
 
 export const categoriseTransaction = async (
@@ -470,7 +473,7 @@ const consultClassifier = Effect.fnUntraced(function* consultClassifier(
   const signature = classificationSignature(classifier, payload);
   const cached = yield* Effect.promise(() => phase.store.find(signature));
 
-  if (cached?.category) {
+  if (cached?.category && cached.category !== "uncategorised") {
     return {
       kind: "answered",
       prediction: {
@@ -482,6 +485,7 @@ const consultClassifier = Effect.fnUntraced(function* consultClassifier(
   }
 
   const abstainedRecently =
+    !phase.askedForByUser &&
     cached !== null &&
     Date.now() - cached.classifiedAt.getTime() < ABSTENTION_RETRY_AFTER_MS;
 
@@ -491,7 +495,7 @@ const consultClassifier = Effect.fnUntraced(function* consultClassifier(
 
   const failedAt = phase.store.failedAt.get(signature);
   const failedRecently =
-    !phase.retryFailedMerchants &&
+    !phase.askedForByUser &&
     failedAt !== undefined &&
     Date.now() - failedAt < FAILURE_RETRY_AFTER_MS;
 
@@ -630,15 +634,21 @@ const categoriseAll = async (
     return results;
   }
 
+  const askedForByUser = options.askedForByUser ?? false;
+
   await Effect.runPromise(
     classifyPending(
       {
+        askedForByUser,
         classifiers: options.classifiers,
         escalateBelow: options.escalateBelow ?? AUTO_BAND_MIN_CONFIDENCE,
         onSignatureSettled: options.onSignatureSettled ?? noProgress,
-        retryFailedMerchants: options.retryFailedMerchants ?? false,
         run: {
-          callsLeft: options.maxCalls ?? MAX_CLASSIFIER_CALLS_PER_RUN,
+          callsLeft:
+            options.maxCalls ??
+            (askedForByUser
+              ? Number.POSITIVE_INFINITY
+              : MAX_CLASSIFIER_CALLS_PER_RUN),
           consecutiveFailures: 0,
           skipped: 0,
         },

@@ -688,11 +688,11 @@ const categoriseUncategorised = async (
   ];
 
   const results = await categoriseBatch(inputs, {
+    askedForByUser,
     classifiers: transactionClassifiers,
     countries: dictionaryCountries,
     escalateBelow: classifierEscalateBelow,
     onSignatureSettled: reporter.heartbeat,
-    retryFailedMerchants: askedForByUser,
     store: prismaClassificationStore,
     timeoutMs: classifierCallBudget,
   });
