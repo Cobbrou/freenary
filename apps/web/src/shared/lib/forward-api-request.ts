@@ -63,7 +63,7 @@ const resolveCallerAddress = (request: Request): string | null => {
     .filter(Boolean)
     .join(",");
 
-  return getIPFromHeader(chain, { trustedProxies });
+  return getIPFromHeader(chain, { trustedProxies }) ?? peer.data.ip;
 };
 
 const buildForwardedRequestInit = (
