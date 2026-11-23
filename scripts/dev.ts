@@ -63,7 +63,7 @@ const readEnvOverride = (key: string): string | null => {
       Option.flatMapNullishOr(
         (contents) => contents.match(assignment)?.groups?.value
       ),
-      Option.map((value) => value.replace(QUOTE_EDGES, "")),
+      Option.map((value) => value.replaceAll(QUOTE_EDGES, "")),
       Option.filter((value) => value.length > 0)
     )
   );

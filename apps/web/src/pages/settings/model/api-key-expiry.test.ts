@@ -21,14 +21,18 @@ describe("expiresInSecondsOf", () => {
   });
 
   it("stays within the range the server accepts", () => {
-    for (const choice of API_KEY_EXPIRY_CHOICES) {
+    const expiries = API_KEY_EXPIRY_CHOICES.flatMap((choice) => {
       const seconds = expiresInSecondsOf(choice);
 
-      if (seconds !== undefined) {
-        expect(seconds).toBeGreaterThanOrEqual(ONE_DAY_SECONDS);
-        expect(seconds).toBeLessThanOrEqual(MAX_EXPIRY_SECONDS);
-      }
-    }
+      return seconds === undefined ? [] : [seconds];
+    });
+
+    expect(expiries).not.toHaveLength(0);
+    expect(
+      expiries.filter(
+        (seconds) => seconds < ONE_DAY_SECONDS || seconds > MAX_EXPIRY_SECONDS
+      )
+    ).toEqual([]);
   });
 });
 

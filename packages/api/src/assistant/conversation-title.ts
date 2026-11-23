@@ -17,7 +17,7 @@ export const questionText = (parts: readonly QuestionPart[]): string =>
     .join(" ");
 
 export const conversationTitle = (question: string): string | null => {
-  const flattened = question.replace(WHITESPACE_RUN, " ").trim();
+  const flattened = question.replaceAll(WHITESPACE_RUN, " ").trim();
 
   if (flattened.length === 0) {
     return null;

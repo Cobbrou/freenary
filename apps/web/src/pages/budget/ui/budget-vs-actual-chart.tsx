@@ -61,21 +61,21 @@ const planBarRow = (entry: PlannedCategory): PlanBarRow => {
   const spentKey = spentKeyOf(entry.category);
 
   if (entry.planned <= 0) {
-    return { [spentKey]: entry.actual, name: entry.category };
+    return { name: entry.category, [spentKey]: entry.actual };
   }
 
   if (entry.actual > entry.planned) {
     return {
       [OVER_PLAN_KEY]: entry.actual - entry.planned,
-      [spentKey]: entry.planned,
       name: entry.category,
+      [spentKey]: entry.planned,
     };
   }
 
   return {
     [LEFT_IN_PLAN_KEY]: entry.planned - entry.actual,
-    [spentKey]: entry.actual,
     name: entry.category,
+    [spentKey]: entry.actual,
   };
 };
 

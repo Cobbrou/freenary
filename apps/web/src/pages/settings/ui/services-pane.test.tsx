@@ -1,6 +1,10 @@
 import { afterAll, beforeAll, describe, expect, it } from "bun:test";
 
+import type * as ReactQuery from "@tanstack/react-query";
+import type * as TestingLibrary from "@testing-library/react/pure";
 import { JSDOM } from "jsdom";
+
+import type * as ServicesPaneModule from "./services-pane";
 
 const dom = new JSDOM("<!doctype html><html><body></body></html>", {
   url: "http://localhost/",
@@ -17,41 +21,47 @@ const BROWSER_GLOBALS = {
   window: dom.window,
 };
 
-beforeAll(() => {
+const requestedUrls: string[] = [];
+const firstRequest = Promise.withResolvers<string>();
+
+const recordingServer = Bun.serve({
+  fetch(request) {
+    requestedUrls.push(request.url);
+    firstRequest.resolve(request.url);
+
+    return new Response(null, { status: 503 });
+  },
+  port: 0,
+});
+
+let reactQuery: typeof ReactQuery;
+let testingLibrary: typeof TestingLibrary;
+let servicesPaneModule: typeof ServicesPaneModule;
+
+beforeAll(async () => {
   for (const [name, value] of Object.entries(BROWSER_GLOBALS)) {
     Object.defineProperty(globalThis, name, { configurable: true, value });
   }
+
+  dom.window.__FREENARY_SERVER_URL__ = recordingServer.url.origin;
+
+  reactQuery = await import("@tanstack/react-query");
+  testingLibrary = await import("@testing-library/react/pure");
+  servicesPaneModule = await import("./services-pane");
 });
 
-const originalFetch = globalThis.fetch;
-
-afterAll(() => {
-  globalThis.fetch = originalFetch;
+afterAll(async () => {
+  await recordingServer.stop(true);
 
   for (const name of Object.keys(BROWSER_GLOBALS)) {
     Reflect.deleteProperty(globalThis, name);
   }
 });
 
-const requestedUrls: string[] = [];
-
-const recordRequest = (input: RequestInfo | URL): Promise<Response> => {
-  requestedUrls.push(input instanceof Request ? input.url : String(input));
-
-  return Promise.withResolvers<Response>().promise;
-};
-
 const renderServicesPane = async () => {
-  requestedUrls.length = 0;
-  globalThis.fetch = Object.assign(recordRequest, {
-    preconnect: globalThis.fetch.preconnect,
-  });
-
-  const { QueryClient, QueryClientProvider } =
-    await import("@tanstack/react-query");
-
-  const { render } = await import("@testing-library/react/pure");
-  const { ServicesPane } = await import("./services-pane");
+  const { QueryClient, QueryClientProvider } = reactQuery;
+  const { render } = testingLibrary;
+  const { ServicesPane } = servicesPaneModule;
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
@@ -62,7 +72,7 @@ const renderServicesPane = async () => {
     </QueryClientProvider>
   );
 
-  await Bun.sleep(50);
+  await firstRequest.promise;
 
   return { requested: [...requestedUrls], view };
 };

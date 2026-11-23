@@ -59,8 +59,8 @@ const toRows = (
   currency: string
 ): WeekRow[] =>
   weeks.map((week) => ({
-    label: weekStart(week.start).toLocaleDateString(getLocale(), WEEK_LABEL),
     [OTHER_KEY]: week.otherMinor,
+    label: weekStart(week.start).toLocaleDateString(getLocale(), WEEK_LABEL),
     tooltipRows: [
       ...categories.flatMap((category) => {
         const amount = week.amounts[category] ?? 0;

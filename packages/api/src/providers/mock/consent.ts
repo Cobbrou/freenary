@@ -17,7 +17,7 @@ const HTML_ESCAPES: Readonly<Record<string, string>> = {
 const HTML_SPECIAL = /["&'<>]/gu;
 
 const escapeHtml = (text: string): string =>
-  text.replace(
+  text.replaceAll(
     HTML_SPECIAL,
     (character) => HTML_ESCAPES[character] ?? character
   );

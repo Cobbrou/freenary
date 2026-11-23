@@ -1,6 +1,12 @@
 import { afterAll, beforeAll, describe, expect, it } from "bun:test";
 
+import type * as DropdownModule from "@freenary/ui/components/dropdown";
+import type * as MenuItemModule from "@freenary/ui/components/menu-item";
+import type * as RemixIcons from "@remixicon/react";
+import type * as TestingLibrary from "@testing-library/react/pure";
 import { JSDOM } from "jsdom";
+
+import type * as RemixIconModule from "@/shared/lib/remix-icon";
 
 const dom = new JSDOM("<!doctype html><html><body></body></html>", {
   pretendToBeVisual: true,
@@ -41,10 +47,22 @@ const originals = new Map(
   ])
 );
 
-beforeAll(() => {
+let testingLibrary: typeof TestingLibrary;
+let dropdownModule: typeof DropdownModule;
+let menuItemModule: typeof MenuItemModule;
+let remixIconsModule: typeof RemixIcons;
+let remixIconModule: typeof RemixIconModule;
+
+beforeAll(async () => {
   for (const [name, value] of Object.entries(BROWSER_GLOBALS)) {
     Object.defineProperty(globalThis, name, { configurable: true, value });
   }
+
+  testingLibrary = await import("@testing-library/react/pure");
+  dropdownModule = await import("@freenary/ui/components/dropdown");
+  menuItemModule = await import("@freenary/ui/components/menu-item");
+  remixIconsModule = await import("@remixicon/react");
+  remixIconModule = await import("@/shared/lib/remix-icon");
 });
 
 afterAll(() => {
@@ -59,18 +77,18 @@ afterAll(() => {
 
 describe("update rows in the account menu", () => {
   it("are a group named by the version heading", async () => {
-    const { render } = await import("@testing-library/react/pure");
+    const { render } = testingLibrary;
     const {
       DropdownContent,
       DropdownGroup,
       DropdownGroupLabel,
       DropdownMenu,
       DropdownTrigger,
-    } = await import("@freenary/ui/components/dropdown");
+    } = dropdownModule;
 
-    const { MenuItem } = await import("@freenary/ui/components/menu-item");
-    const { RiExternalLinkLine } = await import("@remixicon/react");
-    const { remixIcon } = await import("@/shared/lib/remix-icon");
+    const { MenuItem } = menuItemModule;
+    const { RiExternalLinkLine } = remixIconsModule;
+    const { remixIcon } = remixIconModule;
     const External = remixIcon(RiExternalLinkLine);
 
     const view = render(

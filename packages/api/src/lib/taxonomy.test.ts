@@ -127,13 +127,14 @@ describe("resolveCategorySlug", () => {
   });
 
   it("sends a slug that is also a group to that group's catch-all", () => {
-    for (const group of CATEGORY_GROUPS) {
-      if (Object.hasOwn(LEGACY_CATEGORY_SLUGS, group)) {
-        expect(resolveCategorySlug(group)).toBe(
-          CATEGORY_GROUP_FALLBACKS[group]
-        );
-      }
-    }
+    const groupSlugs = CATEGORY_GROUPS.filter((group) =>
+      Object.hasOwn(LEGACY_CATEGORY_SLUGS, group)
+    );
+
+    expect(groupSlugs).not.toHaveLength(0);
+    expect(groupSlugs.map(resolveCategorySlug)).toEqual(
+      groupSlugs.map((group) => CATEGORY_GROUP_FALLBACKS[group])
+    );
   });
 
   it("covers the whole flat set that preceded the hierarchy", () => {

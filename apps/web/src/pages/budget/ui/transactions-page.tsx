@@ -21,6 +21,7 @@ import type {
 import { m } from "@/paraglide/messages.js";
 import { getLocale } from "@/paraglide/runtime.js";
 import { orpc } from "@/shared/api";
+import { useNow } from "@/shared/lib/calendar-day";
 
 import {
   isStaleView,
@@ -150,15 +151,16 @@ export const TransactionsPage = () => {
     [accountsQuery.data]
   );
 
+  const now = useNow();
   const months = useMemo(
     () =>
       recentMonths({
         current: range === "1M" ? anchor : null,
         first: firstMonth,
-        last: lastMonth ?? new Date(),
+        last: lastMonth ?? now,
         locale: getLocale(),
       }),
-    [anchor, firstMonth, lastMonth, range]
+    [anchor, firstMonth, lastMonth, now, range]
   );
 
   const handleMonthPick = useCallback(

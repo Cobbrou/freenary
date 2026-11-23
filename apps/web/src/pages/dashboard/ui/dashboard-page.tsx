@@ -25,7 +25,7 @@ import { useStartChat } from "@/features/assistant-chat";
 import { m } from "@/paraglide/messages.js";
 import { getLocale } from "@/paraglide/runtime.js";
 import { orpc } from "@/shared/api";
-import { startOfDay } from "@/shared/lib/calendar-day";
+import { startOfDay, useNow } from "@/shared/lib/calendar-day";
 import { remixIcon } from "@/shared/lib/remix-icon";
 import { AiUpdateScope } from "@/shared/ui/ai-update-scope";
 import type { AiUpdateScopeHandle } from "@/shared/ui/ai-update-scope";
@@ -68,7 +68,8 @@ export const DashboardPage = () => {
   const { dashboardId } = route.useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const today = useMemo(() => startOfDay(new Date()), []);
+  const now = useNow();
+  const today = useMemo(() => startOfDay(now), [now]);
   const [renaming, setRenaming] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const dashboard = useQuery(dashboardQueryOptions(dashboardId));

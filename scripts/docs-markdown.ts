@@ -20,7 +20,7 @@ const SLUG_SPACE = / /gu;
 const ANGLE_ENTITY: Record<string, string> = { "<": "&lt;", ">": "&gt;" };
 
 export const escapeCell = (value: string): string =>
-  value.replace(TABLE_CELL_PIPE, "\\|").replace(TABLE_CELL_NEWLINE, " ");
+  value.replaceAll(TABLE_CELL_PIPE, "\\|").replaceAll(TABLE_CELL_NEWLINE, " ");
 
 export const code = (value: string): string => {
   const longestRun = Math.max(
@@ -35,7 +35,10 @@ export const code = (value: string): string => {
 };
 
 const escapeAngles = (value: string): string =>
-  value.replace(ANGLE_BRACKET, (bracket) => ANGLE_ENTITY[bracket] ?? bracket);
+  value.replaceAll(
+    ANGLE_BRACKET,
+    (bracket) => ANGLE_ENTITY[bracket] ?? bracket
+  );
 
 export const escapeProse = (value: string): string => {
   const spans = [...value.matchAll(CODE_SPAN)];
@@ -57,12 +60,12 @@ export const table = (header: string[], rows: string[][]): string =>
 
 export const headingSlug = (heading: string): string =>
   heading
-    .replace(HEADING_LINK, "$<text>")
-    .replace(HEADING_MARKUP, "")
+    .replaceAll(HEADING_LINK, "$<text>")
+    .replaceAll(HEADING_MARKUP, "")
     .trim()
     .toLowerCase()
-    .replace(SLUG_REMOVED, "")
-    .replace(SLUG_SPACE, "-");
+    .replaceAll(SLUG_REMOVED, "")
+    .replaceAll(SLUG_SPACE, "-");
 
 export const generatedPage = ({
   title,

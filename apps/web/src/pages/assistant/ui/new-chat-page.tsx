@@ -12,7 +12,7 @@ import {
 import { m } from "@/paraglide/messages.js";
 import { orpc } from "@/shared/api";
 import { authClient } from "@/shared/auth";
-import { startOfDay } from "@/shared/lib/calendar-day";
+import { startOfDay, useNow } from "@/shared/lib/calendar-day";
 
 import { AssistantAvatar } from "./assistant-avatar";
 import { AssistantComposer } from "./assistant-composer";
@@ -24,7 +24,8 @@ export const NewChatPage = () => {
   const { draft: seededDraft } = route.useSearch();
   const [draft, setDraft] = useState(seededDraft ?? "");
   const [composerActive, setComposerActive] = useState(false);
-  const today = useMemo(() => startOfDay(new Date()), []);
+  const now = useNow();
+  const today = useMemo(() => startOfDay(now), [now]);
   const { data: session } = authClient.useSession();
   const status = useQuery(orpc.assistant.getStatus.queryOptions());
   const chats = useQuery(conversationsQueryOptions());

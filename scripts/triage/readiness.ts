@@ -52,7 +52,7 @@ const CRITERIA: Readonly<
       owner: "author",
       unmet: "Only one of the two, or neither",
     },
-    [STEPS_CRITERION]: {
+    check_steps: {
       instructions:
         "Does the report give steps someone else could follow to see the bug?",
       met: "Ordered steps, or one exact action that shows the bug",
@@ -163,9 +163,9 @@ const WHITESPACE_RUN = /\s+/gu;
 
 const normaliseSection = (text: string): string =>
   text
-    .replace(HTML_COMMENT, "")
-    .replace(LINK_DEFINITION, "")
-    .replace(WHITESPACE_RUN, " ")
+    .replaceAll(HTML_COMMENT, "")
+    .replaceAll(LINK_DEFINITION, "")
+    .replaceAll(WHITESPACE_RUN, " ")
     .trim();
 
 const FENCED_BLOCK = /^(?<fence>```|~~~)[\s\S]*?^\k<fence>[^\n]*$/gmu;
@@ -173,7 +173,7 @@ const FENCED_BLOCK = /^(?<fence>```|~~~)[\s\S]*?^\k<fence>[^\n]*$/gmu;
 const NON_NEWLINE = /[^\n]/gu;
 
 const blankFences = (markdown: string): string =>
-  markdown.replace(FENCED_BLOCK, (block) =>
+  markdown.replaceAll(FENCED_BLOCK, (block) =>
     block.replaceAll(NON_NEWLINE, (character) => " ".repeat(character.length))
   );
 
@@ -253,8 +253,8 @@ export const openItemsToDefine = (body: string): string[] => {
   const rest = blanked.slice(start);
   const next = rest.search(/^#{1,6}[ \t]+/mu);
   const section = (next === -1 ? rest : rest.slice(0, next))
-    .replace(HTML_COMMENT, "")
-    .replace(LINK_DEFINITION, "");
+    .replaceAll(HTML_COMMENT, "")
+    .replaceAll(LINK_DEFINITION, "");
 
   const lines = section.split("\n").filter((line) => line.trim() !== "");
   const unchecked = lines.flatMap((line) => {
@@ -268,7 +268,7 @@ export const openItemsToDefine = (body: string): string[] => {
   }
 
   const hasCheckboxes = lines.some((line) => ANY_CHECKBOX.test(line));
-  const prose = lines.join(" ").replace(WHITESPACE_RUN, " ").trim();
+  const prose = lines.join(" ").replaceAll(WHITESPACE_RUN, " ").trim();
 
   return hasCheckboxes || NOTHING_LEFT.has(prose.toLowerCase()) ? [] : [prose];
 };

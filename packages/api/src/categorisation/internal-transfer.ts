@@ -180,13 +180,15 @@ export const matchInternalTransfers = async (
   bookedSince: Date | null
 ): Promise<number> =>
   Option.getOrElse(
-    await matchInternal(userId, bookedSince).then(Option.some, (error) => {
-      console.warn(
-        "[categorisation] Matching internal transfers failed",
-        error
-      );
+    await matchInternal(userId, bookedSince)
+      .then(Option.some)
+      .catch((error) => {
+        console.warn(
+          "[categorisation] Matching internal transfers failed",
+          error
+        );
 
-      return Option.none();
-    }),
+        return Option.none();
+      }),
     () => 0
   );

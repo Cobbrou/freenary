@@ -189,7 +189,7 @@ const ensureLoaded = async (
 
   state.loading = (async () => {
     if (queuedBehind) {
-      await queuedBehind.then(Option.some, Option.none);
+      await queuedBehind.then(Option.some).catch(Option.none);
     }
 
     await widenTo(wanted);
@@ -206,7 +206,9 @@ export const loadDictionary = async (
       ? new Set(countries.map((country) => country.toUpperCase()))
       : EVERY_COUNTRY;
 
-  const loaded = await ensureLoaded(wanted).then(Option.some, Option.none);
+  const loaded = await ensureLoaded(wanted)
+    .then(Option.some)
+    .catch(Option.none);
 
   if (Option.isNone(loaded)) {
     state.entries = new Map();
@@ -219,10 +221,9 @@ export const lookupDictionary = async (
   merchantKey: string
 ): Promise<DictionaryEntry | null> => {
   if (!state.entries) {
-    const loaded = await ensureLoaded(EVERY_COUNTRY).then(
-      Option.some,
-      Option.none
-    );
+    const loaded = await ensureLoaded(EVERY_COUNTRY)
+      .then(Option.some)
+      .catch(Option.none);
 
     if (Option.isNone(loaded)) {
       return null;

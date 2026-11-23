@@ -5,12 +5,13 @@ import { useMemo } from "react";
 import { conversationsQueryOptions } from "@/entities/conversation";
 import { dashboardsQueryOptions } from "@/entities/dashboard";
 import { m } from "@/paraglide/messages.js";
-import { startOfDay } from "@/shared/lib/calendar-day";
+import { startOfDay, useNow } from "@/shared/lib/calendar-day";
 
 import { ChatList } from "./chat-list";
 
 export const AskArea = () => {
-  const today = useMemo(() => startOfDay(new Date()), []);
+  const now = useNow();
+  const today = useMemo(() => startOfDay(now), [now]);
   const chats = useQuery(conversationsQueryOptions());
   const dashboards = useQuery(dashboardsQueryOptions());
 

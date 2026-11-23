@@ -81,12 +81,13 @@ const unreachable = (cause: unknown): SubqRequestFailed =>
 const requestDecision = Effect.fnUntraced(function* requestDecision(
   apiKey: string,
   state: DecisionState,
-  questions: Record<string, Question>
+  questions: Record<string, Question>,
+  endpoint: string
 ) {
   const response = yield* Effect.tryPromise({
     catch: unreachable,
     try: (signal) =>
-      fetch(DECISIONS_URL, {
+      fetch(endpoint, {
         body: JSON.stringify({ model: MODEL, questions, state }),
         headers: {
           Authorization: `Bearer ${apiKey}`,
@@ -133,9 +134,10 @@ const requestDecision = Effect.fnUntraced(function* requestDecision(
 export const decide = (
   apiKey: string,
   state: DecisionState,
-  questions: Record<string, Question>
+  questions: Record<string, Question>,
+  endpoint: string = DECISIONS_URL
 ): Effect.Effect<Answers, SubqRequestFailed> =>
-  requestDecision(apiKey, state, questions).pipe(
+  requestDecision(apiKey, state, questions, endpoint).pipe(
     Effect.timeoutOrElse({
       duration: REQUEST_TIMEOUT,
       orElse: () =>

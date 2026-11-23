@@ -1,6 +1,5 @@
 import { BrandAvatar } from "@freenary/ui/components/brand-avatar";
 import { useQuery } from "@tanstack/react-query";
-import { useMemo } from "react";
 
 import { dashboardsQueryOptions } from "@/entities/dashboard";
 import { useStartChat } from "@/features/assistant-chat";
@@ -8,7 +7,7 @@ import { m } from "@/paraglide/messages.js";
 import { getLocale } from "@/paraglide/runtime.js";
 import { orpc } from "@/shared/api";
 import { authClient } from "@/shared/auth";
-import { startOfDay } from "@/shared/lib/calendar-day";
+import { startOfDay, useNow } from "@/shared/lib/calendar-day";
 import { NoBankAccount } from "@/shared/ui/no-bank-account";
 import { AccountStrip, DashboardGrid } from "@/widgets/dashboard";
 
@@ -20,7 +19,7 @@ import { HomeAskForm } from "./home-ask-form";
 const MONTH_FORMAT: Intl.DateTimeFormatOptions = { month: "long" };
 
 export const HomePage = () => {
-  const now = useMemo(() => new Date(), []);
+  const now = useNow();
   const today = startOfDay(now);
   const { data: session } = authClient.useSession();
   const overview = useQuery(orpc.portfolio.getOverview.queryOptions());

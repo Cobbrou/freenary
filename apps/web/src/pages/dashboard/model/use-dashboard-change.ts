@@ -18,7 +18,7 @@ export const replyText = (message: UIMessage | undefined): string =>
     ? message.parts
         .flatMap((part) => (part.type === "text" ? [part.text] : []))
         .join("\n")
-        .replace(CODE_FENCE, "")
+        .replaceAll(CODE_FENCE, "")
         .trim()
     : "";
 

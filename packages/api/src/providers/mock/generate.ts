@@ -131,7 +131,7 @@ const seededBy = (key: string): Faker => {
 };
 
 const bankText = (text: string): string =>
-  text.normalize("NFD").replace(DIACRITICS, "").toUpperCase();
+  text.normalize("NFD").replaceAll(DIACRITICS, "").toUpperCase();
 
 const eurosToMinor = (
   random: Faker,

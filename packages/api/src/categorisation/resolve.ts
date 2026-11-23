@@ -287,7 +287,9 @@ export const categoriseTransaction = async (
   overrides: UserOverrides = new Map()
 ): Promise<ResolutionResult> =>
   Option.getOrElse(
-    await categoriseInternal(input, overrides).then(Option.some, Option.none),
+    await categoriseInternal(input, overrides)
+      .then(Option.some)
+      .catch(Option.none),
     () => UNKNOWN_RESULT
   );
 

@@ -53,10 +53,8 @@ describe("deriveMerchantKey", () => {
       const derived = deriveMerchantKey(input);
 
       expect(derived.path).toBe("card");
-
-      if (derived.intermediaryName) {
-        expect(derived.intermediaryName.toLowerCase()).toContain("paypal");
-      }
+      expect(derived.intermediaryName).toBe("PayPal");
+      expect(derived.merchantKey).toBe("merchant name");
     });
 
     it("returns empty merchant key on empty remittance", () => {

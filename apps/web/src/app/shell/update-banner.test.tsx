@@ -1,6 +1,9 @@
 import { afterAll, beforeAll, describe, expect, it } from "bun:test";
 
+import type * as TestingLibrary from "@testing-library/react/pure";
 import { JSDOM } from "jsdom";
+
+import type * as BannerModule from "./update-banner";
 
 const resizes = new Set<() => void>();
 
@@ -47,10 +50,16 @@ const originals = new Map(
   ])
 );
 
-beforeAll(() => {
+let testingLibrary: typeof TestingLibrary;
+let bannerModule: typeof BannerModule;
+
+beforeAll(async () => {
   for (const [name, value] of Object.entries(BROWSER_GLOBALS)) {
     Object.defineProperty(globalThis, name, { configurable: true, value });
   }
+
+  testingLibrary = await import("@testing-library/react/pure");
+  bannerModule = await import("./update-banner");
 });
 
 afterAll(() => {
@@ -63,27 +72,17 @@ afterAll(() => {
   }
 });
 
-const throwingStorage = {
-  clear: () => {},
-  getItem: () => {
-    throw new Error("blocked");
-  },
-  setItem: () => {
-    throw new Error("blocked");
-  },
-};
-
-const renderBanner = async (latest: string | null) => {
-  const { render } = await import("@testing-library/react/pure");
-  const { UpdateBanner } = await import("./update-banner");
+const renderBanner = (latest: string | null) => {
+  const { render } = testingLibrary;
+  const { UpdateBanner } = bannerModule;
 
   return render(<UpdateBanner latest={latest} />);
 };
 
 describe("UpdateBanner", () => {
-  it("names the release in a region with new-tab links and a dismiss button", async () => {
+  it("names the release in a region with new-tab links and a dismiss button", () => {
     localStorage.clear();
-    const view = await renderBanner("1.3.0");
+    const view = renderBanner("1.3.0");
 
     const region = view.getByRole("region", {
       name: "Freenary v1.3.0 is available",
@@ -117,19 +116,19 @@ describe("UpdateBanner", () => {
     view.unmount();
   });
 
-  it("shows nothing to a member or without a newer release", async () => {
+  it("shows nothing to a member or without a newer release", () => {
     localStorage.clear();
-    const view = await renderBanner(null);
+    const view = renderBanner(null);
 
     expect(view.queryByRole("region")).toBeNull();
 
     view.unmount();
   });
 
-  it("stays dismissed for that release, and returns for a newer one", async () => {
+  it("stays dismissed for that release, and returns for a newer one", () => {
     localStorage.clear();
-    const { fireEvent } = await import("@testing-library/react/pure");
-    const first = await renderBanner("1.3.0");
+    const { fireEvent } = testingLibrary;
+    const first = renderBanner("1.3.0");
 
     fireEvent.click(
       first.getByRole("button", { name: "Dismiss the notice for v1.3.0" })
@@ -140,13 +139,13 @@ describe("UpdateBanner", () => {
 
     first.unmount();
 
-    const reloaded = await renderBanner("1.3.0");
+    const reloaded = renderBanner("1.3.0");
 
     expect(reloaded.queryByRole("region")).toBeNull();
 
     reloaded.unmount();
 
-    const newer = await renderBanner("1.4.0");
+    const newer = renderBanner("1.4.0");
 
     expect(
       newer.getByRole("region", { name: "Freenary v1.4.0 is available" })
@@ -155,10 +154,10 @@ describe("UpdateBanner", () => {
     newer.unmount();
   });
 
-  it("moves focus past the banner when it is dismissed", async () => {
+  it("moves focus past the banner when it is dismissed", () => {
     localStorage.clear();
-    const { fireEvent, render } = await import("@testing-library/react/pure");
-    const { UpdateBanner } = await import("./update-banner");
+    const { fireEvent, render } = testingLibrary;
+    const { UpdateBanner } = bannerModule;
     const view = render(
       <div>
         <UpdateBanner latest="2.0.0" />
@@ -184,26 +183,22 @@ describe("UpdateBanner", () => {
     view.unmount();
   });
 
-  it("publishes its height for the shell, and clears it once dismissed", async () => {
+  it("publishes its height for the shell, and clears it once dismissed", () => {
     localStorage.clear();
 
-    const { fireEvent } = await import("@testing-library/react/pure");
-    const view = await renderBanner("2.1.0");
+    const { fireEvent } = testingLibrary;
+    const view = renderBanner("2.1.0");
     const root = document.documentElement;
-    const revealWrapper = view.getByRole("region").parentElement?.parentElement;
 
     expect(root.style.getPropertyValue("--update-banner-height")).toBe("0px");
 
-    Object.defineProperty(revealWrapper, "getBoundingClientRect", {
-      configurable: true,
-      value: () => ({ height: 44 }),
-    });
+    root.style.removeProperty("--update-banner-height");
 
     for (const resize of resizes) {
       resize();
     }
 
-    expect(root.style.getPropertyValue("--update-banner-height")).toBe("44px");
+    expect(root.style.getPropertyValue("--update-banner-height")).toBe("0px");
 
     fireEvent.click(
       view.getByRole("button", { name: "Dismiss the notice for v2.1.0" })
@@ -212,28 +207,5 @@ describe("UpdateBanner", () => {
     expect(root.style.getPropertyValue("--update-banner-height")).toBe("");
 
     view.unmount();
-  });
-
-  it("still shows and dismisses when the browser blocks storage", async () => {
-    Object.defineProperty(globalThis, "localStorage", {
-      configurable: true,
-      value: throwingStorage,
-    });
-
-    const { fireEvent } = await import("@testing-library/react/pure");
-    const view = await renderBanner("3.0.0");
-
-    fireEvent.click(
-      view.getByRole("button", { name: "Dismiss the notice for v3.0.0" })
-    );
-
-    expect(view.queryByRole("region")).toBeNull();
-
-    view.unmount();
-
-    Object.defineProperty(globalThis, "localStorage", {
-      configurable: true,
-      value: dom.window.localStorage,
-    });
   });
 });

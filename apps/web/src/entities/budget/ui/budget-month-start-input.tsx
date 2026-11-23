@@ -15,6 +15,7 @@ import { useId, useState } from "react";
 
 import { m } from "@/paraglide/messages.js";
 import { getLocale } from "@/paraglide/runtime.js";
+import { useNow } from "@/shared/lib/calendar-day";
 
 import { budgetMonthExample } from "../model/budget-month-label";
 
@@ -93,7 +94,7 @@ export const BudgetMonthExample = ({
 }: {
   setting: BudgetMonthSetting;
 }) => {
-  const today = new Date();
+  const today = useNow();
   const rule = budgetMonthRuleOf(setting);
   const month = budgetMonthOfDay(
     {

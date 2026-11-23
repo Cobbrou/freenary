@@ -74,7 +74,7 @@ describe("resolveCookiePolicy", () => {
   });
 
   test("warns when production serves the cookie without Secure", () => {
-    const warn = spyOn(console, "warn").mockImplementation(() => {});
+    const warn = spyOn(console, "warn");
 
     resolveCookiePolicy({
       authUrl: "http://freenary.lan",
@@ -89,7 +89,7 @@ describe("resolveCookiePolicy", () => {
   });
 
   test("does not warn when production serves the cookie over HTTPS", () => {
-    const warn = spyOn(console, "warn").mockImplementation(() => {});
+    const warn = spyOn(console, "warn");
 
     resolveCookiePolicy({
       authUrl: "https://freenary.example.com",

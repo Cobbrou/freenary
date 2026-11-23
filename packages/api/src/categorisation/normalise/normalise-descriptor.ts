@@ -95,10 +95,10 @@ export const normaliseTokens = (text: string): string[] => {
     .replaceAll("æ", "ae")
     .replaceAll("Æ", "ae")
     .normalize("NFD")
-    .replace(COMBINING_MARKS, "")
+    .replaceAll(COMBINING_MARKS, "")
     .toLowerCase()
-    .replace(REMOVED_APOSTROPHES, "")
-    .replace(TOKEN_SEPARATORS, " ");
+    .replaceAll(REMOVED_APOSTROPHES, "")
+    .replaceAll(TOKEN_SEPARATORS, " ");
 
   const tokens: string[] = [];
 

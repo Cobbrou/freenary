@@ -6,6 +6,7 @@ import {
   intermediaryFor,
 } from "./catalogue";
 import type {
+  CataloguedIntermediary,
   DetectIntermediaryInput,
   IntermediaryConfidence,
   IntermediaryMatch,
@@ -24,8 +25,15 @@ const hasCorroboratingAsterisk = (raw: string): boolean => {
   return false;
 };
 
+export interface IntermediaryTables {
+  readonly byCreditorIban?: Readonly<
+    Record<string, CataloguedIntermediary | undefined>
+  >;
+}
+
 export const detectIntermediary = (
-  input: DetectIntermediaryInput
+  input: DetectIntermediaryInput,
+  { byCreditorIban = BY_CREDITOR_IBAN }: IntermediaryTables = {}
 ): IntermediaryMatch | null => {
   const {
     creditorIban,
@@ -71,7 +79,7 @@ export const detectIntermediary = (
   }
 
   const byIban = creditorIban
-    ? intermediaryFor(BY_CREDITOR_IBAN, creditorIban)
+    ? intermediaryFor(byCreditorIban, creditorIban)
     : undefined;
 
   if (byIban) {

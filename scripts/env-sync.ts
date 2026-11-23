@@ -614,7 +614,7 @@ const preambleBlocks = (preamble: string[]): string[] => {
       : escapeProse(
           group.lines
             .join(" ")
-            .replace(PREAMBLE_PLACEHOLDER, (token) => code(token))
+            .replaceAll(PREAMBLE_PLACEHOLDER, (token) => code(token))
         )
   );
 };

@@ -12,7 +12,7 @@ This page lists the rules the repository's configuration files enforce on the co
 | Bun        | `1.4.2`        | `packageManager` in `package.json`  |
 | TypeScript | `^6.0.3`       | workspace catalog in `package.json` |
 | Ultracite  | `7.10.6`       | `devDependencies` in `package.json` |
-| Oxlint     | `1.85.0`       | `devDependencies` in `package.json` |
+| Oxlint     | `1.95.0`       | `devDependencies` in `package.json` |
 | Oxfmt      | `0.65.0`       | `devDependencies` in `package.json` |
 | oxslop     | `^0.1.1`       | `devDependencies` in `package.json` |
 | Lefthook   | `2.1.10`       | `devDependencies` in `package.json` |
@@ -28,6 +28,7 @@ Effect is a dependency of the root, `packages/api`, `packages/auth`, `packages/e
   - `oxslop/no-comments` with `allowJsdoc: false`.
   - `oxslop/no-reexport-only-modules` with `allowFiles: ["index.ts"]`.
 - Loads the JavaScript plugin `@shadcn/lint`, with `^@/shared/ui(/|$)` as the component import pattern.
+- Turns on every rule of `@interfere/landmines/configs/recommended.json` as an error. These rules refuse test doubles, assertions inside branches, fixed sleeps, retries and raised timeouts, dynamic imports and processes started inside a test body, and mutation of imported module state. Load a module or start a process in `beforeAll`, and pass test values through a function's options.
 - Ignores `packages/ui/**`, `apps/web/src/paraglide/**` and the agent folders (`.claude`, `.cursor`, `.agents` and others).
 - In `apps/web/**`, `no-restricted-imports` refuses `@freenary/api` imports except `import type` and these modules: `assistant/prompt`, `assistant/tools`, `assistant/turn`, `assistant/ui`, `dashboards/widgets`, `lib/aggregation`, `lib/budget-month`, `lib/budget-profile`, `lib/categories`, `lib/money`, `lib/public-holidays`, `lib/taxonomy`, `lib/transaction-filters`. The message is: "The web runs this code in the browser: import only the isomorphic @freenary/api modules, or `import type` anything else."
 - In `**/*.test.ts` and `**/*.test.tsx`, `oxslop/require-safety-comment-for-type-assertion` is off.

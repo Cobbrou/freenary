@@ -29,7 +29,8 @@ const findClassification = async (
 ): Promise<CachedClassification | null> => {
   const stored = await prisma.merchantClassification
     .findUnique({ where: { signature } })
-    .then(Option.fromNullishOr, Option.none);
+    .then(Option.fromNullishOr)
+    .catch(Option.none);
 
   return Option.match(stored, {
     onNone: () => null,
@@ -69,7 +70,8 @@ const saveClassification = async (
       update: row,
       where: { signature },
     })
-    .then(Option.some, Option.none);
+    .then(Option.some)
+    .catch(Option.none);
 };
 
 export const prismaClassificationStore: ClassificationStore = {

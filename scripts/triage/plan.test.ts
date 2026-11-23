@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, mock, spyOn } from "bun:test";
+import { afterAll, describe, expect, it } from "bun:test";
 
 import { Effect } from "effect";
 
@@ -321,7 +321,7 @@ describe("taxonomy", () => {
 
 const goodFirstIssue = (
   choice: string,
-  probabilities: Record<string, number> | undefined = undefined
+  ...[probabilities]: [] | [Record<string, number>]
 ): Answers => ({
   ...confidentBug,
   good_first_issue: { choice, confidence: 0.1, probabilities, type: "choice" },
@@ -457,7 +457,7 @@ describe("derivePriority", () => {
 
 const impactAnswer = (
   score: number,
-  probabilities: Record<string, number> | undefined = undefined
+  ...[probabilities]: [] | [Record<string, number>]
 ): Answers => ({
   ...confidentBug,
   impact: { confidence: 0.1, probabilities, score, type: "score" },
@@ -886,20 +886,33 @@ describe("existing and refused labels", () => {
 const BAD_REQUEST = 400;
 
 describe("decide", () => {
-  afterEach(() => {
-    mock.restore();
+  const requestBodies: unknown[] = [];
+  const subq = Bun.serve({
+    async fetch(request) {
+      const body = await request.json();
+
+      requestBodies.push(body);
+
+      return new URL(request.url).pathname === "/rejects"
+        ? new Response("bad", { status: BAD_REQUEST })
+        : Response.json({
+            answers: {
+              type: { choice: "bug", confidence: 1, type: "choice" },
+            },
+          });
+    },
+    port: 0,
+  });
+
+  afterAll(async () => {
+    await subq.stop(true);
   });
 
   it("asks SubQ with the subq-snap-1.1 model", async () => {
-    const fetchSpy = spyOn(globalThis, "fetch").mockResolvedValue(
-      Response.json({
-        answers: { type: { choice: "bug", confidence: 1, type: "choice" } },
-      })
-    );
+    requestBodies.length = 0;
 
-    const answers = await Effect.runPromise(decide("key", {}, {}));
-    const requestBodies = fetchSpy.mock.calls.map(([, init]) =>
-      JSON.parse(String(init?.body))
+    const answers = await Effect.runPromise(
+      decide("key", {}, {}, new URL("/answers", subq.url).href)
     );
 
     expect(answers.type?.type).toBe("choice");
@@ -909,12 +922,10 @@ describe("decide", () => {
   });
 
   it("fails with the request error when SubQ rejects the call", async () => {
-    spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response("bad", { status: BAD_REQUEST })
-    );
-
     const failure = await Effect.runPromise(
-      decide("key", {}, {}).pipe(Effect.flip)
+      decide("key", {}, {}, new URL("/rejects", subq.url).href).pipe(
+        Effect.flip
+      )
     );
 
     expect(failure).toBeInstanceOf(SubqRequestFailed);

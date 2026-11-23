@@ -1,6 +1,6 @@
-import { beforeAll, describe, expect, it } from "bun:test";
+import { describe, expect, it } from "bun:test";
 
-import { BY_CREDITOR_IBAN, INTERMEDIARY_CATALOGUE } from "./catalogue";
+import { INTERMEDIARY_CATALOGUE } from "./catalogue";
 import { detectIntermediary } from "./detect";
 
 describe("detectIntermediary", () => {
@@ -133,19 +133,21 @@ describe("detectIntermediary", () => {
 
   const TEST_IBAN = "NL00TEST0000000099";
 
-  beforeAll(() => {
-    BY_CREDITOR_IBAN[TEST_IBAN] = {
-      definition: INTERMEDIARY_CATALOGUE.adyen,
-      id: "adyen",
-    };
-  });
+  const withTestIban = {
+    byCreditorIban: {
+      [TEST_IBAN]: { definition: INTERMEDIARY_CATALOGUE.adyen, id: "adyen" },
+    },
+  };
 
   it("matches by IBAN when no marker is present", () => {
-    const intermediary = detectIntermediary({
-      creditorIban: TEST_IBAN,
-      normalisedDescriptor: "restaurant dupont",
-      rawDescriptor: "RESTAURANT DUPONT",
-    });
+    const intermediary = detectIntermediary(
+      {
+        creditorIban: TEST_IBAN,
+        normalisedDescriptor: "restaurant dupont",
+        rawDescriptor: "RESTAURANT DUPONT",
+      },
+      withTestIban
+    );
 
     expect(intermediary).not.toBeNull();
 
@@ -214,11 +216,14 @@ describe("detectIntermediary", () => {
   });
 
   it("marker match takes priority over IBAN match", () => {
-    const intermediary = detectIntermediary({
-      creditorIban: TEST_IBAN,
-      normalisedDescriptor: "adyen some merchant",
-      rawDescriptor: "ADYEN SOME MERCHANT",
-    });
+    const intermediary = detectIntermediary(
+      {
+        creditorIban: TEST_IBAN,
+        normalisedDescriptor: "adyen some merchant",
+        rawDescriptor: "ADYEN SOME MERCHANT",
+      },
+      withTestIban
+    );
 
     expect(intermediary).not.toBeNull();
 

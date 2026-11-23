@@ -197,7 +197,10 @@ const linksOf = (lines: string[]): Link[] =>
       return [];
     }
 
-    const prose = line.replace(INLINE_CODE, (span) => " ".repeat(span.length));
+    const prose = line.replaceAll(INLINE_CODE, (span) =>
+      " ".repeat(span.length)
+    );
+
     const inline = [...prose.matchAll(INLINE_LINK)].map(
       (match) => match.groups?.target ?? ""
     );
@@ -327,7 +330,7 @@ const imagesOf = (
       ? []
       : [
           ...line
-            .replace(INLINE_CODE, (span) => " ".repeat(span.length))
+            .replaceAll(INLINE_CODE, (span) => " ".repeat(span.length))
             .matchAll(IMAGE),
         ].map((match) => ({
           alt: match.groups?.alt?.trim() ?? "",

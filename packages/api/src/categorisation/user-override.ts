@@ -75,7 +75,8 @@ export const upsertUserOverride = async (
       update: { category, merchantName: name },
       where: { userId_merchantKey: { merchantKey, userId } },
     })
-    .then(Option.some, Option.none);
+    .then(Option.some)
+    .catch(Option.none);
 };
 
 export const deleteUserOverride = async (
@@ -85,11 +86,13 @@ export const deleteUserOverride = async (
 ): Promise<void> => {
   const client = db ?? prisma;
 
-  await client.merchantOverride
-    .deleteMany({
+  await Promise.resolve(
+    client.merchantOverride.deleteMany({
       where: { merchantKey, userId },
     })
-    .then(Option.some, Option.none);
+  )
+    .then(Option.some)
+    .catch(Option.none);
 
   await client.transaction.updateMany({
     data: {

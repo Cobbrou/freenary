@@ -43,14 +43,14 @@ const toDnsLabel = (raw: string | null | undefined): string => {
 
   return raw
     .toLowerCase()
-    .replace(NON_LABEL_RUN, "-")
-    .replace(EDGE_DASHES, "")
+    .replaceAll(NON_LABEL_RUN, "-")
+    .replaceAll(EDGE_DASHES, "")
     .slice(0, MAX_SLUG_LENGTH)
-    .replace(TRAILING_DASHES, "");
+    .replaceAll(TRAILING_DASHES, "");
 };
 
 const toDomain = (raw: string | null | undefined): string =>
-  raw?.trim().toLowerCase().replace(EDGE_DOTS, "") ?? "";
+  raw?.trim().toLowerCase().replaceAll(EDGE_DOTS, "") ?? "";
 
 export const deriveDevIdentity = (input: DevIdentityInput): DevIdentity => {
   const slug =

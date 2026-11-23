@@ -1,4 +1,4 @@
-import { describe, expect, it } from "bun:test";
+import { beforeAll, describe, expect, it } from "bun:test";
 
 import { z } from "zod";
 
@@ -49,19 +49,40 @@ const parseSecretUnder = (nodeEnv: string, secret: string) =>
   );
 
 describe("BETTER_AUTH_SECRET", () => {
+  const verdicts = {
+    developmentSecretInDevelopment: "",
+    developmentSecretInProduction: "",
+    generatedSecretInProduction: "",
+  };
+
+  beforeAll(() => {
+    verdicts.developmentSecretInProduction = parseSecretUnder(
+      "production",
+      DEVELOPMENT_AUTH_SECRET
+    );
+
+    verdicts.generatedSecretInProduction = parseSecretUnder(
+      "production",
+      "a".repeat(64)
+    );
+
+    verdicts.developmentSecretInDevelopment = parseSecretUnder(
+      "development",
+      DEVELOPMENT_AUTH_SECRET
+    );
+  });
+
   it("refuses the development secret in production", () => {
-    expect(parseSecretUnder("production", DEVELOPMENT_AUTH_SECRET)).toContain(
+    expect(verdicts.developmentSecretInProduction).toContain(
       "the development secret is public and is refused in production"
     );
   });
 
   it("accepts a generated secret in production", () => {
-    expect(parseSecretUnder("production", "a".repeat(64))).toBe("accepted");
+    expect(verdicts.generatedSecretInProduction).toBe("accepted");
   });
 
   it("keeps the development secret outside production", () => {
-    expect(parseSecretUnder("development", DEVELOPMENT_AUTH_SECRET)).toBe(
-      "accepted"
-    );
+    expect(verdicts.developmentSecretInDevelopment).toBe("accepted");
   });
 });

@@ -167,7 +167,7 @@ describe("createReleaseCheck", () => {
   });
 
   test("shows nothing and warns once after a refused, timed-out or unreadable request", async () => {
-    const warn = spyOn(console, "warn").mockImplementation(() => {});
+    const warn = spyOn(console, "warn");
     const failing: FetchReleases[] = [
       () =>
         Promise.resolve(
@@ -196,7 +196,7 @@ describe("createReleaseCheck", () => {
   });
 
   test("keeps repeating after a failed attempt", async () => {
-    spyOn(console, "warn").mockImplementation(() => {});
+    spyOn(console, "warn");
     const answers: (() => Promise<Response>)[] = [
       () => Promise.reject(new Error("offline")),
       () => Promise.resolve(Response.json([published("v1.3.0")])),
@@ -216,7 +216,7 @@ describe("createReleaseCheck", () => {
   });
 
   test("keeps the last answer when a later request fails", async () => {
-    spyOn(console, "warn").mockImplementation(() => {});
+    spyOn(console, "warn");
 
     const answers: (() => Promise<Response>)[] = [
       () => Promise.resolve(Response.json([published("v1.3.0")])),

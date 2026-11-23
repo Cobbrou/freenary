@@ -1,6 +1,14 @@
 import { afterAll, beforeAll, describe, expect, it } from "bun:test";
 
+import type * as DialogModule from "@freenary/ui/components/dialog";
+import type * as SidebarModule from "@freenary/ui/components/sidebar-core";
+import type * as LabelsModule from "@freenary/ui/lib/labels";
+import type * as TestingLibrary from "@testing-library/react/pure";
 import { JSDOM } from "jsdom";
+
+import type * as RuntimeModule from "@/paraglide/runtime.js";
+
+import type * as UiLabelsModule from "./ui-labels";
 
 const dom = new JSDOM("<!doctype html><html><body></body></html>", {
   pretendToBeVisual: true,
@@ -28,10 +36,24 @@ const BROWSER_GLOBALS = {
   window: dom.window,
 };
 
-beforeAll(() => {
+let testingLibrary: typeof TestingLibrary;
+let dialogModule: typeof DialogModule;
+let sidebarModule: typeof SidebarModule;
+let labelsModule: typeof LabelsModule;
+let runtimeModule: typeof RuntimeModule;
+let uiLabelsModule: typeof UiLabelsModule;
+
+beforeAll(async () => {
   for (const [name, value] of Object.entries(BROWSER_GLOBALS)) {
     Object.defineProperty(globalThis, name, { configurable: true, value });
   }
+
+  testingLibrary = await import("@testing-library/react/pure");
+  dialogModule = await import("@freenary/ui/components/dialog");
+  sidebarModule = await import("@freenary/ui/components/sidebar-core");
+  labelsModule = await import("@freenary/ui/lib/labels");
+  runtimeModule = await import("@/paraglide/runtime.js");
+  uiLabelsModule = await import("./ui-labels");
 });
 
 afterAll(() => {
@@ -42,14 +64,12 @@ afterAll(() => {
 
 type Locale = "en" | "fr";
 
-const closeButtonName = async (locale: Locale | null): Promise<string> => {
-  const { render } = await import("@testing-library/react/pure");
-  const { Dialog, DialogContent, DialogTitle } =
-    await import("@freenary/ui/components/dialog");
-
-  const { UiLabelsProvider } = await import("@freenary/ui/lib/labels");
-  const { overwriteGetLocale } = await import("@/paraglide/runtime.js");
-  const { uiLabels } = await import("./ui-labels");
+const closeButtonName = (locale: Locale | null): string => {
+  const { render } = testingLibrary;
+  const { Dialog, DialogContent, DialogTitle } = dialogModule;
+  const { UiLabelsProvider } = labelsModule;
+  const { overwriteGetLocale } = runtimeModule;
+  const { uiLabels } = uiLabelsModule;
 
   const dialog = (
     <Dialog open>
@@ -81,14 +101,12 @@ const closeButtonName = async (locale: Locale | null): Promise<string> => {
   return name;
 };
 
-const railTooltipLines = async (locale: Locale | null): Promise<string[]> => {
-  const { render } = await import("@testing-library/react/pure");
-  const { SidebarProvider, SidebarRail } =
-    await import("@freenary/ui/components/sidebar-core");
-
-  const { UiLabelsProvider } = await import("@freenary/ui/lib/labels");
-  const { overwriteGetLocale } = await import("@/paraglide/runtime.js");
-  const { uiLabels } = await import("./ui-labels");
+const railTooltipLines = (locale: Locale | null): string[] => {
+  const { render } = testingLibrary;
+  const { SidebarProvider, SidebarRail } = sidebarModule;
+  const { UiLabelsProvider } = labelsModule;
+  const { overwriteGetLocale } = runtimeModule;
+  const { uiLabels } = uiLabelsModule;
 
   const rail = (
     <SidebarProvider>
@@ -123,22 +141,22 @@ const railTooltipLines = async (locale: Locale | null): Promise<string[]> => {
 };
 
 describe("sidebar rail tooltip", () => {
-  it("reads in French, verbs in semibold, when the interface is French", async () => {
-    expect(await railTooltipLines("fr")).toEqual([
+  it("reads in French, verbs in semibold, when the interface is French", () => {
+    expect(railTooltipLines("fr")).toEqual([
       "**Faites glisser** pour redimensionner",
       "**Cliquez** pour masquer",
     ]);
   });
 
-  it("reads in English when the interface is English", async () => {
-    expect(await railTooltipLines("en")).toEqual([
+  it("reads in English when the interface is English", () => {
+    expect(railTooltipLines("en")).toEqual([
       "**Drag** to resize",
       "**Click** to collapse",
     ]);
   });
 
-  it("falls back to English with no labels provider", async () => {
-    expect(await railTooltipLines(null)).toEqual([
+  it("falls back to English with no labels provider", () => {
+    expect(railTooltipLines(null)).toEqual([
       "**Drag** to resize",
       "**Click** to collapse",
     ]);
@@ -146,15 +164,15 @@ describe("sidebar rail tooltip", () => {
 });
 
 describe("dialog close button", () => {
-  it("is named in French when the interface is French", async () => {
-    expect(await closeButtonName("fr")).toBe("Fermer");
+  it("is named in French when the interface is French", () => {
+    expect(closeButtonName("fr")).toBe("Fermer");
   });
 
-  it("is named in English when the interface is English", async () => {
-    expect(await closeButtonName("en")).toBe("Close");
+  it("is named in English when the interface is English", () => {
+    expect(closeButtonName("en")).toBe("Close");
   });
 
-  it("falls back to English with no labels provider", async () => {
-    expect(await closeButtonName(null)).toBe("Close");
+  it("falls back to English with no labels provider", () => {
+    expect(closeButtonName(null)).toBe("Close");
   });
 });

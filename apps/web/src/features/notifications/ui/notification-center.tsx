@@ -17,6 +17,7 @@ import { useId, useRef, useState } from "react";
 import type { Ref } from "react";
 
 import { m } from "@/paraglide/messages.js";
+import { useNow } from "@/shared/lib/calendar-day";
 import { CHART_COLOR_VARS } from "@/shared/lib/chart-colors";
 import { kubaiIcon } from "@/shared/lib/kubai-icon";
 
@@ -96,6 +97,8 @@ const PanelBody = ({
   onDismiss: (notification: NotificationEntry) => void;
   onOpen: (notification: NotificationEntry) => void;
 }) => {
+  const now = useNow();
+
   if (center.query.isPending) {
     return (
       <div aria-busy="true" className="flex flex-col gap-1 p-3">
@@ -151,8 +154,6 @@ const PanelBody = ({
       </div>
     );
   }
-
-  const now = new Date();
 
   return (
     <div

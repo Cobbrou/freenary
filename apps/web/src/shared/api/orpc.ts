@@ -64,7 +64,7 @@ const link = new RPCLink<ForwardedCookieContext>({
   headers: ({ context }) =>
     context.cookie === undefined ? {} : { cookie: context.cookie },
   plugins: [new SimpleCsrfProtectionLinkPlugin()],
-  url: `${getServerUrl()}/rpc`,
+  url: () => `${getServerUrl()}/rpc`,
 });
 
 // SAFETY: createORPCClient returns a generic client; cast aligns it with the known AppRouter type

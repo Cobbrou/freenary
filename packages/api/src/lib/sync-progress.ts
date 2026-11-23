@@ -201,7 +201,8 @@ export const createSyncReporter = (
         },
         where: { startedAt: claimedAt, userId },
       })
-      .then(Option.some, Option.none);
+      .then(Option.some)
+      .catch(Option.none);
   };
 
   return {

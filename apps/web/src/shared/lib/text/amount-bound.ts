@@ -22,7 +22,7 @@ const localeGroupSeparator = (locale: string) =>
 export const parseAmountBound = (text: string, locale: string): number => {
   const group = localeGroupSeparator(locale);
   const withCommasAsDots = text
-    .replace(SPACING, "")
+    .replaceAll(SPACING, "")
     .replaceAll(group ?? ",", "")
     .replaceAll(",", ".");
 
@@ -32,7 +32,7 @@ export const parseAmountBound = (text: string, locale: string): number => {
       ? withCommasAsDots
       : `${withCommasAsDots.slice(0, lastDot).replaceAll(".", "")}.${withCommasAsDots.slice(lastDot + 1)}`;
 
-  const value = Number(onlyDecimalDotSurvives.replace(NOT_A_NUMBER, ""));
+  const value = Number(onlyDecimalDotSurvives.replaceAll(NOT_A_NUMBER, ""));
 
   return Number.isFinite(value) && value > 0 ? value : NO_AMOUNT_BOUND;
 };
