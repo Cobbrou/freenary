@@ -66,7 +66,9 @@ These add up the balances of the `CHECKING` accounts and take off what `CARD` ac
 
 The spending breakdown, budget against actual, fixed against variable, weekly spending, the Sankey diagram, the cash-flow chart, recurring expenses and monthly income read only the transactions of `CHECKING`, `CARD` and `UNKNOWN` accounts. Interest paid into a Livret A, an order bought inside a PEA or a repayment line on a loan account counts in none of them.
 
-The transaction list and its totals still show the transactions of every account.
+These figures also leave out internal transfers, except a move from a current account into a savings, investment or retirement account, described below. Moving money between two current accounts, or from a current account to a card, is neither income nor spending.
+
+The transaction list shows the transactions of every account, internal transfers included. Its totals count every account and leave every internal transfer out.
 
 ## Transfers between your own accounts
 
