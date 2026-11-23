@@ -31,6 +31,10 @@ import {
   upsertUserOverride,
 } from "../categorisation/user-override";
 import { protectedProcedure } from "../index";
+import {
+  cashFlowAccountsOf,
+  cashFlowAccountTypesSql,
+} from "../lib/account-types";
 import { accountsSummary } from "../lib/accounts-summary";
 import { AGGREGATION_MODES } from "../lib/aggregation";
 import type { AggregationMode } from "../lib/aggregation";
@@ -74,7 +78,12 @@ import {
 import { transactionPage } from "../lib/transaction-page";
 import { userCurrency } from "../lib/user-currency";
 import { spendingWeeksStart, weeklySpending } from "../lib/weekly-spending";
+import {
+  lowConfidenceTransactionIds,
+  notifyTransactionsToCheck,
+} from "../notifications/transactions-to-check";
 import { getProvider } from "../providers/registry";
+import { categorySuggestionProcedures } from "./category-suggestions";
 import { savedFilterProcedures } from "./saved-filters";
 
 interface OutgoingRow {
@@ -167,6 +176,7 @@ const cashFlowQuery = ({ labelExpr, truncExpr }: CashFlowGrain) =>
   JOIN "bank_account" ba ON ba."id" = t."accountId"
   JOIN "bank_connection" bc ON bc."id" = ba."connectionId"
   WHERE bc."userId" = $1
+    AND ${cashFlowAccountTypesSql('ba."type"')}
     AND t."date" >= $2
     AND t."date" <= $3
   GROUP BY ${truncExpr}, ${labelExpr}
@@ -290,7 +300,7 @@ const outgoingRows = (
       resolvedCategory: true,
     },
     where: {
-      account: { connection: { userId } },
+      account: cashFlowAccountsOf(userId),
       amount: { lt: 0 },
       date: { gte: from, lte: to },
     },
@@ -403,7 +413,7 @@ const periodRows = (
       resolvedCategory: true,
     },
     where: {
-      account: { connection: { userId } },
+      account: cashFlowAccountsOf(userId),
       date: { gte: from, lte: to },
     },
   });
@@ -538,6 +548,24 @@ const writeResolutions = (
   ).pipe(Effect.map((written) => written.reduce((sum, one) => sum + one, 0)));
 };
 
+const raiseTransactionsToCheck = (
+  userId: string,
+  transactionIds: readonly string[]
+): Effect.Effect<void> =>
+  Effect.tryPromise(() =>
+    notifyTransactionsToCheck(userId, transactionIds)
+  ).pipe(
+    Effect.matchEffect({
+      onFailure: (cause) =>
+        Effect.logWarning(
+          "Raising the transactions to check notification failed",
+          transactionIds.length,
+          cause
+        ),
+      onSuccess: () => Effect.void,
+    })
+  );
+
 const categoriseUncategorised = async (
   userId: string,
   reporter: SyncReporter
@@ -658,7 +686,21 @@ const categoriseUncategorised = async (
 
   await reporter.categorised(inputs.length - resolutions.length);
 
-  return await Effect.runPromise(writeResolutions(resolutions, reporter));
+  const written = await Effect.runPromise(
+    writeResolutions(resolutions, reporter)
+  );
+
+  await Effect.runPromise(
+    raiseTransactionsToCheck(
+      userId,
+      lowConfidenceTransactionIds(
+        inputs.map((input) => input.txId),
+        results
+      )
+    )
+  );
+
+  return written;
 };
 
 const calendarMonthKey = (date: Date) =>
@@ -975,6 +1017,7 @@ const sankeyOf = (
 };
 
 export const budgetRouter = {
+  ...categorySuggestionProcedures,
   ...savedFilterProcedures,
   getAccounts: protectedProcedure.handler(async ({ context }) => {
     const userId = context.session.user.id;
@@ -1184,7 +1227,7 @@ export const budgetRouter = {
         _min: { date: true },
         _sum: { amount: true },
         where: {
-          account: { connection: { userId } },
+          account: cashFlowAccountsOf(userId),
           amount: { gt: 0 },
           date: { gte: observed.from, lte: observed.to },
           isInternalTransfer: false,

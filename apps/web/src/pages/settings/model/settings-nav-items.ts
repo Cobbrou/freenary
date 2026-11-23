@@ -1,7 +1,17 @@
-import { CurrencyDollar, Link, Palette, ShieldLock } from "kubai-icons-react";
+import {
+  CurrencyDollar,
+  KeyRound,
+  Landmark,
+  Laptop,
+  Palette,
+  ServerCog,
+  ShieldLock,
+  Tags,
+} from "kubai-icons-react";
 import type { KubaiIconComponent } from "kubai-icons-react";
 
 import { m } from "@/paraglide/messages.js";
+import { OPERATOR_SETTINGS_SECTIONS } from "@/shared/config";
 import type { SettingsSection } from "@/shared/config";
 import { CHART_COLOR_VARS } from "@/shared/lib/chart-colors";
 import type { ChartColorVar } from "@/shared/lib/chart-colors";
@@ -15,32 +25,91 @@ interface SettingsNavItem {
   section: SettingsSection;
 }
 
-export const SETTINGS_NAV_ITEMS = [
+interface SettingsNavCategory {
+  id: string;
+  items: readonly SettingsNavItem[];
+  label: () => string;
+}
+
+export const SETTINGS_NAV_CATEGORIES = [
   {
-    color: CHART_COLOR_VARS.pink,
-    icon: Palette,
-    label: m.settings_group_appearance_title,
-    section: "appearance",
+    id: "preferences",
+    items: [
+      {
+        color: CHART_COLOR_VARS.pink,
+        icon: Palette,
+        label: m.settings_tab_appearance,
+        section: "appearance",
+      },
+    ],
+    label: m.settings_nav_group_preferences,
   },
   {
-    color: CHART_COLOR_VARS.blue,
-    icon: Link,
-    label: m.settings_group_connections_title,
-    section: "connections",
+    id: "finances",
+    items: [
+      {
+        color: CHART_COLOR_VARS.blue,
+        icon: Landmark,
+        label: m.settings_tab_bank_accounts,
+        section: "bank-accounts",
+      },
+      {
+        color: CHART_COLOR_VARS.green,
+        icon: CurrencyDollar,
+        label: m.settings_tab_budget,
+        section: "budget",
+      },
+      {
+        color: CHART_COLOR_VARS.orange,
+        icon: Tags,
+        label: m.settings_tab_categories,
+        section: "categories",
+      },
+    ],
+    label: m.settings_nav_group_finances,
   },
   {
-    color: CHART_COLOR_VARS.green,
-    icon: CurrencyDollar,
-    label: m.settings_group_budget_title,
-    section: "budget",
+    id: "security",
+    items: [
+      {
+        color: CHART_COLOR_VARS.purple,
+        icon: ShieldLock,
+        label: m.settings_tab_sign_in,
+        section: "sign-in",
+      },
+      {
+        color: CHART_COLOR_VARS.purple,
+        icon: Laptop,
+        label: m.settings_tab_sessions,
+        section: "sessions",
+      },
+      {
+        color: CHART_COLOR_VARS.purple,
+        icon: KeyRound,
+        label: m.settings_tab_api_keys,
+        section: "api-keys",
+      },
+    ],
+    label: m.settings_nav_group_security,
   },
   {
-    color: CHART_COLOR_VARS.purple,
-    icon: ShieldLock,
-    label: m.settings_group_security_title,
-    section: "security",
+    id: "instance",
+    items: [
+      {
+        color: CHART_COLOR_VARS.grey,
+        icon: ServerCog,
+        label: m.settings_tab_services,
+        section: "services",
+      },
+    ],
+    label: m.settings_nav_group_instance,
   },
-] as const satisfies readonly SettingsNavItem[];
+] as const satisfies readonly SettingsNavCategory[];
+
+export const SETTINGS_NAV_ITEMS: readonly SettingsNavItem[] =
+  SETTINGS_NAV_CATEGORIES.flatMap(
+    (category): readonly SettingsNavItem[] => category.items
+  );
 
 interface OperatorStatus {
   isOperator: boolean | undefined;
@@ -60,3 +129,25 @@ export const operatorStandingOf = ({
 
 export const showsServices = (standing: OperatorStanding): boolean =>
   standing === "operator";
+
+export const isSectionShownTo = (
+  section: SettingsSection,
+  standing: OperatorStanding
+): boolean =>
+  !OPERATOR_SETTINGS_SECTIONS.has(section) || showsServices(standing);
+
+export const settingsNavCategoriesFor = (
+  standing: OperatorStanding
+): readonly SettingsNavCategory[] =>
+  SETTINGS_NAV_CATEGORIES.flatMap((category) => {
+    const items = category.items.filter((item) =>
+      isSectionShownTo(item.section, standing)
+    );
+
+    return items.length > 0 ? [{ ...category, items }] : [];
+  });
+
+export const settingsNavItemOf = (
+  section: SettingsSection
+): SettingsNavItem | undefined =>
+  SETTINGS_NAV_ITEMS.find((item) => item.section === section);

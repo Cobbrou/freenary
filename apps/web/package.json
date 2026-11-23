@@ -14,9 +14,9 @@
   "dependencies": {
     "@ai-sdk/provider": "^4.0.10",
     "@ai-sdk/react": "^4.0.65",
-    "@better-auth/api-key": "1.7.25",
-    "@better-auth/core": "1.7.25",
-    "@better-auth/passkey": "1.7.25",
+    "@better-auth/api-key": "1.7.26",
+    "@better-auth/core": "1.7.26",
+    "@better-auth/passkey": "1.7.26",
     "@freenary/api": "workspace:*",
     "@freenary/env": "workspace:*",
     "@freenary/ui": "workspace:*",
@@ -56,7 +56,7 @@
     "zod": "catalog:"
   },
   "devDependencies": {
-    "@feature-sliced/steiger-plugin": "^0.7.0",
+    "@feature-sliced/steiger-plugin": "^0.8.0",
     "@freenary/config": "workspace:*",
     "@freenary/instance-config": "workspace:*",
     "@tanstack/react-query-devtools": "^5.101.4",

@@ -13,13 +13,9 @@ import { BankConnectionPanel } from "@/features/bank-connection";
 import { m } from "@/paraglide/messages.js";
 import { orpc } from "@/shared/api";
 
-const INSTITUTIONS_FOR_THE_USERS_OWN_JURISDICTIONS = {};
-
 export const ConnectBankDialog = () => {
   const banksQuery = useQuery(
-    orpc.bankConnection.listInstitutions.queryOptions({
-      input: INSTITUTIONS_FOR_THE_USERS_OWN_JURISDICTIONS,
-    })
+    orpc.bankConnection.listInstitutions.queryOptions()
   );
 
   return (
@@ -43,7 +39,6 @@ export const ConnectBankDialog = () => {
           isBanksError={banksQuery.isError}
           isBanksPending={banksQuery.isPending}
           returnTo="settings"
-          unavailableCountries={banksQuery.data?.unavailableCountries ?? []}
         />
       </DialogContent>
     </Dialog>

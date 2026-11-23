@@ -83,17 +83,26 @@ model BankAccount {
   @@map("bank_account")
 }
 
+/// Kind of account. packages/api/src/lib/account-types.ts decides which
+/// calculations count each kind.
 enum BankAccountType {
   CHECKING
-  SAVINGS
   CARD
-  LOAN
+  SAVINGS
+  LIVRET_A
+  LDDS
+  LEP
+  CEL
+  PEL
+  TERM_DEPOSIT
   BROKERAGE
+  PEA
   LIFE_INSURANCE
   RETIREMENT
   EMPLOYEE_SAVINGS
   REAL_ESTATE
   CROWDLENDING
+  LOAN
   UNKNOWN
 }
 
@@ -205,6 +214,7 @@ model Transaction {
   /// True when this transaction is one leg of a movement between the user's own accounts.
   isInternalTransfer   Boolean     @default(false)
   createdAt         DateTime    @default(now())
+  notifications     NotificationTransaction[]
 
   @@unique([accountId, providerTransactionId])
   @@index([accountId, date])

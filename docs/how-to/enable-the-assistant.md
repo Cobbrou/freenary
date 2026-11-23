@@ -16,7 +16,7 @@ This page connects the assistant, the chat behind **Ask** that answers questions
 
 ### In the app
 
-1. Open **Settings** › **Connections**. Under **Services**, find **Assistant model** and select **Set up**.
+1. Open **Settings** › **Services**. Find **Assistant model** and select **Set up**.
 2. Select **OpenAI-compatible endpoint**, then select **Continue**.
 3. Enter the endpoint in **Base URL** and the model ID in **Model**.
 4. If the endpoint needs a key, open **More options** and paste it in **API key**.
@@ -43,7 +43,7 @@ This page connects the assistant, the chat behind **Ask** that answers questions
 
 ## Check that it works
 
-1. In **Settings** › **Connections**, the **Assistant model** row reads **Configured · OpenAI-compatible endpoint**, or **Set by your server · OpenAI-compatible endpoint** when the values come from `.env`.
+1. In **Settings** › **Services**, the **Assistant model** row reads **Configured · OpenAI-compatible endpoint**, or **Set by your server · OpenAI-compatible endpoint** when the values come from `.env`.
 2. Open **Ask**, then open the model menu. It lists your model ID under **On your instance**. A member who has not picked a device model gets it by default.
 3. Ask a question. The answer comes from your model.
 
@@ -53,7 +53,7 @@ This page connects the assistant, the chat behind **Ask** that answers questions
 - **Unable to reach OpenAI-compatible endpoint. Check the address and your network, then try again.** The server could not reach `<Base URL>/chat/completions`. Check that the URL ends with the version path, such as `/v1`, and that the server container can reach it.
 - **A value has the wrong format. Check the fields and try again.** The base URL is not a URL, or the endpoint answered with no `choices`. Check the URL and the model ID.
 - The server stops at start after you set `AI_BASE_URL`. The value is not a URL. Write the full address, starting with `http://` or `https://`.
-- **This instance has no model configured. The operator turns the assistant on in Settings › Connections.** The server answered `unconfigured`: it holds only one of `AI_BASE_URL` and `AI_MODEL`, or the change is saved but not applied yet. Set both, then select **Apply now** or run `docker compose up -d`.
+- **This instance has no model configured. The operator turns the assistant on in Settings › Services.** The server answered `unconfigured`: it holds only one of `AI_BASE_URL` and `AI_MODEL`, or the change is saved but not applied yet. Set both, then select **Apply now** or run `docker compose up -d`.
 - **Too many questions in a row. Wait a moment and try again.** Each member can send 30 questions in 5 minutes. Wait and ask again.
 - **The server did not restart** and **It did not answer within one minute.** Run `docker compose ps` and `docker compose logs server`, then `docker compose up -d`, and select **Try again**.
 

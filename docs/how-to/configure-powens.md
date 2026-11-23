@@ -15,10 +15,10 @@ This page connects Freenary to Powens, the bank provider that links members' ban
 
 ### In the app
 
-1. Open the setup screen. It opens on its own after the first sign-in, on the **Bank** step. On an instance that is already set up, open **Settings** › **Connections** instead, find **Bank provider** under **Services**, and select **Set up** or **Change**.
+1. Open the setup screen. It opens on its own after the first sign-in, on the **Bank** step. On an instance that is already set up, open **Settings** › **Services** instead, find **Bank provider**, and select **Set up** or **Change**.
 2. Select **Powens** (marked **Recommended**), then select **Continue**.
 3. On **Step 1 of 4**, create a free account in the Powens console, then a domain, and enter the domain name in **Powens domain**, for example `acme-sandbox`. Enter the name alone, without `https://`. Select **Next**.
-4. On **Step 2 of 4**, select **Copy** next to **Redirect URL**. In the Powens console, open your domain, select **Applications**, then **Add an application**. Enter a **Name**, paste the URL into **Redirect URIs**, select **Save**, then **Exit**. To turn banks on, select **Connectors** and select **Activate** next to each bank. Select **Next** in Freenary. [Connect your first bank](../tutorials/connect-your-first-bank.md#3-enter-the-powens-details) shows each console screen.
+4. On **Step 2 of 4**, select **Copy** next to **Redirect URL**. In the Powens console, open your domain, select **Applications**, then **Add an application**. Enter a **Name**, paste the URL into **Redirect URIs**, select **Save**, then **Exit**. Then select **Connectors** and select **Activate** next to each bank your members use: Freenary only lists the connectors you activate, as [Choose which banks members can connect with Powens](choose-powens-banks.md) explains. Select **Next** in Freenary. [Connect your first bank](../tutorials/connect-your-first-bank.md#3-enter-the-powens-details) shows each console screen.
 
    ![Connect Powens, Step 2 of 4: the Redirect URL with a Copy button](../images/04-powens-redirect-url.png)
 
@@ -48,7 +48,7 @@ This page connects Freenary to Powens, the bank provider that links members' ban
 
 ## Check that it works
 
-1. Open **Settings** › **Connections**. Under **Services**, the **Bank provider** row reads **Configured · Powens** when you saved the values in the app, or **Set by your server · Powens** when they come from `.env`.
+1. Open **Settings** › **Services**. The **Bank provider** row reads **Configured · Powens** when you saved the values in the app, or **Set by your server · Powens** when they come from `.env`.
 2. For values from `.env`, select **View**, then **Test connection**. The test logs in to Powens with the credentials, creates a throwaway Powens user and deletes it again. A working setup shows **Powens is ready**.
 3. Connect a bank as described in [Connect your first bank](../tutorials/connect-your-first-bank.md). On a Powens sandbox domain, use the test bank **Connecteur de test**; its sign-in page accepts any credentials.
 
@@ -67,6 +67,7 @@ This page connects Freenary to Powens, the bank provider that links members' ban
 
 ## Related
 
+- [Choose which banks members can connect with Powens](choose-powens-banks.md)
 - [Configure Enable Banking](configure-enable-banking.md)
 - [Where settings come from](../explanation/settings-sources.md)
 - [Configuration](../reference/configuration.md#bank-providers)

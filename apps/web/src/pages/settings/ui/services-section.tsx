@@ -28,8 +28,7 @@ import type {
   IntegrationRowAction,
   IntegrationRowEntry,
 } from "../model/integration-rows";
-import { SettingsListSurface } from "./settings-list-surface";
-import { SettingsSubgroup } from "./settings-subgroup";
+import { SettingsList, SettingsPane } from "./settings-section";
 
 const ACTION_LABELS = {
   change: m.settings_services_change,
@@ -138,15 +137,15 @@ export const ServicesSection = ({
   };
 
   return (
-    <SettingsSubgroup
+    <SettingsPane
       description={m.settings_services_description()}
-      title={m.settings_services_title()}
+      title={m.settings_tab_services()}
     >
       {isPending ? (
         <output className="sr-only">{m.settings_integrations_loading()}</output>
       ) : null}
       {notice}
-      <SettingsListSurface>{renderRows()}</SettingsListSurface>
-    </SettingsSubgroup>
+      <SettingsList>{renderRows()}</SettingsList>
+    </SettingsPane>
   );
 };

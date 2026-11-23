@@ -42,6 +42,7 @@ export const useDashboardChange = ({
   });
 
   const { sendMessage } = chat;
+  const { commit } = model;
 
   useEffect(() => {
     if (
@@ -61,6 +62,7 @@ export const useDashboardChange = ({
   const requestChange = useCallback(
     (instruction: string) => {
       sentFor.current = null;
+      commit();
       setPending(instruction);
 
       if (chatId === null) {
@@ -69,7 +71,7 @@ export const useDashboardChange = ({
         });
       }
     },
-    [chatId, createConversation]
+    [chatId, commit, createConversation]
   );
 
   const working =

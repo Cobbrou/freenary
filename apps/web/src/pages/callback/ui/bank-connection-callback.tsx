@@ -52,7 +52,7 @@ export const BankConnectionCallback = () => {
     }
 
     if (exchangeResult.returnTo === "settings") {
-      navigate({ search: { section: "connections" }, to: "/settings" });
+      navigate({ search: { section: "bank-accounts" }, to: "/settings" });
 
       return;
     }

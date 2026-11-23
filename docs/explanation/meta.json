@@ -4,8 +4,10 @@
     "architecture",
     "first-run-and-operator",
     "settings-sources",
+    "bank-list",
     "sign-in-and-email",
     "assistant",
-    "categorisation"
+    "categorisation",
+    "account-types"
   ]
 }

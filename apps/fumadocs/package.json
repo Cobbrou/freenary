@@ -18,8 +18,8 @@
     "@freenary/ui": "workspace:*",
     "@openrouter/ai-sdk-provider": "^3.0.0",
     "@tanstack/react-router": "1.170.46",
-    "@tanstack/react-router-devtools": "1.167.3",
-    "@tanstack/react-start": "1.169.5",
+    "@tanstack/react-router-devtools": "1.167.4",
+    "@tanstack/react-start": "1.169.7",
     "ai": "^7.0.62",
     "class-variance-authority": "^0.7.1",
     "cn": "^0.2.6",
@@ -38,8 +38,8 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@feature-sliced/steiger-plugin": "^0.7.0",
-    "@shadcn/lint": "^0.1.1",
+    "@feature-sliced/steiger-plugin": "^0.8.0",
+    "@shadcn/lint": "^0.2.0",
     "@tailwindcss/vite": "^4.3.3",
     "@types/hast": "^3.0.5",
     "@types/mdx": "^2.0.14",

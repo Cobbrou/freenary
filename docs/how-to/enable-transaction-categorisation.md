@@ -21,7 +21,7 @@ This page connects a classifier, a model that picks a category for a merchant th
 
 ### In the app
 
-1. Open the setup screen and go to the **Categories** step. On an instance that is already set up, open **Settings** › **Connections** instead, find **Categorisation model** under **Services**, and select **Set up** or **Change**.
+1. Open the setup screen and go to the **Categories** step. On an instance that is already set up, open **Settings** › **Services** instead, find **Categorisation model**, and select **Set up** or **Change**.
 2. Select **Jev by TypeSafe**, **SubQ Snap** or **OpenAI-compatible endpoint**, then select **Continue**.
 
    ![The Categorisation model choices on the setup screen: Jev by TypeSafe, SubQ Snap and OpenAI-compatible endpoint](../images/06-categories-step.png)
@@ -65,7 +65,7 @@ This page connects a classifier, a model that picks a category for a merchant th
 
 ## Check that it works
 
-1. In **Settings** › **Connections**, the **Categorisation model** row reads **Configured ·** and the classifier name, or **Set by your server ·** and the name when the values come from `.env`.
+1. In **Settings** › **Services**, the **Categorisation model** row reads **Configured ·** and the classifier name, or **Set by your server ·** and the name when the values come from `.env`.
 2. Open **Transactions** and select the sync button, labelled **Sync transactions**. The progress shows **Sorting transactions into categories**. This sync sorts again every transaction whose category you did not set yourself.
 3. Check that transactions that were uncategorised now carry a category, and that the server log has no `[categorisation] classifier` warnings:
 

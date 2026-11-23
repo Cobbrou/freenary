@@ -19,7 +19,6 @@ interface BankConnectionStepProps {
   isCompleting: boolean;
   onBack: () => void;
   onFinish: () => void;
-  unavailableCountries: string[];
 }
 
 export const BankConnectionStep = ({
@@ -31,7 +30,6 @@ export const BankConnectionStep = ({
   isCompleting,
   onBack,
   onFinish,
-  unavailableCountries,
 }: BankConnectionStepProps) => {
   const ArrowLeftIcon = useIcon("arrow-left");
   const hasConnectedBank = connectedCount > 0;
@@ -57,7 +55,6 @@ export const BankConnectionStep = ({
         isBanksError={isBanksError}
         isBanksPending={isBanksPending}
         returnTo="onboarding"
-        unavailableCountries={unavailableCountries}
       />
     );
   };

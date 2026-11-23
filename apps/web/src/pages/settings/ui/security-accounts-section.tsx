@@ -232,7 +232,7 @@ export const SecurityAccountsSection = ({
         )}
 
         {(passwordAccount !== undefined || rows.length > 0) && (
-          <SettingsRowList className="px-2" hover={hover} ref={listRef}>
+          <SettingsRowList hover={hover} ref={listRef}>
             {passwordAccount === undefined ? null : (
               <AccountRow index={0} registerItem={hover.registerItem}>
                 <ItemContent className="min-w-0">

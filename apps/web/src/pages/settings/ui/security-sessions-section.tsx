@@ -22,7 +22,7 @@ import { useSessionRevocation } from "../model/use-session-revocation";
 import { SecurityRowsSkeleton } from "./security-rows-skeleton";
 import { SecuritySessionRow } from "./security-session-row";
 import { SettingsRowList } from "./settings-row-list";
-import { SettingsSection } from "./settings-section";
+import { SettingsPane } from "./settings-section";
 
 interface SecuritySessionsSectionProps {
   isPending: boolean;
@@ -101,7 +101,7 @@ export const SecuritySessionsSection = ({
     }
 
     return (
-      <SettingsRowList className="px-2" hover={hover} ref={listRef}>
+      <SettingsRowList hover={hover} ref={listRef}>
         {ordered.map((item, index) => (
           <SecuritySessionRow
             formatter={formatter}
@@ -119,7 +119,7 @@ export const SecuritySessionsSection = ({
   };
 
   return (
-    <SettingsSection
+    <SettingsPane
       action={
         otherCount > 0 ? (
           <AlertDialog>
@@ -153,9 +153,9 @@ export const SecuritySessionsSection = ({
         ) : null
       }
       description={m.settings_sessions_description()}
-      title={m.settings_sessions_title()}
+      title={m.settings_tab_sessions()}
     >
       {renderRows()}
-    </SettingsSection>
+    </SettingsPane>
   );
 };

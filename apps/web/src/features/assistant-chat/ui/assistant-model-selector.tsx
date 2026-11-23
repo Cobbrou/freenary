@@ -16,7 +16,10 @@ import { m } from "@/paraglide/messages.js";
 import { getLocale } from "@/paraglide/runtime.js";
 import { remixIcon } from "@/shared/lib/remix-icon";
 
-import { browserModelCatalog } from "../model/browser/engine";
+import {
+  BROWSER_MODELS_QUERY_KEY,
+  browserModelCatalog,
+} from "../model/browser/engine";
 import { browserModelLabel } from "../model/browser/models";
 import { SERVER_MODEL } from "../model/model-choice";
 
@@ -57,7 +60,7 @@ export const AssistantModelSelector = ({
   const catalog = useQuery({
     enabled: open && webGpuAvailable,
     queryFn: browserModelCatalog,
-    queryKey: ["assistant", "browser-models"],
+    queryKey: BROWSER_MODELS_QUERY_KEY,
     staleTime: Number.POSITIVE_INFINITY,
   });
 

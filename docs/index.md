@@ -21,6 +21,7 @@ New to Freenary? Follow the tutorials in order.
 | Put Freenary behind the Caddy or nginx I already run | [Use an existing reverse proxy](how-to/use-an-existing-reverse-proxy.md) |
 | Run images I build myself | [Build the images from source](how-to/build-images-from-source.md) |
 | Set up the bank provider | [Powens](how-to/configure-powens.md), [Enable Banking](how-to/configure-enable-banking.md) |
+| Choose which banks members see with Powens | [Choose which banks members can connect with Powens](how-to/choose-powens-banks.md) |
 | Send sign-in codes and password resets | [Configure email](how-to/configure-email.md) |
 | Add Google, Apple or single sign-on buttons | [Add sign-in providers](how-to/add-sign-in-providers.md) |
 | Turn on the assistant | [Enable the assistant](how-to/enable-the-assistant.md) |

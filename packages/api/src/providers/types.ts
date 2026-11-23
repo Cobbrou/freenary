@@ -109,6 +109,7 @@ export interface CompletedConnection {
     iban?: string;
     identificationHash?: string;
     name?: string;
+    type?: ProviderAccountType;
   }[];
 }
 
@@ -118,9 +119,10 @@ export interface BankingProvider {
   isConfigured: () => boolean;
   createUser?: () => Promise<ProviderUserSession>;
   deleteUser?: (user: ProviderUserSession) => Promise<void>;
-  listInstitutions: (
-    country: string
-  ) => Effect.Effect<ProviderInstitution[], BankInstitutionsUnavailable>;
+  listInstitutions: () => Effect.Effect<
+    ProviderInstitution[],
+    BankInstitutionsUnavailable
+  >;
   startConnection: (
     request: StartConnectionRequest
   ) => Promise<{ url: string }>;
@@ -135,33 +137,31 @@ export interface BankingProvider {
   fetchHoldings?: (request: FetchHoldingsRequest) => Promise<ProviderHolding[]>;
 }
 
-export type ProviderAccountType =
-  | "CHECKING"
-  | "SAVINGS"
-  | "CARD"
-  | "LOAN"
-  | "BROKERAGE"
-  | "LIFE_INSURANCE"
-  | "RETIREMENT"
-  | "EMPLOYEE_SAVINGS"
-  | "REAL_ESTATE"
-  | "CROWDLENDING"
-  | "UNKNOWN";
+export const PROVIDER_ACCOUNT_TYPES = [
+  "CHECKING",
+  "CARD",
+  "SAVINGS",
+  "LIVRET_A",
+  "LDDS",
+  "LEP",
+  "CEL",
+  "PEL",
+  "TERM_DEPOSIT",
+  "BROKERAGE",
+  "PEA",
+  "LIFE_INSURANCE",
+  "RETIREMENT",
+  "EMPLOYEE_SAVINGS",
+  "REAL_ESTATE",
+  "CROWDLENDING",
+  "LOAN",
+  "UNKNOWN",
+] as const;
+
+export type ProviderAccountType = (typeof PROVIDER_ACCOUNT_TYPES)[number];
 
 export class BankInstitutionsUnavailable extends Data.TaggedError(
   "BankInstitutionsUnavailable"
-)<{ country: string }> {
-  override readonly message = "Could not load banks for this country";
+)<{ cause?: unknown }> {
+  override readonly message = "Could not load banks";
 }
-
-const ACCOUNT_TYPES_HOLDING_POSITIONS_NOT_CASH = {
-  BROKERAGE: true,
-  CROWDLENDING: true,
-  EMPLOYEE_SAVINGS: true,
-  LIFE_INSURANCE: true,
-  REAL_ESTATE: true,
-  RETIREMENT: true,
-} satisfies Partial<Record<ProviderAccountType, true>>;
-
-export const isInvestmentAccountType = (type: string): boolean =>
-  Object.hasOwn(ACCOUNT_TYPES_HOLDING_POSITIONS_NOT_CASH, type);

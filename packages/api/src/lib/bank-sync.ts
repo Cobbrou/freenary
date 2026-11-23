@@ -9,7 +9,7 @@ import type {
   ProviderTransaction,
   ProviderUserSession,
 } from "../providers/types";
-import { isInvestmentAccountType } from "../providers/types";
+import { accountTypeRule } from "./account-types";
 import type { SyncReporter } from "./sync-progress";
 
 interface SyncAccount {
@@ -489,7 +489,7 @@ const importAccount = async (context: AccountSyncContext): Promise<void> => {
 
   const { fetchHoldings } = provider;
 
-  if (fetchHoldings && isInvestmentAccountType(account.type)) {
+  if (fetchHoldings && accountTypeRule(account.type).holdsPositions) {
     const holdings = await fetchHoldings({
       providerAccountId: account.providerAccountId,
       providerSessionId: connection.providerSessionId,

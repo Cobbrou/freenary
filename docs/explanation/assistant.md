@@ -13,8 +13,9 @@ The assistant behind **Ask** needs a language model. It can use a model the serv
 ## Without a server model
 
 - The server's chat route `/ai/chat` answers `503` with the body `unconfigured`, and the model menu in **Ask** has no **On your instance** entry.
-- Each member can still run a model in the browser. In **Ask**, the model menu lists models under **On this device** when the browser has WebGPU, the browser interface for the graphics card. The model downloads once from Hugging Face and runs on that device.
-- In a browser without WebGPU, **Ask** shows **This browser has no WebGPU, which the assistant needs to run a model on this device. Use a current Chrome, Edge or Safari, or ask the operator to turn the assistant on in Settings › Connections.**
+- The assistant still works in a browser that has WebGPU, the browser interface for the graphics card. A member who has not picked a model gets Qwen3 4B on this device, or the smallest model in the list when Qwen3 4B is missing from it. **Ask** names that model above the question box, and the model menu lists the other models under **On this device**.
+- Nothing downloads until the member asks a first question, in **Ask**, from **Home**, from the command menu or from the bar that changes a dashboard. The model then downloads once from Hugging Face, the model menu shows the progress, and the question is sent when the model is loaded. From then on the browser remembers the model like a model picked in the menu: it loads when the member opens **Ask** or a dashboard, and it stays the member's choice after the operator sets a server model.
+- In a browser without WebGPU, the bar that changes a dashboard reads **Use a browser with WebGPU, or set up an assistant model, to change dashboards**, and **Ask** shows **This browser has no WebGPU, which the assistant needs to run a model on this device. Use a current Chrome, Edge or Safari, or ask the operator to turn the assistant on in Settings › Services.**
 
 ## Related
 

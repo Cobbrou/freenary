@@ -6,7 +6,7 @@ import { Effect, Result } from "effect";
 import { createClassifierChain, primarySlotOf } from "./registry";
 import type { ClassificationInput, ClassifierTransport } from "./types";
 
-const CATEGORISATION_INTEGRATION = "categorisation";
+export const CATEGORISATION_INTEGRATION = "categorisation";
 
 export const PROBE_TRANSACTION: ClassificationInput = {
   amountBucket: "small",

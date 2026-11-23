@@ -1,10 +1,15 @@
-import { Button } from "@freenary/ui/components/button";
+import {
+  Banner,
+  BannerAction,
+  BannerActions,
+  BannerDescription,
+  BannerTitle,
+} from "@freenary/ui/components/banner";
 import { Spinner } from "@freenary/ui/components/spinner";
+import type { IconComponentProps } from "@freenary/ui/lib/icon-context";
 
 import { restartDocsUrl } from "@/features/instance-integration";
 import { m } from "@/paraglide/messages.js";
-
-import { SettingsSection } from "./settings-section";
 
 type RestartPhase = "idle" | "reconnecting" | "stalled";
 
@@ -17,6 +22,8 @@ interface IntegrationsRestartNoticeProps {
   restartRequired: boolean;
 }
 
+const SpinnerIcon = ({ size }: IconComponentProps) => <Spinner size={size} />;
+
 export const IntegrationsRestartNotice = ({
   applyError,
   isApplying,
@@ -27,38 +34,27 @@ export const IntegrationsRestartNotice = ({
 }: IntegrationsRestartNoticeProps) => {
   if (restartPhase === "reconnecting") {
     return (
-      <output className="block">
-        <SettingsSection
-          action={<Spinner />}
-          description={m.setup_applying_description()}
-          title={m.setup_applying_title()}
-        />
-      </output>
+      <Banner icon={SpinnerIcon}>
+        <BannerTitle>{m.setup_applying_title()}</BannerTitle>
+        <BannerDescription>{m.setup_applying_description()}</BannerDescription>
+      </Banner>
     );
   }
 
   if (restartPhase === "stalled") {
     return (
-      <div role="alert">
-        <SettingsSection
-          description={m.setup_stalled_description()}
-          title={m.setup_stalled_title()}
-        >
-          <div className="flex items-center gap-3">
-            <Button onClick={onReconnect} variant="secondary">
-              {m.setup_try_again()}
-            </Button>
-            <a
-              className="text-muted-foreground hover:text-foreground underline underline-offset-2"
-              href={restartDocsUrl()}
-              rel="noopener noreferrer"
-              target="_blank"
-            >
-              {m.setup_view_troubleshooting()}
-            </a>
-          </div>
-        </SettingsSection>
-      </div>
+      <Banner status="error">
+        <BannerTitle>{m.setup_stalled_title()}</BannerTitle>
+        <BannerDescription>{m.setup_stalled_description()}</BannerDescription>
+        <BannerActions>
+          <BannerAction onClick={onReconnect} variant="primary">
+            {m.setup_try_again()}
+          </BannerAction>
+          <BannerAction external href={restartDocsUrl()} variant="ghost">
+            {m.setup_view_troubleshooting()}
+          </BannerAction>
+        </BannerActions>
+      </Banner>
     );
   }
 
@@ -67,20 +63,21 @@ export const IntegrationsRestartNotice = ({
   }
 
   return (
-    <SettingsSection
-      action={
-        <Button loading={isApplying} onClick={onApply}>
+    <Banner status="info">
+      <BannerTitle>{m.settings_integrations_restart_title()}</BannerTitle>
+      <BannerDescription>
+        {m.settings_integrations_restart_description()}
+        {applyError === null ? null : (
+          <span className="text-destructive mt-1 block" role="alert">
+            {applyError}
+          </span>
+        )}
+      </BannerDescription>
+      <BannerActions>
+        <BannerAction loading={isApplying} onClick={onApply} variant="primary">
           {m.settings_integrations_apply()}
-        </Button>
-      }
-      description={m.settings_integrations_restart_description()}
-      title={m.settings_integrations_restart_title()}
-    >
-      {applyError === null ? null : (
-        <p className="text-destructive" role="alert">
-          {applyError}
-        </p>
-      )}
-    </SettingsSection>
+        </BannerAction>
+      </BannerActions>
+    </Banner>
   );
 };

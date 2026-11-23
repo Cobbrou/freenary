@@ -25,7 +25,6 @@ interface OnboardingWizardProps {
   onSignOut: () => void;
   step: number;
   taxCountries: string[];
-  unavailableCountries: string[];
 }
 
 const STEP_LABEL_FNS = [
@@ -49,7 +48,6 @@ export const OnboardingWizard = ({
   onSignOut,
   step,
   taxCountries,
-  unavailableCountries,
 }: OnboardingWizardProps) => (
   <WizardShell
     avatarState={onboardingAvatarState({ connectedCount, isCompleting, step })}
@@ -86,7 +84,6 @@ export const OnboardingWizard = ({
         isCompleting={isCompleting}
         onBack={onBack}
         onFinish={onFinish}
-        unavailableCountries={unavailableCountries}
       />
     )}
   </WizardShell>

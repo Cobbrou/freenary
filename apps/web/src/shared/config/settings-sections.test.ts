@@ -4,12 +4,14 @@ import { settingsSectionOf } from "./settings-sections";
 
 describe("settingsSectionOf", () => {
   it("keeps a section that exists", () => {
-    expect(settingsSectionOf("connections")).toBe("connections");
-    expect(settingsSectionOf("security")).toBe("security");
+    expect(settingsSectionOf("bank-accounts")).toBe("bank-accounts");
+    expect(settingsSectionOf("api-keys")).toBe("api-keys");
   });
 
-  it("sends a link to the former Integrations section to Connections", () => {
-    expect(settingsSectionOf("integrations")).toBe("connections");
+  it("sends a link to a former section to the tab that holds it now", () => {
+    expect(settingsSectionOf("connections")).toBe("bank-accounts");
+    expect(settingsSectionOf("integrations")).toBe("services");
+    expect(settingsSectionOf("security")).toBe("sign-in");
   });
 
   it("leaves an unknown or missing section to the default", () => {

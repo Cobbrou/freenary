@@ -9,7 +9,7 @@ This page explains how the Freenary server combines two sources of configuration
 
 The first source is the environment of the server process. With the Compose stack, that is every line of `.env`, which the `server` service loads whole through `env_file`, plus the few values `docker-compose.yml` sets itself, such as `DATABASE_URL` and `NODE_ENV`.
 
-The second source is settings saved from the app. The operator, the first account created on the instance, saves them on the setup screen or in **Settings** › **Connections** › **Services**. Only four integrations can be saved this way, and only these keys:
+The second source is settings saved from the app. The operator, the first account created on the instance, saves them on the setup screen or in **Settings** › **Services**. Only four integrations can be saved this way, and only these keys:
 
 - **Bank provider**: `BANKING_PROVIDER`, the three `POWENS_` values and the two `ENABLE_BANKING_` values.
 - **Email delivery**: `EMAIL_PROVIDER`, `EMAIL_FROM`, `RESEND_API_KEY` and the `SMTP_` values.

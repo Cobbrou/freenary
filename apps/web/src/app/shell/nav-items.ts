@@ -21,7 +21,7 @@ interface NavItem {
 
 export type NavEntry = (typeof NAV_ITEMS)[number];
 
-export const NAV_ITEMS = [
+export const MAIN_NAV_ITEMS = [
   {
     color: CHART_COLOR_VARS.blue,
     icon: Home,
@@ -50,13 +50,19 @@ export const NAV_ITEMS = [
     routeId: "/_auth/budget/recurring",
     to: "/budget/recurring",
   },
-  {
-    color: CHART_COLOR_VARS.grey,
-    icon: Settings,
-    label: m.nav_settings,
-    routeId: "/_auth/settings",
-    to: "/settings",
-  },
+] as const satisfies readonly NavItem[];
+
+export const SETTINGS_NAV_ITEM = {
+  color: CHART_COLOR_VARS.grey,
+  icon: Settings,
+  label: m.nav_settings,
+  routeId: "/_auth/settings",
+  to: "/settings",
+} as const satisfies NavItem;
+
+export const NAV_ITEMS = [
+  ...MAIN_NAV_ITEMS,
+  SETTINGS_NAV_ITEM,
 ] as const satisfies readonly NavItem[];
 
 const ACCOUNT_ROUTE_ID = "/_auth/accounts/$accountId";

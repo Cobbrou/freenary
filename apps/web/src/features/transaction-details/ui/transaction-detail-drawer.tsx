@@ -11,14 +11,10 @@ import {
 import { ScrollArea } from "@freenary/ui/components/scroll-area";
 import { Separator } from "@freenary/ui/components/separator";
 import { useSize } from "@freenary/ui/lib/size-context";
-import { RiCalendarLine, RiCloseLine, RiPriceTag3Line } from "@remixicon/react";
+import { RiCloseLine } from "@remixicon/react";
 import { useEffect, useState } from "react";
 
-import {
-  CATEGORY_MEDIA_BOX,
-  TransactionAmount,
-  transactionTitle,
-} from "@/entities/budget";
+import { TransactionAmount, transactionTitle } from "@/entities/budget";
 import type { Transaction } from "@/entities/budget";
 import { CategoryIcon } from "@/entities/category";
 import { m } from "@/paraglide/messages.js";
@@ -95,33 +91,20 @@ const TransactionDetails = ({ transaction }: { transaction: Transaction }) => {
           <Separator />
 
           <ul className="flex flex-col gap-2.5">
-            <TransactionDetailRow
-              icon={<RiCalendarLine />}
-              label={m.budget_detail_date_label()}
-            >
+            <TransactionDetailRow label={m.budget_detail_date_label()}>
               <span className="text-sm">{displayDate}</span>
             </TransactionDetailRow>
 
             {showsBankText && transaction.description ? (
-              <TransactionDetailRow
-                icon={<RiPriceTag3Line />}
-                label={m.budget_detail_description_label()}
-              >
+              <TransactionDetailRow label={m.budget_detail_description_label()}>
                 <span className="text-sm">{transaction.description}</span>
               </TransactionDetailRow>
             ) : null}
 
-            <TransactionDetailRow
-              label={m.budget_detail_category_label()}
-              media={
-                <CategoryIcon
-                  {...predefinedCategoryAppearance(transaction.category)}
-                  className={CATEGORY_MEDIA_BOX[variant]}
-                />
-              }
-            >
+            <TransactionDetailRow label={m.budget_detail_category_label()}>
               <TransactionCategoryPicker
                 category={transaction.category}
+                currency={transaction.currency}
                 direction={isIncoming ? "incoming" : "outgoing"}
                 isOverridden={isOverridden}
                 onSelect={(category) => updateCategory.mutate(category)}

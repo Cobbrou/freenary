@@ -8,6 +8,7 @@
     "build-images-from-source",
     "---Configure---",
     "configure-powens",
+    "choose-powens-banks",
     "configure-enable-banking",
     "configure-email",
     "add-sign-in-providers",

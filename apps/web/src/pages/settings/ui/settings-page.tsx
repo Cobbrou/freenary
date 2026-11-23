@@ -10,11 +10,13 @@ import {
 import { RiErrorWarningLine } from "@remixicon/react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useSearch } from "@tanstack/react-router";
+import { useEffect } from "react";
 import type { ReactNode } from "react";
 
 import { m } from "@/paraglide/messages.js";
 import { orpc } from "@/shared/api";
 import { useOauthCallbackError } from "@/shared/auth";
+import { DEFAULT_SETTINGS_SECTION } from "@/shared/config";
 import type { SettingsSection } from "@/shared/config";
 
 import {
@@ -23,114 +25,90 @@ import {
   CREDENTIAL_PROVIDER_ID,
 } from "../api/auth-queries";
 import type { LinkedAccount, UserSession } from "../api/auth-queries";
-import { operatorStandingOf } from "../model/settings-nav-items";
+import {
+  isSectionShownTo,
+  operatorStandingOf,
+} from "../model/settings-nav-items";
 import type { OperatorStanding } from "../model/settings-nav-items";
 import { useBudgetProfileEditor } from "../model/use-budget-profile-editor";
-import type {
-  BudgetProfileEditor,
-  ServerBudgetProfile,
-} from "../model/use-budget-profile-editor";
+import type { ServerBudgetProfile } from "../model/use-budget-profile-editor";
 import {
   AppearanceLocaleSection,
   AppearanceThemeSection,
 } from "./appearance-section";
+import { BankAccountsSection } from "./bank-accounts-section";
 import { BudgetingSection } from "./budgeting-section";
 import { CategoriesSection } from "./categories-section";
-import { ConnectionsPane } from "./connections-pane";
 import { SecurityAccountsSection } from "./security-accounts-section";
 import type { OAuthProviderOption } from "./security-accounts-section";
 import { SecurityApiKeysSection } from "./security-api-keys-section";
 import { SecurityPasskeysSection } from "./security-passkeys-section";
 import { SecuritySessionsSection } from "./security-sessions-section";
 import { SecurityTwoFactorSection } from "./security-two-factor-section";
-import { SettingsGroup } from "./settings-group";
+import { ServicesPane } from "./services-pane";
 import { SettingsNav } from "./settings-nav";
+import { SettingsPane } from "./settings-section";
 import { UnsavedChangesBar } from "./unsaved-changes-bar";
 
-interface SecurityPaneProps {
+interface SignInPaneProps {
   accounts: LinkedAccount[] | undefined;
   isAccountsPending: boolean;
-  isSessionsPending: boolean;
   providers: OAuthProviderOption[] | undefined;
-  sessions: UserSession[] | undefined;
 }
 
-interface BudgetPaneProps {
-  categories: CategoryEntry[];
-  editor: BudgetProfileEditor;
-  isCategoriesPending: boolean;
-  isPending: boolean;
-}
-
-interface SettingsContentProps extends SecurityPaneProps {
+interface SettingsContentProps extends SignInPaneProps {
   budgetLoadError: ReactNode;
   categories: CategoryEntry[];
+  categoriesLoadError: ReactNode;
   isCategoriesPending: boolean;
   isPending: boolean;
+  isSessionsPending: boolean;
   operatorStanding: OperatorStanding;
   section: SettingsSection;
   serverProfile: ServerBudgetProfile | undefined;
+  sessions: UserSession[] | undefined;
 }
 
+interface LoadErrorProps {
+  isRetrying: boolean;
+  onRetry: () => void;
+}
+
+const LoadError = ({ isRetrying, onRetry }: LoadErrorProps) => (
+  <Empty>
+    <EmptyHeader>
+      <EmptyMedia variant="icon">
+        <RiErrorWarningLine />
+      </EmptyMedia>
+      <EmptyTitle>{m.settings_budget_load_error_title()}</EmptyTitle>
+    </EmptyHeader>
+    <EmptyContent>
+      <Button loading={isRetrying} onClick={onRetry} variant="tertiary">
+        {m.settings_retry()}
+      </Button>
+    </EmptyContent>
+  </Empty>
+);
+
 const AppearancePane = () => (
-  <SettingsGroup
-    description={m.settings_group_appearance_description()}
-    title={m.settings_group_appearance_title()}
+  <SettingsPane
+    description={m.settings_tab_appearance_description()}
+    title={m.settings_tab_appearance()}
   >
     <AppearanceThemeSection />
 
     <AppearanceLocaleSection />
-  </SettingsGroup>
+  </SettingsPane>
 );
 
-const BudgetPane = ({
-  categories,
-  editor,
-  isCategoriesPending,
-  isPending,
-}: BudgetPaneProps) => (
-  <SettingsGroup
-    description={m.settings_group_budget_description()}
-    title={m.settings_group_budget_title()}
-  >
-    <BudgetingSection
-      addLine={editor.addLine}
-      categories={categories}
-      currency={editor.currency}
-      errors={editor.errors}
-      isPending={isPending}
-      lines={editor.lines}
-      moveLine={editor.moveLine}
-      removeLine={editor.removeLine}
-      reorderLines={editor.reorderLines}
-      updateLine={editor.updateLine}
-    />
-
-    <CategoriesSection
-      categories={categories}
-      isPending={isCategoriesPending}
-    />
-
-    <UnsavedChangesBar
-      changeCount={editor.changeCount}
-      hasErrors={editor.errors.size > 0}
-      isSaving={editor.isSaving}
-      onCancel={() => editor.reset()}
-      onSave={() => editor.save()}
-    />
-  </SettingsGroup>
-);
-
-const SecurityPane = ({
+const SignInPane = ({
   accounts,
   isAccountsPending,
-  isSessionsPending,
   providers,
-  sessions,
-}: SecurityPaneProps) => (
-  <SettingsGroup
-    description={m.settings_group_security_description()}
-    title={m.settings_group_security_title()}
+}: SignInPaneProps) => (
+  <SettingsPane
+    description={m.settings_tab_sign_in_description()}
+    title={m.settings_tab_sign_in()}
   >
     <SecurityTwoFactorSection
       hasPassword={accounts?.some(
@@ -141,25 +119,19 @@ const SecurityPane = ({
 
     <SecurityPasskeysSection />
 
-    <SecurityApiKeysSection />
-
-    <SecuritySessionsSection
-      isPending={isSessionsPending}
-      sessions={sessions}
-    />
-
     <SecurityAccountsSection
       accounts={accounts}
       isPending={isAccountsPending}
       providers={providers}
     />
-  </SettingsGroup>
+  </SettingsPane>
 );
 
 const SettingsContent = ({
   accounts,
   budgetLoadError,
   categories,
+  categoriesLoadError,
   isAccountsPending,
   isCategoriesPending,
   isPending,
@@ -171,34 +143,87 @@ const SettingsContent = ({
   sessions,
 }: SettingsContentProps) => {
   const editor = useBudgetProfileEditor(serverProfile, categories);
+  const navigate = useNavigate();
+  const isShown = isSectionShownTo(section, operatorStanding);
+  const isHiddenFromThisAccount = !isShown && operatorStanding === "member";
+
+  useEffect(() => {
+    if (isHiddenFromThisAccount) {
+      void navigate({
+        replace: true,
+        search: { section: DEFAULT_SETTINGS_SECTION },
+        to: "/settings",
+      });
+    }
+  }, [isHiddenFromThisAccount, navigate]);
 
   const panes = {
+    "api-keys": <SecurityApiKeysSection />,
     appearance: <AppearancePane />,
-    budget: budgetLoadError ?? (
-      <BudgetPane
+    "bank-accounts": <BankAccountsSection />,
+    budget: (
+      <BudgetingSection
+        addLine={editor.addLine}
         categories={categories}
-        editor={editor}
-        isCategoriesPending={isCategoriesPending}
+        currency={editor.currency}
+        errors={editor.errors}
         isPending={isPending}
+        lines={editor.lines}
+        loadError={budgetLoadError}
+        moveLine={editor.moveLine}
+        removeLine={editor.removeLine}
+        reorderLines={editor.reorderLines}
+        updateLine={editor.updateLine}
       />
     ),
-    connections: <ConnectionsPane standing={operatorStanding} />,
-    security: (
-      <SecurityPane
+    categories: (
+      <CategoriesSection
+        categories={categories}
+        isPending={isCategoriesPending}
+        loadError={categoriesLoadError}
+      />
+    ),
+    services: <ServicesPane />,
+    sessions: (
+      <SecuritySessionsSection
+        isPending={isSessionsPending}
+        sessions={sessions}
+      />
+    ),
+    "sign-in": (
+      <SignInPane
         accounts={accounts}
         isAccountsPending={isAccountsPending}
-        isSessionsPending={isSessionsPending}
         providers={providers}
-        sessions={sessions}
       />
     ),
   } satisfies Record<SettingsSection, ReactNode>;
 
   return (
-    <div className="flex flex-1 flex-col gap-6 p-4 pb-20 lg:flex-row lg:gap-8">
-      <SettingsNav section={section} />
+    <div className="flex flex-1 flex-col gap-6 p-4 pb-20 lg:flex-row lg:gap-10">
+      <SettingsNav section={section} standing={operatorStanding} />
 
-      <div className="flex min-w-0 flex-1 flex-col gap-8">{panes[section]}</div>
+      <div className="flex max-w-3xl min-w-0 flex-1 flex-col">
+        {isShown ? panes[section] : null}
+      </div>
+
+      <UnsavedChangesBar
+        changeCount={editor.changeCount}
+        hasErrors={editor.errors.size > 0}
+        isSaving={editor.isSaving}
+        onCancel={() => editor.reset()}
+        onReview={
+          section === "budget"
+            ? undefined
+            : () => {
+                void navigate({
+                  search: { section: "budget" },
+                  to: "/settings",
+                });
+              }
+        }
+        onSave={() => editor.save()}
+      />
     </div>
   );
 };
@@ -218,28 +243,26 @@ export const SettingsPage = () => {
   const accountsQuery = useQuery(authAccountsQueryOptions());
   const instanceStatusQuery = useQuery(orpc.instance.status.queryOptions());
 
+  const retryBudget = () => {
+    void categoriesQuery.refetch();
+    void profileQuery.refetch();
+  };
+
+  const categoriesLoadError = categoriesQuery.isError ? (
+    <LoadError
+      isRetrying={categoriesQuery.isFetching}
+      onRetry={() => {
+        void categoriesQuery.refetch();
+      }}
+    />
+  ) : null;
+
   const budgetLoadError =
     categoriesQuery.isError || profileQuery.isError ? (
-      <Empty>
-        <EmptyHeader>
-          <EmptyMedia variant="icon">
-            <RiErrorWarningLine />
-          </EmptyMedia>
-          <EmptyTitle>{m.settings_budget_load_error_title()}</EmptyTitle>
-        </EmptyHeader>
-        <EmptyContent>
-          <Button
-            loading={categoriesQuery.isFetching || profileQuery.isFetching}
-            onClick={() => {
-              void categoriesQuery.refetch();
-              void profileQuery.refetch();
-            }}
-            variant="tertiary"
-          >
-            {m.settings_retry()}
-          </Button>
-        </EmptyContent>
-      </Empty>
+      <LoadError
+        isRetrying={categoriesQuery.isFetching || profileQuery.isFetching}
+        onRetry={retryBudget}
+      />
     ) : null;
 
   return (
@@ -247,6 +270,7 @@ export const SettingsPage = () => {
       accounts={accountsQuery.data}
       budgetLoadError={budgetLoadError}
       categories={categoriesQuery.data?.categories ?? []}
+      categoriesLoadError={categoriesLoadError}
       isAccountsPending={accountsQuery.isPending || capabilitiesQuery.isPending}
       isCategoriesPending={categoriesQuery.isPending}
       isPending={categoriesQuery.isPending || profileQuery.isPending}

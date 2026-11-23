@@ -76,6 +76,8 @@ export const useWebGpuSupport = (): boolean | null =>
 
 const importWebLlm = () => import("@mlc-ai/web-llm");
 
+export const BROWSER_MODELS_QUERY_KEY = ["assistant", "browser-models"];
+
 export const browserModelCatalog = async (): Promise<BrowserModel[]> => {
   const [{ prebuiltAppConfig }, adapter] = await Promise.all([
     importWebLlm(),

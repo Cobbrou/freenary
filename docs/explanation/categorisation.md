@@ -17,7 +17,9 @@ The sync button on **Transactions**, labelled **Sync transactions**, first clear
 
 ## Internal transfers come first
 
-A member with at least two accounts can move money between them. Freenary pairs an outgoing and an incoming transaction when they have the same amount, the same currency, sit on two different accounts, and are booked at most 24 hours apart. Both legs are marked as an internal transfer and skip categorisation. Transactions the member categorised by hand are never paired.
+A member with at least two accounts can move money between them. Freenary pairs an outgoing and an incoming transaction when they have the same amount, the same currency, sit on two different accounts, and are booked at most 24 hours apart. Both legs are marked as an internal transfer and skip categorisation. Transactions the member categorised by hand are never paired, and neither are the transactions of a loan account.
+
+When the money leaves a current account for a savings, investment or retirement account, the current-account leg gets the category `savings`, `securities` or `retirement`, with the stage `internal-transfer`. [How account types change the totals](account-types.md#transfers-between-your-own-accounts) lists which account gives which category.
 
 ## The steps, in order
 
@@ -36,6 +38,14 @@ Steps 2 and 3 need a merchant key. A step never puts money coming in under a cat
 
 When no step gives a category, the transaction stays uncategorised.
 
+## Transactions to check
+
+A classifier answer under the confidence that would make it automatic, `0.85`, still gives the transaction its category, but Freenary flags it as low confidence. After each categorisation that flags such transactions, Freenary sends the member one notification, such as **7 transactions to check**, that holds the transactions flagged in that run. A transaction already held by another notification is not added again.
+
+The notification center sits at the bottom of the sidebar, under **Notifications**, with the number of unread notifications next to it. Opening this notification opens the **Transactions to check** panel. Each row has a category picker and a check mark. The check mark keeps the category and picking another category changes it: both record a correction, as below, so the row leaves the list. **Dismiss all** in the panel empties the list without changing any transaction. Once the list is empty, the notification goes away.
+
+Dismissing the notification leaves the transactions as they are, and **Undo** in the message that follows brings it back. Freenary deletes read notifications after 30 days.
+
 ## Corrections
 
 When a member sets the category of a transaction, Freenary keeps that category on the transaction and records a correction for the member and the merchant key. It copies the category to the member's other transactions with the same merchant key, except those set by hand. Every later transaction from that merchant gets the category at step 2.
@@ -43,6 +53,10 @@ When a member sets the category of a transaction, Freenary keeps that category o
 Corrections belong to one member. Clearing the category deletes the correction and clears the categories it wrote, so the next categorisation runs the steps again for those transactions.
 
 The category a member sees is the one set by hand when there is one, then the one the pipeline wrote, then `uncategorised`.
+
+### Suggestions while picking a category
+
+The category picker in the transaction details filters the categories by the text typed into it. When the classifier is TypeSafe Jev, it also sends that text to Jev 300 milliseconds after the last keystroke, once at least two characters are typed, and lists up to three categories Jev ranks for it under **Matches with**. Jev receives the normalised text as merchant key and description, the direction and currency of the transaction, the `small` amount band, and no country, channel or merchant category code. A category under 0.05 probability is left out. These answers are not cached in `merchant_classification` and assign nothing on their own. A failed call shows no suggestions and logs a `[categorisation] suggestions` warning. With any other classifier, or none, the picker only filters.
 
 ## The merchant dictionary
 

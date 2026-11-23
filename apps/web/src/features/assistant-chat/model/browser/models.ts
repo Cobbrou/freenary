@@ -26,6 +26,8 @@ const CATALOG: readonly CatalogEntry[] = [
   { label: "Llama 3.1 8B", unquantisedId: "Llama-3.1-8B-Instruct" },
 ];
 
+const DEFAULT_UNQUANTISED_ID = "Qwen3-4B";
+
 const WEBLLM_VRAM_MEASURED_AT_TOKENS = 4096;
 
 const KV_KEYS_AND_VALUES = 2;
@@ -82,3 +84,10 @@ export const browserModels = (
 
   return models.toSorted((a, b) => a.vramMb - b.vramMb);
 };
+
+export const defaultBrowserModel = (
+  models: readonly BrowserModel[]
+): BrowserModel | null =>
+  models.find((model) => model.id.startsWith(`${DEFAULT_UNQUANTISED_ID}-`)) ??
+  models[0] ??
+  null;

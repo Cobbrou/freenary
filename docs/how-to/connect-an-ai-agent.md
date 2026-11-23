@@ -13,8 +13,8 @@ This page connects an AI agent to your Freenary account. The agent talks to Free
 
 ## Steps
 
-1. In Freenary, open **Settings**, then **Security**.
-2. Under **API keys**, select **Create a key**.
+1. In Freenary, open **Settings**, then **API keys**.
+2. Select **Create a key**.
 3. In **Name**, enter the agent's name, such as `Claude Code`. Pick a duration in **Expires after**, then select **Create key**.
 4. Under **Copy your key now**, select **Copy**, then **Done**. Freenary shows the key only once, so store it in your password manager.
 5. Add the server to your agent. The URL is your Freenary address followed by `/mcp`, and the key goes in an `Authorization` header. With Claude Code:

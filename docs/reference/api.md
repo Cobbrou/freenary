@@ -69,13 +69,15 @@ The Access column comes from the middleware of each procedure in `packages/api/s
 | `bankConnection.exchangeCode` | `POST /api-reference/bankConnection/exchangeCode` | Signed in | `params` object, required; `providerId` string, required |
 | `bankConnection.getProviderAvailability` | `POST /api-reference/bankConnection/getProviderAvailability` | Signed in | none |
 | `bankConnection.listConnections` | `POST /api-reference/bankConnection/listConnections` | Signed in | none |
-| `bankConnection.listInstitutions` | `POST /api-reference/bankConnection/listInstitutions` | Signed in | `countries` array of string |
+| `bankConnection.listInstitutions` | `POST /api-reference/bankConnection/listInstitutions` | Signed in | none |
 | `bankConnection.startConnection` | `POST /api-reference/bankConnection/startConnection` | Signed in | `bankCountry` string, required; `institutionId` string, required; `returnTo` `"onboarding"` or `"settings"`, required; `state` string |
 
 ## budget
 
 | Procedure | HTTP route | Access | Input fields |
 | --- | --- | --- | --- |
+| `budget.getCategorySuggestionStatus` | `POST /api-reference/budget/getCategorySuggestionStatus` | Signed in | none |
+| `budget.suggestCategories` | `POST /api-reference/budget/suggestCategories` | Signed in | `currency` string; `direction` `"outgoing"` or `"incoming"`, required; `query` string, required |
 | `budget.deleteSavedFilter` | `POST /api-reference/budget/deleteSavedFilter` | Signed in | `id` string, required |
 | `budget.listSavedFilters` | `POST /api-reference/budget/listSavedFilters` | Signed in | none |
 | `budget.saveFilter` | `POST /api-reference/budget/saveFilter` | Signed in | `filters` array of object, required; `name` string, required; `search` string |
@@ -118,6 +120,19 @@ The Access column comes from the middleware of each procedure in `packages/api/s
 | `instance.save` | `POST /api-reference/instance/save` | Operator | `integrationId` string, required; `values` object, required; `variantId` string, required |
 | `instance.status` | `POST /api-reference/instance/status` | Public | none |
 | `instance.update` | `POST /api-reference/instance/update` | Signed in | none |
+
+## notifications
+
+| Procedure | HTTP route | Access | Input fields |
+| --- | --- | --- | --- |
+| `notifications.clearTransactionsToCheck` | `POST /api-reference/notifications/clearTransactionsToCheck` | Signed in | `id` string, required |
+| `notifications.dismiss` | `POST /api-reference/notifications/dismiss` | Signed in | `id` string, required |
+| `notifications.dismissAll` | `POST /api-reference/notifications/dismissAll` | Signed in | none |
+| `notifications.list` | `POST /api-reference/notifications/list` | Signed in | none |
+| `notifications.markAllRead` | `POST /api-reference/notifications/markAllRead` | Signed in | none |
+| `notifications.markRead` | `POST /api-reference/notifications/markRead` | Signed in | `id` string, required |
+| `notifications.restore` | `POST /api-reference/notifications/restore` | Signed in | `id` string, required |
+| `notifications.transactionsToCheck` | `POST /api-reference/notifications/transactionsToCheck` | Signed in | `id` string, required |
 
 ## onboarding
 

@@ -7,6 +7,8 @@ export {
 } from "./server-url";
 export {
   DEFAULT_SETTINGS_SECTION,
+  OPERATOR_SETTINGS_SECTIONS,
+  isSettingsSection,
   SETTINGS_SECTIONS,
   settingsSectionOf,
 } from "./settings-sections";

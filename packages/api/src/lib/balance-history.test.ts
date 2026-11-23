@@ -20,7 +20,14 @@ describe("balanceHistory", () => {
   it("rebuilds past balances by taking back what moved since", () => {
     expect(
       balanceHistory(
-        [{ balanceMinor: 100_000, currency: "EUR", id: "checking" }],
+        [
+          {
+            balanceMinor: 100_000,
+            currency: "EUR",
+            id: "checking",
+            type: "CHECKING",
+          },
+        ],
         [
           {
             accountId: "checking",
@@ -48,9 +55,24 @@ describe("balanceHistory", () => {
     expect(
       balanceHistory(
         [
-          { balanceMinor: 10_000, currency: "EUR", id: "eur" },
-          { balanceMinor: 99_999, currency: "USD", id: "usd" },
-          { balanceMinor: null, currency: "EUR", id: "unknown" },
+          {
+            balanceMinor: 10_000,
+            currency: "EUR",
+            id: "eur",
+            type: "CHECKING",
+          },
+          {
+            balanceMinor: 99_999,
+            currency: "USD",
+            id: "usd",
+            type: "CHECKING",
+          },
+          {
+            balanceMinor: null,
+            currency: "EUR",
+            id: "unknown",
+            type: "CHECKING",
+          },
         ],
         [
           {
@@ -66,6 +88,40 @@ describe("balanceHistory", () => {
     ).toEqual([
       { balanceMinor: 10_000, date: "2026-10-31" },
       { balanceMinor: 10_000, date: "2026-11-18" },
+    ]);
+  });
+
+  it("takes a loan off the total even when the bank reports what is left to repay", () => {
+    expect(
+      balanceHistory(
+        [
+          {
+            balanceMinor: 100_000,
+            currency: "EUR",
+            id: "checking",
+            type: "CHECKING",
+          },
+          {
+            balanceMinor: 900_000,
+            currency: "EUR",
+            id: "mortgage",
+            type: "LOAN",
+          },
+        ],
+        [
+          {
+            accountId: "mortgage",
+            amount: -10_000,
+            date: new Date("2026-11-05T00:00:00.000Z"),
+          },
+        ],
+        "EUR",
+        today,
+        1
+      )
+    ).toEqual([
+      { balanceMinor: -810_000, date: "2026-10-31" },
+      { balanceMinor: -800_000, date: "2026-11-18" },
     ]);
   });
 

@@ -42,7 +42,7 @@ const ManageBanksTile = () => (
   <li className="flex">
     <Link
       className={`${TILE_CLASS} text-muted-foreground items-start justify-between`}
-      search={{ section: "connections" }}
+      search={{ section: "bank-accounts" }}
       to="/settings"
     >
       <RiAddLine aria-hidden="true" className="size-5" />

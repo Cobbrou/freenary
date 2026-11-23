@@ -10,6 +10,8 @@ import { MOCK_INSTITUTIONS } from "./catalog";
 import { MOCK_CALLBACK_PATH, MOCK_CONSENT_PATH } from "./consent";
 import { openedOnOf } from "./session";
 
+const MOCK_INSTITUTION_COUNTRY = "FR";
+
 export class MockConsentIncomplete extends Data.TaggedError(
   "MockConsentIncomplete"
 )<Record<never, never>> {
@@ -75,9 +77,12 @@ export const mockProvider: BankingProvider = {
   },
   id: "mock",
   isConfigured: () => true,
-  listInstitutions: (country) =>
+  listInstitutions: () =>
     Effect.succeed(
-      MOCK_INSTITUTIONS.map((institution) => ({ ...institution, country }))
+      MOCK_INSTITUTIONS.map((institution) => ({
+        ...institution,
+        country: MOCK_INSTITUTION_COUNTRY,
+      }))
     ),
   startConnection,
 };

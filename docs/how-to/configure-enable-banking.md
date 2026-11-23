@@ -17,7 +17,7 @@ This page connects Freenary to Enable Banking, the other bank provider Freenary 
 
 ### In the app
 
-1. Open the setup screen. It opens on its own after the first sign-in, on the **Bank** step. On an instance that is already set up, open **Settings** › **Connections** instead, find **Bank provider** under **Services**, and select **Set up** or **Change**.
+1. Open the setup screen. It opens on its own after the first sign-in, on the **Bank** step. On an instance that is already set up, open **Settings** › **Services** instead, find **Bank provider**, and select **Set up** or **Change**.
 2. Select **Enable Banking**, then select **Continue**.
 3. On **Step 1 of 3**, enter the ID of your application in **Application ID**. Select **Next**.
 4. On **Step 2 of 3**, select **Copy** next to **Redirect URL**, and add this redirect URL to your application in the Enable Banking control panel. Select **Next**.
@@ -47,7 +47,7 @@ This page connects Freenary to Enable Banking, the other bank provider Freenary 
 
 ## Check that it works
 
-1. Open **Settings** › **Connections**. Under **Services**, the **Bank provider** row reads **Configured · Enable Banking** when you saved the values in the app, or **Set by your server · Enable Banking** when they come from `.env`.
+1. Open **Settings** › **Services**. The **Bank provider** row reads **Configured · Enable Banking** when you saved the values in the app, or **Set by your server · Enable Banking** when they come from `.env`.
 2. For values from `.env`, select **View**, then **Test connection**. The test signs a token with your private key and asks `https://api.enablebanking.com/application` for your application. A working setup shows **Enable Banking is ready**.
 3. Connect a bank as described in [Connect your first bank](../tutorials/connect-your-first-bank.md).
 

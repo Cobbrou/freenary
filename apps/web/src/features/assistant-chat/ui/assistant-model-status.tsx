@@ -4,16 +4,19 @@ import { m } from "@/paraglide/messages.js";
 
 import { loadBrowserModel } from "../model/browser/engine";
 import type { BrowserModelStatus } from "../model/browser/engine";
+import { browserModelLabel } from "../model/browser/models";
 import { SERVER_MODEL } from "../model/model-choice";
 
 interface AssistantModelStatusProps {
   browserModel: BrowserModelStatus;
+  deferred: boolean;
   selected: string | null;
   webGpu: boolean | null;
 }
 
 export const AssistantModelStatus = ({
   browserModel,
+  deferred,
   selected,
   webGpu,
 }: AssistantModelStatusProps) => {
@@ -30,6 +33,16 @@ export const AssistantModelStatus = ({
         {webGpu
           ? m.assistant_model_none_chosen()
           : m.assistant_browser_no_webgpu()}
+      </p>
+    );
+  }
+
+  if (deferred) {
+    return (
+      <p className="text-muted-foreground text-center text-xs text-pretty">
+        {m.assistant_model_device_default({
+          model: browserModelLabel(selected),
+        })}
       </p>
     );
   }

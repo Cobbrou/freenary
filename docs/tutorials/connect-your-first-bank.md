@@ -48,7 +48,7 @@ The page now shows **Connect Powens** and **Step 1 of 4**.
 
       ![The new application in the Powens console, with its Client ID, a hidden Client secret and the redirect URI](../images/11-powens-console-application.png)
 
-   4. Select **Connectors** in the left menu, and type `Connecteur de test` in **Filter connectors by name or UUID**. **Connecteur de test** must read **Activated**. If it reads **Activate**, select it. Turn on any other bank the same way.
+   4. Select **Connectors** in the left menu, and type `Connecteur de test` in **Filter connectors by name or UUID**. **Connecteur de test** must read **Activated**. If it reads **Activate**, select it. Freenary only lists the banks whose connector is activated here, so turn on any other bank the same way. [Choose which banks members can connect with Powens](../how-to/choose-powens-banks.md) covers this in detail.
 
       ![The Powens Connectors page filtered on Connecteur de test, which reads Activated](../images/12-powens-console-connectors.png)
 
@@ -64,7 +64,7 @@ Freenary tests the details with Powens before it saves them. If the test passes,
 
 The **Categories** step connects a model that sorts new transactions into categories. You can add one later.
 
-1. Read the note next to the button: **Without a model, new transactions stay uncategorised until you add one in Settings › Connections.**
+1. Read the note next to the button: **Without a model, new transactions stay uncategorised until you add one in Settings › Services.**
 2. Select **Skip for now**.
 
    ![The Categorisation model step with Jev by TypeSafe, SubQ Snap and OpenAI-compatible endpoint, and the Skip for now button](../images/06-categories-step.png)
@@ -86,7 +86,7 @@ The page shows **Applying your settings…** and **This page reconnects on its o
 
 Every member, including you, now sets up their own account.
 
-1. **What’s your tax residency?** Add **France**, the country of **Connecteur de test**, then select **Continue**. The countries you pick decide which banks you can link.
+1. **What’s your tax residency?** Add your country, for example **France**, then select **Continue**. This choice does not filter the bank list: the next step lists every bank your bank provider makes available.
 
    ![The onboarding step What’s your tax residency? with an Add a country… field](../images/09-onboarding-tax-residency.png)
 
@@ -117,7 +117,7 @@ Every member, including you, now sets up their own account.
 
    ![The Freenary home page with three Connecteur de test accounts and their balances](../images/17-home.png)
 
-2. Open **Settings**, then **Connections**. Under **Bank accounts**, **Connecteur de test** reads **3 accounts · Synced** with the date. Under **Services**, **Bank provider** reads **Configured · Powens**.
+2. Open **Settings**, then **Bank accounts**. **Connecteur de test** reads **3 accounts · Synced** with the date. Then open **Services**: **Bank provider** reads **Configured · Powens**.
 
    ![Settings, Connections: the Connecteur de test bank with 3 accounts, and the Bank provider row reading Configured · Powens](../images/18-settings-connections.png)
 
