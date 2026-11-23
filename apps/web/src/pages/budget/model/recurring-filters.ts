@@ -6,7 +6,8 @@ import { EMPTY_CATEGORY_FILTER, filterCount } from "@/entities/category";
 import type { CategoryFilter } from "@/entities/category";
 import { merchantLabel } from "@/entities/recurring";
 import type { RecurringItem } from "@/entities/recurring";
-import { foldForSearch } from "@/shared/lib/text";
+import { EMPTY_AMOUNT_RANGE, foldForSearch } from "@/shared/lib/text";
+import type { AmountRange } from "@/shared/lib/text";
 
 import { monthlyEquivalentMinor, recurringSections } from "./recurring";
 import type {
@@ -15,8 +16,6 @@ import type {
   RecurringSection,
 } from "./recurring";
 import type { RecurringSortMode } from "./search";
-import { EMPTY_AMOUNT_RANGE } from "./transaction-filters";
-import type { AmountRange } from "./transaction-filters";
 
 export interface RecurringFilter {
   amount: AmountRange;

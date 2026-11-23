@@ -2,14 +2,13 @@ import type { BudgetMonthRule } from "@freenary/api/lib/budget-month";
 import { getRouteApi } from "@tanstack/react-router";
 import { useCallback, useMemo } from "react";
 
-import { BUDGET_SEARCH_DEFAULTS, nextBudgetSearch } from "./search";
 import type {
-  BudgetSearchPatch,
-  CompanionView,
-  PrimaryView,
   SortMode,
   TransactionDirection,
-} from "./search";
+} from "@/features/transaction-list";
+
+import { BUDGET_SEARCH_DEFAULTS, nextBudgetSearch } from "./search";
+import type { BudgetSearchPatch, CompanionView, PrimaryView } from "./search";
 import { useBudgetPeriod } from "./use-budget-period";
 import type { BudgetPeriodPatch } from "./use-budget-period";
 

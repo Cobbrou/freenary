@@ -136,15 +136,26 @@ describe("filterTokenText", () => {
 
 describe("suggestions", () => {
   it("offers the fields that start with the last typed word", () => {
-    expect(fieldSuggestions("").map((s) => s.label)).toEqual([
+    expect(fieldSuggestions("", true).map((s) => s.label)).toEqual([
       "Company",
       "Category",
       "Account",
       "Amount",
     ]);
 
-    expect(fieldSuggestions("CA").map((s) => s.label)).toEqual(["Category"]);
-    expect(fieldSuggestions("uber")).toEqual([]);
+    expect(fieldSuggestions("CA", true).map((s) => s.label)).toEqual([
+      "Category",
+    ]);
+
+    expect(fieldSuggestions("uber", true)).toEqual([]);
+  });
+
+  it("leaves the account field out when there is no account to choose", () => {
+    expect(fieldSuggestions("", false).map((s) => s.label)).toEqual([
+      "Company",
+      "Category",
+      "Amount",
+    ]);
   });
 
   it("offers the accounts whose name matches, marking the picked ones", () => {

@@ -1,13 +1,21 @@
 import {
   CATEGORY_GROUPS,
   SPENDING_CATEGORIES,
-  TRANSACTION_DIRECTIONS,
 } from "@freenary/api/lib/taxonomy";
-import {
-  lenientTransactionFiltersSchema,
-  MAX_SEARCH_TEXT_LENGTH,
-} from "@freenary/api/lib/transaction-filters";
+import { MAX_SEARCH_TEXT_LENGTH } from "@freenary/api/lib/transaction-filters";
 import { z } from "zod";
+
+import {
+  nextTransactionListSearch,
+  TRANSACTION_LIST_SEARCH_DEFAULTS,
+  transactionListSearchSchema,
+} from "@/features/transaction-list";
+import {
+  absentUnlessNonEmptyText,
+  absentUnlessOneOf,
+  absentWhenDefault,
+  absentWhenEmpty,
+} from "@/shared/routing";
 
 import { AGGREGATION_MODES, TIME_RANGES } from "./period";
 import {
@@ -23,10 +31,6 @@ export type CompanionView = (typeof COMPANION_VIEWS)[number];
 export type RecurringView = (typeof RECURRING_VIEWS)[number];
 
 export type RecurringCompanionView = (typeof RECURRING_COMPANION_VIEWS)[number];
-
-export type TransactionDirection = (typeof TRANSACTION_DIRECTIONS)[number];
-
-export type SortMode = (typeof SORT_MODES)[number];
 
 export type RecurringSortMode = (typeof RECURRING_SORT_MODES)[number];
 
@@ -44,7 +48,6 @@ export const RECURRING_COMPANION_VIEWS = [
   "split",
 ] as const;
 
-export const SORT_MODES = ["date", "amount"] as const;
 export const RECURRING_SORT_MODES = ["next", "cost"] as const;
 
 const EARLIEST_PLAUSIBLE_YEAR = 1970;
@@ -53,16 +56,6 @@ const LATEST_PLAUSIBLE_YEAR = 2999;
 const MAX_PLAUSIBLE_AMOUNT = 1_000_000_000;
 
 const LAST_MONTH_INDEX = 11;
-
-const absentUnlessOneOf = <T extends string>(allowed: readonly T[]) =>
-  z
-    .unknown()
-    .transform((raw) => {
-      const parsed = z.enum(allowed).safeParse(raw);
-
-      return parsed.success ? parsed.data : undefined;
-    })
-    .optional();
 
 const absentUnlessSlugList = <T extends string>(allowed: readonly T[]) =>
   z
@@ -90,17 +83,6 @@ const absentUnlessBoundedInt = (min: number, max: number) =>
     })
     .optional();
 
-const absentUnlessNonEmptyText = z
-  .unknown()
-  .transform((raw) => {
-    const parsed = z.coerce.string().safeParse(raw);
-
-    return parsed.success && parsed.data.length > 0
-      ? parsed.data.slice(0, MAX_SEARCH_TEXT_LENGTH)
-      : undefined;
-  })
-  .optional();
-
 const absentUnlessPositiveAmount = z
   .unknown()
   .transform((raw) => {
@@ -114,17 +96,10 @@ const absentUnlessPositiveAmount = z
   })
   .optional();
 
-const absentUnlessFilters = lenientTransactionFiltersSchema
-  .transform((kept) => (kept.length > 0 ? kept : undefined))
-  .optional();
-
-export const budgetSearchSchema = z.object({
+export const budgetSearchSchema = transactionListSearchSchema.extend({
   agg: absentUnlessOneOf(AGGREGATION_MODES),
   companion: absentUnlessOneOf(COMPANION_VIEWS),
-  dir: absentUnlessOneOf(TRANSACTION_DIRECTIONS),
-  filters: absentUnlessFilters,
   month: absentUnlessBoundedInt(0, LAST_MONTH_INDEX),
-  q: absentUnlessNonEmptyText,
   range: absentUnlessOneOf(TIME_RANGES),
   rcat: absentUnlessSlugList(SPENDING_CATEGORIES),
   rcomp: absentUnlessOneOf(RECURRING_COMPANION_VIEWS),
@@ -134,19 +109,17 @@ export const budgetSearchSchema = z.object({
   rkind: absentUnlessOneOf(RECURRENCE_KINDS),
   rmax: absentUnlessPositiveAmount,
   rmin: absentUnlessPositiveAmount,
-  rq: absentUnlessNonEmptyText,
+  rq: absentUnlessNonEmptyText(MAX_SEARCH_TEXT_LENGTH),
   rsort: absentUnlessOneOf(RECURRING_SORT_MODES),
   rview: absentUnlessOneOf(RECURRING_VIEWS),
-  sort: absentUnlessOneOf(SORT_MODES),
   view: absentUnlessOneOf(PRIMARY_VIEWS),
   year: absentUnlessBoundedInt(EARLIEST_PLAUSIBLE_YEAR, LATEST_PLAUSIBLE_YEAR),
 });
 
 export const BUDGET_SEARCH_DEFAULTS = {
+  ...TRANSACTION_LIST_SEARCH_DEFAULTS,
   agg: "total",
   companion: "fixed",
-  dir: "outgoing",
-  q: "",
   range: "1M",
   rcomp: "categories",
   rkind: "fixed",
@@ -155,20 +128,10 @@ export const BUDGET_SEARCH_DEFAULTS = {
   rq: "",
   rsort: "cost",
   rview: "trend",
-  sort: "date",
   view: "flow",
 } as const satisfies Partial<BudgetSearch>;
 
-const absentWhenDefault = <T extends number | string>(
-  value: T | undefined,
-  fallback: T
-): T | undefined =>
-  value === undefined || value === fallback ? undefined : value;
-
-const absentWhenEmpty = <T>(value: T[] | undefined) =>
-  value && value.length > 0 ? value : undefined;
-
-const nextTransactionsSearch = (
+const nextPeriodAndChartsSearch = (
   current: BudgetSearch,
   patch: BudgetSearchPatch
 ) => ({
@@ -177,17 +140,10 @@ const nextTransactionsSearch = (
     patch.companion ?? current.companion,
     BUDGET_SEARCH_DEFAULTS.companion
   ),
-  dir: absentWhenDefault(patch.dir ?? current.dir, BUDGET_SEARCH_DEFAULTS.dir),
-  filters: absentWhenEmpty(patch.filters ?? current.filters),
   month: patch.month ?? current.month,
-  q: absentWhenDefault(patch.q ?? current.q, BUDGET_SEARCH_DEFAULTS.q),
   range: absentWhenDefault(
     patch.range ?? current.range,
     BUDGET_SEARCH_DEFAULTS.range
-  ),
-  sort: absentWhenDefault(
-    patch.sort ?? current.sort,
-    BUDGET_SEARCH_DEFAULTS.sort
   ),
   view: absentWhenDefault(
     patch.view ?? current.view,
@@ -235,6 +191,7 @@ export const nextBudgetSearch = (
   current: BudgetSearch,
   patch: BudgetSearchPatch
 ): BudgetSearch => ({
-  ...nextTransactionsSearch(current, patch),
+  ...nextTransactionListSearch(current, patch),
+  ...nextPeriodAndChartsSearch(current, patch),
   ...nextRecurringSearch(current, patch),
 });

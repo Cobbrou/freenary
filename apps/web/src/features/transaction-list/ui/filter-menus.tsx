@@ -30,7 +30,7 @@ interface FilterMenusProps {
   filters: readonly TransactionFilter[];
   months: readonly MonthChoice[];
   onFiltersChange: (filters: TransactionFilter[]) => void;
-  onMonthPick: (choice: MonthChoice) => void;
+  onMonthPick?: (choice: MonthChoice) => void;
 }
 
 const ChevronIcon = remixIcon(RiArrowDownSLine);
@@ -112,25 +112,27 @@ export const FilterMenus = ({
           />
         ))}
       </FilterMenu>
-      <FilterMenu
-        checkedIndex={accounts.findIndex(
-          (account) => account.id === pickedAccount
-        )}
-        label={m.budget_filter_field_account()}
-      >
-        {accounts.map((account, index) => (
-          <MenuItem
-            checked={account.id === pickedAccount}
-            icon={AccountIcon}
-            index={index}
-            key={account.id}
-            label={account.label}
-            onSelect={() =>
-              pick({ field: "account", operator: "is", values: [account.id] })
-            }
-          />
-        ))}
-      </FilterMenu>
+      {accounts.length > 0 ? (
+        <FilterMenu
+          checkedIndex={accounts.findIndex(
+            (account) => account.id === pickedAccount
+          )}
+          label={m.budget_filter_field_account()}
+        >
+          {accounts.map((account, index) => (
+            <MenuItem
+              checked={account.id === pickedAccount}
+              icon={AccountIcon}
+              index={index}
+              key={account.id}
+              label={account.label}
+              onSelect={() =>
+                pick({ field: "account", operator: "is", values: [account.id] })
+              }
+            />
+          ))}
+        </FilterMenu>
+      ) : null}
       <FilterMenu
         checkedIndex={AMOUNT_PRESETS.findIndex(
           (preset) =>
@@ -155,20 +157,22 @@ export const FilterMenus = ({
           />
         ))}
       </FilterMenu>
-      <FilterMenu
-        checkedIndex={months.findIndex((month) => month.isCurrent)}
-        label={m.budget_filter_field_date()}
-      >
-        {months.map((month, index) => (
-          <MenuItem
-            checked={month.isCurrent}
-            index={index}
-            key={`${month.year}-${month.month}`}
-            label={month.label}
-            onSelect={() => onMonthPick(month)}
-          />
-        ))}
-      </FilterMenu>
+      {months.length > 0 ? (
+        <FilterMenu
+          checkedIndex={months.findIndex((month) => month.isCurrent)}
+          label={m.budget_filter_field_date()}
+        >
+          {months.map((month, index) => (
+            <MenuItem
+              checked={month.isCurrent}
+              index={index}
+              key={`${month.year}-${month.month}`}
+              label={month.label}
+              onSelect={() => onMonthPick?.(month)}
+            />
+          ))}
+        </FilterMenu>
+      ) : null}
     </div>
   );
 };

@@ -3,7 +3,7 @@ import { m } from "@/paraglide/messages.js";
 import type { Locale } from "@/paraglide/runtime.js";
 import { localDayOfBankDate } from "@/shared/lib/calendar-day";
 
-import type { TimeRange } from "./period";
+export type TransactionGrouping = "day" | "week" | "month";
 
 interface GroupHeader {
   type: "header";
@@ -62,14 +62,17 @@ const weekKey = (date: Date) => {
   return `${monday.getFullYear()}-W${padded(weekOfMonth(monday))}-${padded(monday.getMonth() + 1)}-${padded(monday.getDate())}`;
 };
 
-export const groupKey = (dateStr: string, range: TimeRange): string => {
+export const groupKey = (
+  dateStr: string,
+  grouping: TransactionGrouping
+): string => {
   const date = localDayOfBankDate(dateStr);
 
-  if (range === "1Y") {
+  if (grouping === "month") {
     return monthKey(date);
   }
 
-  if (range === "3M") {
+  if (grouping === "week") {
     return weekKey(date);
   }
 
@@ -119,14 +122,14 @@ const formatDayKeyLabel = (key: string, locale: Locale): string => {
 
 export const formatGroupLabel = (
   key: string,
-  range: TimeRange,
+  grouping: TransactionGrouping,
   locale: Locale
 ): string => {
-  if (range === "1Y") {
+  if (grouping === "month") {
     return formatMonthKeyLabel(key, locale);
   }
 
-  if (range === "3M") {
+  if (grouping === "week") {
     return formatWeekKeyLabel(key, locale);
   }
 
@@ -135,7 +138,7 @@ export const formatGroupLabel = (
 
 export const buildVirtualItems = (
   transactions: Transaction[],
-  range: TimeRange,
+  grouping: TransactionGrouping,
   locale: Locale
 ): VirtualItem[] => {
   if (transactions.length === 0) {
@@ -148,7 +151,7 @@ export const buildVirtualItems = (
   let headerAwaitingItsTotal: GroupHeader | null = null;
 
   for (const tx of transactions) {
-    const key = groupKey(tx.date, range);
+    const key = groupKey(tx.date, grouping);
 
     if (key !== currentKey) {
       if (headerAwaitingItsTotal) {
@@ -159,8 +162,8 @@ export const buildVirtualItems = (
       groupTotal = 0;
       headerAwaitingItsTotal = {
         currency: tx.currency,
-        key: `header-${key}`,
-        label: formatGroupLabel(key, range, locale),
+        key: `header-${tx.id}`,
+        label: formatGroupLabel(key, grouping, locale),
         total: 0,
         type: "header",
       };

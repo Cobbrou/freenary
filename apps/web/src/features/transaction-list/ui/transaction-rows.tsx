@@ -14,15 +14,15 @@ import { useCallback, useEffect, useMemo, useRef } from "react";
 import type { Transaction } from "@/entities/budget";
 import { m } from "@/paraglide/messages.js";
 import { getLocale } from "@/paraglide/runtime.js";
+import { LoadError } from "@/shared/ui/load-error";
+import { StaleRegion } from "@/shared/ui/stale-region";
 
-import type { TimeRange } from "../model/period";
 import {
   buildVirtualItems,
   HEADER_HEIGHT,
   ROW_HEIGHT,
 } from "../model/transaction-groups";
-import { LoadError } from "./load-error";
-import { StaleRegion } from "./stale-region";
+import type { TransactionGrouping } from "../model/transaction-groups";
 import { TransactionGroupHeader } from "./transaction-group-header";
 import { TransactionRow } from "./transaction-row";
 import { TransactionRowsSkeleton } from "./transaction-rows-skeleton";
@@ -42,7 +42,8 @@ export const TransactionRows = ({
   isIncoming,
   isStale,
   onTransactionClick,
-  range,
+  grouping,
+  emptyDescription,
 }: {
   transactions: Transaction[];
   hasMore: boolean;
@@ -54,7 +55,8 @@ export const TransactionRows = ({
   isIncoming: boolean;
   isStale: boolean;
   onTransactionClick: (tx: Transaction) => void;
-  range: TimeRange;
+  grouping: TransactionGrouping;
+  emptyDescription: string;
 }) => {
   "use no memo";
   const parentRef = useRef<HTMLDivElement>(null);
@@ -63,8 +65,8 @@ export const TransactionRows = ({
 
   const locale = getLocale();
   const virtualItems = useMemo(
-    () => buildVirtualItems(transactions, range, locale),
-    [transactions, range, locale]
+    () => buildVirtualItems(transactions, grouping, locale),
+    [transactions, grouping, locale]
   );
 
   // eslint-disable-next-line react/incompatible-library -- useVirtualizer is inherently incompatible with React Compiler; component opts out via "use no memo"
@@ -72,6 +74,7 @@ export const TransactionRows = ({
     count: virtualItems.length,
     estimateSize: (index) =>
       virtualItems[index]?.type === "header" ? HEADER_HEIGHT : ROW_HEIGHT,
+    getItemKey: (index) => virtualItems[index]?.key ?? index,
     getScrollElement: () => parentRef.current,
     overscan: 10,
   });
@@ -141,11 +144,7 @@ export const TransactionRows = ({
               <RiReceiptLine />
             </EmptyMedia>
             <EmptyTitle>{m.budget_transactions_empty_title()}</EmptyTitle>
-            <EmptyDescription>
-              {isIncoming
-                ? m.budget_transactions_empty_incoming()
-                : m.budget_transactions_empty_outgoing()}
-            </EmptyDescription>
+            <EmptyDescription>{emptyDescription}</EmptyDescription>
           </EmptyHeader>
         </Empty>
       </StaleRegion>

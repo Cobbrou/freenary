@@ -18,6 +18,7 @@ import { categoryChartColor, categoryLabel } from "@/entities/category";
 import { m } from "@/paraglide/messages.js";
 import { CHART_COLOR_VARS } from "@/shared/lib/chart-colors";
 import { formatCurrency } from "@/shared/lib/format-currency";
+import { PRESS_MOTION } from "@/shared/ui/list-controls";
 
 import {
   breakdownSlices,
@@ -28,7 +29,6 @@ import type {
   BreakdownSlice,
   CategoryAmount,
 } from "../model/spending-breakdown";
-import { PRESS_MOTION } from "./list-controls";
 
 interface SpendingBreakdownChartProps {
   activeCategories: SpendingCategory[];

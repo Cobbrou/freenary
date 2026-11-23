@@ -24,6 +24,7 @@ import { useMemo } from "react";
 
 import type { RecurringData } from "@/entities/recurring";
 import { m } from "@/paraglide/messages.js";
+import { PRESS_MOTION } from "@/shared/ui/list-controls";
 
 import {
   forecastSeries,
@@ -35,7 +36,6 @@ import {
 import { RECURRING_COMPANION_VIEWS, RECURRING_VIEWS } from "../model/search";
 import type { RecurringCompanionView, RecurringView } from "../model/search";
 import { FrequencyCostChart } from "./frequency-cost-chart";
-import { PRESS_MOTION } from "./list-controls";
 import { PurchaseFrequencyChart } from "./purchase-frequency-chart";
 import { RecurringCategoryChart } from "./recurring-category-chart";
 import { RecurringForecastChart } from "./recurring-forecast-chart";

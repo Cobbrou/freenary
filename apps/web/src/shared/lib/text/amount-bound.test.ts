@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { parseAmountBound } from "./transaction-filters";
+import { parseAmountBound } from "./amount-bound";
 
 describe("parseAmountBound", () => {
   test("reads a plain number in either locale", () => {

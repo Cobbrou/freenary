@@ -23,8 +23,8 @@ import type { ReactNode } from "react";
 
 import { m } from "@/paraglide/messages.js";
 
-import { useHoverIntent } from "../lib/use-hover-intent";
-import { useSettledText } from "../lib/use-settled-text";
+import { useHoverIntent } from "./use-hover-intent";
+import { useSettledText } from "./use-settled-text";
 
 interface ChipPosition {
   index: number;

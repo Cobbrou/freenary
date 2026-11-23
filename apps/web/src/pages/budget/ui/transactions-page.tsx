@@ -1,15 +1,23 @@
 import type { TransactionFilter } from "@freenary/api/lib/transaction-filters";
 import type { AppRouter } from "@freenary/api/routers/index";
 import type { InferRouterOutputs } from "@orpc/server";
-import {
-  useInfiniteQuery,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useMemo, useState } from "react";
 
 import type { CategorySelection } from "@/entities/category";
 import { TransactionDetailDrawer } from "@/features/transaction-details";
+import {
+  highlightedChartCategories,
+  recentMonths,
+  selectChartCategory,
+  TransactionList,
+  useTransactionListQuery,
+} from "@/features/transaction-list";
+import type {
+  MonthChoice,
+  TransactionGrouping,
+  TransactionsInput,
+} from "@/features/transaction-list";
 import { m } from "@/paraglide/messages.js";
 import { getLocale } from "@/paraglide/runtime.js";
 import { orpc } from "@/shared/api";
@@ -18,17 +26,9 @@ import {
   isStaleView,
   periodOverviewQueryOptions,
   prefetchPeriod,
-  prefetchTransactions,
-  transactionsQueryOptions,
 } from "../api/budget-queries";
-import type { PeriodInput, TransactionsInput } from "../api/budget-queries";
-import { recentMonths } from "../model/filter-menus";
-import type { MonthChoice } from "../model/filter-menus";
-import {
-  highlightedChartCategories,
-  selectChartCategory,
-} from "../model/filter-tokens";
-import type { SortMode, TransactionDirection } from "../model/search";
+import type { PeriodInput } from "../api/budget-queries";
+import type { TimeRange } from "../model/period";
 import { useBudgetCurrency } from "../model/use-budget-currency";
 import { useBudgetMonthRule } from "../model/use-budget-month-rule";
 import { useBudgetView } from "../model/use-budget-view";
@@ -36,7 +36,6 @@ import { useSyncProgress } from "../model/use-sync-progress";
 import { BudgetCharts } from "./budget-charts";
 import { BudgetKpiStrip } from "./budget-kpi-strip";
 import { PeriodNavigator } from "./period-navigator";
-import { TransactionList } from "./transaction-list";
 
 type PeriodOverview =
   InferRouterOutputs<AppRouter>["budget"]["getPeriodOverview"];
@@ -49,6 +48,12 @@ const overviewSections = (overview: PeriodOverview | undefined) => ({
   totalExpenses: overview?.sankey.totalExpenses ?? 0,
   totalIncome: overview?.sankey.totalIncome ?? 0,
 });
+
+const GROUPING_OF_RANGE = {
+  "1M": "day",
+  "1Y": "month",
+  "3M": "week",
+} as const satisfies Record<TimeRange, TransactionGrouping>;
 
 export const TransactionsPage = () => {
   const accountsQuery = useQuery(orpc.budget.getAccounts.queryOptions());
@@ -109,37 +114,21 @@ export const TransactionsPage = () => {
     [direction, filters, from, searchQuery, sort, to]
   );
 
-  const transactionsQuery = useInfiniteQuery(
-    transactionsQueryOptions(listInput)
-  );
+  const syncProgress = useSyncProgress();
+  const hasNoHistoryYet =
+    accountsQuery.isSuccess && accountsQuery.data.firstTransactionDate === null;
+
+  const isAwaitingFirstData = syncProgress !== null && hasNoHistoryYet;
+  const transactionList = useTransactionListQuery(listInput, {
+    isAwaitingFirstData,
+  });
 
   const queryClient = useQueryClient();
-
-  const handleDirectionIntent = useCallback(
-    (dir: TransactionDirection) =>
-      prefetchTransactions(queryClient, { ...listInput, direction: dir }),
-    [listInput, queryClient]
-  );
-
-  const handleSortIntent = useCallback(
-    (next: SortMode) =>
-      prefetchTransactions(queryClient, { ...listInput, sort: next }),
-    [listInput, queryClient]
-  );
 
   const handlePeriodIntent = useCallback(
     (target: PeriodInput) => prefetchPeriod(queryClient, target, listInput),
     [listInput, queryClient]
   );
-
-  const handleLoadMore = useCallback(() => {
-    if (
-      transactionsQuery.hasNextPage &&
-      !transactionsQuery.isFetchingNextPage
-    ) {
-      transactionsQuery.fetchNextPage();
-    }
-  }, [transactionsQuery]);
 
   const handleFiltersChange = useCallback(
     (next: TransactionFilter[]) => applyPatch({ filters: next }),
@@ -189,32 +178,20 @@ export const TransactionsPage = () => {
     [filters, handleFiltersChange]
   );
 
-  const allTransactions =
-    transactionsQuery.data?.pages.flatMap((p) => p.transactions) ?? [];
-
-  const totals = transactionsQuery.data?.pages[0]?.totals ?? {
-    incoming: 0,
-    outgoing: 0,
-  };
-
-  const syncProgress = useSyncProgress();
-  const hasNoHistoryYet =
-    accountsQuery.isSuccess && accountsQuery.data.firstTransactionDate === null;
-
-  const isAwaitingFirstData = syncProgress !== null && hasNoHistoryYet;
-  const isFilling = (isLoading: boolean) => isLoading || isAwaitingFirstData;
   const overview = overviewSections(overviewQuery.data);
   const overviewState = {
     isError: overviewQuery.isError,
-    isPending: isFilling(overviewQuery.isLoading),
+    isPending: overviewQuery.isLoading || isAwaitingFirstData,
     isStale: isStaleView(overviewQuery),
   };
 
   const selectedTransaction = selectedTransactionId
-    ? (allTransactions.find((t) => t.id === selectedTransactionId) ?? null)
+    ? (transactionList.transactions.find(
+        (t) => t.id === selectedTransactionId
+      ) ?? null)
     : null;
 
-  const isUpdating = [overviewQuery, transactionsQuery].some(isStaleView);
+  const isUpdating = isStaleView(overviewQuery) || transactionList.isStale;
 
   return (
     <div className="flex flex-1 flex-col gap-6">
@@ -269,15 +246,13 @@ export const TransactionsPage = () => {
       />
 
       <TransactionList
+        {...transactionList}
         accounts={accounts}
         months={months}
         onMonthPick={handleMonthPick}
-        transactions={allTransactions}
         currency={currency}
-        totals={totals}
         direction={direction}
         onDirectionChange={(dir) => applyPatch({ dir })}
-        onDirectionIntent={handleDirectionIntent}
         from={from}
         to={to}
         search={searchQuery}
@@ -287,23 +262,8 @@ export const TransactionsPage = () => {
         onSearchReplace={handleSearchReplace}
         sort={sort}
         onSortChange={(next) => applyPatch({ sort: next })}
-        onSortIntent={handleSortIntent}
-        hasMore={transactionsQuery.hasNextPage}
-        onLoadMore={handleLoadMore}
-        isLoading={
-          isFilling(transactionsQuery.isLoading) ||
-          transactionsQuery.isFetchingNextPage
-        }
-        isError={
-          transactionsQuery.isError && !transactionsQuery.isFetchNextPageError
-        }
-        isRetrying={transactionsQuery.isFetching}
-        onRetry={() => {
-          void transactionsQuery.refetch();
-        }}
-        isStale={isStaleView(transactionsQuery)}
         onTransactionClick={(tx) => setSelectedTransactionId(tx.id)}
-        range={range}
+        grouping={GROUPING_OF_RANGE[range]}
       />
 
       <TransactionDetailDrawer

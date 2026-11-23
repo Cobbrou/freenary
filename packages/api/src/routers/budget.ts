@@ -1175,6 +1175,7 @@ export const budgetRouter = {
   getMerchants: protectedProcedure
     .input(
       z.object({
+        accountId: z.string().min(1).optional(),
         direction: z.enum(["incoming", "outgoing"]).optional(),
         from: z.coerce.date(),
         limit: z.number().int().min(1).max(100).default(30),
@@ -1183,7 +1184,7 @@ export const budgetRouter = {
       })
     )
     .handler(async ({ context, input }) => {
-      const { direction, from, limit, search, to } = input;
+      const { accountId, direction, from, limit, search, to } = input;
       const signPredicate = direction ? AMOUNT_SIGN_PREDICATE[direction] : "";
       const sql = `SELECT
           MIN(COALESCE(t."counterpartyName", initcap(t."normalisedDescriptor"))) AS name,
@@ -1197,6 +1198,7 @@ export const budgetRouter = {
           AND t."date" <= $3
           AND COALESCE(t."counterpartyName", t."normalisedDescriptor") <> ''
           AND ($4::text IS NULL OR COALESCE(t."counterpartyName", t."normalisedDescriptor") ILIKE '%' || $4 || '%')
+          AND ($6::text IS NULL OR t."accountId" = $6)
           ${signPredicate}
         GROUP BY lower(COALESCE(t."counterpartyName", t."normalisedDescriptor"))
         ORDER BY count DESC, name ASC
@@ -1210,7 +1212,8 @@ export const budgetRouter = {
         from,
         to,
         search === undefined ? null : escapeLikePattern(search),
-        limit
+        limit,
+        accountId ?? null
       );
 
       return {

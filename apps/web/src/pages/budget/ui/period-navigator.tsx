@@ -32,8 +32,8 @@ import { useRef, useState } from "react";
 import { formatBudgetMonthSpan } from "@/entities/budget";
 import { m } from "@/paraglide/messages.js";
 import { getLocale } from "@/paraglide/runtime.js";
+import { useHoverIntent } from "@/shared/ui/list-controls";
 
-import { useHoverIntent } from "../lib/use-hover-intent";
 import {
   AGGREGATION_MODES,
   aggregationLabel,

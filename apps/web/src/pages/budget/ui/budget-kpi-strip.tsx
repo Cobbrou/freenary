@@ -4,9 +4,9 @@ import { cn } from "@freenary/ui/lib/utils";
 
 import { m } from "@/paraglide/messages.js";
 import { formatCurrency } from "@/shared/lib/format-currency";
+import { StaleRegion } from "@/shared/ui/stale-region";
 
 import type { AggregationMode } from "../model/period";
-import { StaleRegion } from "./stale-region";
 
 interface SummaryLabels {
   expenses: () => string;

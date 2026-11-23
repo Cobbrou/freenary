@@ -112,7 +112,7 @@ const MERGED_CALL_SITES: { args: string[]; expected: string; where: string }[] =
     {
       args: ["font-medium tabular-nums", "text-success", "text-destructive"],
       expected: "font-medium tabular-nums text-destructive",
-      where: "apps/web/src/pages/budget/ui/transaction-row.tsx",
+      where: "apps/web/src/features/transaction-list/ui/transaction-row.tsx",
     },
     {
       args: [

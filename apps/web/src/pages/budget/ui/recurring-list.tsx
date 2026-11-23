@@ -8,6 +8,16 @@ import {
   formatCurrency,
   formatDecimalCurrency,
 } from "@/shared/lib/format-currency";
+import { EMPTY_AMOUNT_RANGE } from "@/shared/lib/text";
+import type { AmountRange } from "@/shared/lib/text";
+import {
+  ClearFiltersButton,
+  ListFilterBar,
+  ListFilterChip,
+  ListFilterChips,
+  ListSearchInput,
+  ListSortToggle,
+} from "@/shared/ui/list-controls";
 
 import {
   confidenceLabel,
@@ -29,18 +39,8 @@ import type {
   RecurringGroups,
 } from "../model/recurring-filters";
 import type { RecurringSortMode } from "../model/search";
-import { EMPTY_AMOUNT_RANGE } from "../model/transaction-filters";
-import type { AmountRange } from "../model/transaction-filters";
 import { AmountFilterMenu } from "./amount-filter-menu";
 import { CategoryFilterMenu } from "./category-filter-menu";
-import {
-  ClearFiltersButton,
-  ListFilterBar,
-  ListFilterChip,
-  ListFilterChips,
-  ListSearchInput,
-  ListSortToggle,
-} from "./list-controls";
 import { RecurrenceFilterMenu } from "./recurrence-filter-menu";
 import { RecurringTable } from "./recurring-table";
 

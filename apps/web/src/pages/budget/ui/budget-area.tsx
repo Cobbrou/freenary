@@ -4,10 +4,9 @@ import { Outlet } from "@tanstack/react-router";
 import { useSyncAccounts } from "@/features/account-sync";
 import { m } from "@/paraglide/messages.js";
 import { orpc } from "@/shared/api";
+import { LoadError } from "@/shared/ui/load-error";
 import { NoBankAccount } from "@/shared/ui/no-bank-account";
 import { SyncButton } from "@/shared/ui/sync-button";
-
-import { LoadError } from "./load-error";
 
 export const BudgetArea = () => {
   const accountsQuery = useQuery(orpc.budget.getAccounts.queryOptions());

@@ -19,13 +19,9 @@ import { m } from "@/paraglide/messages.js";
 import { getLocale } from "@/paraglide/runtime.js";
 import { currencyAffix } from "@/shared/lib/format-currency";
 import { remixIcon } from "@/shared/lib/remix-icon";
+import { EMPTY_AMOUNT_RANGE, parseAmountBound } from "@/shared/lib/text";
+import type { AmountRange } from "@/shared/lib/text";
 import { useDebouncedValue } from "@/shared/lib/use-debounced-value";
-
-import {
-  EMPTY_AMOUNT_RANGE,
-  parseAmountBound,
-} from "../model/transaction-filters";
-import type { AmountRange } from "../model/transaction-filters";
 
 interface AmountFilterMenuProps {
   currency: string;

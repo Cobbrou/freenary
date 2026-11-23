@@ -1018,6 +1018,10 @@
               "schema": {
                 "type": "object",
                 "properties": {
+                  "accountId": {
+                    "type": "string",
+                    "minLength": 1
+                  },
                   "direction": {
                     "enum": ["incoming", "outgoing"],
                     "type": "string"

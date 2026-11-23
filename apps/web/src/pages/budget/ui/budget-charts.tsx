@@ -24,6 +24,8 @@ import type { ComponentProps } from "react";
 
 import type { CategorySelection } from "@/entities/category";
 import { m } from "@/paraglide/messages.js";
+import { PRESS_MOTION } from "@/shared/ui/list-controls";
+import { StaleRegion } from "@/shared/ui/stale-region";
 
 import { aggregationLabel } from "../model/period";
 import type { AggregationMode } from "../model/period";
@@ -31,9 +33,7 @@ import type { CompanionView, PrimaryView } from "../model/search";
 import { BudgetVsActualChart } from "./budget-vs-actual-chart";
 import { CashFlowChart } from "./cash-flow-chart";
 import { FixedVsVariableChart } from "./fixed-vs-variable-chart";
-import { PRESS_MOTION } from "./list-controls";
 import { SpendingBreakdownChart } from "./spending-breakdown-chart";
-import { StaleRegion } from "./stale-region";
 
 type BreakdownData = Pick<
   ComponentProps<typeof SpendingBreakdownChart>,

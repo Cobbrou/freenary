@@ -6,15 +6,14 @@ import { useId } from "react";
 import type { Transaction } from "@/entities/budget";
 import { m } from "@/paraglide/messages.js";
 import { formatCurrency } from "@/shared/lib/format-currency";
+import { ListSortToggle, useHoverIntent } from "@/shared/ui/list-controls";
 
-import { useHoverIntent } from "../lib/use-hover-intent";
 import type { MonthChoice } from "../model/filter-menus";
 import type { AccountChoice } from "../model/filter-suggestions";
-import type { TimeRange } from "../model/period";
-import type { SortMode, TransactionDirection } from "../model/search";
+import type { SortMode, TransactionDirection } from "../model/list-search";
+import type { TransactionGrouping } from "../model/transaction-groups";
 import { FilterMenus } from "./filter-menus";
 import { FilterTokenSearch } from "./filter-token-search";
-import { ListSortToggle } from "./list-controls";
 import { SavedFiltersMenu } from "./saved-filters-menu";
 import { TransactionRows } from "./transaction-rows";
 
@@ -23,14 +22,23 @@ const DIRECTIONS = [
   "incoming",
 ] as const satisfies readonly TransactionDirection[];
 
+const PERIOD_EMPTY_DESCRIPTIONS = {
+  incoming: m.budget_transactions_empty_incoming,
+  outgoing: m.budget_transactions_empty_outgoing,
+} as const satisfies Record<TransactionDirection, () => string>;
+
+const NO_MONTHS: readonly MonthChoice[] = [];
+
 const SORT_OPTIONS = [
   { label: m.budget_sort_date, value: "date" },
   { label: m.budget_sort_amount, value: "amount" },
 ] as const satisfies readonly { label: () => string; value: SortMode }[];
 
 export const TransactionList = ({
+  accountId,
   accounts,
-  months,
+  emptyDescriptions = PERIOD_EMPTY_DESCRIPTIONS,
+  months = NO_MONTHS,
   onMonthPick,
   transactions,
   currency,
@@ -56,11 +64,13 @@ export const TransactionList = ({
   onRetry,
   isStale,
   onTransactionClick,
-  range,
+  grouping,
 }: {
+  accountId?: string;
   accounts: readonly AccountChoice[];
-  months: readonly MonthChoice[];
-  onMonthPick: (choice: MonthChoice) => void;
+  emptyDescriptions?: Record<TransactionDirection, () => string>;
+  months?: readonly MonthChoice[];
+  onMonthPick?: (choice: MonthChoice) => void;
   transactions: Transaction[];
   currency: string;
   totals: { incoming: number; outgoing: number };
@@ -88,7 +98,7 @@ export const TransactionList = ({
   onRetry: () => void;
   isStale: boolean;
   onTransactionClick: (tx: Transaction) => void;
-  range: TimeRange;
+  grouping: TransactionGrouping;
 }) => {
   const directionIntent = useHoverIntent(onDirectionIntent);
   const hasAnything = filters.length > 0 || search.trim() !== "";
@@ -120,6 +130,7 @@ export const TransactionList = ({
     <div className="flex flex-1 flex-col gap-3">
       <div className="flex flex-col gap-2">
         <FilterTokenSearch
+          accountId={accountId}
           accounts={accounts}
           currency={currency}
           direction={direction}
@@ -201,7 +212,8 @@ export const TransactionList = ({
               isIncoming={candidate === "incoming"}
               isStale={isStale}
               onTransactionClick={onTransactionClick}
-              range={range}
+              grouping={grouping}
+              emptyDescription={emptyDescriptions[candidate]()}
             />
           </TabsPanel>
         ))}

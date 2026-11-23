@@ -65,11 +65,15 @@ export const withoutLastWord = (text: string): string =>
 const startsWithFolded = (label: string, query: string) =>
   foldForSearch(label).startsWith(foldForSearch(query.trim()));
 
-export const fieldSuggestions = (fragment: string): FilterSuggestion[] =>
+export const fieldSuggestions = (
+  fragment: string,
+  hasAccountChoice: boolean
+): FilterSuggestion[] =>
   TRANSACTION_FILTER_FIELDS.flatMap((field) => {
     const label = FILTER_FIELD_LABELS[field]();
+    const isOffered = field !== "account" || hasAccountChoice;
 
-    return startsWithFolded(label, fragment)
+    return isOffered && startsWithFolded(label, fragment)
       ? [{ field, kind: "field" as const, label }]
       : [];
   });
@@ -219,7 +223,9 @@ export const filterSuggestionsFor = ({
   typedAmountMinor,
 }: SuggestionContext): FilterSuggestion[] => {
   if (draft === null) {
-    return canAddFilter(filters) ? fieldSuggestions(lastWordOf(text)) : [];
+    return canAddFilter(filters)
+      ? fieldSuggestions(lastWordOf(text), accounts.length > 0)
+      : [];
   }
 
   if (draft.stage === "operator") {

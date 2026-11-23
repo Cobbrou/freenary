@@ -85,7 +85,7 @@ The Access column comes from the middleware of each procedure in `packages/api/s
 | `budget.getBudgetVsActual` | `POST /api-reference/budget/getBudgetVsActual` | Signed in | `aggregation` `"total"` or `"average"` or `"median"`; `from` string (date), required; `to` string (date), required |
 | `budget.getCashFlow` | `POST /api-reference/budget/getCashFlow` | Signed in | `from` string (date), required; `grain` `"day"` or `"week"` or `"month"`; `to` string (date), required |
 | `budget.getFixedVsVariable` | `POST /api-reference/budget/getFixedVsVariable` | Signed in | `aggregation` `"total"` or `"average"` or `"median"`; `from` string (date), required; `to` string (date), required |
-| `budget.getMerchants` | `POST /api-reference/budget/getMerchants` | Signed in | `direction` `"incoming"` or `"outgoing"`; `from` string (date), required; `limit` integer; `search` string; `to` string (date), required |
+| `budget.getMerchants` | `POST /api-reference/budget/getMerchants` | Signed in | `accountId` string; `direction` `"incoming"` or `"outgoing"`; `from` string (date), required; `limit` integer; `search` string; `to` string (date), required |
 | `budget.getPeriodOverview` | `POST /api-reference/budget/getPeriodOverview` | Signed in | `aggregation` `"total"` or `"average"` or `"median"`; `from` string (date), required; `to` string (date), required |
 | `budget.getRecurring` | `POST /api-reference/budget/getRecurring` | Signed in | none |
 | `budget.getRecurringExpenses` | `POST /api-reference/budget/getRecurringExpenses` | Signed in | none |
