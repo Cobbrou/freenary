@@ -155,7 +155,10 @@ export const AssistantModelSelector = ({
         title={m.assistant_model_label()}
       >
         <CommandMenu items={items}>
-          <CommandMenuInput placeholder={m.assistant_model_search()} />
+          <CommandMenuInput
+            aria-label={m.assistant_model_search()}
+            placeholder={m.assistant_model_search()}
+          />
           <CommandMenuList>
             {hasOptions && (
               <CommandMenuEmpty>{m.assistant_model_none()}</CommandMenuEmpty>

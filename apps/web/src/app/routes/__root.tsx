@@ -15,6 +15,7 @@ import { createMiddleware } from "@tanstack/react-start";
 import { evlogErrorHandler } from "evlog/nitro/v3";
 import { ThemeProvider } from "next-themes";
 
+import { m } from "@/paraglide/messages.js";
 import { getLocale } from "@/paraglide/runtime.js";
 import type { orpc } from "@/shared/api";
 import { publicServerUrlScript } from "@/shared/config";
@@ -51,7 +52,7 @@ const RootDocument = () => (
             </UiLabelsProvider>
           </IconProvider>
         </SizeProvider>
-        <Toaster richColors />
+        <Toaster containerAriaLabel={m.nav_notifications()} richColors />
       </ThemeProvider>
       <TanStackRouterDevtools position="bottom-left" />
       <ReactQueryDevtools position="bottom" buttonPosition="bottom-right" />

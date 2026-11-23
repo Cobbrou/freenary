@@ -173,6 +173,7 @@ export const AppCommandMenu = () => {
         query={query}
       >
         <CommandMenuInput
+          aria-label={m.command_menu_title()}
           onKeyDown={(event) => {
             if (
               event.key === "Enter" &&
