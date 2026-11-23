@@ -80,7 +80,9 @@ Freenary drops an answer below 0.5 confidence, which counts as an abstention: th
 
 Each answer and each abstention is cached in the `merchant_classification` table, shared by the whole instance. The cache key covers the classifier protocol, the model, the version of the category list, the merchant key or description, the country, the direction and the merchant category code. So changing `TRANSACTION_CLASSIFIER_MODEL` asks every merchant again. A cached answer gives the stage `cached-model`. A cached abstention stops Freenary from asking about that merchant again for 30 days.
 
-A call that fails or runs past the time limit leaves the transaction uncategorised, logs a `[categorisation] classifier` warning, and is not cached, so the next categorisation asks again. The time limit is `TRANSACTION_CLASSIFIER_TIMEOUT_MS` plus a five-second margin.
+A call that fails, runs past the time limit, or answers outside the contract leaves the transaction uncategorised, logs a `[categorisation] classifier` warning, and is not cached. The time limit is `TRANSACTION_CLASSIFIER_TIMEOUT_MS` plus a five-second margin. The server remembers the failure in memory and does not ask about that merchant again for one hour, unless the member asks: **Sync transactions**, connecting a bank and the `budget.recategorise` procedure ask again at once. A restart forgets the failures.
+
+One categorisation asks at most 200 questions and stops asking after 5 failures in a row. It logs `[categorisation] classifier phase skipped` with the number of questions it left out, and the next categorisation asks them.
 
 ### The fallback
 

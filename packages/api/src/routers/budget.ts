@@ -599,7 +599,8 @@ const raiseTransactionsToCheck = (
 
 const categoriseUncategorised = async (
   userId: string,
-  reporter: SyncReporter
+  reporter: SyncReporter,
+  askedForByUser: boolean
 ): Promise<number> => {
   const uncategorised = await prisma.transaction.findMany({
     select: {
@@ -691,6 +692,7 @@ const categoriseUncategorised = async (
     countries: dictionaryCountries,
     escalateBelow: classifierEscalateBelow,
     onSignatureSettled: reporter.heartbeat,
+    retryFailedMerchants: askedForByUser,
     store: prismaClassificationStore,
     timeoutMs: classifierCallBudget,
   });
@@ -831,7 +833,7 @@ const categoriseAfterSync = (
         await clearResolutions({ connectionId, userId });
       }
 
-      return await categoriseUncategorised(userId, reporter);
+      return await categoriseUncategorised(userId, reporter, force);
     },
   }).pipe(
     Effect.map((categorised) => ({ categorised, failure: undefined })),
@@ -1578,7 +1580,7 @@ export const budgetRouter = {
       Effect.promise(async () => {
         await clearResolutions({ userId });
 
-        return await categoriseUncategorised(userId, reporter);
+        return await categoriseUncategorised(userId, reporter, true);
       }).pipe(Effect.ensuring(Effect.promise(() => reporter.finished())))
     );
 
