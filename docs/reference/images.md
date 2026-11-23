@@ -12,7 +12,21 @@ Freenary publishes two container images to the GitHub Container Registry. The `I
 | `ghcr.io/suiramdev/freenary-server` | `apps/server/Dockerfile` | `3000` | `bun dist/index.mjs` in `/app/apps/server` |
 | `ghcr.io/suiramdev/freenary-web` | `apps/web/Dockerfile` | `3001` | `bun .output/server/index.mjs` in `/app/apps/web` |
 
-The image name is `ghcr.io/<repository, lower case>-<app>`, so a fork that runs the workflow publishes under its own name. Both images use the base image `oven/bun:1.4.2`, install the dependencies from `bun.lock` with `--frozen-lockfile`, and run as the non-root user `bun`. The server image also runs the database migrations: the `migrate` service of `docker-compose.yml` runs `bun x prisma migrate deploy` in `/app/packages/db` of the server image.
+The image name is `ghcr.io/<repository, lower case>-<app>`, so a fork that runs the workflow publishes under its own name. Both images use the base image `oven/bun:1.4.5`, install the dependencies from `bun.lock` with `--frozen-lockfile`, and run as the non-root user `bun`. The server image also runs the database migrations: the `migrate` service of `docker-compose.yml` runs `bun x prisma migrate deploy` in `/app/packages/db` of the server image.
+
+## Contents
+
+Each Dockerfile builds in a `builder` stage, then copies only what the image runs into a `runner` stage on a fresh `oven/bun:1.4.5`. Neither image holds the repository sources, the development dependencies, or the build caches.
+
+| Path in the image | Server | Web |
+| --- | --- | --- |
+| `/app/apps/server/dist` | the server bundle from `tsdown`, with the `@freenary/*` packages inlined | not present |
+| `/app/node_modules`, `/app/apps/server/node_modules` | the production dependencies of the `server` workspace, from `bun install --production --filter server` | not present |
+| `/app/packages/db` | `package.json`, `prisma.config.ts`, `prisma/schema`, `prisma/migrations` and `node_modules` with the Prisma CLI, for the `migrate` service | not present |
+| `/app/apps/data` | the merchant data that `bun run build:data` writes to `packages/api/data` at build time | not present |
+| `/app/apps/web/.output` | not present | the Nitro build: `public/` holds the browser assets, `server/` the bundled server with `react` and `react-dom` in `server/node_modules` |
+
+The server bundle reads the merchant data from `../../data` relative to `dist/`, which is `/app/apps/data`.
 
 ## Tags
 

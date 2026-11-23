@@ -18,16 +18,17 @@ ENV NODE_ENV=production
 RUN cd apps/web && bun run build
 ENV DATABASE_URL=
 
+# The Nitro output runs on its own: it bundles the workspace packages and the
+# dependencies, and traces react and react-dom into .output/server/node_modules.
+# The image carries that output and nothing else from the build.
 FROM oven/bun:1.4.5 AS runner
-WORKDIR /app
+WORKDIR /app/apps/web
 ENV NODE_ENV=production
-COPY --from=builder /app /app
+COPY --from=builder /app/apps/web/.output .output
 USER bun
 
 ENV HOST=0.0.0.0
 ENV PORT=3001
 EXPOSE 3001
 
-# SSR chunks require workspace dependencies at runtime
-WORKDIR /app/apps/web
 CMD ["bun", ".output/server/index.mjs"]
