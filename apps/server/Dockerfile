@@ -5,8 +5,12 @@ ENV SKIP_ENV_VALIDATION=1
 # prisma generate resolves DATABASE_URL at install time; the real value comes from compose at runtime
 ENV DATABASE_URL=postgresql://build:build@localhost:5432/build
 
+# Manifests and the Prisma schema first: the install layer stays cached until a
+# dependency changes, and the db postinstall (prisma generate) finds its schema.
+COPY --parents package.json bun.lock apps/*/package.json packages/*/package.json \
+    packages/db/prisma.config.ts packages/db/prisma/schema ./
+RUN --mount=type=cache,target=/root/.bun/install/cache bun install --frozen-lockfile
 COPY . .
-RUN --mount=type=cache,target=/root/.bun/install/cache bun install
 
 ENV NODE_ENV=production
 # The merchant data comes from the newest `data-*` GitHub release of this
@@ -28,6 +32,7 @@ ENV NODE_ENV=production
 ARG FREENARY_VERSION=""
 ENV FREENARY_BUILD_VERSION=$FREENARY_VERSION
 COPY --from=builder /app /app
+USER bun
 
 EXPOSE 3000
 

@@ -12,7 +12,7 @@ Freenary publishes two container images to the GitHub Container Registry. The `I
 | `ghcr.io/suiramdev/freenary-server` | `apps/server/Dockerfile` | `3000` | `bun dist/index.mjs` in `/app/apps/server` |
 | `ghcr.io/suiramdev/freenary-web` | `apps/web/Dockerfile` | `3001` | `bun .output/server/index.mjs` in `/app/apps/web` |
 
-The image name is `ghcr.io/<repository, lower case>-<app>`, so a fork that runs the workflow publishes under its own name. Both images use the base image `oven/bun:1.4.2`. The server image also runs the database migrations: the `migrate` service of `docker-compose.yml` runs `bun x prisma migrate deploy` in `/app/packages/db` of the server image.
+The image name is `ghcr.io/<repository, lower case>-<app>`, so a fork that runs the workflow publishes under its own name. Both images use the base image `oven/bun:1.4.2`, install the dependencies from `bun.lock` with `--frozen-lockfile`, and run as the non-root user `bun`. The server image also runs the database migrations: the `migrate` service of `docker-compose.yml` runs `bun x prisma migrate deploy` in `/app/packages/db` of the server image.
 
 ## Tags
 
