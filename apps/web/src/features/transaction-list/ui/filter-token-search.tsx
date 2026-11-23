@@ -228,6 +228,11 @@ const SuggestionPopup = ({
 
 export const FilterTokenSearch = (options: FilterTokenSearchOptions) => {
   const { accounts, currency, filters } = options;
+  const emptyPlaceholder =
+    accounts.length > 0
+      ? m.budget_filter_search_placeholder_empty
+      : m.budget_filter_search_placeholder_empty_one_account;
+
   const locale = getLocale();
   const listId = useId();
   const pendingId = useId();
@@ -321,7 +326,7 @@ export const FilterTokenSearch = (options: FilterTokenSearchOptions) => {
           onKeyDown={handleKeyDown}
           placeholder={
             isEmpty
-              ? m.budget_filter_search_placeholder_empty()
+              ? emptyPlaceholder()
               : m.budget_filter_search_placeholder_more()
           }
           ref={inputRef}

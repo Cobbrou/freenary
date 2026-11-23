@@ -483,6 +483,7 @@
   "budget_filter_remove": "Remove {label} filter",
   "budget_filter_search_label": "Search and filter transactions",
   "budget_filter_search_placeholder_empty": "Search transactions, or filter by category, account or amount",
+  "budget_filter_search_placeholder_empty_one_account": "Search transactions, or filter by category or amount",
   "budget_filter_search_placeholder_more": "Add a filter or text…",
   "budget_filter_token_remove": "Remove filter: {filter}",
   "budget_filter_token_sentence": "{field} {operator} {value}",

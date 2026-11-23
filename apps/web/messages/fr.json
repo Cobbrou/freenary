@@ -492,6 +492,7 @@
   "budget_filter_remove": "Retirer le filtre {label}",
   "budget_filter_search_label": "Rechercher et filtrer les transactions",
   "budget_filter_search_placeholder_empty": "Rechercher des transactions, ou filtrer par catégorie, compte ou montant",
+  "budget_filter_search_placeholder_empty_one_account": "Rechercher des transactions, ou filtrer par catégorie ou montant",
   "budget_filter_search_placeholder_more": "Ajouter un filtre ou du texte…",
   "budget_filter_token_remove": "Retirer le filtre : {filter}",
   "budget_filter_token_sentence": "{field} {operator} {value}",
