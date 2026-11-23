@@ -42,6 +42,7 @@ Every script: [docs/reference/commands.md](docs/reference/commands.md).
 ## Rules that are easy to miss
 
 - Pull requests target `dev`.
+- To attach a screenshot to a pull request from the terminal, do not commit it or push a branch for it. `gh` cannot upload images; ask the user to drag the file into the PR description or a comment, or follow [Attaching files with GitHub CLI](https://docs.github.com/en/github-cli/github-cli/attaching-files-with-github-cli).
 - Never edit generated files by hand: `.env.example`, `docs/reference/configuration.md`, `docs/reference/api.md`, `docs/reference/openapi.json`, `docs/reference/commands.md`, `docs/reference/compose-files.md`, `apps/web/src/paraglide/`, `routeTree.gen.ts`.
 - A change to documented behaviour updates `docs/` in the same pull request. Keep pages to one Diátaxis type, and state only what the code shows.
 - Every user-facing string in `apps/web` is a key in both `apps/web/messages/en.json` and `fr.json`.

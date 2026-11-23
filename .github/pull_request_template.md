@@ -26,7 +26,7 @@ How have similar problems been solved elsewhere — what worked, what didn't?
 
 [evidence]: #evidence
 
-Optional, and strongly recommended for any change a user can see: screens, copy, layout or states. Add screenshots, a screen recording, or other proof such as a test run or a before and after. Drag the files into this box so GitHub hosts them, and link a long log in a comment. Use fake data only: no real keys, tokens or personal data, and no file paths from your machine. Delete this section if it does not apply.
+Optional, and strongly recommended for any change a user can see: screens, copy, layout or states. Add screenshots, a screen recording, or other proof such as a test run or a before and after. Drag the files into this box so GitHub hosts them (agents using `gh`: see [Attaching files with GitHub CLI](https://docs.github.com/en/github-cli/github-cli/attaching-files-with-github-cli); never push a branch just to host an image), and link a long log in a comment. Use fake data only: no real keys, tokens or personal data, and no file paths from your machine. Delete this section if it does not apply.
 
 # Notes
 
