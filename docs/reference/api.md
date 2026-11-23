@@ -76,6 +76,8 @@ The Access column comes from the middleware of each procedure in `packages/api/s
 
 | Procedure | HTTP route | Access | Input fields |
 | --- | --- | --- | --- |
+| `budget.getCategorySuggestionStatus` | `POST /api-reference/budget/getCategorySuggestionStatus` | Signed in | none |
+| `budget.suggestCategories` | `POST /api-reference/budget/suggestCategories` | Signed in | `currency` string; `direction` `"outgoing"` or `"incoming"`, required; `query` string, required |
 | `budget.deleteSavedFilter` | `POST /api-reference/budget/deleteSavedFilter` | Signed in | `id` string, required |
 | `budget.listSavedFilters` | `POST /api-reference/budget/listSavedFilters` | Signed in | none |
 | `budget.saveFilter` | `POST /api-reference/budget/saveFilter` | Signed in | `filters` array of object, required; `name` string, required; `search` string |

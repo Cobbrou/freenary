@@ -46,6 +46,10 @@ Corrections belong to one member. Clearing the category deletes the correction a
 
 The category a member sees is the one set by hand when there is one, then the one the pipeline wrote, then `uncategorised`.
 
+### Suggestions while picking a category
+
+The category picker in the transaction details filters the categories by the text typed into it. When the classifier is TypeSafe Jev, it also sends that text to Jev 300 milliseconds after the last keystroke, once at least two characters are typed, and lists up to three categories Jev ranks for it under **Matches with**. Jev receives the normalised text as merchant key and description, the direction and currency of the transaction, the `small` amount band, and no country, channel or merchant category code. A category under 0.05 probability is left out. These answers are not cached in `merchant_classification` and assign nothing on their own. A failed call shows no suggestions and logs a `[categorisation] suggestions` warning. With any other classifier, or none, the picker only filters.
+
 ## The merchant dictionary
 
 The dictionary is the file `packages/api/data/merchants.jsonl.gz`, shipped in the server image and built by `packages/api/scripts/build-merchant-dictionary.ts`. It maps merchant names and their aliases to categories. The server loads it into memory, keeping only merchants that operate worldwide or in the countries of the banks being categorised.

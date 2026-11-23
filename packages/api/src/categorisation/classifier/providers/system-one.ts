@@ -1,5 +1,6 @@
 import { Data, Effect, Match, Schema } from "effect";
 
+import type { SpendingCategory } from "../../../lib/taxonomy";
 import {
   ACCEPT_CONFIDENCE,
   concentration,
@@ -136,10 +137,8 @@ const readAnswers = Effect.fnUntraced(function* readAnswers(
   );
 });
 
-const readPrediction = Effect.fnUntraced(function* readPrediction(
-  settings: SystemOneSettings,
-  answered: SystemOneResponse,
-  direction: ClassificationInput["direction"]
+const categoryAnswerOf = Effect.fnUntraced(function* categoryAnswerOf(
+  answered: SystemOneResponse
 ) {
   const answer = answered.answers[CATEGORY_QUESTION_ID];
 
@@ -149,6 +148,32 @@ const readPrediction = Effect.fnUntraced(function* readPrediction(
     });
   }
 
+  return answer;
+});
+
+const runAnswered = <A>(
+  settings: SystemOneSettings,
+  transport: ClassifierTransport,
+  input: ClassificationInput,
+  read: (
+    answered: SystemOneResponse
+  ) => Effect.Effect<A, SystemOneClassificationFailed>
+): Promise<A> =>
+  Effect.runPromise(
+    readAnswers(settings, transport, input).pipe(
+      Effect.flatMap(read),
+      Effect.mapError(
+        (failure: SystemOneClassificationFailed) => new Error(failure.message)
+      )
+    )
+  );
+
+const readPrediction = Effect.fnUntraced(function* readPrediction(
+  settings: SystemOneSettings,
+  answered: SystemOneResponse,
+  direction: ClassificationInput["direction"]
+) {
+  const answer = yield* categoryAnswerOf(answered);
   const category = answer.choice;
 
   if (!isOfferedCategory(category, direction)) {
@@ -189,15 +214,48 @@ const classifyWith = (
   transport: ClassifierTransport,
   input: ClassificationInput
 ): Promise<ClassificationPrediction | null> =>
-  Effect.runPromise(
-    readAnswers(settings, transport, input).pipe(
-      Effect.flatMap((answered) =>
-        readPrediction(settings, answered, input.direction)
-      ),
-      Effect.mapError(
-        (failure: SystemOneClassificationFailed) => new Error(failure.message)
-      )
-    )
+  runAnswered(settings, transport, input, (answered) =>
+    readPrediction(settings, answered, input.direction)
+  );
+
+const SUGGESTION_FLOOR = 0.05;
+
+const rankSuggestions = Effect.fnUntraced(function* rankSuggestions(
+  answered: SystemOneResponse,
+  direction: ClassificationInput["direction"],
+  limit: number
+) {
+  const answer = yield* categoryAnswerOf(answered);
+  const scores = new Map<SpendingCategory, number>();
+  const candidates: [string, number][] = [
+    [answer.choice, answer.certainty ?? answer.confidence],
+    ...Object.entries(answer.probabilities ?? {}),
+  ];
+
+  for (const [category, score] of candidates) {
+    if (
+      isOfferedCategory(category, direction) &&
+      category !== "uncategorised" &&
+      score >= SUGGESTION_FLOOR
+    ) {
+      scores.set(category, Math.max(score, scores.get(category) ?? 0));
+    }
+  }
+
+  return [...scores.entries()]
+    .toSorted(([, left], [, right]) => right - left)
+    .slice(0, limit)
+    .map(([category]) => category);
+});
+
+export const suggestSystemOneCategories = (
+  settings: SystemOneSettings,
+  transport: ClassifierTransport,
+  input: ClassificationInput,
+  limit: number
+): Promise<SpendingCategory[]> =>
+  runAnswered(settings, transport, input, (answered) =>
+    rankSuggestions(answered, input.direction, limit)
   );
 
 export const createSystemOneClassifier = (
