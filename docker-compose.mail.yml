@@ -8,7 +8,7 @@ name: freenary
 
 services:
   mailpit:
-    image: axllent/mailpit:v1.28
+    image: axllent/mailpit:v1.34
     environment:
       MP_SMTP_AUTH_ACCEPT_ANY: 1
       MP_SMTP_AUTH_ALLOW_INSECURE: 1

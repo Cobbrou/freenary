@@ -210,7 +210,7 @@ An SMTP transport for the development stack, with no mail account and no console
 
 ### `mailpit`
 
-- Image: `axllent/mailpit:v1.28`
+- Image: `axllent/mailpit:v1.34`
 - Published ports: none
 - Exposed, not published: `1025`
 - Environment it sets: `MP_SMTP_AUTH_ACCEPT_ANY`, `MP_SMTP_AUTH_ALLOW_INSECURE`
