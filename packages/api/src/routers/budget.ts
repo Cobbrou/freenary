@@ -924,6 +924,34 @@ export const startAccountSync = async (
   return claimedAt;
 };
 
+const startRecategorisation = async (userId: string): Promise<Date | null> => {
+  const claimedAt = await claimSyncRun(userId, "CATEGORISING");
+
+  if (claimedAt === null) {
+    return null;
+  }
+
+  const reporter = createSyncReporter(userId, "CATEGORISING", claimedAt);
+
+  Effect.runFork(
+    categoriseAfterSync(userId, undefined, reporter, true).pipe(
+      Effect.tapCause(Effect.logError),
+      Effect.matchCauseEffect({
+        onFailure: () => Effect.promise(() => reporter.finished()),
+        onSuccess: ({ categorised, failure }) =>
+          Effect.promise(() =>
+            reporter.finishedWith({
+              categorised,
+              failures: failure ? [failure] : [],
+            })
+          ),
+      })
+    )
+  );
+
+  return claimedAt;
+};
+
 const sankeyOf = (
   transactions: PeriodRow[],
   { aggregation, from, rule, to }: BucketedPeriod
@@ -1570,25 +1598,9 @@ export const budgetRouter = {
       };
     }),
 
-  recategorise: protectedProcedure.handler(async ({ context }) => {
-    const userId = context.session.user.id;
-    const claimedAt = await claimSyncRun(userId, "CATEGORISING");
-
-    if (claimedAt === null) {
-      return { categorised: 0, started: false };
-    }
-
-    const reporter = createSyncReporter(userId, "CATEGORISING", claimedAt);
-    const categorised = await Effect.runPromise(
-      Effect.promise(async () => {
-        await clearResolutions({ userId });
-
-        return await categoriseUncategorised(userId, reporter, true);
-      }).pipe(Effect.ensuring(Effect.promise(() => reporter.finished())))
-    );
-
-    return { categorised, started: true };
-  }),
+  recategorise: protectedProcedure.handler(async ({ context }) => ({
+    startedAt: await startRecategorisation(context.session.user.id),
+  })),
 
   syncAccounts: protectedProcedure
     .input(

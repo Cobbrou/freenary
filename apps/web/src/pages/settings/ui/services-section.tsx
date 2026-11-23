@@ -79,7 +79,7 @@ export const ServicesSection = ({
     }
 
     return (
-      <ul aria-busy={isPending} className="flex flex-col">
+      <ul aria-busy={isPending} className="flex flex-col gap-2">
         {rows.map(({ integration, row }) => {
           const title = integrationTitle(row.id);
           const status =
@@ -90,7 +90,7 @@ export const ServicesSection = ({
           const action = status === null ? null : integrationRowAction(status);
 
           return (
-            <li className="border-border not-first:border-t" key={row.id}>
+            <li key={row.id}>
               <Item size="sm">
                 <ItemMedia className="text-muted-foreground" variant="icon">
                   <row.icon aria-hidden="true" />

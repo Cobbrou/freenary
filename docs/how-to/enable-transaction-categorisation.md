@@ -66,7 +66,7 @@ This page connects a classifier, a model that picks a category for a merchant th
 ## Check that it works
 
 1. In **Settings** › **Services**, the **Categorisation model** row reads **Configured ·** and the classifier name, or **Set by your server ·** and the name when the values come from `.env`.
-2. Open **Transactions** and select the sync button, labelled **Sync transactions**. The progress shows **Sorting transactions into categories**. This sync sorts again every transaction whose category you did not set yourself.
+2. Open **Settings** › **Categories** and, under **Re-categorise transactions**, select **Re-categorise all**. The progress shows **Sorting transactions into categories**. This sorts again every transaction whose category you did not set yourself, without asking your banks for new transactions.
 3. Check that transactions that were uncategorised now carry a category, and that the server log has no `[categorisation] classifier` warnings:
 
    ```bash

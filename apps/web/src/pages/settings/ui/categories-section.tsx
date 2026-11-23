@@ -43,6 +43,7 @@ import {
   ROW_ABOVE_HOVER_FILL,
 } from "./category-row";
 import { CustomCategoryDialog } from "./custom-category-dialog";
+import { RecategoriseSection } from "./recategorise-section";
 import { SETTINGS_BLEED, SettingsPane } from "./settings-section";
 
 type CategoryEditorState = EditedCustomCategory | "new" | null;
@@ -248,6 +249,8 @@ export const CategoriesSection = ({
         title={m.settings_tab_categories()}
       >
         {loadError}
+
+        <RecategoriseSection />
       </SettingsPane>
     );
   }
@@ -387,6 +390,8 @@ export const CategoriesSection = ({
           </div>
         </SizeProvider>
       ) : null}
+
+      <RecategoriseSection />
 
       <CustomCategoryDialog
         edited={categoryEditor === "new" ? null : categoryEditor}

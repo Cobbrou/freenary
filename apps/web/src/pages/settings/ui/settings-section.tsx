@@ -36,7 +36,7 @@ export const SettingsPane = ({
       aria-labelledby={headingId}
       className="flex min-w-0 flex-col gap-6"
     >
-      <div className={cn(HEADER_ROW, "border-b pb-4")}>
+      <div className={HEADER_ROW}>
         <div className={cn(HEADER_TEXT, "gap-1")}>
           <h2
             className="font-heading text-lg font-semibold tracking-tight text-balance"
@@ -54,7 +54,7 @@ export const SettingsPane = ({
       </div>
 
       {children ? (
-        <div className={cn("flex flex-col gap-6", SETTINGS_PROSE)}>
+        <div className={cn("flex flex-col gap-10", SETTINGS_PROSE)}>
           {children}
         </div>
       ) : null}
@@ -71,10 +71,7 @@ export const SettingsSection = ({
   const headingId = useId();
 
   return (
-    <section
-      aria-labelledby={headingId}
-      className="flex flex-col gap-3 border-t pt-6 first:border-t-0 first:pt-0"
-    >
+    <section aria-labelledby={headingId} className="flex flex-col gap-3">
       <div className={HEADER_ROW}>
         <div className={cn(HEADER_TEXT, "gap-0.5")}>
           <h3 className="text-sm font-semibold" id={headingId}>

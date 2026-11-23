@@ -15,9 +15,7 @@ const awaitSyncOutcome = (startedAt: Date) =>
     Effect.repeat({ until: (outcome) => outcome !== null })
   );
 
-export const syncAccountsToEnd = async (input: SyncAccountsInput) => {
-  const { startedAt } = await client.budget.syncAccounts(input);
-
+const runToEnd = async (startedAt: Date | null) => {
   if (startedAt === null) {
     return { categorised: 0, failures: [], started: false, success: true };
   }
@@ -29,4 +27,16 @@ export const syncAccountsToEnd = async (input: SyncAccountsInput) => {
   }
 
   return { ...outcome, started: true };
+};
+
+export const syncAccountsToEnd = async (input: SyncAccountsInput) => {
+  const { startedAt } = await client.budget.syncAccounts(input);
+
+  return runToEnd(startedAt);
+};
+
+export const recategoriseToEnd = async () => {
+  const { startedAt } = await client.budget.recategorise();
+
+  return runToEnd(startedAt);
 };

@@ -533,6 +533,8 @@
   "budget_planned_over": "{amount} de trop",
   "budget_planned_under": "{amount} restants",
   "budget_planned_unplanned": "Non prévu",
+  "budget_recategorise_confirm_description": "Chaque catégorie choisie par Freenary est remplacée par un nouveau choix, qui peut différer. Les catégories que vous avez choisies vous-même et les virements entre vos propres comptes restent inchangés.",
+  "budget_recategorise_confirm_title": "Recatégoriser toutes les transactions ?",
   "budget_recurrence_confidence_confirmed": "Confirmé",
   "budget_recurrence_confidence_likely": "Probable",
   "budget_recurrence_confidence_pattern": "Habitude",
@@ -1058,6 +1060,19 @@
   "onboarding_step_country": "Résidence fiscale",
   "query_error_generic": "Une erreur est survenue pendant le chargement. Réessayez.",
   "query_error_retry": "Réessayer",
+  "recategorise_error": "Impossible de recatégoriser vos transactions",
+  "recategorise_finished": "Recatégorisation terminée",
+  "recategorise_success": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} transaction recatégorisée",
+        "countPlural=other": "{count} transactions recatégorisées"
+      }
+    }
+  ],
+  "recategorise_sync_running": "Une synchronisation est déjà en cours. Réessayez quand elle sera terminée.",
   "settings_2fa_accounts_error": "Nous n’avons pas pu vérifier si ce compte a un mot de passe : l’authentification à deux facteurs est donc indisponible pour l’instant. Rechargez la page pour réessayer.",
   "settings_2fa_code_label": "Code de l’application",
   "settings_2fa_code_placeholder": "123456",
@@ -1395,6 +1410,9 @@
   "settings_passkeys_title": "Clés d’accès",
   "settings_passkeys_unavailable": "Ce navigateur ne peut pas créer de clé d’accès ici. Il faut un navigateur récent et une connexion sécurisée (HTTPS).",
   "settings_passkeys_unnamed": "Clé d’accès sans nom",
+  "settings_recategorise_action": "Tout recatégoriser",
+  "settings_recategorise_description": "Classer à nouveau chaque transaction dans une catégorie. Les catégories que vous avez choisies vous-même et les virements entre vos propres comptes restent inchangés.",
+  "settings_recategorise_title": "Recatégoriser les transactions",
   "settings_retry": "Réessayer",
   "settings_save": "Enregistrer",
   "settings_save_changes": "Enregistrer les modifications",

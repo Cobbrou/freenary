@@ -8,6 +8,8 @@ import { LoadError } from "@/shared/ui/load-error";
 import { NoBankAccount } from "@/shared/ui/no-bank-account";
 import { SyncButton } from "@/shared/ui/sync-button";
 
+import { RecategoriseButton } from "./recategorise-button";
+
 export const BudgetArea = () => {
   const accountsQuery = useQuery(orpc.budget.getAccounts.queryOptions());
   const { isSyncing, sync } = useSyncAccounts();
@@ -42,7 +44,8 @@ export const BudgetArea = () => {
 
   return (
     <div className="@container/budget flex flex-1 flex-col gap-4 p-4">
-      <div className="flex items-center justify-end">
+      <div className="flex items-center justify-end gap-1">
+        <RecategoriseButton isSyncing={isSyncing} />
         <SyncButton
           isSyncing={isSyncing}
           label={m.budget_sync_now()}

@@ -6,7 +6,11 @@ export {
   budgetMonthQueryOptions,
   useBudgetMonthRule,
 } from "./api/budget-month-query";
-export { SYNC_POLL_INTERVAL_MS, syncAccountsToEnd } from "./api/sync-accounts";
+export {
+  recategoriseToEnd,
+  SYNC_POLL_INTERVAL_MS,
+  syncAccountsToEnd,
+} from "./api/sync-accounts";
 export { formatBudgetMonthSpan } from "./model/budget-month-label";
 export { type Transaction, transactionTitle } from "./model/transaction";
 export { BudgetMonthField } from "./ui/budget-month-field";

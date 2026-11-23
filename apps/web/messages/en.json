@@ -524,6 +524,8 @@
   "budget_planned_over": "{amount} over",
   "budget_planned_under": "{amount} left",
   "budget_planned_unplanned": "Unplanned",
+  "budget_recategorise_confirm_description": "Every category Freenary picked is replaced by a new pick, which can differ. Categories you picked yourself and transfers between your own accounts stay as they are.",
+  "budget_recategorise_confirm_title": "Re-categorise all transactions?",
   "budget_recurrence_confidence_confirmed": "Confirmed",
   "budget_recurrence_confidence_likely": "Likely",
   "budget_recurrence_confidence_pattern": "Pattern",
@@ -1049,6 +1051,19 @@
   "onboarding_step_country": "Tax residency",
   "query_error_generic": "Something went wrong while loading. Try again.",
   "query_error_retry": "Retry",
+  "recategorise_error": "Couldn’t re-categorise your transactions",
+  "recategorise_finished": "Re-categorisation finished",
+  "recategorise_success": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} transaction re-categorised",
+        "countPlural=other": "{count} transactions re-categorised"
+      }
+    }
+  ],
+  "recategorise_sync_running": "A sync is already in progress. Try again once it finishes.",
   "settings_2fa_accounts_error": "We could not check whether this account has a password, so two-factor authentication is unavailable for now. Reload to try again.",
   "settings_2fa_code_label": "Authenticator code",
   "settings_2fa_code_placeholder": "123456",
@@ -1386,6 +1401,9 @@
   "settings_passkeys_title": "Passkeys",
   "settings_passkeys_unavailable": "This browser cannot create passkeys here. They need a recent browser on a secure (HTTPS) connection.",
   "settings_passkeys_unnamed": "Unnamed passkey",
+  "settings_recategorise_action": "Re-categorise all",
+  "settings_recategorise_description": "Sort every transaction into categories again. Categories you picked yourself and transfers between your own accounts stay as they are.",
+  "settings_recategorise_title": "Re-categorise transactions",
   "settings_retry": "Try again",
   "settings_save": "Save",
   "settings_save_changes": "Save changes",

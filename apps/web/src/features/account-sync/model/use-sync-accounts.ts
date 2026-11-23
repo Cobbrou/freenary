@@ -74,8 +74,15 @@ export const useSyncAccounts = () => {
     },
   });
 
-  const isRequestInFlight =
-    useIsMutating({ mutationKey: orpc.budget.syncAccounts.mutationKey() }) > 0;
+  const syncRequests = useIsMutating({
+    mutationKey: orpc.budget.syncAccounts.mutationKey(),
+  });
+
+  const recategoriseRequests = useIsMutating({
+    mutationKey: orpc.budget.recategorise.mutationKey(),
+  });
+
+  const isRequestInFlight = syncRequests + recategoriseRequests > 0;
 
   const { data: progress } = useQuery({
     ...orpc.budget.getSyncStatus.queryOptions(),

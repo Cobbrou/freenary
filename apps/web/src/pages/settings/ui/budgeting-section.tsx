@@ -1,6 +1,5 @@
 import type { CategoryEntry } from "@freenary/api/lib/categories";
 import { Button } from "@freenary/ui/components/button";
-import { Separator } from "@freenary/ui/components/separator";
 import { Skeleton } from "@freenary/ui/components/skeleton";
 import { useIcon } from "@freenary/ui/lib/icon-context";
 import { useSize } from "@freenary/ui/lib/size-context";
@@ -73,16 +72,12 @@ export const BudgetingSection = ({
     >
       <BudgetMonthSection />
 
-      <Separator />
-
       <BudgetProfilePreview
         categories={categories}
         currency={currency}
         isPending={isPending}
         lines={lines}
       />
-
-      <Separator />
 
       {isPending || currency === undefined ? (
         <div aria-busy="true">

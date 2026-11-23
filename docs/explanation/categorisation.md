@@ -15,6 +15,8 @@ Categorisation runs after each sync of a member's banks, in three phases:
 
 The sync button on **Transactions**, labelled **Sync transactions**, first clears every category the pipeline wrote for that member, except internal transfers and categories set by hand, so the whole history goes through the steps again. A later sync also clears the result of a transaction whose merchant key changed.
 
+**Re-categorise all**, under **Re-categorise transactions** in **Settings** › **Categories**, does the same without asking the banks for new transactions. It runs in the background and shows the same progress, **Sorting transactions into categories**. It does not start while a sync is running, and a sync does not start while it runs.
+
 ## Internal transfers come first
 
 A member with at least two accounts can move money between them. Freenary pairs an outgoing and an incoming transaction when they have the same amount, the same currency, sit on two different accounts, and are booked at most 24 hours apart. Both legs are marked as an internal transfer and skip categorisation. Transactions the member categorised by hand are never paired, and neither are the transactions of a loan account.
@@ -80,7 +82,7 @@ Freenary drops an answer below 0.5 confidence, which counts as an abstention: th
 
 Each answer and each abstention is cached in the `merchant_classification` table, shared by the whole instance. The cache key covers the classifier protocol, the model, the version of the category list, the merchant key or description, the country, the direction and the merchant category code. So changing `TRANSACTION_CLASSIFIER_MODEL` asks every merchant again. A cached answer gives the stage `cached-model`. A cached abstention stops Freenary from asking about that merchant again for 30 days.
 
-A call that fails, runs past the time limit, or answers outside the contract leaves the transaction uncategorised, logs a `[categorisation] classifier` warning, and is not cached. The time limit is `TRANSACTION_CLASSIFIER_TIMEOUT_MS` plus a five-second margin. The server remembers the failure in memory and does not ask about that merchant again for one hour, unless the member asks: **Sync transactions**, connecting a bank and the `budget.recategorise` procedure ask again at once. A restart forgets the failures.
+A call that fails, runs past the time limit, or answers outside the contract leaves the transaction uncategorised, logs a `[categorisation] classifier` warning, and is not cached. The time limit is `TRANSACTION_CLASSIFIER_TIMEOUT_MS` plus a five-second margin. The server remembers the failure in memory and does not ask about that merchant again for one hour, unless the member asks: **Sync transactions**, **Re-categorise all**, connecting a bank and the `budget.recategorise` procedure ask again at once. A restart forgets the failures.
 
 One categorisation asks at most 200 questions and stops asking after 5 failures in a row. It logs `[categorisation] classifier phase skipped` with the number of questions it left out, and the next categorisation asks them.
 
