@@ -1,6 +1,6 @@
 import type { BrandAvatarState } from "@freenary/ui/lib/brand-avatar/states";
 
-const BANK_STEP = 1;
+import { ONBOARDING_STEPS } from "./steps";
 
 export interface OnboardingAvatarInput {
   connectedCount: number;
@@ -17,5 +17,7 @@ export const onboardingAvatarState = ({
     return "loading";
   }
 
-  return step === BANK_STEP && connectedCount > 0 ? "success" : "idle";
+  return step === ONBOARDING_STEPS.bank && connectedCount > 0
+    ? "success"
+    : "idle";
 };

@@ -1,9 +1,11 @@
+import { budgetMonthSettingInput } from "@freenary/api/lib/budget-month";
 import { Option } from "effect";
 import { z } from "zod";
 
 import { isServer } from "@/shared/lib/is-server";
 
 const onboardingStateSchema = z.object({
+  budgetMonth: budgetMonthSettingInput.optional(),
   taxCountries: z.array(z.string()).min(1),
 });
 

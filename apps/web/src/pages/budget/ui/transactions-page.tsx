@@ -30,6 +30,7 @@ import {
 } from "../model/filter-tokens";
 import type { SortMode, TransactionDirection } from "../model/search";
 import { useBudgetCurrency } from "../model/use-budget-currency";
+import { useBudgetMonthRule } from "../model/use-budget-month-rule";
 import { useBudgetView } from "../model/use-budget-view";
 import { useSyncProgress } from "../model/use-sync-progress";
 import { BudgetCharts } from "./budget-charts";
@@ -52,6 +53,7 @@ const overviewSections = (overview: PeriodOverview | undefined) => ({
 export const TransactionsPage = () => {
   const accountsQuery = useQuery(orpc.budget.getAccounts.queryOptions());
   const currency = useBudgetCurrency();
+  const rule = useBudgetMonthRule();
   const {
     applyPatch,
     companion,
@@ -69,10 +71,12 @@ export const TransactionsPage = () => {
           last: accountsQuery.data.lastTransactionDate,
         }
       : undefined,
+    rule,
   });
 
   const {
     aggregation,
+    anchor,
     firstMonth,
     from,
     lastMonth,
@@ -160,15 +164,12 @@ export const TransactionsPage = () => {
   const months = useMemo(
     () =>
       recentMonths({
-        current:
-          range === "1M"
-            ? { month: from.getUTCMonth(), year: from.getUTCFullYear() }
-            : null,
+        current: range === "1M" ? anchor : null,
         first: firstMonth,
         last: lastMonth ?? new Date(),
         locale: getLocale(),
       }),
-    [firstMonth, from, lastMonth, range]
+    [anchor, firstMonth, lastMonth, range]
   );
 
   const handleMonthPick = useCallback(
@@ -223,8 +224,11 @@ export const TransactionsPage = () => {
 
       <PeriodNavigator
         aggregation={aggregation}
+        anchor={anchor}
+        from={from}
         to={to}
         range={range}
+        rule={rule}
         firstMonth={firstMonth}
         lastMonth={lastMonth}
         onAggregationChange={handleAggregationChange}

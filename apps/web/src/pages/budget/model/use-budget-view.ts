@@ -1,3 +1,4 @@
+import type { BudgetMonthRule } from "@freenary/api/lib/budget-month";
 import { getRouteApi } from "@tanstack/react-router";
 import { useCallback, useMemo } from "react";
 
@@ -14,11 +15,12 @@ import type { BudgetPeriodPatch } from "./use-budget-period";
 
 interface BudgetViewOptions {
   dateBounds?: { first: Date | null; last: Date | null };
+  rule: BudgetMonthRule;
 }
 
 const route = getRouteApi("/_auth/budget/transactions");
 
-export const useBudgetView = ({ dateBounds }: BudgetViewOptions) => {
+export const useBudgetView = ({ dateBounds, rule }: BudgetViewOptions) => {
   const search = route.useSearch();
   const navigate = route.useNavigate();
 
@@ -50,6 +52,7 @@ export const useBudgetView = ({ dateBounds }: BudgetViewOptions) => {
     month: search.month,
     onChange: handlePeriodChange,
     range: search.range,
+    rule,
     year: search.year,
   });
 

@@ -14,6 +14,7 @@ import { m } from "@/paraglide/messages.js";
 import { categoryParentOptions } from "../model/category-parent-options";
 import type { EditorLine } from "../model/use-budget-profile-editor";
 import { BudgetLineRow } from "./budget-line-row";
+import { BudgetMonthSection } from "./budget-month-section";
 import { BudgetProfilePreview } from "./budget-profile-preview";
 import { CustomCategoryDialog } from "./custom-category-dialog";
 import { SettingsPane } from "./settings-section";
@@ -70,6 +71,10 @@ export const BudgetingSection = ({
       description={m.settings_budgeting_description()}
       title={m.settings_tab_budget()}
     >
+      <BudgetMonthSection />
+
+      <Separator />
+
       <BudgetProfilePreview
         categories={categories}
         currency={currency}

@@ -86,30 +86,31 @@ The page shows **Applying your settings…** and **This page reconnects on its o
 
 Every member, including you, now sets up their own account.
 
-1. **What’s your tax residency?** Add your country, for example **France**, then select **Continue**. This choice does not filter the bank list: the next step lists every bank your bank provider makes available.
+1. **What’s your tax residency?** Add your country, for example **France**, then select **Continue**. This choice does not filter the bank list: the bank step lists every bank your bank provider makes available.
 
    ![The onboarding step What’s your tax residency? with an Add a country… field](../images/09-onboarding-tax-residency.png)
 
-2. **Connect your bank.** Find **Connecteur de test** in the list, or type it in **Search banks…**, then select **Connect** next to it.
-3. The browser opens the Powens connection page, which names your Powens application. Select **Accept**.
+2. **When does your month start?** Keep **Last working day** if your salary arrives on the last working day of the month; **Public holidays of** follows your tax residency. Otherwise pick **Last day**, or **Day of the month** and enter a day from 1 to 28. The line under the choice shows the dates of the current budget month. Select **Continue**. You can change it later in **Settings** › **Budget**; [How budget months work](../explanation/budget-months.md) explains what it changes.
+3. **Connect your bank.** Find **Connecteur de test** in the list, or type it in **Search banks…**, then select **Connect** next to it.
+4. The browser opens the Powens connection page, which names your Powens application. Select **Accept**.
 
    ![The Powens page saying that your application partners with Powens to connect your accounts, with an Accept button](../images/13-powens-webview-consent.png)
 
-4. On **Please select your space**, select **Particuliers**. On the next page, select **Open**.
-5. The test bank's sign-in page opens. It says **Enter any credentials, it's a fake bank anyway**. Enter any **Username or email** and **Password**, for example `demo` and `1234`, and select **Log in**.
+5. On **Please select your space**, select **Particuliers**. On the next page, select **Open**.
+6. The test bank's sign-in page opens. It says **Enter any credentials, it's a fake bank anyway**. Enter any **Username or email** and **Password**, for example `demo` and `1234`, and select **Log in**.
 
    ![The Powens test bank sign-in page, Demo Bank, with Username or email and Password fields](../images/14-powens-demo-bank-login.png)
 
-6. On **Enter the code received on your fake phone**, enter any code, for example `123456`, and select **Next**. Then select **Allow**.
-7. On **Select the accounts to use**, keep **Select all** checked and select **Connect**. On **You're almost done**, select **Finish**.
+7. On **Enter the code received on your fake phone**, enter any code, for example `123456`, and select **Next**. Then select **Allow**.
+8. On **Select the accounts to use**, keep **Select all** checked and select **Connect**. On **You're almost done**, select **Finish**.
 
    ![The Powens page Select the accounts to use, with three test accounts checked and a Connect button](../images/15-powens-select-accounts.png)
 
-8. Powens sends you back to Freenary. A notice says **Connected 3 accounts**, and **Connecteur de test** now reads **3 accounts · Not synced yet**.
+9. Powens sends you back to Freenary. A notice says **Connected 3 accounts**, and **Connecteur de test** now reads **3 accounts · Not synced yet**.
 
    ![Connect your bank in Freenary: Connecteur de test with 3 accounts, the Finish (1) button and the notice Connected 3 accounts](../images/16-onboarding-bank-connected.png)
 
-9. Select **Finish (1)**. The number counts your connected banks.
+10. Select **Finish (1)**. The number counts your connected banks.
 
 ## 7. Check that it works
 

@@ -85,7 +85,7 @@ const BudgetRow = ({
 };
 
 export const BudgetsWidget = ({ title, today }: BudgetsWidgetProps) => {
-  const query = useMonthBudget(today);
+  const { query, rule } = useMonthBudget(today);
   const budget = query.data;
   const lines = budget ? plannedLines(budget.categories) : [];
 
@@ -93,7 +93,9 @@ export const BudgetsWidget = ({ title, today }: BudgetsWidgetProps) => {
     <WidgetCard
       action={
         <WidgetHint>
-          {m.widget_budget_days_left({ count: daysLeftInMonth(today) })}
+          {m.widget_budget_days_left({
+            count: daysLeftInMonth(today, rule),
+          })}
         </WidgetHint>
       }
       headingLevel="h3"

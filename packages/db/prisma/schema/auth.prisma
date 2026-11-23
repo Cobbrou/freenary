@@ -1,33 +1,42 @@
 model User {
-  id                    String             @id
-  name                  String
-  email                 String
-  emailVerified         Boolean            @default(false)
-  twoFactorEnabled      Boolean            @default(false)
-  image                 String?
+  id                        String             @id
+  name                      String
+  email                     String
+  emailVerified             Boolean            @default(false)
+  twoFactorEnabled          Boolean            @default(false)
+  image                     String?
   /// Tax jurisdictions the user answered onboarding with, ISO 3166-1 alpha-2.
   /// A person can be resident in several, and the bank picker lists the
   /// institutions of every one of them.
-  taxCountries          String[]
-  onboardingCompletedAt DateTime?
-  role                  UserRole           @default(MEMBER)
-  createdAt             DateTime           @default(now())
-  updatedAt             DateTime           @updatedAt
-  sessions              Session[]
-  accounts              Account[]
-  twoFactors            TwoFactor[]
-  passkeys              Passkey[]
-  apiKeys               Apikey[]
-  bankConnections       BankConnection[]
-  bankProviderUsers     BankProviderUser[]
-  merchantOverrides     MerchantOverride[]
-  budgetLines           BudgetLine[]
-  customCategories      CustomCategory[]
-  conversations         Conversation[]
-  dashboards            Dashboard[]
-  syncRun               SyncRun?
-  savedFilters          SavedFilter[]
-  notifications         Notification[]
+  taxCountries              String[]
+  /// How the user's budget month starts: on a day of the month, on the last
+  /// day, or on the last working day, so income paid at the end of a month
+  /// counts in the month it funds.
+  budgetMonthAnchor         BudgetMonthAnchor  @default(LAST_WORKING_DAY)
+  /// Day of the month, 1 to 28, used when budgetMonthAnchor is DAY_OF_MONTH.
+  budgetMonthStartDay       Int                @default(1)
+  /// ISO 3166-1 alpha-2 country whose public holidays the last working day
+  /// skips. Null follows the first tax country.
+  budgetMonthHolidayCountry String?
+  onboardingCompletedAt     DateTime?
+  role                      UserRole           @default(MEMBER)
+  createdAt                 DateTime           @default(now())
+  updatedAt                 DateTime           @updatedAt
+  sessions                  Session[]
+  accounts                  Account[]
+  twoFactors                TwoFactor[]
+  passkeys                  Passkey[]
+  apiKeys                   Apikey[]
+  bankConnections           BankConnection[]
+  bankProviderUsers         BankProviderUser[]
+  merchantOverrides         MerchantOverride[]
+  budgetLines               BudgetLine[]
+  customCategories          CustomCategory[]
+  conversations             Conversation[]
+  dashboards                Dashboard[]
+  syncRun                   SyncRun?
+  savedFilters              SavedFilter[]
+  notifications             Notification[]
 
   @@unique([email])
   @@map("user")
@@ -166,4 +175,11 @@ model Apikey {
   @@index([referenceId])
   @@index([key])
   @@map("apikey")
+}
+
+/// How a budget month starts; see packages/api/src/lib/budget-month.ts.
+enum BudgetMonthAnchor {
+  DAY_OF_MONTH
+  LAST_DAY
+  LAST_WORKING_DAY
 }

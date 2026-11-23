@@ -29,7 +29,7 @@ Effect is a dependency of the root, `packages/api`, `packages/auth`, `packages/e
   - `oxslop/no-reexport-only-modules` with `allowFiles: ["index.ts"]`.
 - Loads the JavaScript plugin `@shadcn/lint`, with `^@/shared/ui(/|$)` as the component import pattern.
 - Ignores `packages/ui/**`, `apps/web/src/paraglide/**` and the agent folders (`.claude`, `.cursor`, `.agents` and others).
-- In `apps/web/**`, `no-restricted-imports` refuses `@freenary/api` imports except `import type` and these modules: `assistant/prompt`, `assistant/tools`, `assistant/turn`, `assistant/ui`, `dashboards/widgets`, `lib/aggregation`, `lib/budget-profile`, `lib/categories`, `lib/money`, `lib/taxonomy`, `lib/transaction-filters`. The message is: "The web runs this code in the browser: import only the isomorphic @freenary/api modules, or `import type` anything else."
+- In `apps/web/**`, `no-restricted-imports` refuses `@freenary/api` imports except `import type` and these modules: `assistant/prompt`, `assistant/tools`, `assistant/turn`, `assistant/ui`, `dashboards/widgets`, `lib/aggregation`, `lib/budget-month`, `lib/budget-profile`, `lib/categories`, `lib/money`, `lib/public-holidays`, `lib/taxonomy`, `lib/transaction-filters`. The message is: "The web runs this code in the browser: import only the isomorphic @freenary/api modules, or `import type` anything else."
 - In `**/*.test.ts` and `**/*.test.tsx`, `oxslop/require-safety-comment-for-type-assertion` is off.
 
 `apps/fumadocs/.oxlintrc.json` is a separate config. It extends `oxslop/presets/all.json` with the same two rule options.

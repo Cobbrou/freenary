@@ -26,6 +26,7 @@ const OnboardingContent = () => {
     <OnboardingWizard
       bankLinking={bankLinking}
       banks={banksQuery.data?.banks ?? []}
+      budgetMonth={wizard.budgetMonth}
       connectedCount={connectionsQuery.data?.connections.length ?? 0}
       direction={wizard.direction}
       isBanksError={banksQuery.isError}
@@ -33,6 +34,8 @@ const OnboardingContent = () => {
       isCompleting={wizard.isCompleting}
       isPending={bankLinking === "pending"}
       onBack={wizard.handleBack}
+      onBudgetMonthChange={wizard.handleBudgetMonthChange}
+      onBudgetMonthContinue={wizard.handleBudgetMonthContinue}
       onCountriesChange={wizard.handleCountriesChange}
       onCountryContinue={wizard.handleCountryContinue}
       onFinish={wizard.handleFinish}

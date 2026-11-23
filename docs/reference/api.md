@@ -138,7 +138,7 @@ The Access column comes from the middleware of each procedure in `packages/api/s
 
 | Procedure | HTTP route | Access | Input fields |
 | --- | --- | --- | --- |
-| `onboarding.completeOnboarding` | `POST /api-reference/onboarding/completeOnboarding` | Signed in | `taxCountries` array of string, required |
+| `onboarding.completeOnboarding` | `POST /api-reference/onboarding/completeOnboarding` | Signed in | `budgetMonth` object; `taxCountries` array of string, required |
 | `onboarding.getStatus` | `POST /api-reference/onboarding/getStatus` | Signed in | none |
 
 ## portfolio
@@ -154,9 +154,11 @@ The Access column comes from the middleware of each procedure in `packages/api/s
 | --- | --- | --- | --- |
 | `settings.createCustomCategory` | `POST /api-reference/settings/createCustomCategory` | Signed in | `color` one of 7 values, required; `icon` one of 28 values, required; `label` string, required; `parentKey` string or null, required |
 | `settings.deleteCustomCategory` | `POST /api-reference/settings/deleteCustomCategory` | Signed in | `id` string, required |
+| `settings.getBudgetMonth` | `POST /api-reference/settings/getBudgetMonth` | Signed in | none |
 | `settings.getBudgetProfile` | `POST /api-reference/settings/getBudgetProfile` | Signed in | none |
 | `settings.listCategories` | `POST /api-reference/settings/listCategories` | Signed in | none |
 | `settings.moveCustomCategory` | `POST /api-reference/settings/moveCustomCategory` | Signed in | `direction` `"down"` or `"up"`, required; `id` string, required |
+| `settings.saveBudgetMonth` | `POST /api-reference/settings/saveBudgetMonth` | Signed in | `anchor` `"DAY_OF_MONTH"` or `"LAST_DAY"` or `"LAST_WORKING_DAY"`, required; `country` string or null, required; `startDay` integer, required |
 | `settings.saveBudgetProfile` | `POST /api-reference/settings/saveBudgetProfile` | Signed in | `lines` array of object, required |
 | `settings.updateCustomCategory` | `POST /api-reference/settings/updateCustomCategory` | Signed in | `color` one of 7 values, required; `icon` one of 28 values, required; `label` string, required; `parentKey` string or null, required; `id` string, required |
 

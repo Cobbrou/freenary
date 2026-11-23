@@ -1,5 +1,7 @@
 import { describe, expect, it } from "bun:test";
 
+import type { BudgetMonthRule } from "@freenary/api/lib/budget-month";
+
 import type { RecurringData, RecurringItem } from "@/entities/recurring";
 
 import {
@@ -12,6 +14,10 @@ import {
   topCategories,
   unsortedSpendMinor,
 } from "./finance";
+
+const CALENDAR_MONTH: BudgetMonthRule = { anchor: "DAY_OF_MONTH", startDay: 1 };
+
+const PAYDAY: BudgetMonthRule = { anchor: "DAY_OF_MONTH", startDay: 28 };
 
 const item = (overrides: Partial<RecurringItem> = {}): RecurringItem => ({
   amountSpread: 0,
@@ -45,12 +51,27 @@ const recurringData = (
 
 describe("dashboardMonths", () => {
   it("spans whole UTC months, the way the budget page asks for them", () => {
-    const { current, previous } = dashboardMonths(new Date(2026, 0, 15));
+    const { current, previous } = dashboardMonths(
+      new Date(2026, 0, 15),
+      CALENDAR_MONTH
+    );
 
     expect(current.from.toISOString()).toBe("2026-01-01T00:00:00.000Z");
     expect(current.to.toISOString()).toBe("2026-01-31T23:59:59.999Z");
     expect(previous.from.toISOString()).toBe("2025-12-01T00:00:00.000Z");
     expect(previous.to.toISOString()).toBe("2025-12-31T23:59:59.999Z");
+  });
+
+  it("starts the current month on the payday once it has passed", () => {
+    const { current, previous } = dashboardMonths(
+      new Date(2026, 0, 29),
+      PAYDAY
+    );
+
+    expect(current.from.toISOString()).toBe("2026-01-28T00:00:00.000Z");
+    expect(current.to.toISOString()).toBe("2026-02-27T23:59:59.999Z");
+    expect(previous.from.toISOString()).toBe("2025-12-28T00:00:00.000Z");
+    expect(previous.to.toISOString()).toBe("2026-01-27T23:59:59.999Z");
   });
 });
 
@@ -65,7 +86,8 @@ describe("spendingPace", () => {
         { label: "2026-04-02", outgoing: 2000 },
         { label: "2026-04-28", outgoing: 9000 },
       ],
-      new Date(2026, 4, 3)
+      new Date(2026, 4, 3),
+      CALENDAR_MONTH
     );
 
     expect(pace.points).toEqual([
@@ -84,11 +106,28 @@ describe("spendingPace", () => {
     const pace = spendingPace(
       [],
       [{ label: "2026-02-28", outgoing: 700 }],
-      new Date(2026, 2, 31)
+      new Date(2026, 2, 31),
+      CALENDAR_MONTH
     );
 
     expect(pace.previousToDateMinor).toBe(700);
     expect(pace.points).toHaveLength(31);
+  });
+
+  it("counts the days from the start of the budget month", () => {
+    const pace = spendingPace(
+      [
+        { label: "2026-04-28", outgoing: 1000 },
+        { label: "2026-05-01", outgoing: 500 },
+      ],
+      [{ label: "2026-03-30", outgoing: 2000 }],
+      new Date(2026, 4, 1),
+      PAYDAY
+    );
+
+    expect(pace.points).toHaveLength(4);
+    expect(pace.currentToDateMinor).toBe(1500);
+    expect(pace.previousToDateMinor).toBe(2000);
   });
 });
 
@@ -112,7 +151,8 @@ describe("availableToSpend", () => {
           }),
         ],
       }),
-      today
+      today,
+      CALENDAR_MONTH
     );
 
     expect(available).toEqual({
@@ -127,7 +167,8 @@ describe("availableToSpend", () => {
   it("leaves out a commitment in another currency", () => {
     const available = availableToSpend(
       recurringData({ items: [item({ currency: "USD" })] }),
-      today
+      today,
+      CALENDAR_MONTH
     );
 
     expect(available?.billsMinor).toBe(0);
@@ -135,7 +176,11 @@ describe("availableToSpend", () => {
 
   it("has nothing to say without a current-account balance", () => {
     expect(
-      availableToSpend(recurringData({ availableBalanceMinor: null }), today)
+      availableToSpend(
+        recurringData({ availableBalanceMinor: null }),
+        today,
+        CALENDAR_MONTH
+      )
     ).toBeNull();
   });
 });
@@ -233,7 +278,7 @@ describe("stackedWeeks", () => {
 
 describe("lastMonths", () => {
   it("spans from the first day of the earliest month to the end of this one", () => {
-    const range = lastMonths(new Date(2026, 10, 18), 3);
+    const range = lastMonths(new Date(2026, 10, 18), 3, CALENDAR_MONTH);
 
     expect(range.from.toISOString()).toBe("2026-09-01T00:00:00.000Z");
     expect(range.to.toISOString()).toBe("2026-11-30T23:59:59.999Z");
@@ -242,7 +287,24 @@ describe("lastMonths", () => {
 
 describe("daysLeftInMonth", () => {
   it("counts the days after today until the month ends", () => {
-    expect(daysLeftInMonth(new Date(2026, 10, 17))).toBe(13);
-    expect(daysLeftInMonth(new Date(2026, 1, 28))).toBe(0);
+    expect(daysLeftInMonth(new Date(2026, 10, 17), CALENDAR_MONTH)).toBe(13);
+    expect(daysLeftInMonth(new Date(2026, 1, 28), CALENDAR_MONTH)).toBe(0);
+  });
+
+  it("counts until the day before the next payday", () => {
+    expect(daysLeftInMonth(new Date(2026, 10, 28), PAYDAY)).toBe(29);
+    expect(daysLeftInMonth(new Date(2026, 10, 27), PAYDAY)).toBe(0);
+  });
+});
+
+describe("dashboardMonths on the last working day", () => {
+  it("starts the month on the Friday before a month-end weekend", () => {
+    const { current } = dashboardMonths(new Date(2026, 4, 29), {
+      anchor: "LAST_WORKING_DAY",
+      country: "FR",
+    });
+
+    expect(current.from.toISOString()).toBe("2026-05-29T00:00:00.000Z");
+    expect(current.to.toISOString()).toBe("2026-06-29T23:59:59.999Z");
   });
 });

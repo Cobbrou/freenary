@@ -1,3 +1,13 @@
+import {
+  budgetMonthOfDay,
+  budgetMonthRange,
+  budgetMonthsRange,
+  shiftBudgetMonth,
+} from "@freenary/api/lib/budget-month";
+import type {
+  BudgetMonth,
+  BudgetMonthRule,
+} from "@freenary/api/lib/budget-month";
 import type { SpendingCategory } from "@freenary/api/lib/taxonomy";
 
 import { upcomingPayments } from "@/entities/recurring";
@@ -47,48 +57,57 @@ export interface CashFlow {
   periods: (CashFlowPeriod & { incoming: number })[];
 }
 
-const LAST_DAY_OF_PREVIOUS_MONTH = 0;
-const END_OF_DAY = { hours: 23, milliseconds: 999, minutes: 59, seconds: 59 };
-const DAY_OF_MONTH_START = 8;
-const DAY_OF_MONTH_END = 10;
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+const DAY_LABEL_LENGTH = 10;
 
 const UNSORTED: SpendingCategory = "uncategorised";
 
 export const UPCOMING_ROWS_SHOWN = 5;
 
-const daysInMonth = (year: number, month: number): number =>
-  new Date(Date.UTC(year, month + 1, LAST_DAY_OF_PREVIOUS_MONTH)).getUTCDate();
+const budgetMonthOfToday = (today: Date, rule: BudgetMonthRule): BudgetMonth =>
+  budgetMonthOfDay(
+    {
+      date: today.getDate(),
+      month: today.getMonth(),
+      year: today.getFullYear(),
+    },
+    rule
+  );
 
-const monthRange = (year: number, month: number): MonthRange => ({
-  from: new Date(Date.UTC(year, month, 1)),
-  to: new Date(
-    Date.UTC(
-      year,
-      month + 1,
-      LAST_DAY_OF_PREVIOUS_MONTH,
-      END_OF_DAY.hours,
-      END_OF_DAY.minutes,
-      END_OF_DAY.seconds,
-      END_OF_DAY.milliseconds
-    )
-  ),
-});
+const daysIn = ({ from, to }: MonthRange): number =>
+  Math.round((to.getTime() + 1 - from.getTime()) / MS_PER_DAY);
 
-export const dashboardMonths = (today: Date) => ({
-  current: monthRange(today.getFullYear(), today.getMonth()),
-  previous: monthRange(today.getFullYear(), today.getMonth() - 1),
-});
+const utcDayOf = (today: Date): number =>
+  Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
 
-const runningTotals = (periods: CashFlowPeriod[], days: number): number[] => {
+const localLastDayOf = ({ to }: MonthRange): Date =>
+  new Date(to.getUTCFullYear(), to.getUTCMonth(), to.getUTCDate());
+
+export const dashboardMonths = (today: Date, rule: BudgetMonthRule) => {
+  const current = budgetMonthOfToday(today, rule);
+
+  return {
+    current: budgetMonthRange(current, rule),
+    previous: budgetMonthRange(shiftBudgetMonth(current, -1), rule),
+  };
+};
+
+const runningTotals = (
+  periods: CashFlowPeriod[],
+  range: MonthRange
+): number[] => {
+  const days = daysIn(range);
   const byDay = Array.from({ length: days }, () => 0);
 
   for (const period of periods) {
-    const day = Number(
-      period.label.slice(DAY_OF_MONTH_START, DAY_OF_MONTH_END)
+    const index = Math.round(
+      (new Date(period.label.slice(0, DAY_LABEL_LENGTH)).getTime() -
+        range.from.getTime()) /
+        MS_PER_DAY
     );
 
-    if (day >= 1 && day <= days) {
-      byDay[day - 1] = (byDay[day - 1] ?? 0) + period.outgoing;
+    if (index >= 0 && index < days) {
+      byDay[index] = (byDay[index] ?? 0) + period.outgoing;
     }
   }
 
@@ -104,15 +123,16 @@ const runningTotals = (periods: CashFlowPeriod[], days: number): number[] => {
 export const spendingPace = (
   current: CashFlowPeriod[],
   previous: CashFlowPeriod[],
-  today: Date
+  today: Date,
+  rule: BudgetMonthRule
 ): SpendingPace => {
-  const year = today.getFullYear();
-  const month = today.getMonth();
-  const currentDays = daysInMonth(year, month);
-  const previousDays = daysInMonth(year, month - 1);
-  const currentTotals = runningTotals(current, currentDays);
-  const previousTotals = runningTotals(previous, previousDays);
-  const dayOfMonth = today.getDate();
+  const months = dashboardMonths(today, rule);
+  const previousDays = daysIn(months.previous);
+  const currentTotals = runningTotals(current, months.current);
+  const previousTotals = runningTotals(previous, months.previous);
+  const dayOfMonth =
+    Math.round((utcDayOf(today) - months.current.from.getTime()) / MS_PER_DAY) +
+    1;
 
   const previousAt = (day: number) =>
     previousTotals[Math.min(day, previousDays) - 1] ?? 0;
@@ -145,7 +165,8 @@ export const commitmentsDue = (
 
 export const availableToSpend = (
   recurring: RecurringData,
-  today: Date
+  today: Date,
+  rule: BudgetMonthRule
 ): AvailableToSpend | null => {
   const balanceMinor = recurring.availableBalanceMinor;
 
@@ -153,7 +174,7 @@ export const availableToSpend = (
     return null;
   }
 
-  const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+  const monthEnd = localLastDayOf(dashboardMonths(today, rule).current);
   const bills = commitmentsDue(
     recurring,
     today,
@@ -267,13 +288,15 @@ export const stackedWeeks = (
   };
 };
 
-export const lastMonths = (today: Date, months: number): MonthRange => ({
-  from: monthRange(today.getFullYear(), today.getMonth() - months + 1).from,
-  to: monthRange(today.getFullYear(), today.getMonth()).to,
-});
+export const lastMonths = (
+  today: Date,
+  months: number,
+  rule: BudgetMonthRule
+): MonthRange =>
+  budgetMonthsRange(budgetMonthOfToday(today, rule), months, rule);
 
-export const daysLeftInMonth = (today: Date): number =>
-  daysInMonth(today.getFullYear(), today.getMonth()) - today.getDate();
+export const daysLeftInMonth = (today: Date, rule: BudgetMonthRule): number =>
+  dayDelta(today, localLastDayOf(dashboardMonths(today, rule).current));
 
 export interface BudgetLine {
   actual: number;

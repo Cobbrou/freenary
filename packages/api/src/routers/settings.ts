@@ -4,6 +4,7 @@ import { ORPCError } from "@orpc/server";
 import { z } from "zod";
 
 import { protectedProcedure } from "../index";
+import { budgetMonthSettingInput } from "../lib/budget-month";
 import {
   MAX_AMOUNT_MINOR_UNITS,
   MAX_BUDGET_LINE_LABEL_LENGTH,
@@ -33,6 +34,7 @@ import {
   resolveCategoryGroup,
 } from "../lib/taxonomy";
 import type { CategoryIconName } from "../lib/taxonomy";
+import { userBudgetMonthSetting } from "../lib/user-budget-month";
 import { userCurrency } from "../lib/user-currency";
 
 const customCategoryFields = {
@@ -255,6 +257,10 @@ export const settingsRouter = {
       });
     }),
 
+  getBudgetMonth: protectedProcedure.handler(({ context }) =>
+    userBudgetMonthSetting(context.session.user.id)
+  ),
+
   getBudgetProfile: protectedProcedure.handler(async ({ context }) => {
     const userId = context.session.user.id;
 
@@ -371,6 +377,21 @@ export const settingsRouter = {
       ]);
 
       return { moved: true };
+    }),
+
+  saveBudgetMonth: protectedProcedure
+    .input(budgetMonthSettingInput)
+    .handler(async ({ context, input }) => {
+      await prisma.user.update({
+        data: {
+          budgetMonthAnchor: input.anchor,
+          budgetMonthHolidayCountry: input.country,
+          budgetMonthStartDay: input.startDay,
+        },
+        where: { id: context.session.user.id },
+      });
+
+      return userBudgetMonthSetting(context.session.user.id);
     }),
 
   saveBudgetProfile: protectedProcedure

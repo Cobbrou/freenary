@@ -10,7 +10,13 @@ import { formatCurrency } from "@/shared/lib/format-currency";
 
 import { availableToSpend, spendingPace } from "../model/finance";
 import type { CashFlow } from "../model/finance";
-import { useMonthCashFlows, useOverview, useRecurring } from "../model/queries";
+import {
+  untilBudgetMonthKnown,
+  useBudgetMonth,
+  useMonthCashFlows,
+  useOverview,
+  useRecurring,
+} from "../model/queries";
 import type { WidgetQuery } from "../model/widget-query";
 import { HeadlineAmount, WidgetCaption, WidgetError } from "./widget-card";
 import type { CaptionTone } from "./widget-card";
@@ -135,12 +141,12 @@ const StatCard = ({ errorMessage, label, query }: StatCardProps) => {
 };
 
 const SpentStat = ({ label, today }: { label: string; today: Date }) => {
-  const { current, previous } = useMonthCashFlows(today);
+  const { current, previous, rule } = useMonthCashFlows(today);
 
   const query = mapQuery(
     bothQueries(current, previous),
     ([now, before]): StatValue => {
-      const pace = spendingPace(now.periods, before.periods, today);
+      const pace = spendingPace(now.periods, before.periods, today, rule);
       const difference = pace.currentToDateMinor - pace.previousToDateMinor;
       const amount = formatCurrency(Math.abs(difference), now.currency);
       const caption =
@@ -225,8 +231,10 @@ const SavedStat = ({ label, today }: { label: string; today: Date }) => {
 };
 
 const AvailableStat = ({ label, today }: { label: string; today: Date }) => {
-  const query = mapQuery(useRecurring(), (recurring): StatValue | null => {
-    const available = availableToSpend(recurring, today);
+  const { isKnown, rule } = useBudgetMonth();
+  const recurringQuery = untilBudgetMonthKnown(useRecurring(), isKnown);
+  const query = mapQuery(recurringQuery, (recurring): StatValue | null => {
+    const available = availableToSpend(recurring, today, rule);
 
     if (available === null) {
       return null;

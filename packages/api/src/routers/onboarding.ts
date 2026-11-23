@@ -3,11 +3,17 @@ import { ORPCError } from "@orpc/server";
 import { z } from "zod";
 
 import { protectedProcedure } from "../index";
+import { budgetMonthSettingInput } from "../lib/budget-month";
 import { taxResidencyCountries } from "../lib/country-code";
 
 export const onboardingRouter = {
   completeOnboarding: protectedProcedure
-    .input(z.object({ taxCountries: taxResidencyCountries.min(1) }))
+    .input(
+      z.object({
+        budgetMonth: budgetMonthSettingInput.optional(),
+        taxCountries: taxResidencyCountries.min(1),
+      })
+    )
     .handler(async ({ context, input }) => {
       const userId = context.session.user.id;
       const bankConnectionCount = await prisma.bankConnection.count({
@@ -22,6 +28,9 @@ export const onboardingRouter = {
 
       await prisma.user.update({
         data: {
+          budgetMonthAnchor: input.budgetMonth?.anchor,
+          budgetMonthHolidayCountry: input.budgetMonth?.country,
+          budgetMonthStartDay: input.budgetMonth?.startDay,
           onboardingCompletedAt: new Date(),
           taxCountries: input.taxCountries,
         },

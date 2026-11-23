@@ -1,4 +1,12 @@
 import type { AggregationMode } from "@freenary/api/lib/aggregation";
+import {
+  budgetMonthsRange,
+  shiftBudgetMonth,
+} from "@freenary/api/lib/budget-month";
+import type {
+  BudgetMonth,
+  BudgetMonthRule,
+} from "@freenary/api/lib/budget-month";
 
 import { m } from "@/paraglide/messages.js";
 import type { Locale } from "@/paraglide/runtime.js";
@@ -24,9 +32,6 @@ const SHORT_MONTH: Intl.DateTimeFormatOptions = {
   month: "short",
   timeZone: "UTC",
 };
-
-const DAY_BEFORE_THE_FIRST = 0;
-const END_OF_DAY = { hours: 23, milliseconds: 999, minutes: 59, seconds: 59 };
 
 export const TIME_RANGES: TimeRange[] = ["1M", "3M", "1Y"];
 
@@ -55,45 +60,32 @@ const formatShortMonthSpan = (from: Date, to: Date, locale: Locale): string => {
     : `${fromMonth} ${fromYear} – ${toMonth} ${toYear}`;
 };
 
+const firstDayOf = ({ month, year }: BudgetMonth): Date =>
+  new Date(Date.UTC(year, month, 1));
+
 export const formatPeriodLabel = (
-  from: Date,
-  to: Date,
+  anchor: BudgetMonth,
   range: TimeRange,
   locale: Locale
 ): string => {
   if (range === "1M") {
-    return formatMonthYear(from, locale);
+    return formatMonthYear(firstDayOf(anchor), locale);
   }
 
   if (range === "1Y") {
-    return String(from.getUTCFullYear());
+    return String(anchor.year);
   }
 
-  return formatShortMonthSpan(from, to, locale);
-};
-
-const endOfMonth = (year: number, month: number): Date =>
-  new Date(
-    Date.UTC(
-      year,
-      month + 1,
-      DAY_BEFORE_THE_FIRST,
-      END_OF_DAY.hours,
-      END_OF_DAY.minutes,
-      END_OF_DAY.seconds,
-      END_OF_DAY.milliseconds
-    )
+  return formatShortMonthSpan(
+    firstDayOf(shiftBudgetMonth(anchor, 1 - rangeMonths(range))),
+    firstDayOf(anchor),
+    locale
   );
+};
 
 export const computeDateRange = (
   year: number,
   month: number,
-  range: TimeRange
-) => {
-  const monthsBeforeAnchor = rangeMonths(range) - 1;
-
-  return {
-    from: new Date(Date.UTC(year, month - monthsBeforeAnchor, 1)),
-    to: endOfMonth(year, month),
-  };
-};
+  range: TimeRange,
+  rule: BudgetMonthRule
+) => budgetMonthsRange({ month, year }, rangeMonths(range), rule);
