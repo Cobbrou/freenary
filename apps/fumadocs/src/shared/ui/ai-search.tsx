@@ -9,7 +9,14 @@ import {
   type UIToolInvocation,
 } from "ai";
 import { cn } from "cn";
-import { Loader2, RefreshCw, SearchIcon, Send, X } from "lucide-react";
+import {
+  BookOpen,
+  Loader2,
+  RefreshCw,
+  SearchIcon,
+  Send,
+  X,
+} from "lucide-react";
 import {
   type ComponentProps,
   createContext,
@@ -24,7 +31,7 @@ import {
 } from "react";
 import { flushSync } from "react-dom";
 
-import { withoutToolParts } from "../lib/chat-history";
+import { chatHistory, MAX_USER_MESSAGE_LENGTH } from "../lib/chat-history";
 import { buttonVariants } from "../ui/button";
 import { Markdown } from "./markdown";
 
@@ -39,6 +46,8 @@ export type ChatUIMessage = UIMessage<
 
 export type SearchTool = Tool<{ query: string; limit: number }>;
 
+export type ReadTool = Tool<{ url: string }>;
+
 const Context = createContext<{
   open: boolean;
   setOpen: (open: boolean) => void;
@@ -48,6 +57,8 @@ const Context = createContext<{
 const INPUT_STORAGE_KEY = "__ai_search_input";
 
 const SEARCH_TOOL_PART = "tool-search";
+
+const READ_TOOL_PART = "tool-read";
 
 const ROLE_NAMES = {
   assistant: "fumadocs",
@@ -183,6 +194,7 @@ export function AISearchInput(props: ComponentProps<"form">) {
         value={input}
         placeholder={isLoading ? "AI is answering..." : "Ask a question"}
         autoFocus
+        maxLength={MAX_USER_MESSAGE_LENGTH}
         className="p-3"
         disabled={status === "streaming" || status === "submitted"}
         onChange={(e) => {
@@ -301,10 +313,20 @@ function Message({
 }: { message: ChatUIMessage } & ComponentProps<"div">) {
   let markdown = "";
   const searchCalls: UIToolInvocation<SearchTool>[] = [];
+  const readCalls: UIToolInvocation<ReadTool>[] = [];
 
   for (const part of message.parts ?? []) {
     if (part.type === "text") {
       markdown += part.text;
+
+      continue;
+    }
+
+    if (part.type === READ_TOOL_PART) {
+      // SAFETY: `part.type` is `tool-read`, so this part is that tool's invocation.
+      const invocation = part as UIToolInvocation<ReadTool>;
+
+      if (invocation.toolCallId) readCalls.push(invocation);
 
       continue;
     }
@@ -352,6 +374,24 @@ function Message({
           </div>
         );
       })}
+
+      {readCalls.map((call) => (
+        <div
+          key={call.toolCallId}
+          className="bg-fd-secondary text-fd-muted-foreground mt-3 flex flex-row items-center gap-2 rounded-lg border p-2 text-xs"
+        >
+          <BookOpen className="size-4" />
+          {call.state === "output-error" || call.state === "output-denied" ? (
+            <p className="text-fd-error">
+              {call.errorText ?? "Failed to read"}
+            </p>
+          ) : (
+            <p className="truncate">
+              {call.output ? "Read" : "Reading"} {call.input?.url}
+            </p>
+          )}
+        </div>
+      ))}
     </div>
   );
 }
@@ -372,7 +412,7 @@ export function AISearch({ children }: { children: ReactNode }) {
         body: {
           ...body,
           id,
-          messages: withoutToolParts(messages),
+          messages: chatHistory(messages),
           trigger,
           messageId,
         },

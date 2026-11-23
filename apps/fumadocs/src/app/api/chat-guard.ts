@@ -1,12 +1,14 @@
 import { safeValidateUIMessages } from "ai";
 import { z } from "zod";
 
-import { withoutToolParts } from "@/shared/lib/chat-history";
+import {
+  chatHistory,
+  MAX_USER_MESSAGE_LENGTH,
+  userTextLength,
+} from "@/shared/lib/chat-history";
 import type { ChatUIMessage } from "@/shared/ui/ai-search";
 
 const MAX_BODY_LENGTH = 32_000;
-
-const MAX_MESSAGES = 20;
 
 const RATE_LIMIT_WINDOW_MS = 5 * 60 * 1000;
 
@@ -17,8 +19,7 @@ const MAX_REQUESTS_PER_WINDOW = 300;
 const chatRequestBody = z.object({
   messages: z
     .array(z.looseObject({ role: z.enum(["user", "assistant"]) }))
-    .min(1)
-    .max(MAX_MESSAGES),
+    .min(1),
 });
 
 export type ChatRequest = {
@@ -83,7 +84,23 @@ export const guardChatRequest = async (
     return new Response("invalid_body", { status: 400 });
   }
 
+  const isUserMessageTooLong = messages.data.some(
+    (message) =>
+      message.role === "user" &&
+      userTextLength(message) > MAX_USER_MESSAGE_LENGTH
+  );
+
+  if (isUserMessageTooLong) {
+    return new Response("message_too_long", { status: 400 });
+  }
+
+  const history = chatHistory(messages.data);
+
+  if (history.length === 0) {
+    return new Response("invalid_body", { status: 400 });
+  }
+
   return {
-    messages: withoutToolParts(messages.data),
+    messages: history,
   };
 };

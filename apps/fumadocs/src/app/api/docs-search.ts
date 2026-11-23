@@ -4,6 +4,10 @@ export const MAX_SEARCH_RESULTS = 5;
 
 const EXCERPT_LENGTH = 500;
 
+export const MAX_SECTION_LENGTH = 4000;
+
+const URL_BASE = "https://docs.invalid";
+
 interface Section extends DocumentData {
   id: string;
   url: string;
@@ -18,6 +22,17 @@ export type SearchResult = {
   description: string;
   excerpt: string;
 };
+
+export type ReadResult =
+  | {
+      found: true;
+      url: string;
+      title: string;
+      description: string;
+      content: string;
+      truncated: boolean;
+    }
+  | { found: false; error: string };
 
 export type IndexedPage = {
   url: string;
@@ -75,6 +90,39 @@ export const createSectionIndex = (pages: IndexedPage[]) => {
   }
 
   return index;
+};
+
+const sectionPathOf = (url: string): string | undefined => {
+  if (!URL.canParse(url, URL_BASE)) return undefined;
+
+  const { pathname, hash } = new URL(url, URL_BASE);
+
+  return `${pathname.replace(/(?<=.)\/+$/, "")}${hash}`;
+};
+
+export const readSection = (
+  index: Document<Section>,
+  url: string
+): ReadResult => {
+  const path = sectionPathOf(url);
+  const section =
+    index.get(url) ?? (path === undefined ? null : index.get(path));
+
+  if (!section) {
+    return {
+      found: false,
+      error: `No docs section at "${url}". Use a \`url\` from the \`search\` results.`,
+    };
+  }
+
+  return {
+    found: true,
+    url: section.url,
+    title: section.title,
+    description: section.description,
+    content: section.content.slice(0, MAX_SECTION_LENGTH),
+    truncated: section.content.length > MAX_SECTION_LENGTH,
+  };
 };
 
 export const searchSections = async (

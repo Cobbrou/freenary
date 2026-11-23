@@ -9,6 +9,8 @@ import {
   createSectionIndex,
   type IndexedPage,
   MAX_SEARCH_RESULTS,
+  MAX_SECTION_LENGTH,
+  readSection,
   searchSections,
 } from "./docs-search";
 
@@ -101,6 +103,63 @@ describe("a follow-up question after a docs search", async () => {
           .flatMap((message) => message.parts)
           .map((part) => part.type)
       ).toEqual(["text", "step-start", "text", "text"]);
+    });
+  }
+});
+
+describe("readSection", async () => {
+  const index = createSectionIndex(await docsPages());
+
+  test("returns the section of a search result, capped in length", async () => {
+    const [first] = await searchSections(index, "install", 1);
+
+    if (!first) throw new Error("Expected a search result");
+
+    const section = readSection(index, first.url);
+
+    if (!section.found) throw new Error(section.error);
+
+    expect(section.url).toBe(first.url);
+    expect(section.content.startsWith(first.excerpt)).toBe(true);
+    expect(section.content.length).toBeLessThanOrEqual(MAX_SECTION_LENGTH);
+  });
+
+  test("reads a url with the site origin", async () => {
+    const [first] = await searchSections(index, "docker compose", 1);
+
+    if (!first) throw new Error("Expected a search result");
+
+    const section = readSection(index, `https://freenary.app${first.url}`);
+
+    expect(section.found ? section.url : section.error).toBe(first.url);
+  });
+
+  test("caps a long section", () => {
+    const longIndex = createSectionIndex([
+      {
+        url: "/docs/long",
+        title: "Long",
+        description: "",
+        structuredData: {
+          headings: [{ id: "part", content: "Part" }],
+          contents: [{ heading: "part", content: "a".repeat(10_000) }],
+        },
+      },
+    ]);
+
+    const section = readSection(longIndex, "/docs/long#part");
+
+    if (!section.found) throw new Error(section.error);
+
+    expect(section.content).toHaveLength(MAX_SECTION_LENGTH);
+    expect(section.truncated).toBe(true);
+  });
+
+  for (const url of ["/docs/does-not-exist#nope", "http://[bad", ""]) {
+    test(`returns a readable error for "${url}"`, () => {
+      const section = readSection(index, url);
+
+      expect(section.found).toBe(false);
     });
   }
 });

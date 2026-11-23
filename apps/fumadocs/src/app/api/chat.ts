@@ -10,13 +10,18 @@ import {
 import { z } from "zod";
 
 import { source } from "@/shared/content";
-import { ChatUIMessage, SearchTool } from "@/shared/ui/ai-search";
+import {
+  ChatUIMessage,
+  type ReadTool,
+  SearchTool,
+} from "@/shared/ui/ai-search";
 
 import { guardChatRequest } from "./chat-guard";
 import {
   createSectionIndex,
   type IndexedPage,
   MAX_SEARCH_RESULTS,
+  readSection,
   searchSections,
 } from "./docs-search";
 
@@ -38,6 +43,7 @@ const systemPrompt = [
   "You are an AI assistant for a documentation site.",
   "Use the `search` tool to retrieve relevant docs context before answering when needed.",
   "The `search` tool returns matching documentation sections as JSON, each with a short excerpt. Use those results to ground your answer and cite sources as markdown links using the document `url` field when available.",
+  "When an excerpt is not enough to answer, call the `read` tool with that result's `url` to get the full section.",
   "If you cannot find the answer in search results, say you do not know and suggest a better search query.",
 ].join("\n");
 
@@ -58,6 +64,17 @@ const searchTool = tool({
   },
 }) satisfies SearchTool;
 
+const readTool = tool({
+  description:
+    "Read one docs section in full, by the `url` of a `search` result, including its anchor.",
+  inputSchema: z.object({
+    url: z.string().max(2048),
+  }),
+  async execute({ url }) {
+    return readSection(await getSearchServer(), url);
+  },
+}) satisfies ReadTool;
+
 export const chatHandler = async (ctx: { request: Request }) => {
   const chatRequest = await guardChatRequest(ctx.request);
 
@@ -69,6 +86,7 @@ export const chatHandler = async (ctx: { request: Request }) => {
     maxOutputTokens: MAX_OUTPUT_TOKENS,
     tools: {
       search: searchTool,
+      read: readTool,
     },
     messages: [
       { role: "system", content: systemPrompt },
