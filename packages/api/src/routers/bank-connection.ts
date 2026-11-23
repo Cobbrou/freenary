@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 
 import prisma from "@freenary/db";
+import type { Prisma } from "@freenary/db";
 import { env } from "@freenary/env/server";
 import { ORPCError } from "@orpc/server";
 import { Data, Effect, Option } from "effect";
@@ -21,6 +22,7 @@ import {
   releaseProviderUser,
 } from "../lib/bank-provider-user";
 import { isoAlpha2CountryCode } from "../lib/country-code";
+import { exchangeOnceWith } from "../lib/exchange-once";
 import { institutionsLoaderWith } from "../lib/institutions-cache";
 import { getDefaultProvider, getProvider } from "../providers/registry";
 import type { BankingProvider } from "../providers/types";
@@ -101,10 +103,10 @@ const issueStateNonce = async (userId: string): Promise<string> => {
   return nonce;
 };
 
-const consumeStateNonce = async (
+const claimStateNonce = async (
   nonce: string,
   userId: string
-): Promise<void> => {
+): Promise<boolean> => {
   const { count } = await prisma.verification.deleteMany({
     where: {
       expiresAt: { gt: new Date() },
@@ -114,12 +116,56 @@ const consumeStateNonce = async (
     },
   });
 
-  if (count === 0) {
-    throw new ORPCError("BAD_REQUEST", {
-      message: "Bank connection state has expired or was already used",
-    });
-  }
+  return count > 0;
 };
+
+const EXCHANGED_CONNECTION = {
+  accounts: {
+    orderBy: { createdAt: "asc" },
+    select: { iban: true, name: true, providerAccountId: true },
+  },
+  id: true,
+  institutionName: true,
+  providerSessionId: true,
+} satisfies Prisma.BankConnectionSelect;
+
+interface Exchanged {
+  readonly connection: Prisma.BankConnectionGetPayload<{
+    select: typeof EXCHANGED_CONNECTION;
+  }>;
+  readonly syncStartedAt: Date | null;
+}
+
+const exchangeOnce = exchangeOnceWith<Exchanged>();
+
+const findExchanged = async (
+  exchangeNonce: string,
+  userId: string
+): Promise<Exchanged | null> => {
+  const connection = await prisma.bankConnection.findFirst({
+    select: EXCHANGED_CONNECTION,
+    where: { exchangeNonce, userId },
+  });
+
+  return connection && { connection, syncStartedAt: null };
+};
+
+const startFirstSync = (
+  userId: string,
+  connectionId: string
+): Promise<Date | null> =>
+  Effect.runPromise(
+    Effect.tryPromise({
+      catch: (cause) => new FirstSyncNotStarted({ cause }),
+      try: () => startAccountSync(userId, { connectionId, force: false }),
+    }).pipe(
+      Effect.catchTag("FirstSyncNotStarted", (failure) =>
+        Effect.logWarning("First bank sync not started", failure).pipe(
+          Effect.as(null)
+        )
+      )
+    )
+  );
 
 const loadInstitutions = institutionsLoaderWith();
 
@@ -218,72 +264,71 @@ export const bankConnectionRouter = {
         });
       }
 
-      await consumeStateNonce(connectionState.nonce, userId);
+      const { nonce } = connectionState;
 
-      const completed = await provider.completeConnection({
-        callbackParams: input.params,
-        user: providerUser,
+      const { connection, syncStartedAt } = await exchangeOnce({
+        claim: () => claimStateNonce(nonce, userId),
+        exchange: async () => {
+          const completed = await provider.completeConnection({
+            callbackParams: input.params,
+            user: providerUser,
+          });
+
+          const { providerSessionId } = completed;
+
+          const opened = await prisma.bankConnection.upsert({
+            create: {
+              accounts: {
+                create: completed.accounts.map((account) => ({
+                  iban: account.iban ?? null,
+                  identificationHash: account.identificationHash ?? null,
+                  name: account.name ?? null,
+                  providerAccountId: account.providerAccountId,
+                  type: account.type,
+                })),
+              },
+              exchangeNonce: nonce,
+              institutionBic: institution.bic ?? null,
+              institutionCountry: institution.country,
+              institutionGroup:
+                completed.institutionGroup ?? institution.group ?? null,
+              institutionId: institution.id,
+              institutionName:
+                completed.institutionName.trim() || institution.name,
+              provider: provider.id,
+              providerSessionId,
+              userId,
+            },
+            select: EXCHANGED_CONNECTION,
+            update: { exchangeNonce: nonce },
+            where: {
+              userId_provider_providerSessionId: {
+                provider: provider.id,
+                providerSessionId,
+                userId,
+              },
+            },
+          });
+
+          return {
+            connection: opened,
+            syncStartedAt: await startFirstSync(userId, opened.id),
+          };
+        },
+        findExchanged: () => findExchanged(nonce, userId),
+        nonce,
       });
-
-      const providerInstitutionName = completed.institutionName.trim();
-      const bankName = providerInstitutionName || institution.name;
-
-      const connection = await prisma.$transaction(async (db) => {
-        const created = await db.bankConnection.create({
-          data: {
-            institutionBic: institution.bic ?? null,
-            institutionCountry: institution.country,
-            institutionGroup:
-              completed.institutionGroup ?? institution.group ?? null,
-            institutionId: institution.id,
-            institutionName: bankName,
-            provider: provider.id,
-            providerSessionId: completed.providerSessionId,
-            userId,
-          },
-        });
-
-        await db.bankAccount.createMany({
-          data: completed.accounts.map((account) => ({
-            connectionId: created.id,
-            iban: account.iban ?? null,
-            identificationHash: account.identificationHash ?? null,
-            name: account.name ?? null,
-            providerAccountId: account.providerAccountId,
-            type: account.type,
-          })),
-        });
-
-        return created;
-      });
-
-      const syncStartedAt = await Effect.runPromise(
-        Effect.tryPromise({
-          catch: (cause) => new FirstSyncNotStarted({ cause }),
-          try: () =>
-            startAccountSync(userId, {
-              connectionId: connection.id,
-              force: false,
-            }),
-        }).pipe(
-          Effect.catchTag("FirstSyncNotStarted", (failure) =>
-            Effect.logWarning("First bank sync not started", failure).pipe(
-              Effect.as(null)
-            )
-          )
-        )
-      );
 
       return {
-        accounts: completed.accounts.map((a) => ({
-          iban: a.iban,
-          name: a.name,
-          uid: a.providerAccountId,
+        accounts: connection.accounts.map((account) => ({
+          iban: account.iban ?? undefined,
+          name: account.name ?? undefined,
+          uid: account.providerAccountId,
         })),
         connectionId: connection.id,
-        institutionName: bankName,
+        institutionName: connection.institutionName,
         returnTo: connectionState.returnTo,
-        sessionId: completed.providerSessionId,
+        sessionId: connection.providerSessionId,
         syncStartedAt,
       };
     }),

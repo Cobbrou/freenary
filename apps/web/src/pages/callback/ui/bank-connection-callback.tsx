@@ -52,12 +52,16 @@ export const BankConnectionCallback = () => {
     }
 
     if (exchangeResult.returnTo === "settings") {
-      navigate({ search: { section: "bank-accounts" }, to: "/settings" });
+      navigate({
+        replace: true,
+        search: { section: "bank-accounts" },
+        to: "/settings",
+      });
 
       return;
     }
 
-    navigate({ to: "/onboarding" });
+    navigate({ replace: true, to: "/onboarding" });
   }, [exchangeResult, navigate, queryClient]);
 
   return <ConnectingBank />;

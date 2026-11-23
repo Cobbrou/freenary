@@ -8,6 +8,8 @@ model BankConnection {
   provider          String
   /// Provider-level handle used to refresh data: Enable Banking session_id, Powens connection id.
   providerSessionId String
+  /// Nonce of the last callback state exchanged for this connection, so a replayed callback finds it again.
+  exchangeNonce     String?
   /// Provider-level institution identifier this connection was opened against.
   institutionId     String?
   /// Human-readable institution name shown in the UI.
@@ -26,6 +28,7 @@ model BankConnection {
   updatedAt         DateTime @updatedAt
   accounts          BankAccount[]
 
+  @@unique([userId, provider, providerSessionId])
   @@index([userId])
   @@map("bank_connection")
 }
