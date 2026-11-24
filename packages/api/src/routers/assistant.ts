@@ -11,7 +11,7 @@ import {
   listConversations,
   ownedConversation,
 } from "../assistant/conversation";
-import { assistantModelId } from "../assistant/provider";
+import { assistantModelId } from "../assistant/model-id";
 import {
   answerableParts,
   hasContent,

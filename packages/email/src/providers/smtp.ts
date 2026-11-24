@@ -1,4 +1,4 @@
-import { createTransport } from "nodemailer";
+import type { Transporter } from "nodemailer";
 
 import type { EmailMessage, EmailProvider } from "../types";
 
@@ -11,10 +11,12 @@ interface SmtpCredentials {
   password?: string;
 }
 
-export const createSmtpEmailProvider = (
+const openPooledTransport = async (
   credentials: SmtpCredentials
-): EmailProvider => {
-  const pooledTransport = createTransport({
+): Promise<Transporter> => {
+  const { createTransport } = await import("nodemailer");
+
+  return createTransport({
     auth:
       credentials.user === undefined
         ? undefined
@@ -25,11 +27,25 @@ export const createSmtpEmailProvider = (
     requireTLS: !credentials.secure && credentials.user !== undefined,
     secure: credentials.secure,
   });
+};
+
+export const createSmtpEmailProvider = (
+  credentials: SmtpCredentials
+): EmailProvider => {
+  let pooledTransport: Promise<Transporter> | null = null;
+
+  const transport = () => {
+    pooledTransport ??= openPooledTransport(credentials);
+
+    return pooledTransport;
+  };
 
   return {
     id: "smtp",
     send: async (message: EmailMessage) => {
-      await pooledTransport.sendMail({
+      const opened = await transport();
+
+      await opened.sendMail({
         from: credentials.from,
         subject: message.subject,
         text: message.text,

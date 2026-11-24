@@ -3,7 +3,7 @@ import { PrismaPg } from "@prisma/adapter-pg";
 
 import { PrismaClient } from "../prisma/generated/client";
 
-export const createPrismaClient = () => {
+const createPrismaClient = () => {
   const adapter = new PrismaPg({
     connectionString: env.DATABASE_URL,
   });

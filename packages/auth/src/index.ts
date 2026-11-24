@@ -1,6 +1,6 @@
 import { apiKey } from "@better-auth/api-key";
 import { passkey } from "@better-auth/passkey";
-import { createPrismaClient } from "@freenary/db";
+import prisma from "@freenary/db";
 import { isEmailEnabled } from "@freenary/email";
 import { env } from "@freenary/env/server";
 import { claimForFirstSession } from "@freenary/instance-config";
@@ -162,10 +162,8 @@ const enforceAuthPolicy = createAuthMiddleware(async (ctx) => {
   }
 });
 
-export const createAuth = () => {
-  const prisma = createPrismaClient();
-
-  return betterAuth({
+export const createAuth = () =>
+  betterAuth({
     account: {
       accountLinking: {
         allowDifferentEmails: false,
@@ -258,7 +256,6 @@ export const createAuth = () => {
       additionalFields: USER_ADDITIONAL_FIELDS,
     },
   });
-};
 
 export const auth = createAuth();
 

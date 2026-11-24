@@ -14,6 +14,7 @@ The self-hosted stack, from the published images. `docker compose up -d` pulls t
 ### `postgres`
 
 - Image: `postgres:18`
+- Command: `postgres -c shared_buffers=32MB`
 - Published ports: `127.0.0.1:${POSTGRES_PORT:-5432}:5432`
 - Healthcheck: `pg_isready -U postgres -d freenary`
 - Volumes: `freenary_postgres_data:/var/lib/postgresql`
@@ -78,6 +79,7 @@ Three values are required: FREENARY_URL, POSTGRES_PASSWORD and BETTER_AUTH_SECRE
 ### `postgres`
 
 - Image: `postgres:18`
+- Command: `postgres -c shared_buffers=32MB`
 - Published ports: none
 - Healthcheck: `pg_isready -U postgres -d freenary`
 - Volumes: `freenary_postgres_data:/var/lib/postgresql`

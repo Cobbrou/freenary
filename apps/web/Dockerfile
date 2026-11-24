@@ -15,7 +15,9 @@ COPY . .
 # image serves any deployment; VITE_SERVER_URL is the localhost fallback.
 ENV NODE_ENV=production
 
-RUN cd apps/web && bun run build
+# The image has no Node.js, so Vite runs on Bun; --smol makes Bun collect
+# garbage more often, which lowers the peak memory of the build.
+RUN cd apps/web && bun --smol node_modules/.bin/vite build
 ENV DATABASE_URL=
 
 # The Nitro output runs on its own: it bundles the workspace packages and the

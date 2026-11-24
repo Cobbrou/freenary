@@ -5,7 +5,6 @@ import {
   probeDeadline,
 } from "@freenary/instance-config/probe";
 import { Effect, Match } from "effect";
-import { createTransport } from "nodemailer";
 
 import type { EmailSettings } from "./registry";
 
@@ -60,6 +59,12 @@ const probeSmtp = Effect.fn("email.probeSmtp")(function* probeSmtp(
       kind: "invalid",
     });
   }
+
+  const { createTransport } = yield* Effect.tryPromise({
+    catch: (cause) =>
+      failure("smtp", { detail: String(cause), kind: "unreachable" }),
+    try: () => import("nodemailer"),
+  });
 
   const transport = yield* Effect.acquireRelease(
     Effect.sync(() =>

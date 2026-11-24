@@ -1,11 +1,9 @@
 import { cors } from "@elysiajs/cors";
-import { handleAssistantChat } from "@freenary/api/assistant/handler";
 import { createContext } from "@freenary/api/context";
 import { updateCheck } from "@freenary/api/instance/update-check";
 import { refusedApiKeyResponse } from "@freenary/api/lib/api-key-refusal";
 import { sealLegacyProviderTokens } from "@freenary/api/lib/bank-provider-user";
 import { isJsonRequest } from "@freenary/api/lib/json-request";
-import { handleMcpRequest } from "@freenary/api/mcp/handler";
 import {
   handleMockConsent,
   MOCK_CONSENT_PATH,
@@ -14,12 +12,9 @@ import { appRouter } from "@freenary/api/routers/index";
 import { auth, requestSession } from "@freenary/auth";
 import { env } from "@freenary/env/server";
 import { readSetupState } from "@freenary/instance-config";
-import { OpenAPIHandler } from "@orpc/openapi/fetch";
-import { OpenAPIReferencePlugin } from "@orpc/openapi/plugins";
 import { ORPCError, onError } from "@orpc/server";
 import { RPCHandler } from "@orpc/server/fetch";
 import { SimpleCsrfProtectionHandlerPlugin } from "@orpc/server/plugins";
-import { ZodToJsonSchemaConverter } from "@orpc/zod/zod4";
 import { Effect } from "effect";
 import { Elysia } from "elysia";
 import { initLogger } from "evlog";
@@ -44,21 +39,41 @@ const rpcHandler = new RPCHandler(appRouter, {
   plugins: [new SimpleCsrfProtectionHandlerPlugin()],
 });
 
-const apiHandler = new OpenAPIHandler(appRouter, {
-  interceptors: [
-    // eslint-disable-next-line promise/prefer-await-to-callbacks -- oRPC interceptor API uses callback pattern
-    onError((error) => {
-      if (!(error instanceof ORPCError && isCallerRefusal(error))) {
-        console.error(error);
-      }
-    }),
-  ],
-  plugins: [
-    new OpenAPIReferencePlugin({
-      schemaConverters: [new ZodToJsonSchemaConverter()],
-    }),
-  ],
-});
+const createApiHandler = async () => {
+  const [
+    { OpenAPIHandler },
+    { OpenAPIReferencePlugin },
+    { ZodToJsonSchemaConverter },
+  ] = await Promise.all([
+    import("@orpc/openapi/fetch"),
+    import("@orpc/openapi/plugins"),
+    import("@orpc/zod/zod4"),
+  ]);
+
+  return new OpenAPIHandler(appRouter, {
+    interceptors: [
+      // eslint-disable-next-line promise/prefer-await-to-callbacks -- oRPC interceptor API uses callback pattern
+      onError((error) => {
+        if (!(error instanceof ORPCError && isCallerRefusal(error))) {
+          console.error(error);
+        }
+      }),
+    ],
+    plugins: [
+      new OpenAPIReferencePlugin({
+        schemaConverters: [new ZodToJsonSchemaConverter()],
+      }),
+    ],
+  });
+};
+
+let apiHandler: ReturnType<typeof createApiHandler> | null = null;
+
+const openApiHandler = () => {
+  apiHandler ??= createApiHandler();
+
+  return apiHandler;
+};
 
 const copyResponseStatusOntoWideEvent = (
   set: { status?: number | string },
@@ -150,19 +165,29 @@ new Elysia()
   )
   .post(
     "/ai/chat",
-    (context) =>
-      handleAssistantChat({ log: context.log, request: context.request }),
+    async (context) => {
+      const { handleAssistantChat } =
+        await import("@freenary/api/assistant/handler");
+
+      return handleAssistantChat({
+        log: context.log,
+        request: context.request,
+      });
+    },
     {
       parse: "none",
     }
   )
   .all(
     "/mcp",
-    async (context) =>
-      copyResponseStatusOntoWideEvent(
+    async (context) => {
+      const { handleMcpRequest } = await import("@freenary/api/mcp/handler");
+
+      return copyResponseStatusOntoWideEvent(
         context.set,
         await handleMcpRequest(context.request)
-      ),
+      );
+    },
     {
       parse: "none",
     }
@@ -186,7 +211,8 @@ new Elysia()
         context.request
       );
 
-      const { response } = await apiHandler.handle(publicRequest, {
+      const handler = await openApiHandler();
+      const { response } = await handler.handle(publicRequest, {
         context: await createContext({ context }),
         prefix: "/api-reference",
       });
