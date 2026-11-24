@@ -2,10 +2,14 @@ import type { TransactionFilter } from "@freenary/api/lib/transaction-filters";
 import type { AppRouter } from "@freenary/api/routers/index";
 import type { InferRouterOutputs } from "@orpc/server";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { getRouteApi } from "@tanstack/react-router";
 import { useCallback, useMemo, useState } from "react";
 
 import type { CategorySelection } from "@/entities/category";
-import { TransactionDetailDrawer } from "@/features/transaction-details";
+import {
+  TransactionDetailDrawer,
+  TransactionsToCheckDrawer,
+} from "@/features/transaction-details";
 import {
   highlightedChartCategories,
   recentMonths,
@@ -56,7 +60,11 @@ const GROUPING_OF_RANGE = {
   "3M": "week",
 } as const satisfies Record<TimeRange, TransactionGrouping>;
 
+const route = getRouteApi("/_auth/budget/transactions");
+
 export const TransactionsPage = () => {
+  const { check } = route.useSearch();
+  const navigate = route.useNavigate();
   const accountsQuery = useQuery(orpc.budget.getAccounts.queryOptions());
   const currency = useBudgetCurrency();
   const rule = useBudgetMonthRule();
@@ -274,6 +282,20 @@ export const TransactionsPage = () => {
         onOpenChange={(open) => {
           if (!open) {
             setSelectedTransactionId(null);
+          }
+        }}
+      />
+
+      <TransactionsToCheckDrawer
+        notificationId={check ?? null}
+        open={check !== undefined}
+        onOpenChange={(open) => {
+          if (!open) {
+            void navigate({
+              replace: true,
+              resetScroll: false,
+              search: (prev) => ({ ...prev, check: undefined }),
+            });
           }
         }}
       />

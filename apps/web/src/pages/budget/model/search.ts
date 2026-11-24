@@ -116,6 +116,12 @@ export const budgetSearchSchema = transactionListSearchSchema.extend({
   year: absentUnlessBoundedInt(EARLIEST_PLAUSIBLE_YEAR, LATEST_PLAUSIBLE_YEAR),
 });
 
+const MAX_NOTIFICATION_ID_LENGTH = 64;
+
+export const transactionsSearchSchema = z.object({
+  check: absentUnlessNonEmptyText(MAX_NOTIFICATION_ID_LENGTH),
+});
+
 export const BUDGET_SEARCH_DEFAULTS = {
   ...TRANSACTION_LIST_SEARCH_DEFAULTS,
   agg: "total",

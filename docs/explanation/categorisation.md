@@ -42,7 +42,7 @@ When no step gives a category, the transaction stays uncategorised. With a `syst
 
 ## Transactions to check
 
-A classifier answer under the confidence that would make it automatic, `0.85`, still gives the transaction its category, but Freenary flags it as low confidence. After each categorisation that flags such transactions, Freenary sends the member one notification, such as **7 transactions to check**, that holds the transactions flagged in that run. A transaction already held by another notification is not added again.
+A classifier answer under the confidence that would make it automatic, `0.85`, still gives the transaction its category, but Freenary flags it as low confidence. Only transactions booked in the last 60 days are flagged, so connecting a bank or syncing the whole history does not flag older transactions; they keep their category. After each categorisation that flags such transactions, Freenary sends the member one notification, such as **7 transactions to check**, that holds the transactions flagged in that run. A transaction already held by another notification is not added again.
 
 The notification center sits at the bottom of the sidebar, under **Notifications**, with the number of unread notifications next to it. Opening this notification opens the **Transactions to check** panel. Each row has a category picker and a check mark. The check mark keeps the category and picking another category changes it: both record a correction, as below, so the row leaves the list. **Dismiss all** in the panel empties the list without changing any transaction. Once the list is empty, the notification goes away.
 

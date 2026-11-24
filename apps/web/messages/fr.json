@@ -912,6 +912,7 @@
   "home_add_account_description": "Connecter une banque",
   "home_ask_label": "Posez-moi une question",
   "home_ask_placeholder": "Posez-moi une question. Une nouvelle discussion s’ouvre dans Demander.",
+  "home_to_check_cta": "Les vérifier",
   "home_available_error": "Impossible de charger ce qu’il vous reste à dépenser.",
   "home_available_title": "Reste à dépenser",
   "home_balance_error": "Impossible de charger votre solde.",

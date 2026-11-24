@@ -21,15 +21,27 @@ export const isLowConfidence = (resolution: ResolutionResult): boolean =>
   resolution.band === "suggest" &&
   isClassifierStage(resolution.stage);
 
+export const TO_CHECK_WINDOW_DAYS = 60;
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
 export const lowConfidenceTransactionIds = (
-  transactionIds: readonly string[],
-  resolutions: readonly (ResolutionResult | undefined)[]
-): string[] =>
-  transactionIds.flatMap((transactionId, index) => {
+  transactions: readonly { date: Date; id: string }[],
+  resolutions: readonly (ResolutionResult | undefined)[],
+  now: Date = new Date()
+): string[] => {
+  const since = now.getTime() - TO_CHECK_WINDOW_DAYS * DAY_MS;
+
+  return transactions.flatMap((transaction, index) => {
     const resolution = resolutions[index];
 
-    return resolution && isLowConfidence(resolution) ? [transactionId] : [];
+    return resolution &&
+      isLowConfidence(resolution) &&
+      transaction.date.getTime() >= since
+      ? [transaction.id]
+      : [];
   });
+};
 
 export const stillToCheck: Prisma.TransactionWhereInput = {
   category: null,

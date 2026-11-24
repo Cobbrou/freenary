@@ -15,6 +15,7 @@ import { greetingFor } from "../model/greeting";
 import { HOME_WIDGETS } from "../model/home-widgets";
 import { DashboardsStrip } from "./dashboards-strip";
 import { HomeAskForm } from "./home-ask-form";
+import { HomeToCheckCta } from "./home-to-check-cta";
 
 const MONTH_FORMAT: Intl.DateTimeFormatOptions = { month: "long" };
 
@@ -48,6 +49,7 @@ export const HomePage = () => {
           {greetingFor(now.getHours(), firstName)}
         </h1>
         <HomeAskForm isStarting={isStarting} onAsk={startChat} />
+        <HomeToCheckCta />
       </section>
       <DashboardsStrip dashboards={dashboards.data?.dashboards} today={today} />
       <AccountStrip />

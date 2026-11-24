@@ -620,6 +620,7 @@ const categoriseUncategorised = async (
       counterpartyName: true,
       creditorAccountIban: true,
       currency: true,
+      date: true,
       id: true,
       merchantCategoryCode: true,
       merchantKey: true,
@@ -727,7 +728,7 @@ const categoriseUncategorised = async (
     raiseTransactionsToCheck(
       userId,
       lowConfidenceTransactionIds(
-        inputs.map((input) => input.txId),
+        uncategorised.map((tx) => ({ date: tx.date, id: tx.id })),
         results
       )
     )
