@@ -404,6 +404,8 @@
   "bank_list_empty_title": "No banks available",
   "bank_list_error_title": "Could not load banks",
   "bank_list_loading": "Loading banks",
+  "bank_reconnect": "Reconnect",
+  "bank_reconnect_aria_label": "Reconnect {institution}",
   "bank_row_never_synced": "{accounts} · Not synced yet",
   "bank_row_reconnect": "{accounts} · Reconnect to resume importing",
   "bank_row_sync": "Re-sync {institution}",

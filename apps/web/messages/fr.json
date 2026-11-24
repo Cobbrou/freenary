@@ -413,6 +413,8 @@
   "bank_list_empty_title": "Aucune banque disponible",
   "bank_list_error_title": "Impossible de charger les banques",
   "bank_list_loading": "Chargement des banques",
+  "bank_reconnect": "Reconnecter",
+  "bank_reconnect_aria_label": "Reconnecter {institution}",
   "bank_row_never_synced": "{accounts} · Jamais synchronisé",
   "bank_row_reconnect": "{accounts} · Reconnectez pour reprendre l’import",
   "bank_row_sync": "Resynchroniser {institution}",

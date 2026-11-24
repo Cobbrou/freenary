@@ -5,6 +5,7 @@ import { z } from "zod";
 import type { ProviderInstitution } from "../providers/types";
 
 export interface BankConnectionStateInput {
+  readonly connectionId?: string;
   readonly institution: ProviderInstitution;
   readonly nonce: string;
   readonly original?: string;
@@ -20,6 +21,7 @@ export const BANK_CONNECTION_RETURN_TARGETS = [
 ] as const;
 
 const bankConnectionStateSchema = z.object({
+  connectionId: z.string().optional(),
   hmac: z.string(),
   institution: z.object({
     country: z.string(),
@@ -41,6 +43,7 @@ const computeHmac = (payload: string, userId: string, secret: string): string =>
   createHmac("sha256", secret).update(`${userId}:${payload}`).digest("hex");
 
 export const encodeBankConnectionState = ({
+  connectionId,
   institution,
   nonce,
   original,
@@ -50,6 +53,7 @@ export const encodeBankConnectionState = ({
   userId,
 }: BankConnectionStateInput): string => {
   const payload = {
+    connectionId,
     institution: {
       country: institution.country,
       id: institution.id,

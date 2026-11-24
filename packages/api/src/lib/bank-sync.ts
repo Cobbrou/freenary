@@ -57,8 +57,20 @@ type SyncScope =
 
 class BankSyncFailed extends Data.TaggedError("BankSyncFailed")<{
   readonly detail: string;
+  readonly needsReconnect: boolean;
   readonly scope: SyncScope;
-}> {}
+}> {
+  override get message(): string {
+    return Match.value(this.scope).pipe(
+      Match.discriminatorsExhaustive("kind")({
+        account: (scope) =>
+          `Account ${scope.providerAccountId}: ${this.detail}`,
+        connection: (scope) =>
+          `Connection ${scope.institutionName}: ${this.detail}`,
+      })
+    );
+  }
+}
 
 const PROVIDER_SERVED_HISTORY_DAYS = 90;
 
@@ -67,30 +79,22 @@ const MS_PER_DAY = 24 * 60 * 60 * 1000;
 const PENDING = "PDNG";
 const REJECTED = "RJCT";
 
-const failureLine = (failure: BankSyncFailed): string =>
-  Match.value(failure.scope).pipe(
-    Match.discriminatorsExhaustive("kind")({
-      account: (scope) =>
-        `Account ${scope.providerAccountId}: ${failure.detail}`,
-      connection: (scope) =>
-        `Connection ${scope.institutionName}: ${failure.detail}`,
-    })
-  );
-
 const accountFailure =
-  (account: SyncAccount) =>
+  (account: SyncAccount, provider: BankingProvider) =>
   (cause: unknown): BankSyncFailed =>
     new BankSyncFailed({
       detail: cause instanceof Error ? cause.message : "Unknown account error",
+      needsReconnect: provider.needsReconnect(cause),
       scope: { kind: "account", providerAccountId: account.providerAccountId },
     });
 
-const connectionFailure =
-  (connection: ConnectionWithAccounts) =>
+export const connectionFailure =
+  (connection: ConnectionWithAccounts, provider: BankingProvider | null) =>
   (cause: unknown): BankSyncFailed =>
     new BankSyncFailed({
       detail:
         cause instanceof Error ? cause.message : "Unknown connection error",
+      needsReconnect: provider?.needsReconnect(cause) ?? false,
       scope: {
         institutionName: connection.institutionName,
         kind: "connection",
@@ -503,16 +507,16 @@ const importAccount = async (context: AccountSyncContext): Promise<void> => {
 export const importAccountsInSeries = (
   context: ConnectionSyncContext,
   accounts: readonly SyncAccount[]
-): Effect.Effect<string[]> =>
+): Effect.Effect<BankSyncFailed[]> =>
   Effect.all(
     accounts.map((account) =>
       Effect.tryPromise({
-        catch: accountFailure(account),
+        catch: accountFailure(account, context.provider),
         try: () => importAccount({ ...context, account }),
       }).pipe(
         Effect.as([]),
         Effect.catchTag("BankSyncFailed", (failure) =>
-          Effect.succeed([failureLine(failure)])
+          Effect.succeed([failure])
         ),
         Effect.tap(() =>
           Effect.promise(() => context.reporter.accountFinished())
@@ -527,7 +531,7 @@ const connectionSteps = Effect.fnUntraced(function* connectionSteps(
   reporter: SyncReporter,
   reReadFullWindow: boolean
 ) {
-  const failed = connectionFailure(connection);
+  const failed = connectionFailure(connection, null);
   const now = new Date();
   const oldestPending = yield* Effect.tryPromise({
     catch: failed,
@@ -547,7 +551,7 @@ const connectionSteps = Effect.fnUntraced(function* connectionSteps(
   });
 
   const accounts = yield* Effect.tryPromise({
-    catch: failed,
+    catch: connectionFailure(connection, provider),
     try: () => refreshProviderAccounts(provider, connection, user),
   });
 
@@ -581,6 +585,17 @@ const connectionSteps = Effect.fnUntraced(function* connectionSteps(
   return [];
 });
 
+export const concludeSync = Effect.fnUntraced(function* concludeSync(
+  failures: readonly BankSyncFailed[],
+  expireConnection: () => Promise<void>
+) {
+  if (failures.some((failure) => failure.needsReconnect)) {
+    yield* Effect.promise(expireConnection);
+  }
+
+  return failures.map((failure) => failure.message);
+});
+
 export const syncConnection = (
   connection: ConnectionWithAccounts,
   user: ProviderUserSession | null,
@@ -589,8 +604,14 @@ export const syncConnection = (
 ): Promise<string[]> =>
   Effect.runPromise(
     connectionSteps(connection, user, reporter, force).pipe(
-      Effect.catchTag("BankSyncFailed", (failure) =>
-        Effect.succeed([failureLine(failure)])
+      Effect.catchTag("BankSyncFailed", (failure) => Effect.succeed([failure])),
+      Effect.flatMap((failures) =>
+        concludeSync(failures, async () => {
+          await prisma.bankConnection.update({
+            data: { status: "EXPIRED" },
+            where: { id: connection.id },
+          });
+        })
       )
     )
   );

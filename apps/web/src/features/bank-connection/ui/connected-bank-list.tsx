@@ -18,6 +18,7 @@ import { useBankConnections } from "../model/use-bank-connections";
 import type { BankInstitution } from "../model/use-bank-connections";
 import { BankListSkeleton } from "./bank-list-skeleton";
 import { DisconnectBankDialog } from "./disconnect-bank-dialog";
+import { ReconnectBankButton } from "./reconnect-bank-button";
 
 interface ConnectedBankListProps {
   banks: BankInstitution[];
@@ -41,11 +42,13 @@ const BankMark = ({ row }: { row: BankRow }) =>
 export const ConnectedBankList = ({ banks }: ConnectedBankListProps) => {
   const locale = getLocale();
   const {
+    connecting,
     connections,
     disconnect,
     disconnectingId,
     isConnectionsMissing,
     isConnectionsPending,
+    reconnect,
     resync,
     resyncingId,
   } = useBankConnections({ returnTo: "settings" });
@@ -107,16 +110,28 @@ export const ConnectedBankList = ({ banks }: ConnectedBankListProps) => {
             </ItemContent>
             {row.connection === null ? null : (
               <ItemActions>
-                <SyncButton
-                  isSyncing={resyncingId === row.connection.id}
-                  label={m.bank_row_sync({ institution: row.name })}
-                  onSync={() => {
-                    if (row.connection) {
-                      resync(row.connection);
-                    }
-                  }}
-                  size="icon-compact"
-                />
+                {row.connection.status === "ACTIVE" ? (
+                  <SyncButton
+                    isSyncing={resyncingId === row.connection.id}
+                    label={m.bank_row_sync({ institution: row.name })}
+                    onSync={() => {
+                      if (row.connection) {
+                        resync(row.connection);
+                      }
+                    }}
+                    size="icon-compact"
+                  />
+                ) : (
+                  <ReconnectBankButton
+                    institutionName={row.name}
+                    isReconnecting={connecting === row.connection.id}
+                    onReconnect={() => {
+                      if (row.connection) {
+                        void reconnect(row.connection);
+                      }
+                    }}
+                  />
+                )}
                 <DisconnectBankDialog
                   accountCount={row.connection.accounts.length}
                   institutionName={row.name}

@@ -27,15 +27,16 @@ const completeConnection = Effect.fn("mock.completeConnection")(
     }
 
     const { planAccounts } = yield* Effect.promise(() => import("./generate"));
+    const providerSessionId = request.providerSessionId ?? code;
 
     return {
-      accounts: planAccounts(code).map((account) => ({
+      accounts: planAccounts(providerSessionId).map((account) => ({
         iban: account.iban,
         name: account.name,
         providerAccountId: account.providerAccountId,
       })),
       institutionName: "",
-      providerSessionId: code,
+      providerSessionId,
     };
   }
 );
@@ -84,5 +85,6 @@ export const mockProvider: BankingProvider = {
         country: MOCK_INSTITUTION_COUNTRY,
       }))
     ),
+  needsReconnect: () => false,
   startConnection,
 };

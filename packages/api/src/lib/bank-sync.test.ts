@@ -2,12 +2,19 @@ import { describe, expect, it, mock } from "bun:test";
 
 import { Effect } from "effect";
 
+import { enableBankingProvider } from "../providers/enable-banking";
+import { EnableBankingRequestFailed } from "../providers/enable-banking/client";
 import { mockProvider } from "../providers/mock";
+import { PowensConnectionUnusable, powensProvider } from "../providers/powens";
+import { PowensRequestFailed } from "../providers/powens/client";
 import type {
+  BankingProvider,
   FetchTransactionsRequest,
   ProviderTransaction,
 } from "../providers/types";
 import {
+  concludeSync,
+  connectionFailure,
   earliestImportedDay,
   importAccountsInSeries,
   staleTransactionsWhere,
@@ -75,7 +82,9 @@ describe("importAccountsInSeries", () => {
       importAccountsInSeries(contextFailing(["savings"]), [checking, savings])
     );
 
-    expect(accountFailures).toEqual(["Account savings: timeout"]);
+    expect(accountFailures.map((failure) => failure.message)).toEqual([
+      "Account savings: timeout",
+    ]);
   });
 
   it("drops stale rows only for the account that imported", async () => {
@@ -101,6 +110,125 @@ describe("importAccountsInSeries", () => {
     );
 
     expect(accountFailures).toEqual([]);
+  });
+});
+
+const enableBankingRejected = (status: number, body: string) =>
+  new EnableBankingRequestFailed({
+    operation: "transactions",
+    reason: { body, kind: "rejected", status },
+  });
+
+const endedSession = (errorCode: string) =>
+  enableBankingRejected(
+    401,
+    JSON.stringify({ code: 401, error: errorCode, message: "Session is over" })
+  );
+
+const concludeAfter = async (provider: BankingProvider, cause: Error) => {
+  const expireConnection = mock(() => Promise.resolve());
+  const { connection } = contextFailing([]);
+  const reported = await Effect.runPromise(
+    concludeSync(
+      [connectionFailure(connection, provider)(cause)],
+      expireConnection
+    )
+  );
+
+  return { expired: expireConnection.mock.calls.length === 1, reported };
+};
+
+describe("concludeSync", () => {
+  it.each(["SCARequired", "passwordExpired", "wrongpass"])(
+    "expires a Powens connection in the state %s",
+    async (state) => {
+      expect(
+        await concludeAfter(
+          powensProvider,
+          new PowensConnectionUnusable({
+            reason: { kind: "needsUserAction", state },
+          })
+        )
+      ).toEqual({
+        expired: true,
+        reported: [
+          `Connection Mock Bank: Powens connection needs the user's attention (${state})`,
+        ],
+      });
+    }
+  );
+
+  it.each(["CLOSED_SESSION", "EXPIRED_SESSION", "REVOKED_SESSION"])(
+    "expires an Enable Banking connection on %s",
+    async (code) => {
+      const { expired } = await concludeAfter(
+        enableBankingProvider,
+        endedSession(code)
+      );
+
+      expect(expired).toBe(true);
+    }
+  );
+
+  it.each([
+    [
+      "a Powens timeout",
+      powensProvider,
+      new PowensRequestFailed({
+        operation: "connection",
+        reason: { detail: "TimeoutError", kind: "unreachable" },
+      }),
+    ],
+    [
+      "a Powens 5xx",
+      powensProvider,
+      new PowensRequestFailed({
+        operation: "connection",
+        reason: { body: "", kind: "rejected", status: 503 },
+      }),
+    ],
+    [
+      "an Enable Banking timeout",
+      enableBankingProvider,
+      new EnableBankingRequestFailed({
+        operation: "transactions",
+        reason: { detail: "TimeoutError", kind: "unreachable" },
+      }),
+    ],
+    [
+      "an Enable Banking 5xx with no JSON",
+      enableBankingProvider,
+      enableBankingRejected(502, "<html>Bad Gateway</html>"),
+    ],
+    [
+      "an Enable Banking 401 about the application",
+      enableBankingProvider,
+      endedSession("UNAUTHORIZED_ACCESS"),
+    ],
+  ])("keeps the connection active after %s", async (_, provider, cause) => {
+    const { expired, reported } = await concludeAfter(provider, cause);
+
+    expect(expired).toBe(false);
+    expect(reported).toHaveLength(1);
+  });
+
+  it("recognises a session that ended when an account is read", async () => {
+    const context = contextFailing([]);
+    const failures = await Effect.runPromise(
+      importAccountsInSeries(
+        {
+          ...context,
+          provider: {
+            ...enableBankingProvider,
+            fetchTransactions: () =>
+              Promise.reject(endedSession("EXPIRED_SESSION")),
+          },
+        },
+        [checking]
+      )
+    );
+
+    expect(failures.map((failure) => failure.needsReconnect)).toEqual([true]);
   });
 });
 

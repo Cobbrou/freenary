@@ -120,16 +120,13 @@ export const useBankConnections = ({
     },
   });
 
-  const handOverToBank = async (bank: BankInstitution) => {
-    setConnecting(institutionKey(bank));
-    const started = await client.bankConnection
-      .startConnection({
-        bankCountry: bank.country,
-        institutionId: bank.id,
-        returnTo,
-        state: crypto.randomUUID(),
-      })
-      .catch(() => null);
+  const handOverToBank = async (
+    key: string,
+    institution: string,
+    consent: Promise<{ url: string }>
+  ) => {
+    setConnecting(key);
+    const started = await consent.catch(() => null);
 
     if (started?.url) {
       window.location.assign(started.url);
@@ -137,14 +134,36 @@ export const useBankConnections = ({
       return;
     }
 
-    toast.error(m.bank_connect_error({ institution: bank.name }));
+    toast.error(m.bank_connect_error({ institution }));
     setConnecting(null);
   };
+
+  const connect = (bank: BankInstitution) =>
+    handOverToBank(
+      institutionKey(bank),
+      bank.name,
+      client.bankConnection.startConnection({
+        bankCountry: bank.country,
+        institutionId: bank.id,
+        returnTo,
+        state: crypto.randomUUID(),
+      })
+    );
+
+  const reconnect = (connection: BankConnection) =>
+    handOverToBank(
+      connection.id,
+      connection.institutionName,
+      client.bankConnection.reconnect({
+        connectionId: connection.id,
+        returnTo,
+      })
+    );
 
   const connections = connectionsQuery.data?.connections ?? EMPTY_CONNECTIONS;
 
   return {
-    connect: handOverToBank,
+    connect,
     connecting,
     connections,
     disconnect: disconnectMutation.mutate,
@@ -154,6 +173,7 @@ export const useBankConnections = ({
     isConnectionsMissing:
       connectionsQuery.isError && connectionsQuery.data === undefined,
     isConnectionsPending: connectionsQuery.isPending,
+    reconnect,
     resync: resyncMutation.mutate,
     resyncingId: resyncMutation.isPending ? resyncMutation.variables.id : null,
   };

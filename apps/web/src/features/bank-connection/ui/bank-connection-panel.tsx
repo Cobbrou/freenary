@@ -43,6 +43,7 @@ export const BankConnectionPanel = ({
     disconnectingId,
     isConnectionsMissing,
     isConnectionsPending,
+    reconnect,
     resync,
     resyncingId,
   } = useBankConnections({ returnTo });
@@ -103,6 +104,9 @@ export const BankConnectionPanel = ({
           }
         }}
         onDisconnect={disconnect}
+        onReconnect={(connection) => {
+          void reconnect(connection);
+        }}
         onSync={resync}
         rows={matchingRows}
         syncingId={resyncingId}

@@ -488,6 +488,48 @@
         }
       }
     },
+    "/bankConnection/reconnect": {
+      "post": {
+        "operationId": "bankConnection.reconnect",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "connectionId": {
+                    "type": "string"
+                  },
+                  "returnTo": {
+                    "enum": ["onboarding", "settings"],
+                    "type": "string"
+                  }
+                },
+                "required": ["connectionId", "returnTo"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {},
+                    {
+                      "not": {}
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/bankConnection/startConnection": {
       "post": {
         "operationId": "bankConnection.startConnection",
