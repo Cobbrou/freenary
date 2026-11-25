@@ -57,7 +57,8 @@ export const matchAccounts = (
 
 export const reopenConnection = (
   connectionId: string,
-  completed: CompletedConnection
+  completed: CompletedConnection,
+  exchangeNonce: string
 ): Promise<{ id: string; institutionName: string }> =>
   prisma.$transaction(async (db) => {
     const known = await db.bankAccount.findMany({
@@ -117,6 +118,7 @@ export const reopenConnection = (
 
     return await db.bankConnection.update({
       data: {
+        exchangeNonce,
         lastSyncedAt: null,
         providerSessionId: completed.providerSessionId,
         status: "ACTIVE",
