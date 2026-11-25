@@ -1,4 +1,4 @@
-import { writeFile } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { Data, Duration, Effect, Match, Option, Schedule } from "effect";
@@ -493,9 +493,10 @@ const fetchWikidataBrands = Effect.fnUntraced(function* fetchWikidataBrands() {
   const allAliases = yield* collectAliases([...merged.keys()]);
   const sorted = assembleBrands(merged, allAliases);
 
-  yield* Effect.promise(() =>
-    writeFile(OUTPUT_PATH, JSON.stringify(sorted, null, 2), "utf-8")
-  );
+  yield* Effect.promise(async () => {
+    await mkdir(path.dirname(OUTPUT_PATH), { recursive: true });
+    await writeFile(OUTPUT_PATH, JSON.stringify(sorted, null, 2), "utf-8");
+  });
 
   const frenchCount = sorted.filter((brand) =>
     brand.countries.includes("FR")
