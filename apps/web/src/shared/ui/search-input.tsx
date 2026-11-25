@@ -21,6 +21,7 @@ export const SearchInput = ({
       <RiSearchLine />
     </InputGroupAddon>
     <InputGroupInput
+      aria-label={placeholder}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
       type="search"

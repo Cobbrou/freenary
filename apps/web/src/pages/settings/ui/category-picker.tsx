@@ -73,6 +73,7 @@ export const CategoryPicker = ({
       value={value}
     >
       <ComboboxInput
+        aria-label={m.settings_category_picker_placeholder()}
         className="w-44 shrink-0"
         icon={selected ? categoryMenuIcon(selected.entry) : undefined}
         placeholder={m.settings_category_picker_placeholder()}
