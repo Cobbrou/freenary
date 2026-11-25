@@ -24,6 +24,7 @@ import {
   ensureProviderUser,
   releaseProviderUser,
 } from "../lib/bank-provider-user";
+import { startAccountSync } from "../lib/bank-sync";
 import { isoAlpha2CountryCode } from "../lib/country-code";
 import { exchangeOnceWith } from "../lib/exchange-once";
 import { institutionsLoaderWith } from "../lib/institutions-cache";
@@ -34,7 +35,6 @@ import type {
   CompletedConnection,
   ProviderInstitution,
 } from "../providers/types";
-import { startAccountSync } from "./budget";
 
 class FirstSyncNotStarted extends Data.TaggedError("FirstSyncNotStarted")<{
   readonly cause: unknown;

@@ -98,7 +98,7 @@ The modules in use are `Effect`, `Data`, `Option`, `Match`, `Result`, `Schema`, 
 | `Schema.decodeUnknown*` | Decodes the responses of outside HTTP services (Powens, Enable Banking, classifiers, the assistant probe, the release check). Zod covers API inputs, the environment and web search parameters. | `packages/api/src/providers/powens/client.ts` |
 | `Effect.result` | Returns success or failure as a `Result` value, read with `Result.isFailure` or `Result.match`. | `packages/api/src/routers/instance.ts` |
 | `Effect.retry` and `Effect.repeat` with `Schedule` | Polling and retries. | `apps/web/src/features/instance-integration/api/wait-for-server.ts` |
-| `Effect.runFork` | Background work that the caller does not await. | `packages/api/src/routers/budget.ts`, `packages/api/src/instance/release.ts` |
+| `Effect.runFork` | Background work that the caller does not await. | `packages/api/src/lib/bank-sync.ts`, `packages/api/src/categorisation/run.ts`, `packages/api/src/instance/release.ts` |
 
 The code has no `Effect.gen`, `Effect.runSync`, `Layer`, `Context` services, `Effect.provide` or `Stream`.
 

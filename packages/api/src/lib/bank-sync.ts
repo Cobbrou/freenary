@@ -1,7 +1,10 @@
 import prisma, { Prisma } from "@freenary/db";
 import { Data, Effect, Match } from "effect";
 
+import { matchInternalTransfers } from "../categorisation/internal-transfer";
 import { deriveMerchantKey } from "../categorisation/merchant-key";
+import { categoriseAfterSync } from "../categorisation/run";
+import { refreshExchangeRatesNow } from "../fx/rates";
 import { getProvider } from "../providers/registry";
 import type {
   BankingProvider,
@@ -12,7 +15,14 @@ import type {
   ProviderUserSession,
 } from "../providers/types";
 import { accountTypeRule } from "./account-types";
-import type { SyncReporter } from "./sync-progress";
+import { findProviderUser } from "./bank-provider-user";
+import {
+  BudgetPipelineFailed,
+  claimSyncRun,
+  createSyncReporter,
+  reportPipelineFailure,
+} from "./sync-progress";
+import type { BudgetPipelineReason, SyncReporter } from "./sync-progress";
 
 interface SyncAccount {
   id: string;
@@ -522,7 +532,7 @@ export const earliestImportedDay = (
   return starts.length === 0 ? null : new Date(Math.min(...starts));
 };
 
-export const oldestPendingDate = async (
+const oldestPendingDate = async (
   connectionIds: readonly string[]
 ): Promise<Date | null> => {
   const pending = await prisma.transaction.aggregate({
@@ -686,7 +696,7 @@ export const concludeSync = Effect.fnUntraced(function* concludeSync(
   return failures.map((failure) => failure.message);
 });
 
-export const syncConnection = (
+const syncConnection = (
   connection: ConnectionWithAccounts,
   user: ProviderUserSession | null,
   reporter: SyncReporter,
@@ -705,3 +715,139 @@ export const syncConnection = (
       )
     )
   );
+
+const syncEveryConnection = (
+  connections: Parameters<typeof syncConnection>[0][],
+  userId: string,
+  reporter: SyncReporter,
+  force: boolean
+): Effect.Effect<BudgetPipelineReason[]> =>
+  Effect.forEach(
+    connections,
+    (connection) => {
+      const failed = (cause: unknown) =>
+        new BudgetPipelineFailed({
+          cause,
+          reason: {
+            connectionId: connection.id,
+            institutionName: connection.institutionName,
+            kind: "connection-sync",
+          },
+        });
+
+      return Effect.tryPromise({
+        catch: failed,
+        try: async () => {
+          const providerUser = await findProviderUser(
+            userId,
+            getProvider(connection.provider)
+          );
+
+          return await syncConnection(
+            connection,
+            providerUser,
+            reporter,
+            force
+          );
+        },
+      }).pipe(
+        Effect.flatMap((failureLines) =>
+          failureLines.length === 0
+            ? Effect.succeed(null)
+            : Effect.fail(failed(failureLines))
+        ),
+        Effect.catchTag("BudgetPipelineFailed", reportPipelineFailure)
+      );
+    },
+    { concurrency: 1 }
+  ).pipe(
+    Effect.map((failures) => failures.filter((failure) => failure !== null))
+  );
+
+const runSyncAccounts = Effect.fnUntraced(function* runSyncAccounts(
+  userId: string,
+  connectionId: string | undefined,
+  force: boolean,
+  reporter: SyncReporter
+) {
+  const where: Prisma.BankConnectionWhereInput = { status: "ACTIVE", userId };
+
+  if (connectionId) {
+    where.id = connectionId;
+  }
+
+  const connections = yield* Effect.promise(() =>
+    prisma.bankConnection.findMany({
+      include: {
+        accounts: {
+          select: {
+            currency: true,
+            id: true,
+            providerAccountId: true,
+            type: true,
+          },
+          where: { inConsent: true },
+        },
+      },
+      where,
+    })
+  );
+
+  const oldestPending = yield* Effect.promise(() =>
+    oldestPendingDate(connections.map((connection) => connection.id))
+  );
+
+  const connectionFailures = yield* syncEveryConnection(
+    connections,
+    userId,
+    reporter,
+    force
+  );
+
+  yield* Effect.promise(() => refreshExchangeRatesNow());
+
+  yield* Effect.promise(() =>
+    matchInternalTransfers(
+      userId,
+      earliestImportedDay(connections, force, oldestPending)
+    )
+  );
+
+  const { categorised, failure } = yield* categoriseAfterSync(
+    userId,
+    connectionId,
+    reporter,
+    force
+  );
+
+  return {
+    categorised,
+    failures: failure ? [...connectionFailures, failure] : connectionFailures,
+  };
+});
+
+export const startAccountSync = async (
+  userId: string,
+  { connectionId, force }: { connectionId?: string; force: boolean }
+): Promise<Date | null> => {
+  const claimedAt = await claimSyncRun(userId, "IMPORTING");
+
+  if (claimedAt === null) {
+    return null;
+  }
+
+  const reporter = createSyncReporter(userId, "IMPORTING", claimedAt);
+
+  Effect.runFork(
+    runSyncAccounts(userId, connectionId, force, reporter).pipe(
+      Effect.tapCause(Effect.logError),
+      Effect.matchCauseEffect({
+        onFailure: () => Effect.promise(() => reporter.finished()),
+        onSuccess: (outcome) =>
+          Effect.promise(() => reporter.finishedWith(outcome)),
+      })
+    )
+  );
+
+  return claimedAt;
+};

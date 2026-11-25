@@ -1,5 +1,5 @@
 import prisma, { Prisma } from "@freenary/db";
-import { Option } from "effect";
+import { Data, Effect, Option } from "effect";
 
 export type SyncProgressPhase = "categorising" | "importing";
 
@@ -58,9 +58,33 @@ interface ReporterState {
   lastWriteAt: number;
 }
 
+export type BudgetPipelineReason =
+  | {
+      readonly connectionId: string;
+      readonly institutionName: string;
+      readonly kind: "connection-sync";
+    }
+  | { readonly kind: "categorisation" };
+
 export const SYNC_RUN_ABANDONED_AFTER_MS = 5 * 60 * 1000;
 
 const PROGRESS_WRITE_INTERVAL_MS = 1000;
+
+export class BudgetPipelineFailed extends Data.TaggedError(
+  "BudgetPipelineFailed"
+)<{
+  readonly cause: unknown;
+  readonly reason: BudgetPipelineReason;
+}> {}
+
+export const reportPipelineFailure = (
+  failure: BudgetPipelineFailed
+): Effect.Effect<BudgetPipelineReason> =>
+  Effect.logWarning(
+    "Budget pipeline failed",
+    failure.reason,
+    failure.cause
+  ).pipe(Effect.as(failure.reason));
 
 export const syncProgressFrom = (
   row: SyncRunRow | null,
