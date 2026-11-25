@@ -15,7 +15,7 @@ const SECTION_ORDER: readonly GapOwner[] = ["author", "maintainer", "waiting"];
 const RERUN_HINT = {
   issue:
     "Setting the issue type, or adding an `impact:` or `priority:` label, runs triage again; a maintainer setting a `priority:` label closes this list.",
-  "pull-request": "Adding a `type:` label runs triage again.",
+  "pull-request": "Editing the description runs triage again.",
 } as const satisfies Record<SubjectKind, string>;
 
 const SUBJECT_NAME = {

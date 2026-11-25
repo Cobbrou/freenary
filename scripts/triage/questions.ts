@@ -38,33 +38,19 @@ export const candidateNumber = (key: string): number | undefined =>
     ? Number(key.slice(DUPLICATE_KEY_PREFIX.length))
     : undefined;
 
-const typeQuestion = (kind: SubjectKind): Question => ({
-  criteria:
-    kind === "issue"
-      ? {
-          bug: "Something in Freenary crashes, fails or behaves differently from what it should today",
-          documentation:
-            "A mistake, gap or confusing passage in the documentation site, README or contributor guides",
-          feature:
-            "A request for a capability Freenary does not have, or to improve, extend or polish something it already does",
-          maintenance:
-            "Housekeeping: dependencies, refactoring, tooling, tests, CI or repository chores",
-        }
-      : {
-          bug: "The change fixes something that crashes, fails or behaves incorrectly",
-          documentation:
-            "The change only edits documentation, guides or code comments",
-          feature:
-            "The change adds a capability Freenary did not have, or improves, extends or polishes something it already does",
-          maintenance:
-            "The change updates dependencies, refactors, or touches tooling, tests or CI without changing behaviour",
-        },
-  instructions:
-    kind === "issue"
-      ? "What kind of request is this issue?"
-      : "What kind of change is this pull request?",
+const TYPE_QUESTION: Question = {
+  criteria: {
+    bug: "Something in Freenary crashes, fails or behaves differently from what it should today",
+    documentation:
+      "A mistake, gap or confusing passage in the documentation site, README or contributor guides",
+    feature:
+      "A request for a capability Freenary does not have, or to improve, extend or polish something it already does",
+    maintenance:
+      "Housekeeping: dependencies, refactoring, tooling, tests, CI or repository chores",
+  },
+  instructions: "What kind of request is this issue?",
   type: "choice",
-});
+};
 
 const IMPACT_QUESTION: Question = {
   criteria: [
@@ -161,10 +147,10 @@ export const buildQuestions = (
 ): Record<string, Question> => {
   const questions: Record<string, Question> = {
     blocked: BLOCKED_QUESTION,
-    type: typeQuestion(kind),
   };
 
   if (kind === "issue") {
+    questions.type = TYPE_QUESTION;
     questions.good_first_issue = GOOD_FIRST_ISSUE_QUESTION;
     questions.impact = IMPACT_QUESTION;
     questions.regression = REGRESSION_QUESTION;

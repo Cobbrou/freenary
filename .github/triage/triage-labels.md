@@ -10,8 +10,8 @@ The skills speak in terms of five canonical triage roles. This repo no longer us
 | `ready-for-human` | Same as `ready-for-agent` | Same as `ready-for-agent` |
 | `wontfix` | No label. Close the issue with a comment that says why | Will not be actioned |
 
-Issues carry a GitHub issue type: `Bug`, `Feature` or `Task`. A documentation `Task` also carries the `documentation` label. Pull requests carry a `type:` label instead.
+Issues carry a GitHub issue type: `Bug`, `Feature` or `Task`. A documentation `Task` also carries the `documentation` label. Pull requests carry no type: their title says what kind of change they are.
 
-The labels this repo uses are `type: bug`, `type: feature`, `type: documentation`, `type: maintenance` (pull requests only), `documentation` (issues only), `impact: high`, `impact: medium`, `impact: low`, `priority: high`, `priority: medium`, `priority: low`, `good first issue` and `help wanted`. A skill that mentions another label has no counterpart here: skip that step.
+The labels this repo uses are `documentation`, `impact: high`, `impact: medium`, `impact: low`, `priority: high`, `priority: medium`, `priority: low`, `good first issue` and `help wanted`. A skill that mentions another label has no counterpart here: skip that step.
 
 `good first issue` and `help wanted` mean the spec is complete. Never apply either while the issue has an open item under **Still to define**.

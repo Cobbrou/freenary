@@ -10,7 +10,6 @@ import {
   GOOD_FIRST_ISSUE_LABEL,
   GROUP_PREFIXES,
   typeOfIssue,
-  typeOfLabel,
 } from "./taxonomy";
 import type { TypeKey } from "./taxonomy";
 
@@ -52,7 +51,7 @@ const groupLabel = (
 
 const reviewedType = (item: ReviewedItem): TypeKey | undefined =>
   item.issueType === undefined
-    ? item.labels.map(typeOfLabel).find((key) => key !== undefined)
+    ? undefined
     : typeOfIssue(item.issueType, item.labels);
 
 const typeSample = (answers: Answers, item: ReviewedItem): Sample[] => {
@@ -197,7 +196,6 @@ export interface RecordedRun {
 
 const PREFIX_BY_QUESTION: Readonly<Record<string, string>> = {
   impact: GROUP_PREFIXES.impact,
-  type: GROUP_PREFIXES.type,
 };
 
 const inputCarriedAnswer = (run: RecordedRun, question: string): boolean => {

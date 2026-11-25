@@ -47,9 +47,7 @@ import {
   GOOD_FIRST_ISSUE_LABEL,
   GROUP_PREFIXES,
   ISSUE_TYPES,
-  TYPE_LABELS,
   typeOfIssue,
-  typeOfLabel,
   typesOfIssueType,
 } from "./taxonomy";
 import type { TypeKey } from "./taxonomy";
@@ -196,20 +194,12 @@ const readOwnership = Effect.fnUntraced(function* readOwnership(
 const readTypes = Effect.fnUntraced(function* readTypes(
   client: GitHubClient,
   kind: SubjectKind,
-  subject: Issue,
-  refusedLabels: readonly string[]
+  subject: Issue
 ) {
   const labels = subject.labels.map((label) => label.name);
 
   if (kind === "pull-request") {
-    return {
-      existingType: labels.map(typeOfLabel).find((key) => key !== undefined),
-      refusedTypes: refusedLabels.flatMap((label) => {
-        const key = typeOfLabel(label);
-
-        return key === undefined ? [] : [key];
-      }),
-    };
+    return { existingType: undefined, refusedTypes: [] };
   }
 
   const currentType = subject.type?.name;
@@ -225,25 +215,15 @@ const readTypes = Effect.fnUntraced(function* readTypes(
 });
 
 const typeLabelsFor = (
-  kind: SubjectKind,
   type: TypeKey | undefined,
   existingLabels: readonly string[],
   refusedLabels: readonly string[]
-): string[] => {
-  if (type === undefined) {
-    return [];
-  }
-
-  if (kind === "pull-request") {
-    return [TYPE_LABELS[type]];
-  }
-
-  return type === "documentation" &&
-    !existingLabels.includes(DOCUMENTATION_LABEL) &&
-    !refusedLabels.includes(DOCUMENTATION_LABEL)
+): string[] =>
+  type === "documentation" &&
+  !existingLabels.includes(DOCUMENTATION_LABEL) &&
+  !refusedLabels.includes(DOCUMENTATION_LABEL)
     ? [DOCUMENTATION_LABEL]
     : [];
-};
 
 const applyType = Effect.fnUntraced(function* applyType(
   client: GitHubClient,
@@ -298,12 +278,7 @@ const triage = Effect.fnUntraced(function* triage() {
 
   const existingLabels = subject.labels.map((label) => label.name);
   const ownership = yield* readOwnership(client, number, existingLabels);
-  const types = yield* readTypes(
-    client,
-    kind,
-    subject,
-    ownership.refusedLabels
-  );
+  const types = yield* readTypes(client, kind, subject);
 
   const body = subject.body ?? "";
   const comments = yield* listComments(client, number);
@@ -374,7 +349,7 @@ const triage = Effect.fnUntraced(function* triage() {
   const typeSummary = yield* applyType(client, kind, number, plan.type);
 
   const added = [
-    ...typeLabelsFor(kind, plan.type, existingLabels, ownership.refusedLabels),
+    ...typeLabelsFor(plan.type, existingLabels, ownership.refusedLabels),
     ...plan.labels,
   ];
 

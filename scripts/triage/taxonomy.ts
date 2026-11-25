@@ -4,14 +4,14 @@ export interface LabelDefinition {
   readonly description: string;
 }
 
-export const TYPE_LABELS = {
-  bug: "type: bug",
-  documentation: "type: documentation",
-  feature: "type: feature",
-  maintenance: "type: maintenance",
-} as const;
+export const TYPE_KEYS = [
+  "bug",
+  "documentation",
+  "feature",
+  "maintenance",
+] as const;
 
-export type TypeKey = keyof typeof TYPE_LABELS;
+export type TypeKey = (typeof TYPE_KEYS)[number];
 
 export const DOCUMENTATION_LABEL = "documentation";
 
@@ -21,15 +21,6 @@ export const ISSUE_TYPES = {
   feature: "Feature",
   maintenance: "Task",
 } as const satisfies Record<TypeKey, string>;
-
-const isTypeKey = (key: string): key is TypeKey =>
-  Object.hasOwn(TYPE_LABELS, key);
-
-const TYPE_KEYS: readonly TypeKey[] =
-  Object.keys(TYPE_LABELS).filter(isTypeKey);
-
-export const typeOfLabel = (label: string): TypeKey | undefined =>
-  TYPE_KEYS.find((key) => TYPE_LABELS[key] === label);
 
 export const typesOfIssueType = (name: string): TypeKey[] =>
   TYPE_KEYS.filter((key) => ISSUE_TYPES[key] === name);
@@ -70,36 +61,13 @@ export const HELP_WANTED_LABEL = "help wanted";
 export const GROUP_PREFIXES = {
   impact: "impact:",
   priority: "priority:",
-  type: "type:",
 } as const;
 
 export const LABELS: readonly LabelDefinition[] = [
   {
-    color: "d73a4a",
-    description: "A pull request that fixes something Freenary does wrong",
-    name: TYPE_LABELS.bug,
-  },
-  {
-    color: "0e8a16",
-    description:
-      "A pull request that adds a capability or improves an existing one",
-    name: TYPE_LABELS.feature,
-  },
-  {
-    color: "0075ca",
-    description: "A pull request that only changes documentation",
-    name: TYPE_LABELS.documentation,
-  },
-  {
     color: "0075ca",
     description: "A Task issue about the documentation site, README or guides",
     name: DOCUMENTATION_LABEL,
-  },
-  {
-    color: "fef2c0",
-    description:
-      "A pull request for dependencies, refactoring, tooling, tests or chores",
-    name: TYPE_LABELS.maintenance,
   },
   {
     color: "b60205",

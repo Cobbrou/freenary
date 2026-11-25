@@ -4,7 +4,6 @@ import {
   DOCUMENTATION_LABEL,
   ISSUE_TYPES,
   typeOfIssue,
-  typeOfLabel,
   typesOfIssueType,
 } from "./taxonomy";
 
@@ -27,10 +26,5 @@ describe("issue types", () => {
     expect(typeOfIssue("Task", [DOCUMENTATION_LABEL])).toBe("documentation");
     expect(typeOfIssue(undefined, [DOCUMENTATION_LABEL])).toBeUndefined();
     expect(typeOfIssue("Epic", [])).toBeUndefined();
-  });
-
-  it("reads the type of a pull request label", () => {
-    expect(typeOfLabel("type: documentation")).toBe("documentation");
-    expect(typeOfLabel(DOCUMENTATION_LABEL)).toBeUndefined();
   });
 });

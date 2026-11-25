@@ -430,7 +430,10 @@ export const planLabels = (input: PlanInput): Plan => {
   const allowed = (label: string | undefined): string | undefined =>
     label !== undefined && !refused.has(label) ? label : undefined;
 
-  const modelType = planType(input.answers, input.refusedTypes, notes);
+  const modelType = isIssue
+    ? planType(input.answers, input.refusedTypes, notes)
+    : undefined;
+
   const type = input.existingType === undefined ? modelType : undefined;
   const { impact, priority } = planImpactAndPriority(
     input,

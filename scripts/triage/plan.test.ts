@@ -303,7 +303,7 @@ describe("buildQuestions", () => {
 });
 
 describe("taxonomy", () => {
-  it("defines the thirteen labels once", () => {
+  it("defines the nine labels once", () => {
     const names = LABELS.map((label) => label.name);
 
     expect(new Set(names).size).toBe(names.length);
@@ -318,10 +318,6 @@ describe("taxonomy", () => {
         "priority: high",
         "priority: low",
         "priority: medium",
-        "type: bug",
-        "type: documentation",
-        "type: feature",
-        "type: maintenance",
       ].toSorted()
     );
   });
@@ -706,7 +702,7 @@ describe("top label wins", () => {
 });
 
 describe("tie order", () => {
-  it("follows the option order of the type question", () => {
+  it("follows the option order of the type question, asked of issues only", () => {
     const issue = buildQuestions("issue", []);
     const pullRequest = buildQuestions("pull-request", []);
 
@@ -714,9 +710,7 @@ describe("tie order", () => {
       ...TYPE_TIE_ORDER,
     ]);
 
-    expect(Object.keys(pullRequest.type?.criteria ?? {})).toEqual([
-      ...TYPE_TIE_ORDER,
-    ]);
+    expect(pullRequest.type).toBeUndefined();
   });
 
   it("gives an impact tie to the higher level", () => {

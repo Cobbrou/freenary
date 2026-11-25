@@ -6,24 +6,23 @@ The workflow in `.github/workflows/triage.yml` sets the type and labels what it 
 
 ## Types
 
-An issue's type is its GitHub issue type. A pull request's type is a `type:` label, because pull requests have no issue type.
+An issue's type is its GitHub issue type. A pull request has no type: its title says what kind of change it is, as in `fix: …`, `feat: …`, `docs: …` or `chore: …`.
 
-| Kind of work | Issue type | Pull request label |
-| --- | --- | --- |
-| Something in Freenary behaves incorrectly | `Bug` | `type: bug` |
-| A new capability, or an improvement to something that exists | `Feature` | `type: feature` |
-| The documentation site, README or contributor guides | `Task` and the `documentation` label | `type: documentation` |
-| Dependencies, refactoring, tooling, tests or chores | `Task` | `type: maintenance` |
+| Kind of work | Issue type |
+| --- | --- |
+| Something in Freenary behaves incorrectly | `Bug` |
+| A new capability, or an improvement to something that exists | `Feature` |
+| The documentation site, README or contributor guides | `Task` and the `documentation` label |
+| Dependencies, refactoring, tooling, tests or chores | `Task` |
 
 The repository is owned by a user account, so it has only the three default issue types. The `documentation` label separates documentation work from the other tasks. The **Bug report** form sets `Bug` and the **Feature request** form sets `Feature`.
 
 ## The labels
 
-The repository carries thirteen labels, defined in `scripts/triage/taxonomy.ts`. The `Labels` workflow creates and updates them when that file changes on `dev` or `main`; it never deletes one.
+The repository carries nine labels, defined in `scripts/triage/taxonomy.ts`. The `Labels` workflow creates and updates them when that file changes on `dev` or `main`; it never deletes one.
 
 | Group | Labels | Meaning |
 | --- | --- | --- |
-| Type | `type: bug`, `type: feature`, `type: documentation`, `type: maintenance` | What kind of work a pull request is. See [Types](#types) |
 | Documentation | `documentation` | A `Task` issue about documentation |
 | Impact | `impact: high`, `impact: medium`, `impact: low` | How much it affects the people who use Freenary |
 | Priority | `priority: high`, `priority: medium`, `priority: low` | When to do it, relative to the rest of the queue |
@@ -53,14 +52,14 @@ Impact describes the problem, priority schedules the fix. They often agree, and 
 
 The `Triage` workflow reads the title, the description and the author's replies when an issue or pull request is opened, reopened, edited or answered. It skips closed items, draft pull requests and anything a bot triggered. The rules:
 
-- **Type.** It applies its most probable answer, whatever its confidence, because a wrong type costs a relabel and no wrong decision. On an issue it sets the issue type, and adds `documentation` for documentation work. On a pull request it adds the `type:` label. With no usable answer, it applies none. It never changes a type that is already set.
+- **Type, on issues only.** It sets its most probable answer as the issue type, whatever its confidence, because a wrong type costs a change and no wrong decision, and adds `documentation` for documentation work. With no usable answer, it sets none. It never changes a type that is already set.
 - **Impact and priority, on issues only.** It applies the model's most probable impact level, whatever its confidence, and gives an exact tie to the higher level. When the model returns no probability per level, it rounds the impact score. Priority follows impact: `impact: high`, `medium` and `low` give `priority: high`, `medium` and `low`. A regression, found with at least 0.80 probability, raises that priority by one level. A security risk, found with the same probability, gives `priority: high`. Neither sets a priority without an impact. With no usable impact answer, neither label is applied. An item with no impact and no priority is waiting for a maintainer.
 - **`good first issue`, on issues only.** It applies the label when the model's most probable answer, whatever its confidence, is that a newcomer could finish the work, and only when the spec is complete: no gap in the checklist below, no open item under **Still to define**, not blocked. When the spec stops being complete, the workflow removes the `good first issue` label it applied. A later answer that a newcomer could not finish it does not remove it. While an item is open under **Still to define**, it also removes `good first issue` and `help wanted` whoever added them, and adds a gap for a maintainer.
 - **Possible duplicate.** When the model's most probable answer names another open item with at least 0.85 probability, it asks a maintainer to check it. It adds no label, and an exact tie goes to no duplicate.
 - **`help wanted`.** The workflow never applies it. A maintainer adds it when the spec is complete and the work is open to anyone.
 - **Never over a maintainer.** It does not replace a type or a group a maintainer already set, never sets back an issue type or adds back a label that someone else removed, and recomputes a `priority:` label only when it set that label itself.
 
-A pull request gets a `type:` label and nothing else: impact, priority and the contribution labels belong to the issue it closes.
+A pull request gets no label: its type is in its title, and impact, priority and the contribution labels belong to the issue it closes.
 
 ### The checklist
 

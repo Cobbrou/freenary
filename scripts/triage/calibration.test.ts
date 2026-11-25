@@ -16,7 +16,8 @@ describe("samplesFor", () => {
         type: { choice: "feature", confidence: 0.6, type: "choice" },
       },
       {
-        labels: ["type: maintenance", "impact: low"],
+        issueType: "Task",
+        labels: ["impact: low"],
       }
     );
 
@@ -54,7 +55,7 @@ describe("samplesFor", () => {
           type: "choice",
         },
       },
-      { labels: ["type: bug", "impact: high"] }
+      { issueType: "Bug", labels: ["impact: high"] }
     );
 
     expect(samples).toEqual([
@@ -113,7 +114,7 @@ describe("samplesFor", () => {
           type: "choice",
         },
       },
-      { labels: ["type: bug", "impact: high"] }
+      { issueType: "Bug", labels: ["impact: high"] }
     );
 
     expect(samples).toEqual([
@@ -205,7 +206,8 @@ describe("measureAgreement", () => {
 describe("blindSamples", () => {
   it("skips a run whose input already carried the answer", () => {
     const item = {
-      labels: ["type: bug", "impact: low"],
+      issueType: "Bug",
+      labels: ["impact: low"],
     };
 
     const samples = blindSamples(
@@ -223,7 +225,8 @@ describe("blindSamples", () => {
             impact: { confidence: 0.9, score: 0, type: "score" },
             type: { choice: "bug", confidence: 0.9, type: "choice" },
           },
-          existingLabels: ["type: bug", "impact: low", "priority: low"],
+          existingLabels: ["impact: low", "priority: low"],
+          existingType: "bug",
           recordedAt: "2026-10-02T00:00:00Z",
         },
       ],
