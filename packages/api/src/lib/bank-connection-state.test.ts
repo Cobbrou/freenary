@@ -109,6 +109,30 @@ describe("bank connection state", () => {
     ).toBe(false);
   });
 
+  test("HMAC rejects a connection to reopen that was swapped in", () => {
+    const state = parseBankConnectionState(
+      encodeBankConnectionState({
+        connectionId: "connection-1",
+        institution,
+        nonce: "nonce-1",
+        providerId: "enable-banking",
+        returnTo: "settings",
+        secret,
+        userId,
+      })
+    );
+
+    expect(state.connectionId).toBe("connection-1");
+    expect(verifyBankConnectionState(state, userId, secret)).toBe(true);
+    expect(
+      verifyBankConnectionState(
+        { ...state, connectionId: "connection-2" },
+        userId,
+        secret
+      )
+    ).toBe(false);
+  });
+
   test("rejects state without a return target", () => {
     expect(() =>
       parseBankConnectionState(

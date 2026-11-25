@@ -9,7 +9,12 @@ import type { RecurringItem } from "@/entities/recurring";
 import { EMPTY_AMOUNT_RANGE, foldForSearch } from "@/shared/lib/text";
 import type { AmountRange } from "@/shared/lib/text";
 
-import { monthlyEquivalentMinor, recurringSections } from "./recurring";
+import {
+  comparableMonthlyMinor,
+  monthlyEquivalentMinor,
+  recurringSections,
+  reportingMonthlyMinor,
+} from "./recurring";
 import type {
   RecurrenceConfidence,
   RecurrenceFrequency,
@@ -88,9 +93,21 @@ const matchesLabelOrBankKey = (item: RecurringItem, needle: string): boolean =>
   foldForSearch(merchantLabel(item)).includes(needle) ||
   foldForSearch(item.merchantKey).includes(needle);
 
+const monthlyAmountOf = (
+  item: RecurringItem,
+  reportingCurrency: string
+): number => {
+  const reporting = reportingMonthlyMinor(item);
+
+  return reporting === null
+    ? fromMinor(monthlyEquivalentMinor(item), item.currency)
+    : fromMinor(reporting, reportingCurrency);
+};
+
 export const filterRecurringItems = (
   items: RecurringItem[],
-  filter: RecurringFilter
+  filter: RecurringFilter,
+  reportingCurrency: string
 ): RecurringItem[] => {
   const allowed = categoriesUnionedWithGroups(filter.categories);
   const needle = foldForSearch(filter.search.trim());
@@ -115,7 +132,7 @@ export const filterRecurringItems = (
       return false;
     }
 
-    const monthly = fromMinor(monthlyEquivalentMinor(item), item.currency);
+    const monthly = monthlyAmountOf(item, reportingCurrency);
 
     if (min > 0 && monthly < min) {
       return false;
@@ -136,18 +153,19 @@ export const sortRecurringItems = (
   items.toSorted((a, b) =>
     sort === "next"
       ? Date.parse(a.nextExpected) - Date.parse(b.nextExpected) ||
-        monthlyEquivalentMinor(b) - monthlyEquivalentMinor(a)
-      : monthlyEquivalentMinor(b) - monthlyEquivalentMinor(a) ||
+        comparableMonthlyMinor(b) - comparableMonthlyMinor(a)
+      : comparableMonthlyMinor(b) - comparableMonthlyMinor(a) ||
         Date.parse(a.nextExpected) - Date.parse(b.nextExpected)
   );
 
 export const groupRecurringItems = (
   items: RecurringItem[],
   filter: RecurringFilter,
-  sort: RecurringSortMode
+  sort: RecurringSortMode,
+  reportingCurrency: string
 ): RecurringGroups => {
   const [fixed, behavioral] = recurringSections(
-    filterRecurringItems(items, filter)
+    filterRecurringItems(items, filter, reportingCurrency)
   );
 
   return {

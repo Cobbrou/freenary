@@ -3,6 +3,7 @@ generator client {
   output          = "../generated"
   moduleFormat    = "esm"
   runtime         = "bun"
+  compilerBuild   = "small"
   previewFeatures = ["postgresqlExtensions"]
 }
 

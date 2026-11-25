@@ -14,11 +14,17 @@ import { useSize } from "@freenary/ui/lib/size-context";
 import { RiCloseLine } from "@remixicon/react";
 import { useEffect, useState } from "react";
 
-import { TransactionAmount, transactionTitle } from "@/entities/budget";
+import {
+  exchangeRateOf,
+  originalAmountOf,
+  TransactionAmount,
+  transactionTitle,
+} from "@/entities/budget";
 import type { Transaction } from "@/entities/budget";
 import { CategoryIcon } from "@/entities/category";
 import { m } from "@/paraglide/messages.js";
 import { getLocale } from "@/paraglide/runtime.js";
+import { formatCurrency } from "@/shared/lib/format-currency";
 
 import { useTransactionCategory } from "../model/use-transaction-category";
 import { TransactionCategoryPicker } from "./transaction-category-picker";
@@ -28,6 +34,55 @@ const HERO_BOX = {
   compact: "size-10 [&_svg]:size-5",
   default: "size-12 [&_svg]:size-6",
 } as const;
+
+const RATE_FORMAT: Intl.NumberFormatOptions = {
+  maximumFractionDigits: 4,
+  maximumSignificantDigits: 4,
+  roundingPriority: "morePrecision",
+};
+
+const ExchangeRows = ({ transaction }: { transaction: Transaction }) => {
+  const original = originalAmountOf(transaction);
+  const rate = exchangeRateOf(transaction);
+  const fee = transaction.exchangeFeeMinor ?? 0;
+
+  return (
+    <>
+      {original ? (
+        <TransactionDetailRow label={m.budget_detail_original_amount_label()}>
+          <span className="text-sm tabular-nums">
+            {formatCurrency(Math.abs(original.amountMinor), original.currency)}
+          </span>
+        </TransactionDetailRow>
+      ) : null}
+
+      {original && rate !== null ? (
+        <TransactionDetailRow label={m.budget_detail_exchange_rate_label()}>
+          <span className="text-sm tabular-nums">
+            {m.budget_detail_exchange_rate_value({
+              from: original.currency,
+              rate: new Intl.NumberFormat(getLocale(), RATE_FORMAT).format(
+                rate
+              ),
+              to: transaction.currency,
+            })}
+          </span>
+        </TransactionDetailRow>
+      ) : null}
+
+      {fee > 0 ? (
+        <TransactionDetailRow label={m.budget_detail_exchange_cost_label()}>
+          <span className="text-sm tabular-nums">
+            {formatCurrency(fee, transaction.currency)}
+          </span>
+          <span className="text-muted-foreground text-xs text-pretty">
+            {m.budget_detail_exchange_cost_hint()}
+          </span>
+        </TransactionDetailRow>
+      ) : null}
+    </>
+  );
+};
 
 const TransactionDetails = ({ transaction }: { transaction: Transaction }) => {
   const updateCategory = useTransactionCategory(transaction);
@@ -94,6 +149,8 @@ const TransactionDetails = ({ transaction }: { transaction: Transaction }) => {
             <TransactionDetailRow label={m.budget_detail_date_label()}>
               <span className="text-sm">{displayDate}</span>
             </TransactionDetailRow>
+
+            <ExchangeRows transaction={transaction} />
 
             {showsBankText && transaction.description ? (
               <TransactionDetailRow label={m.budget_detail_description_label()}>

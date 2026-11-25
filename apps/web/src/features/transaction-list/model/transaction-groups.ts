@@ -5,12 +5,16 @@ import { localDayOfBankDate } from "@/shared/lib/calendar-day";
 
 export type TransactionGrouping = "day" | "week" | "month";
 
+export interface GroupTotal {
+  currency: string;
+  total: number;
+}
+
 interface GroupHeader {
   type: "header";
   key: string;
   label: string;
-  total: number;
-  currency: string;
+  totals: GroupTotal[];
 }
 
 export type VirtualItem =
@@ -136,47 +140,42 @@ export const formatGroupLabel = (
   return formatDayKeyLabel(key, locale);
 };
 
+const addToGroupTotals = (totals: GroupTotal[], tx: Transaction) => {
+  const inCurrency = totals.find((entry) => entry.currency === tx.currency);
+
+  if (inCurrency) {
+    inCurrency.total += tx.amount;
+  } else {
+    totals.push({ currency: tx.currency, total: tx.amount });
+  }
+};
+
 export const buildVirtualItems = (
   transactions: Transaction[],
   grouping: TransactionGrouping,
   locale: Locale
 ): VirtualItem[] => {
-  if (transactions.length === 0) {
-    return [];
-  }
-
   const items: VirtualItem[] = [];
   let currentKey = "";
-  let groupTotal = 0;
-  let headerAwaitingItsTotal: GroupHeader | null = null;
+  let header: GroupHeader | null = null;
 
   for (const tx of transactions) {
     const key = groupKey(tx.date, grouping);
 
-    if (key !== currentKey) {
-      if (headerAwaitingItsTotal) {
-        headerAwaitingItsTotal.total = groupTotal;
-      }
-
+    if (key !== currentKey || header === null) {
       currentKey = key;
-      groupTotal = 0;
-      headerAwaitingItsTotal = {
-        currency: tx.currency,
+      header = {
         key: `header-${tx.id}`,
         label: formatGroupLabel(key, grouping, locale),
-        total: 0,
+        totals: [],
         type: "header",
       };
 
-      items.push(headerAwaitingItsTotal);
+      items.push(header);
     }
 
-    groupTotal += tx.amount;
+    addToGroupTotals(header.totals, tx);
     items.push({ key: tx.id, tx, type: "tx" });
-  }
-
-  if (headerAwaitingItsTotal) {
-    headerAwaitingItsTotal.total = groupTotal;
   }
 
   return items;

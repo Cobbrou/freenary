@@ -1,10 +1,13 @@
 import { describe, expect, it } from "bun:test";
 
+import { rateBookOf } from "../fx/rate-book";
 import {
+  exchangeFeeOf,
   matchInternalTransfers,
   pairedLegs,
   transferLegUpdates,
 } from "./internal-transfer";
+import type { TransferCandidate, TransferPair } from "./internal-transfer";
 
 describe("matchInternalTransfers", () => {
   it("returns 0 for non-existent user", async () => {
@@ -70,5 +73,194 @@ describe("transferLegUpdates", () => {
 
     expect(flagged).toHaveLength(4);
     expect(saved.size).toBe(0);
+  });
+});
+
+const MAY_SECOND = new Date("2026-05-02T00:00:00Z");
+const HOUR_MS = 60 * 60 * 1000;
+
+const dollarRates = rateBookOf([
+  { currency: "USD", date: new Date("2026-05-01T00:00:00Z"), ratePerEur: 1.1 },
+]);
+
+const foreignLeg = (
+  id: string,
+  accountId: string,
+  amount: number,
+  currency: string,
+  overrides: Partial<TransferCandidate> = {}
+): TransferCandidate => ({
+  accountId,
+  amount,
+  currency,
+  date: MAY_SECOND,
+  id,
+  ...overrides,
+});
+
+const pairIds = (pairs: readonly TransferPair[]) =>
+  pairs.map((pair) => [pair.outgoing.id, pair.incoming.id]);
+
+describe("pairedLegs across currencies", () => {
+  it("pairs two accounts when the reference rate lands within tolerance", () => {
+    const pairs = pairedLegs(
+      [
+        foreignLeg("eur-out", "checking", -10_000, "EUR"),
+        foreignLeg("usd-in", "dollars", 10_800, "USD"),
+      ],
+      dollarRates
+    );
+
+    expect(pairIds(pairs)).toEqual([["eur-out", "usd-in"]]);
+    expect(pairs[0]?.exchangeFeeMinor).toBe(182);
+  });
+
+  it("pairs an exchange inside one account holding two currencies", () => {
+    const pairs = pairedLegs(
+      [
+        foreignLeg("eur-out", "multi", -10_000, "EUR"),
+        foreignLeg("usd-in", "multi", 10_900, "USD", {
+          date: new Date(MAY_SECOND.getTime() + HOUR_MS),
+        }),
+      ],
+      dollarRates
+    );
+
+    expect(pairIds(pairs)).toEqual([["eur-out", "usd-in"]]);
+    expect(pairs[0]?.exchangeFeeMinor).toBe(91);
+  });
+
+  it("trusts the amount the bank converted even far from the reference rate", () => {
+    const pairs = pairedLegs(
+      [
+        foreignLeg("eur-out", "checking", -10_000, "EUR", {
+          originalAmount: 9500,
+          originalCurrency: "USD",
+        }),
+        foreignLeg("usd-in", "dollars", 9500, "USD"),
+      ],
+      dollarRates
+    );
+
+    expect(pairIds(pairs)).toEqual([["eur-out", "usd-in"]]);
+    expect(pairs[0]?.exchangeFeeMinor).toBe(1364);
+  });
+
+  it("refuses a pair more than 3% off the reference rate", () => {
+    expect(
+      pairedLegs(
+        [
+          foreignLeg("eur-out", "checking", -10_000, "EUR"),
+          foreignLeg("usd-in", "dollars", 10_500, "USD"),
+        ],
+        dollarRates
+      )
+    ).toEqual([]);
+  });
+
+  it("refuses a pair more than a day apart", () => {
+    expect(
+      pairedLegs(
+        [
+          foreignLeg("eur-out", "checking", -10_000, "EUR"),
+          foreignLeg("usd-in", "dollars", 11_000, "USD", {
+            date: new Date(MAY_SECOND.getTime() + 25 * HOUR_MS),
+          }),
+        ],
+        dollarRates
+      )
+    ).toEqual([]);
+  });
+
+  it("chooses the outgoing leg closest to the reference rate", () => {
+    const pairs = pairedLegs(
+      [
+        foreignLeg("further", "checking", -10_000, "EUR"),
+        foreignLeg("closer", "joint", -9950, "EUR"),
+        foreignLeg("usd-in", "dollars", 10_900, "USD"),
+      ],
+      dollarRates
+    );
+
+    expect(pairIds(pairs)).toEqual([["closer", "usd-in"]]);
+  });
+
+  it("does not pair across currencies without rates", () => {
+    expect(
+      pairedLegs([
+        foreignLeg("eur-out", "checking", -10_000, "EUR"),
+        foreignLeg("usd-in", "dollars", 11_000, "USD"),
+      ])
+    ).toEqual([]);
+  });
+
+  it("keeps pairing same-currency legs first", () => {
+    const pairs = pairedLegs(
+      [
+        foreignLeg("eur-out", "checking", -10_000, "EUR"),
+        foreignLeg("eur-in", "livret", 10_000, "EUR"),
+        foreignLeg("usd-in", "dollars", 11_000, "USD"),
+      ],
+      dollarRates
+    );
+
+    expect(pairIds(pairs)).toEqual([["eur-out", "eur-in"]]);
+  });
+});
+
+describe("exchangeFeeOf", () => {
+  it("is what was sent beyond the reference value of what arrived", () => {
+    expect(
+      exchangeFeeOf(
+        foreignLeg("eur-out", "checking", -10_000, "EUR"),
+        foreignLeg("usd-in", "dollars", 10_780, "USD"),
+        dollarRates
+      )
+    ).toBe(200);
+  });
+
+  it("is zero when more arrived than the reference rate gives", () => {
+    expect(
+      exchangeFeeOf(
+        foreignLeg("eur-out", "checking", -10_000, "EUR"),
+        foreignLeg("usd-in", "dollars", 11_200, "USD"),
+        dollarRates
+      )
+    ).toBe(0);
+  });
+
+  it("is unknown without a rate for the currency received", () => {
+    expect(
+      exchangeFeeOf(
+        foreignLeg("eur-out", "checking", -10_000, "EUR"),
+        foreignLeg("gbp-in", "pounds", 8600, "GBP"),
+        dollarRates
+      )
+    ).toBeNull();
+  });
+});
+
+describe("transferLegUpdates fees", () => {
+  it("reports the exchange fee under the outgoing leg", () => {
+    const pairs = pairedLegs(
+      [
+        foreignLeg("eur-out", "checking", -10_000, "EUR"),
+        foreignLeg("usd-in", "dollars", 10_800, "USD"),
+        foreignLeg("to-livret", "checking", -5000, "EUR"),
+        foreignLeg("livret-in", "livret", 5000, "EUR"),
+      ],
+      dollarRates
+    );
+
+    const { fees } = transferLegUpdates(
+      pairs,
+      new Map([
+        ["checking", "CHECKING"],
+        ["dollars", "CHECKING"],
+        ["livret", "LIVRET_A"],
+      ])
+    );
+
+    expect(fees).toEqual(new Map([["eur-out", 182]]));
   });
 });

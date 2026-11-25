@@ -1,9 +1,23 @@
 import { describe, expect, it } from "bun:test";
 
+import { converterOf } from "../fx/converter";
+import { rateBookOf } from "../fx/rate-book";
 import { currentAccountsOf, holdingsSummaryOf, netWorthOf } from "./net-worth";
 
 const MAY_FIRST = new Date("2026-05-01T08:00:00Z");
 const MAY_SECOND = new Date("2026-05-02T08:00:00Z");
+const euros = converterOf("EUR", rateBookOf([]));
+
+const dollarsAtOneTen = converterOf(
+  "EUR",
+  rateBookOf([
+    {
+      currency: "USD",
+      date: new Date("2026-05-01T00:00:00Z"),
+      ratePerEur: 1.1,
+    },
+  ])
+);
 
 describe("netWorthOf", () => {
   it("adds assets by class and takes debts off the total", () => {
@@ -40,7 +54,7 @@ describe("netWorthOf", () => {
           type: "LOAN",
         },
       ],
-      "EUR"
+      euros
     );
 
     expect(worth).toEqual({
@@ -54,6 +68,7 @@ describe("netWorthOf", () => {
       excludedAccountCount: 0,
       liabilitiesMinor: 900_000,
       netWorthMinor: 220_000,
+      unconvertedAccountCount: 0,
     });
   });
 
@@ -67,7 +82,7 @@ describe("netWorthOf", () => {
           type: "CHECKING",
         },
       ],
-      "EUR"
+      euros
     );
 
     expect(worth.assetClasses).toEqual([]);
@@ -97,7 +112,7 @@ describe("netWorthOf", () => {
           type: "CARD",
         },
       ],
-      "EUR"
+      euros
     );
 
     expect(worth.assetsMinor).toBe(100_000);
@@ -139,7 +154,7 @@ describe("netWorthOf", () => {
           type: "EMPLOYEE_SAVINGS",
         },
       ],
-      "EUR"
+      euros
     );
 
     expect(worth.assetClasses).toEqual([
@@ -151,7 +166,56 @@ describe("netWorthOf", () => {
     expect(worth.netWorthMinor).toBe(1_100_000);
   });
 
-  it("leaves out accounts in another currency or with no balance", () => {
+  it("converts an account in another currency at the rate of the day", () => {
+    const worth = netWorthOf(
+      [
+        {
+          balanceAt: null,
+          balanceMinor: 10_000,
+          currency: "EUR",
+          type: "CHECKING",
+        },
+        {
+          balanceAt: null,
+          balanceMinor: 88_000,
+          currency: "USD",
+          type: "CHECKING",
+        },
+      ],
+      dollarsAtOneTen,
+      MAY_SECOND
+    );
+
+    expect(worth.netWorthMinor).toBe(90_000);
+    expect(worth.excludedAccountCount).toBe(0);
+  });
+
+  it("adds every currency an account holds", () => {
+    const worth = netWorthOf(
+      [
+        {
+          balanceAt: MAY_FIRST,
+          balanceMinor: null,
+          balances: [
+            { balanceAt: MAY_FIRST, balanceMinor: 50_000, currency: "EUR" },
+            { balanceAt: MAY_FIRST, balanceMinor: 11_000, currency: "USD" },
+          ],
+          currency: "EUR",
+          type: "SAVINGS",
+        },
+      ],
+      dollarsAtOneTen,
+      MAY_SECOND
+    );
+
+    expect(worth.assetClasses).toEqual([
+      { amountMinor: 60_000, assetClass: "savings" },
+    ]);
+
+    expect(worth.excludedAccountCount).toBe(0);
+  });
+
+  it("leaves out accounts in a currency with no rate or with no balance", () => {
     const worth = netWorthOf(
       [
         {
@@ -173,11 +237,12 @@ describe("netWorthOf", () => {
           type: "SAVINGS",
         },
       ],
-      "EUR"
+      euros
     );
 
     expect(worth.netWorthMinor).toBe(10_000);
     expect(worth.excludedAccountCount).toBe(2);
+    expect(worth.unconvertedAccountCount).toBe(1);
   });
 
   it("has no total when no account reports a balance", () => {
@@ -190,7 +255,7 @@ describe("netWorthOf", () => {
           type: "CHECKING",
         },
       ],
-      "EUR"
+      euros
     );
 
     expect(worth.netWorthMinor).toBeNull();
@@ -238,18 +303,39 @@ describe("holdingsSummaryOf", () => {
           valuationMinor: 900_000,
         },
       ],
-      "EUR"
+      euros
     );
 
     expect(summary.valuationMinor).toBe(235_000);
     expect(summary.unrealisedGainMinor).toBe(16_000);
     expect(summary.costBasisMinor).toBe(159_000);
     expect(summary.holdingCount).toBe(4);
+    expect(summary.unconvertedHoldingCount).toBe(1);
     expect(summary.topHoldings.map((holding) => holding.id)).toEqual([
       "a",
       "c",
       "b",
     ]);
+  });
+
+  it("converts a holding in another currency, gain included", () => {
+    const summary = holdingsSummaryOf(
+      [
+        {
+          currency: "USD",
+          id: "e",
+          label: "US stock",
+          unrealisedGainMinor: 11_000,
+          valuationMinor: 110_000,
+        },
+      ],
+      dollarsAtOneTen,
+      MAY_SECOND
+    );
+
+    expect(summary.valuationMinor).toBe(100_000);
+    expect(summary.unrealisedGainMinor).toBe(10_000);
+    expect(summary.unconvertedHoldingCount).toBe(0);
   });
 
   it("reports no gain when no holding carries one", () => {
@@ -263,7 +349,7 @@ describe("holdingsSummaryOf", () => {
           valuationMinor: 1000,
         },
       ],
-      "EUR"
+      euros
     );
 
     expect(summary.unrealisedGainMinor).toBeNull();
@@ -274,66 +360,116 @@ describe("holdingsSummaryOf", () => {
 describe("currentAccountsOf", () => {
   it("dates the balance by the checking accounts it adds up, not by the others", () => {
     expect(
-      currentAccountsOf([
-        {
-          balanceAt: MAY_FIRST,
-          balanceMinor: 120_000,
-          currency: "EUR",
-          type: "CHECKING",
-        },
-        {
-          balanceAt: MAY_SECOND,
-          balanceMinor: 500_000,
-          currency: "EUR",
-          type: "BROKERAGE",
-        },
-      ])
+      currentAccountsOf(
+        [
+          {
+            balanceAt: MAY_FIRST,
+            balanceMinor: 120_000,
+            currency: "EUR",
+            type: "CHECKING",
+          },
+          {
+            balanceAt: MAY_SECOND,
+            balanceMinor: 500_000,
+            currency: "EUR",
+            type: "BROKERAGE",
+          },
+        ],
+        euros
+      )
     ).toEqual({
       balanceMinor: 120_000,
       balancesAt: MAY_FIRST,
       currency: "EUR",
+      unconvertedBalanceCount: 0,
     });
   });
 
   it("takes off what a deferred card has spent but leaves savings out", () => {
     expect(
-      currentAccountsOf([
-        {
-          balanceAt: MAY_FIRST,
-          balanceMinor: 120_000,
-          currency: "EUR",
-          type: "CHECKING",
-        },
-        {
-          balanceAt: MAY_SECOND,
-          balanceMinor: -20_000,
-          currency: "EUR",
-          type: "CARD",
-        },
-        {
-          balanceAt: MAY_SECOND,
-          balanceMinor: 500_000,
-          currency: "EUR",
-          type: "LIVRET_A",
-        },
-      ])
+      currentAccountsOf(
+        [
+          {
+            balanceAt: MAY_FIRST,
+            balanceMinor: 120_000,
+            currency: "EUR",
+            type: "CHECKING",
+          },
+          {
+            balanceAt: MAY_SECOND,
+            balanceMinor: -20_000,
+            currency: "EUR",
+            type: "CARD",
+          },
+          {
+            balanceAt: MAY_SECOND,
+            balanceMinor: 500_000,
+            currency: "EUR",
+            type: "LIVRET_A",
+          },
+        ],
+        euros
+      )
     ).toEqual({
       balanceMinor: 100_000,
       balancesAt: MAY_SECOND,
       currency: "EUR",
+      unconvertedBalanceCount: 0,
+    });
+  });
+
+  it("adds a checking account in another currency and counts one with no rate", () => {
+    expect(
+      currentAccountsOf(
+        [
+          {
+            balanceAt: MAY_FIRST,
+            balanceMinor: 120_000,
+            currency: "EUR",
+            type: "CHECKING",
+          },
+          {
+            balanceAt: MAY_SECOND,
+            balanceMinor: 22_000,
+            currency: "USD",
+            type: "CHECKING",
+          },
+          {
+            balanceAt: MAY_SECOND,
+            balanceMinor: 5000,
+            currency: "GBP",
+            type: "CHECKING",
+          },
+        ],
+        dollarsAtOneTen,
+        MAY_SECOND
+      )
+    ).toEqual({
+      balanceMinor: 140_000,
+      balancesAt: MAY_SECOND,
+      currency: "EUR",
+      unconvertedBalanceCount: 1,
     });
   });
 
   it("has no date when no checking account reports a balance", () => {
     expect(
-      currentAccountsOf([
-        {
-          balanceAt: MAY_SECOND,
-          balanceMinor: null,
-          currency: "EUR",
-          type: "CHECKING",
-        },
-      ])
-    ).toEqual({ balanceMinor: null, balancesAt: null, currency: "EUR" });
+      currentAccountsOf(
+        [
+          {
+            balanceAt: MAY_SECOND,
+            balanceMinor: null,
+            currency: "EUR",
+            type: "CHECKING",
+          },
+        ],
+        euros
+      )
+    ).toEqual({
+      balanceMinor: null,
+      balancesAt: null,
+      currency: "EUR",
+      unconvertedBalanceCount: 0,
+    });
   });
 });

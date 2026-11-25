@@ -1,11 +1,9 @@
 import prisma from "@freenary/db";
-import type { Prisma } from "@freenary/db";
+import type { Prisma, TransactionClient } from "@freenary/db";
 import { Option } from "effect";
 
 import { resolveCategorySlug } from "../lib/taxonomy";
 import type { SpendingCategory } from "../lib/taxonomy";
-
-type TransactionClient = Prisma.TransactionClient;
 
 interface OverrideClient {
   merchantOverride: {

@@ -176,8 +176,7 @@ export const TransactionRows = ({
                 <TransactionGroupHeader
                   key={item.key}
                   label={item.label}
-                  total={item.total}
-                  currency={item.currency}
+                  totals={item.totals}
                   index={virtualRow.index}
                   offset={virtualRow.start}
                   measureRef={virtualizer.measureElement}

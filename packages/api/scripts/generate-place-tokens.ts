@@ -1,5 +1,5 @@
 import { existsSync } from "node:fs";
-import { writeFile } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { Data, Effect, Match } from "effect";
@@ -181,7 +181,10 @@ const generatePlaceTokens = Effect.fnUntraced(function* generatePlaceTokens() {
   yield* Effect.tryPromise({
     catch: (cause) =>
       new PlaceTokenBuildFailed({ reason: { cause, kind: "writeFailed" } }),
-    try: () => writeFile(OUTPUT_PATH, JSON.stringify(tokens, null, 2)),
+    try: async () => {
+      await mkdir(path.dirname(OUTPUT_PATH), { recursive: true });
+      await writeFile(OUTPUT_PATH, JSON.stringify(tokens, null, 2));
+    },
   });
 
   console.log(`Generated ${tokens.length} place tokens → ${OUTPUT_PATH}`);

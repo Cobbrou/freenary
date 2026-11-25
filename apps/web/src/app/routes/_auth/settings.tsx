@@ -2,11 +2,14 @@ import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 
 import { SettingsPage } from "@/pages/settings";
+import { m } from "@/paraglide/messages.js";
 import {
   DEFAULT_SETTINGS_SECTION,
   SETTINGS_SECTIONS,
   settingsSectionOf,
 } from "@/shared/config";
+
+import { pageHead } from "../../router/page-head";
 
 const settingsSearchSchema = z.object({
   error: z.string().optional(),
@@ -17,6 +20,7 @@ type SettingsSearchInput = z.input<typeof settingsSearchSchema>;
 
 export const Route = createFileRoute("/_auth/settings")({
   component: SettingsPage,
+  head: pageHead(m.nav_settings),
   validateSearch: (search: SettingsSearchInput) =>
     settingsSearchSchema.parse({
       error: search.error,

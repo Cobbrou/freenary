@@ -1,7 +1,11 @@
+import type { Converter } from "../fx/converter";
 import { signedBalanceOf } from "./account-types";
+import { balancesOf } from "./accounts-summary";
+import type { HeldBalance } from "./accounts-summary";
 
 export interface HistoryAccount {
   balanceMinor: number | null;
+  balances?: readonly HeldBalance[];
   currency: string | null;
   id: string;
   type: string;
@@ -10,6 +14,7 @@ export interface HistoryAccount {
 export interface HistoryTransaction {
   accountId: string;
   amount: number;
+  currency: string;
   date: Date;
 }
 
@@ -18,7 +23,16 @@ export interface BalancePoint {
   date: string;
 }
 
+interface Ledger {
+  balanceNow: number;
+  currency: string;
+  sign: number;
+}
+
 const isoDay = (date: Date): string => date.toISOString().slice(0, 10);
+
+const ledgerKey = (accountId: string, currency: string) =>
+  `${accountId}\u001F${currency}`;
 
 export const monthEndsBefore = (today: Date, months: number): Date[] =>
   Array.from(
@@ -37,45 +51,90 @@ export const monthEndsBefore = (today: Date, months: number): Date[] =>
       )
   );
 
-export const balanceHistory = (
-  accounts: readonly HistoryAccount[],
-  transactions: readonly HistoryTransaction[],
-  currency: string,
-  today: Date,
-  months: number
-): BalancePoint[] | null => {
-  const ledgerSign = new Map<string, number>();
-  let balanceNow = 0;
+const ledgersOf = (accounts: readonly HistoryAccount[]) => {
+  const ledgers = new Map<string, Ledger>();
 
   for (const account of accounts) {
-    if (account.balanceMinor !== null && account.currency === currency) {
-      const signed = signedBalanceOf(account.type, account.balanceMinor);
+    for (const held of balancesOf(account)) {
+      const signed = signedBalanceOf(account.type, held.balanceMinor);
 
-      ledgerSign.set(account.id, signed === account.balanceMinor ? 1 : -1);
-      balanceNow += signed;
+      ledgers.set(ledgerKey(account.id, held.currency), {
+        balanceNow: signed,
+        currency: held.currency,
+        sign: signed === held.balanceMinor ? 1 : -1,
+      });
     }
   }
 
-  if (ledgerSign.size === 0) {
+  return ledgers;
+};
+
+export const balanceHistory = (
+  accounts: readonly HistoryAccount[],
+  transactions: readonly HistoryTransaction[],
+  converter: Converter,
+  today: Date,
+  months: number
+): BalancePoint[] | null => {
+  const ledgers = ledgersOf(accounts);
+
+  if (ledgers.size === 0) {
     return null;
   }
 
-  const counted = transactions.flatMap((transaction) => {
-    const sign = ledgerSign.get(transaction.accountId);
+  const pointAt = (date: Date, rewind: boolean): BalancePoint => {
+    const byCurrency = new Map<string, number>();
 
-    return sign === undefined
-      ? []
-      : [{ amount: sign * transaction.amount, date: transaction.date }];
-  });
+    for (const ledger of ledgers.values()) {
+      byCurrency.set(
+        ledger.currency,
+        (byCurrency.get(ledger.currency) ?? 0) + ledger.balanceNow
+      );
+    }
 
-  const history = monthEndsBefore(today, months).map((monthEnd) => ({
-    balanceMinor:
-      balanceNow -
-      counted
-        .filter((transaction) => transaction.date > monthEnd)
-        .reduce((sum, transaction) => sum + transaction.amount, 0),
-    date: isoDay(monthEnd),
-  }));
+    for (const transaction of transactions) {
+      const ledger = ledgers.get(
+        ledgerKey(transaction.accountId, transaction.currency)
+      );
 
-  return [...history, { balanceMinor: balanceNow, date: isoDay(today) }];
+      if (rewind && ledger && transaction.date > date) {
+        byCurrency.set(
+          ledger.currency,
+          (byCurrency.get(ledger.currency) ?? 0) -
+            ledger.sign * transaction.amount
+        );
+      }
+    }
+
+    let balanceMinor = 0;
+
+    for (const [currency, nativeMinor] of byCurrency) {
+      balanceMinor += converter.convert(nativeMinor, currency, date) ?? 0;
+    }
+
+    return { balanceMinor, date: isoDay(date) };
+  };
+
+  return [
+    ...monthEndsBefore(today, months).map((monthEnd) =>
+      pointAt(monthEnd, true)
+    ),
+    pointAt(today, false),
+  ];
+};
+
+export const unconvertedHistoryCurrencies = (
+  accounts: readonly HistoryAccount[],
+  converter: Converter,
+  today: Date
+): string[] => {
+  const currencies = new Set<string>();
+
+  for (const ledger of ledgersOf(accounts).values()) {
+    if (converter.convert(1, ledger.currency, today) === null) {
+      currencies.add(ledger.currency);
+    }
+  }
+
+  return [...currencies].toSorted();
 };

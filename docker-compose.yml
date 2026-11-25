@@ -13,6 +13,9 @@ x-database-url: &database-url postgresql://postgres:${POSTGRES_PASSWORD:?Set POS
 services:
   postgres:
     image: postgres:18
+    # A personal finance database stays small: a 32 MB buffer cache holds its
+    # working set, and the kernel page cache serves the rest.
+    command: ["postgres", "-c", "shared_buffers=32MB"]
     environment:
       POSTGRES_DB: freenary
       POSTGRES_USER: postgres

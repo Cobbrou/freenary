@@ -1,9 +1,9 @@
 ---
 title: Troubleshoot
-description: Find the cause of a stack that does not start or a sign-in that fails.
+description: Find the cause of a stack that does not start, a bank that stops importing or a sign-in that fails.
 ---
 
-This page helps you find why a Freenary stack does not start, why the browser shows an error, or why sign-in fails. You find the service that fails, read its log, and match the message to one of the cases below.
+This page helps you find why a Freenary stack does not start, why the browser shows an error, why a bank stops importing, or why sign-in fails. You find the service that fails, read its log, and match the message to one of the cases below.
 
 ## Before you start
 
@@ -82,6 +82,11 @@ After each fix, run `docker compose up -d`.
 - After **Finish setup** or **Apply now**, the page shows **The server did not restart** and **It did not answer within one minute.** Applying settings makes the server process exit so that it starts again with them. In `docker-compose.yml` and `deploy/docker-compose.yml`, `restart: unless-stopped` starts it again. Run `docker compose ps -a`: if `server` reads `Exited`, run `docker compose up -d --wait`, then select **Try again**. If it reads `(unhealthy)` or keeps restarting, read `docker compose logs server` and match the message to the cases above.
 
   ![The Applying your settings… screen that waits for the server to come back](../images/08-applying-settings.png)
+
+### A bank stops importing
+
+- The bank in **Settings** › **Bank accounts** reads **Reconnect to resume importing**. Its consent expired or was revoked, or the bank asks for the account holder. Syncs skip this bank. Its owner selects **Reconnect** and approves the access again. The accounts the bank returns keep their transactions. An account left out of the new consent keeps its history and is no longer synced, and an account the bank never returned before is added.
+- A notice reads **Couldn’t sync** with the name of the bank, and the row does not ask to reconnect. The failure can be temporary, such as a timeout, so the next sync tries this bank again. The reason is in `docker compose logs server`.
 
 ### Sign-in fails
 

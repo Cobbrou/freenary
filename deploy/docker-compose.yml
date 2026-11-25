@@ -18,6 +18,9 @@ x-public-url: &public-url "${FREENARY_URL:?Set FREENARY_URL to the public URL of
 services:
   postgres:
     image: postgres:18
+    # A personal finance database stays small: a 32 MB buffer cache holds its
+    # working set, and the kernel page cache serves the rest.
+    command: ["postgres", "-c", "shared_buffers=32MB"]
     environment:
       POSTGRES_DB: freenary
       POSTGRES_USER: postgres

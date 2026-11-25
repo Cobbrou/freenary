@@ -51,6 +51,7 @@ export interface CategoriseInput {
   merchantCategoryCode?: Iso18245MerchantCategoryCode | null;
   amountMinor: OutgoingNegativeMinorUnits;
   currency: Iso4217Currency;
+  referenceAmountMinor?: number | null;
 }
 
 export interface MerchantKeyInput {

@@ -5,6 +5,8 @@ import { deriveMerchantKey } from "../categorisation/merchant-key";
 import { getProvider } from "../providers/registry";
 import type {
   BankingProvider,
+  ProviderAccount,
+  ProviderBalance,
   ProviderHolding,
   ProviderTransaction,
   ProviderUserSession,
@@ -16,6 +18,7 @@ interface SyncAccount {
   id: string;
   providerAccountId: string;
   type: string;
+  currency: string | null;
 }
 
 export interface ConnectionWithAccounts {
@@ -57,8 +60,20 @@ type SyncScope =
 
 class BankSyncFailed extends Data.TaggedError("BankSyncFailed")<{
   readonly detail: string;
+  readonly needsReconnect: boolean;
   readonly scope: SyncScope;
-}> {}
+}> {
+  override get message(): string {
+    return Match.value(this.scope).pipe(
+      Match.discriminatorsExhaustive("kind")({
+        account: (scope) =>
+          `Account ${scope.providerAccountId}: ${this.detail}`,
+        connection: (scope) =>
+          `Connection ${scope.institutionName}: ${this.detail}`,
+      })
+    );
+  }
+}
 
 const PROVIDER_SERVED_HISTORY_DAYS = 90;
 
@@ -67,35 +82,32 @@ const MS_PER_DAY = 24 * 60 * 60 * 1000;
 const PENDING = "PDNG";
 const REJECTED = "RJCT";
 
-const failureLine = (failure: BankSyncFailed): string =>
-  Match.value(failure.scope).pipe(
-    Match.discriminatorsExhaustive("kind")({
-      account: (scope) =>
-        `Account ${scope.providerAccountId}: ${failure.detail}`,
-      connection: (scope) =>
-        `Connection ${scope.institutionName}: ${failure.detail}`,
-    })
-  );
-
 const accountFailure =
-  (account: SyncAccount) =>
+  (account: SyncAccount, provider: BankingProvider) =>
   (cause: unknown): BankSyncFailed =>
     new BankSyncFailed({
       detail: cause instanceof Error ? cause.message : "Unknown account error",
+      needsReconnect: provider.needsReconnect(cause),
       scope: { kind: "account", providerAccountId: account.providerAccountId },
     });
 
-const connectionFailure =
-  (connection: ConnectionWithAccounts) =>
+export const connectionFailure =
+  (connection: ConnectionWithAccounts, provider: BankingProvider | null) =>
   (cause: unknown): BankSyncFailed =>
     new BankSyncFailed({
       detail:
         cause instanceof Error ? cause.message : "Unknown connection error",
+      needsReconnect: provider?.needsReconnect(cause) ?? false,
       scope: {
         institutionName: connection.institutionName,
         kind: "connection",
       },
     });
+
+const mapOriginalAmount = (tx: ProviderTransaction) => ({
+  originalAmount: tx.originalAmountMinor ?? null,
+  originalCurrency: tx.originalCurrency ?? null,
+});
 
 // SAFETY: Prisma requires DbNull (not plain null) to clear a Json? column
 const mapProviderFields = (tx: ProviderTransaction) => ({
@@ -121,6 +133,7 @@ const mapProviderFields = (tx: ProviderTransaction) => ({
   description: tx.remittanceLines.join(" "),
   exchangeRate: tx.exchangeRate ?? null,
   merchantCategoryCode: tx.merchantCategoryCode ?? null,
+  ...mapOriginalAmount(tx),
   psuNote: tx.psuNote ?? null,
   referenceNumber: tx.referenceNumber ?? null,
   referenceNumberScheme: tx.referenceNumberScheme ?? null,
@@ -170,10 +183,11 @@ type TransactionFields = ReturnType<typeof transactionFields>;
 type TransactionColumn = keyof TransactionFields;
 
 const NON_TEXT_COLUMN_TYPES: Partial<Record<TransactionColumn, string>> = {
-  amount: "integer",
-  balanceAfterTransaction: "integer",
+  amount: "bigint",
+  balanceAfterTransaction: "bigint",
   creditorIdentifications: "jsonb",
   date: "timestamp(3)",
+  originalAmount: "bigint",
   remittanceLines: "text[]",
   transactionDate: "timestamp(3)",
   valueDate: "timestamp(3)",
@@ -291,6 +305,80 @@ const upsertTransactionsInBatches = async (
   }
 };
 
+export const reportedBalances = (
+  account: ProviderAccount
+): ProviderBalance[] | null => {
+  if (account.balances) {
+    return [
+      ...new Map(
+        account.balances.map((balance) => [balance.currency, balance])
+      ).values(),
+    ];
+  }
+
+  const { balanceAt, balanceMinor, currency } = account;
+
+  if (currency === undefined || balanceMinor === undefined) {
+    return null;
+  }
+
+  return [{ balanceAt, balanceMinor, currency }];
+};
+
+const toBalanceAt = (balanceAt: string | undefined): Date | null =>
+  balanceAt ? new Date(balanceAt) : null;
+
+export const mainBalanceFields = (account: ProviderAccount) => {
+  const { balanceAt, balanceMinor, currency } = account;
+
+  if (currency !== undefined && balanceMinor !== undefined) {
+    return { balanceAt: toBalanceAt(balanceAt), balanceMinor, currency };
+  }
+
+  const balances = reportedBalances(account);
+
+  if (!balances) {
+    return currency === undefined ? {} : { currency };
+  }
+
+  const mainCurrency = currency ?? balances[0]?.currency ?? null;
+  const main = balances.find((balance) => balance.currency === mainCurrency);
+
+  return {
+    balanceAt: toBalanceAt(main?.balanceAt),
+    balanceMinor: main?.balanceMinor ?? null,
+    currency: mainCurrency,
+  };
+};
+
+const replaceBalances = async (
+  accountId: string,
+  balances: readonly ProviderBalance[]
+): Promise<void> => {
+  await prisma.$transaction([
+    prisma.accountBalance.deleteMany({
+      where: {
+        accountId,
+        currency: { notIn: balances.map((balance) => balance.currency) },
+      },
+    }),
+    ...balances.map((balance) => {
+      const fields = {
+        balanceAt: toBalanceAt(balance.balanceAt),
+        balanceMinor: balance.balanceMinor,
+      };
+
+      return prisma.accountBalance.upsert({
+        create: { ...fields, accountId, currency: balance.currency },
+        update: fields,
+        where: {
+          accountId_currency: { accountId, currency: balance.currency },
+        },
+      });
+    }),
+  ]);
+};
+
 const refreshProviderAccounts = async (
   provider: BankingProvider,
   connection: ConnectionWithAccounts,
@@ -311,9 +399,7 @@ const refreshProviderAccounts = async (
 
   for (const account of accounts) {
     const fields = {
-      balanceAt: account.balanceAt ? new Date(account.balanceAt) : null,
-      balanceMinor: account.balanceMinor ?? null,
-      currency: account.currency ?? null,
+      ...mainBalanceFields(account),
       iban: account.iban ?? null,
       name: account.name ?? null,
       type: account.type,
@@ -326,7 +412,7 @@ const refreshProviderAccounts = async (
         connectionId: connection.id,
         providerAccountId: account.providerAccountId,
       },
-      select: { id: true, providerAccountId: true, type: true },
+      select: { currency: true, id: true, providerAccountId: true, type: true },
       update: fields,
       where: {
         connectionId_providerAccountId: {
@@ -335,6 +421,13 @@ const refreshProviderAccounts = async (
         },
       },
     });
+
+    const balances = reportedBalances(account);
+
+    if (balances) {
+      // eslint-disable-next-line no-await-in-loop -- sequential to avoid unique constraint races
+      await replaceBalances(row.id, balances);
+    }
 
     rows.push(row);
   }
@@ -473,6 +566,7 @@ const importAccount = async (context: AccountSyncContext): Promise<void> => {
   } = context;
 
   const transactions = await provider.fetchTransactions({
+    accountCurrency: account.currency,
     dateFrom: window.dateFrom,
     dateTo: window.dateTo,
     providerAccountId: account.providerAccountId,
@@ -503,16 +597,16 @@ const importAccount = async (context: AccountSyncContext): Promise<void> => {
 export const importAccountsInSeries = (
   context: ConnectionSyncContext,
   accounts: readonly SyncAccount[]
-): Effect.Effect<string[]> =>
+): Effect.Effect<BankSyncFailed[]> =>
   Effect.all(
     accounts.map((account) =>
       Effect.tryPromise({
-        catch: accountFailure(account),
+        catch: accountFailure(account, context.provider),
         try: () => importAccount({ ...context, account }),
       }).pipe(
         Effect.as([]),
         Effect.catchTag("BankSyncFailed", (failure) =>
-          Effect.succeed([failureLine(failure)])
+          Effect.succeed([failure])
         ),
         Effect.tap(() =>
           Effect.promise(() => context.reporter.accountFinished())
@@ -527,7 +621,7 @@ const connectionSteps = Effect.fnUntraced(function* connectionSteps(
   reporter: SyncReporter,
   reReadFullWindow: boolean
 ) {
-  const failed = connectionFailure(connection);
+  const failed = connectionFailure(connection, null);
   const now = new Date();
   const oldestPending = yield* Effect.tryPromise({
     catch: failed,
@@ -547,7 +641,7 @@ const connectionSteps = Effect.fnUntraced(function* connectionSteps(
   });
 
   const accounts = yield* Effect.tryPromise({
-    catch: failed,
+    catch: connectionFailure(connection, provider),
     try: () => refreshProviderAccounts(provider, connection, user),
   });
 
@@ -581,6 +675,17 @@ const connectionSteps = Effect.fnUntraced(function* connectionSteps(
   return [];
 });
 
+export const concludeSync = Effect.fnUntraced(function* concludeSync(
+  failures: readonly BankSyncFailed[],
+  expireConnection: () => Promise<void>
+) {
+  if (failures.some((failure) => failure.needsReconnect)) {
+    yield* Effect.promise(expireConnection);
+  }
+
+  return failures.map((failure) => failure.message);
+});
+
 export const syncConnection = (
   connection: ConnectionWithAccounts,
   user: ProviderUserSession | null,
@@ -589,8 +694,14 @@ export const syncConnection = (
 ): Promise<string[]> =>
   Effect.runPromise(
     connectionSteps(connection, user, reporter, force).pipe(
-      Effect.catchTag("BankSyncFailed", (failure) =>
-        Effect.succeed([failureLine(failure)])
+      Effect.catchTag("BankSyncFailed", (failure) => Effect.succeed([failure])),
+      Effect.flatMap((failures) =>
+        concludeSync(failures, async () => {
+          await prisma.bankConnection.update({
+            data: { status: "EXPIRED" },
+            where: { id: connection.id },
+          });
+        })
       )
     )
   );

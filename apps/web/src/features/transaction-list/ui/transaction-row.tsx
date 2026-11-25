@@ -11,6 +11,7 @@ import { useCallback, useRef } from "react";
 
 import {
   CATEGORY_MEDIA_BOX,
+  originalAmountOf,
   TransactionAmount,
   transactionTitle,
 } from "@/entities/budget";
@@ -42,6 +43,15 @@ export const TransactionRow = ({
   );
 
   const title = transactionTitle(transaction);
+  const original = originalAmountOf(transaction);
+  const originalText = original
+    ? formatCurrency(Math.abs(original.amountMinor), original.currency)
+    : null;
+
+  const label = isIncoming
+    ? m.budget_transaction_received({ amount, title })
+    : m.budget_transaction_paid({ amount, title });
+
   const { variant } = useSize();
 
   const rowRef = useRef<HTMLDivElement | null>(null);
@@ -62,9 +72,9 @@ export const TransactionRow = ({
       render={
         <button
           aria-label={
-            isIncoming
-              ? m.budget_transaction_received({ amount, title })
-              : m.budget_transaction_paid({ amount, title })
+            originalText === null
+              ? label
+              : m.budget_transaction_original({ amount: originalText, label })
           }
           type="button"
         />
@@ -82,11 +92,16 @@ export const TransactionRow = ({
       <ItemContent className="min-w-0">
         <ItemTitle className="block w-full truncate">{title}</ItemTitle>
       </ItemContent>
-      <ItemContent className="font-medium">
+      <ItemContent className="items-end gap-0 font-medium">
         <TransactionAmount
           amount={transaction.amount}
           currency={transaction.currency}
         />
+        {originalText === null ? null : (
+          <span className="text-muted-foreground text-xs font-normal whitespace-nowrap tabular-nums">
+            {originalText}
+          </span>
+        )}
       </ItemContent>
     </Item>
   );

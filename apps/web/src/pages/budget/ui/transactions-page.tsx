@@ -2,10 +2,14 @@ import type { TransactionFilter } from "@freenary/api/lib/transaction-filters";
 import type { AppRouter } from "@freenary/api/routers/index";
 import type { InferRouterOutputs } from "@orpc/server";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { getRouteApi } from "@tanstack/react-router";
 import { useCallback, useMemo, useState } from "react";
 
 import type { CategorySelection } from "@/entities/category";
-import { TransactionDetailDrawer } from "@/features/transaction-details";
+import {
+  TransactionDetailDrawer,
+  TransactionsToCheckDrawer,
+} from "@/features/transaction-details";
 import {
   highlightedChartCategories,
   recentMonths,
@@ -22,6 +26,7 @@ import { m } from "@/paraglide/messages.js";
 import { getLocale } from "@/paraglide/runtime.js";
 import { orpc } from "@/shared/api";
 import { useNow } from "@/shared/lib/calendar-day";
+import { UnconvertedNote } from "@/shared/ui/unconverted-note";
 
 import {
   isStaleView,
@@ -48,6 +53,7 @@ const overviewSections = (overview: PeriodOverview | undefined) => ({
   spendingBreakdown: overview?.spendingBreakdown,
   totalExpenses: overview?.sankey.totalExpenses ?? 0,
   totalIncome: overview?.sankey.totalIncome ?? 0,
+  unconvertedCount: overview?.sankey.unconvertedCount ?? 0,
 });
 
 const GROUPING_OF_RANGE = {
@@ -56,7 +62,11 @@ const GROUPING_OF_RANGE = {
   "3M": "week",
 } as const satisfies Record<TimeRange, TransactionGrouping>;
 
+const route = getRouteApi("/_auth/budget/transactions");
+
 export const TransactionsPage = () => {
+  const { check } = route.useSearch();
+  const navigate = route.useNavigate();
   const accountsQuery = useQuery(orpc.budget.getAccounts.queryOptions());
   const currency = useBudgetCurrency();
   const rule = useBudgetMonthRule();
@@ -247,6 +257,13 @@ export const TransactionsPage = () => {
         view={view}
       />
 
+      {overviewState.isPending || overviewState.isError ? null : (
+        <UnconvertedNote
+          className="-mt-3"
+          counts={{ transactions: overview.unconvertedCount }}
+        />
+      )}
+
       <TransactionList
         {...transactionList}
         accounts={accounts}
@@ -274,6 +291,20 @@ export const TransactionsPage = () => {
         onOpenChange={(open) => {
           if (!open) {
             setSelectedTransactionId(null);
+          }
+        }}
+      />
+
+      <TransactionsToCheckDrawer
+        notificationId={check ?? null}
+        open={check !== undefined}
+        onOpenChange={(open) => {
+          if (!open) {
+            void navigate({
+              replace: true,
+              resetScroll: false,
+              search: (prev) => ({ ...prev, check: undefined }),
+            });
           }
         }}
       />

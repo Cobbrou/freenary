@@ -19,7 +19,7 @@ The sync button on **Transactions**, labelled **Sync transactions**, first clear
 
 ## Internal transfers come first
 
-A member with at least two accounts can move money between them. Freenary pairs an outgoing and an incoming transaction when they have the same amount, the same currency, sit on two different accounts, and are booked at most 24 hours apart. Both legs are marked as an internal transfer and skip categorisation. Transactions the member categorised by hand are never paired, and neither are the transactions of a loan account.
+A member can move money between their own accounts, or between two currencies of one account. Freenary pairs an outgoing and an incoming transaction when they have the same amount, the same currency, sit on two different accounts, and are booked at most 24 hours apart. Legs in two different currencies pair when their amounts match at the bank's rate or within 3% at the reference rate, as [How currencies are converted](currencies.md#exchanges-and-transfers-between-currencies) explains. Both legs are marked as an internal transfer and skip categorisation. Transactions the member categorised by hand are never paired, and neither are the transactions of a loan account.
 
 When the money leaves a current account for a savings, investment or retirement account, the current-account leg gets the category `savings`, `securities` or `retirement`, with the stage `internal-transfer`. [How account types change the totals](account-types.md#transfers-between-your-own-accounts) lists which account gives which category.
 
@@ -42,7 +42,7 @@ When no step gives a category, the transaction stays uncategorised. With a `syst
 
 ## Transactions to check
 
-A classifier answer under the confidence that would make it automatic, `0.85`, still gives the transaction its category, but Freenary flags it as low confidence. After each categorisation that flags such transactions, Freenary sends the member one notification, such as **7 transactions to check**, that holds the transactions flagged in that run. A transaction already held by another notification is not added again.
+A classifier answer under the confidence that would make it automatic, `0.85`, still gives the transaction its category, but Freenary flags it as low confidence. Only transactions booked in the last 60 days are flagged, so connecting a bank or syncing the whole history does not flag older transactions; they keep their category. After each categorisation that flags such transactions, Freenary sends the member one notification, such as **7 transactions to check**, that holds the transactions flagged in that run. A transaction already held by another notification is not added again.
 
 The notification center sits at the bottom of the sidebar, under **Notifications**, with the number of unread notifications next to it. Opening this notification opens the **Transactions to check** panel. Each row has a category picker and a check mark. The check mark keeps the category and picking another category changes it: both record a correction, as below, so the row leaves the list. **Dismiss all** in the panel empties the list without changing any transaction. Once the list is empty, the notification goes away.
 
@@ -74,7 +74,7 @@ The classifier is optional. [Enable transaction categorisation](../how-to/enable
 
 ### What it receives
 
-A transaction with neither a merchant key nor a description is described by its counterparty name instead. Freenary groups the waiting transactions: transactions that share the merchant key (or, without one, the description), the country, the direction and the merchant category code make one question. It asks up to four questions at a time. A request carries the merchant key, the normalised description, the counterparty name, the country, the currency, the direction (money in or out), the merchant category code, the channel, whether it is a card or a bank-transfer payment, and a size band for the amount instead of the amount itself. For a bank transfer identified by account number, the merchant key is left out.
+A transaction with neither a merchant key nor a description is described by its counterparty name instead. Freenary groups the waiting transactions: transactions that share the merchant key (or, without one, the description), the country, the direction and the merchant category code make one question. It asks up to four questions at a time. A request carries the merchant key, the normalised description, the counterparty name, the country, the currency, the direction (money in or out), the merchant category code, the channel, whether it is a card or a bank-transfer payment, and a size band for the amount instead of the amount itself. The band is worked out on the amount converted into euros at the rate of the transaction date, or on the amount as booked when no rate exists. For a bank transfer identified by account number, the merchant key is left out.
 
 ### Answers, abstentions and failures
 

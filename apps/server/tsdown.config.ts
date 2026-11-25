@@ -5,7 +5,9 @@ export default defineConfig({
   deps: {
     alwaysBundle: [/@freenary\/.*/u],
   },
+  dts: false,
   entry: "./src/index.ts",
   format: "esm",
   outDir: "./dist",
+  report: false,
 });

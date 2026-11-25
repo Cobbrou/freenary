@@ -30,7 +30,7 @@ The browser only ever talks to `web`. The web app's request handler ([`apps/web/
 
 Every other path is a page that the web app renders. When it renders a page, the web app's own server also calls the API at `SERVER_URL`.
 
-Because of this forwarding, `BETTER_AUTH_URL` (the API's public address) and `CORS_ORIGIN` (the web app's public address) hold the same value in the default setup. The forwarder replaces the caller's `X-Forwarded-For` header with the address of the connection. When that connection comes from an address listed in `TRUSTED_PROXIES`, it uses the caller address that the proxy reported instead. It gives up after 9 seconds and answers `502 Bad Gateway`.
+Because of this forwarding, `BETTER_AUTH_URL` (the API's public address) and `CORS_ORIGIN` (the web app's public address) hold the same value in the default setup. The forwarder replaces the caller's `X-Forwarded-For` header with the address of the connection. When that connection comes from an address listed in `TRUSTED_PROXIES`, it uses the caller address that the proxy reported instead. When every address it was given is in `TRUSTED_PROXIES`, it keeps the address of the connection, which a caller cannot forge. It gives up after 9 seconds and answers `502 Bad Gateway`.
 
 ```text
 browser ──► [reverse proxy, optional] ──► web :3001 ──► server :3000 ──► postgres :5432

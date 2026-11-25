@@ -1,5 +1,32 @@
 {
   "$schema": "https://inlang.com/schema/inlang-message-format",
+  "account_balance_estimate": "Converted at today's rate",
+  "account_balance_several": [
+    {
+      "declarations": [
+        "input count",
+        "input amount",
+        "local countPlural = count: plural"
+      ],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{amount} · {count} currency",
+        "countPlural=other": "{amount} · {count} currencies"
+      }
+    }
+  ],
+  "account_balances_no_rate": "No exchange rate yet",
+  "account_balances_title": "Balance per currency",
+  "account_currency_count": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} currency",
+        "countPlural=other": "{count} currencies"
+      }
+    }
+  ],
   "account_documentation": "Documentation",
   "account_menu_loading": "Loading account",
   "account_menu_update_available": "Update available: v{version}",
@@ -362,10 +389,10 @@
   "bank_connect": "Connect",
   "bank_connect_error": "Could not connect to {institution}. Try again later.",
   "bank_connections_error_title": "Could not load your banks",
-  "bank_disconnect": "Disconnect",
-  "bank_disconnect_aria_label": "Disconnect {institution}",
+  "bank_disconnect": "Remove",
+  "bank_disconnect_aria_label": "Remove {institution}",
   "bank_disconnect_cancel": "Cancel",
-  "bank_disconnect_confirm": "Disconnect bank",
+  "bank_disconnect_confirm": "Remove bank",
   "bank_disconnect_confirm_description": [
     {
       "declarations": ["input count", "local countPlural = count: plural"],
@@ -377,10 +404,10 @@
     }
   ],
   "bank_disconnect_confirm_description_none": "This asks your bank to revoke freenary’s access. No account is linked, so no transaction is removed.",
-  "bank_disconnect_confirm_title": "Disconnect {institution}?",
-  "bank_disconnect_error": "Couldn’t disconnect the bank. Try again.",
-  "bank_disconnect_revoke_warning": "{institution} disconnected, but freenary could not ask your bank to revoke access. Revoke it from your bank to be sure.",
-  "bank_disconnect_success": "{institution} disconnected",
+  "bank_disconnect_confirm_title": "Remove {institution}?",
+  "bank_disconnect_error": "Couldn’t remove the bank. Try again.",
+  "bank_disconnect_revoke_warning": "{institution} removed, but freenary could not ask your bank to revoke access. Revoke it from your bank to be sure.",
+  "bank_disconnect_success": "{institution} removed",
   "bank_disconnect_success_accounts": [
     {
       "declarations": [
@@ -390,8 +417,8 @@
       ],
       "selectors": ["countPlural"],
       "match": {
-        "countPlural=one": "{institution} disconnected — {count} account removed",
-        "countPlural=other": "{institution} disconnected — {count} accounts removed"
+        "countPlural=one": "{institution} removed, with {count} account",
+        "countPlural=other": "{institution} removed, with {count} accounts"
       }
     }
   ],
@@ -404,6 +431,8 @@
   "bank_list_empty_title": "No banks available",
   "bank_list_error_title": "Could not load banks",
   "bank_list_loading": "Loading banks",
+  "bank_reconnect": "Reconnect",
+  "bank_reconnect_aria_label": "Reconnect {institution}",
   "bank_row_never_synced": "{accounts} · Not synced yet",
   "bank_row_reconnect": "{accounts} · Reconnect to resume importing",
   "bank_row_sync": "Re-sync {institution}",
@@ -438,6 +467,11 @@
   "budget_detail_close": "Close",
   "budget_detail_date_label": "Date",
   "budget_detail_description_label": "Description",
+  "budget_detail_exchange_cost_hint": "What the conversion cost against the European Central Bank rate",
+  "budget_detail_exchange_cost_label": "Exchange cost",
+  "budget_detail_exchange_rate_label": "Exchange rate",
+  "budget_detail_exchange_rate_value": "1 {from} = {rate} {to}",
+  "budget_detail_original_amount_label": "Original amount",
   "budget_detail_sr_description": "View and edit transaction details",
   "budget_detail_title": "Transaction details",
   "budget_filter_account_unknown": "Removed account",
@@ -766,6 +800,7 @@
   "budget_tab_outgoing": "Outgoing · {amount}",
   "budget_tab_outgoing_unknown": "Outgoing",
   "budget_transaction_meta": "{day} · {category}",
+  "budget_transaction_original": "{label}, originally {amount}",
   "budget_transaction_paid": "{title}, paid {amount}",
   "budget_transaction_received": "{title}, received {amount}",
   "budget_transactions_empty_incoming": "No incoming transactions found for this period.",
@@ -903,6 +938,7 @@
   "home_add_account_description": "Link a bank",
   "home_ask_label": "Ask me anything",
   "home_ask_placeholder": "Ask me anything. A new chat opens in Ask.",
+  "home_to_check_cta": "Check them",
   "home_available_error": "Could not load what you have available to spend.",
   "home_available_title": "Available to spend",
   "home_balance_error": "Could not load your balance.",
@@ -1049,6 +1085,9 @@
   "onboarding_step_bank": "Bank connection",
   "onboarding_step_budget_month": "Budget month",
   "onboarding_step_country": "Tax residency",
+  "page_title_login": "Sign in",
+  "page_title_onboarding": "Get started",
+  "page_title_setup": "Setup",
   "query_error_generic": "Something went wrong while loading. Try again.",
   "query_error_retry": "Retry",
   "recategorise_error": "Couldn’t re-categorise your transactions",
@@ -1340,8 +1379,8 @@
       "declarations": ["input count", "local countPlural = count: plural"],
       "selectors": ["countPlural"],
       "match": {
-        "countPlural=one": "Bank connections made with the current provider can no longer sync. {count} bank connection on this server is affected, across every member: its owner has to disconnect that bank and connect it again to resume syncing.",
-        "countPlural=other": "Bank connections made with the current provider can no longer sync. {count} bank connections on this server are affected, across every member: their owners have to disconnect each bank and connect it again to resume syncing."
+        "countPlural=one": "Bank connections made with the current provider can no longer sync. {count} bank connection on this server is affected, across every member: its owner has to remove that bank and connect it again to resume syncing.",
+        "countPlural=other": "Bank connections made with the current provider can no longer sync. {count} bank connections on this server are affected, across every member: their owners have to remove each bank and connect it again to resume syncing."
       }
     }
   ],
@@ -1404,6 +1443,14 @@
   "settings_recategorise_action": "Re-categorise all",
   "settings_recategorise_description": "Sort every transaction into categories again. Categories you picked yourself and transfers between your own accounts stay as they are.",
   "settings_recategorise_title": "Re-categorise transactions",
+  "settings_reporting_currency_automatic": "Automatic ({currency})",
+  "settings_reporting_currency_description": "Totals, charts, budgets and net worth are converted into this currency. Each transaction keeps the currency it was made in.",
+  "settings_reporting_currency_no_rate_error": "No exchange rate is known for this currency yet",
+  "settings_reporting_currency_no_rates": "No exchange rates downloaded yet.",
+  "settings_reporting_currency_rates": "Exchange rates from the European Central Bank, last updated {date}.",
+  "settings_reporting_currency_save_error": "Could not save your reporting currency",
+  "settings_reporting_currency_saved": "Reporting currency saved",
+  "settings_reporting_currency_title": "Reporting currency",
   "settings_retry": "Try again",
   "settings_save": "Save",
   "settings_save_changes": "Save changes",
@@ -1676,6 +1723,57 @@
   "ui_thinking_word_thinking": "Thinking",
   "ui_time": "Time",
   "ui_toggle_sidebar": "Toggle sidebar",
+  "unconverted_accounts": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} account in another currency isn't included: no exchange rate yet.",
+        "countPlural=other": "{count} accounts in other currencies aren't included: no exchange rate yet."
+      }
+    }
+  ],
+  "unconverted_balances": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} balance in another currency isn't included: no exchange rate yet.",
+        "countPlural=other": "{count} balances in other currencies aren't included: no exchange rate yet."
+      }
+    }
+  ],
+  "unconverted_currencies": "Balances in {currencies} aren't included: no exchange rate yet.",
+  "unconverted_holdings": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} holding in another currency isn't included: no exchange rate yet.",
+        "countPlural=other": "{count} holdings in other currencies aren't included: no exchange rate yet."
+      }
+    }
+  ],
+  "unconverted_payments": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} payment in another currency isn't included: no exchange rate yet.",
+        "countPlural=other": "{count} payments in other currencies aren't included: no exchange rate yet."
+      }
+    }
+  ],
+  "unconverted_transactions": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} transaction in another currency isn't included: no exchange rate yet.",
+        "countPlural=other": "{count} transactions in other currencies aren't included: no exchange rate yet."
+      }
+    }
+  ],
   "update_banner_dismiss": "Dismiss the notice for v{version}",
   "update_banner_new_tab": "(opens in a new tab)",
   "update_banner_title": "Freenary v{version} is available",

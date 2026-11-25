@@ -1,6 +1,9 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 
 import { OnboardingPage } from "@/pages/onboarding";
+import { m } from "@/paraglide/messages.js";
+
+import { pageHead } from "../router/page-head";
 
 export const Route = createFileRoute("/onboarding")({
   beforeLoad: ({ context: { instance, viewer } }) => {
@@ -17,4 +20,5 @@ export const Route = createFileRoute("/onboarding")({
     }
   },
   component: OnboardingPage,
+  head: pageHead(m.page_title_onboarding),
 });

@@ -32,6 +32,7 @@ const item = (overrides: Partial<RecurringItem> = {}): RecurringItem => ({
   merchantName: "Netflix",
   nextExpected: "2026-05-20T00:00:00.000Z",
   occurrences: 6,
+  reportingAmountMinor: overrides.typicalAmountMinor ?? 1500,
   typicalAmountMinor: 1500,
   ...overrides,
 });
@@ -46,6 +47,8 @@ const recurringData = (
   monthly: [],
   monthlyIncomeMinor: null,
   plannedOutgoingMinor: null,
+  unconvertedBalanceCount: 0,
+  unconvertedCount: 0,
   ...overrides,
 });
 
@@ -161,17 +164,34 @@ describe("availableToSpend", () => {
       billCount: 1,
       billsMinor: 1500,
       monthEnd: new Date(2026, 4, 31),
+      unconvertedBillCount: 0,
     });
   });
 
-  it("leaves out a commitment in another currency", () => {
+  it("takes a commitment in another currency off at its converted amount", () => {
     const available = availableToSpend(
-      recurringData({ items: [item({ currency: "USD" })] }),
+      recurringData({
+        items: [item({ currency: "USD", reportingAmountMinor: 1300 })],
+      }),
+      today,
+      CALENDAR_MONTH
+    );
+
+    expect(available?.billsMinor).toBe(1300);
+    expect(available?.billCount).toBe(1);
+  });
+
+  it("leaves out and counts a commitment with no exchange rate", () => {
+    const available = availableToSpend(
+      recurringData({
+        items: [item({ currency: "XYZ", reportingAmountMinor: null })],
+      }),
       today,
       CALENDAR_MONTH
     );
 
     expect(available?.billsMinor).toBe(0);
+    expect(available?.unconvertedBillCount).toBe(1);
   });
 
   it("has nothing to say without a current-account balance", () => {

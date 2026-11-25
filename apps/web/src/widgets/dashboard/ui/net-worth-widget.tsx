@@ -12,6 +12,7 @@ import { m } from "@/paraglide/messages.js";
 import { getLocale } from "@/paraglide/runtime.js";
 import { CHART_COLOR_VARS } from "@/shared/lib/chart-colors";
 import { formatCurrency } from "@/shared/lib/format-currency";
+import { UnconvertedNote } from "@/shared/ui/unconverted-note";
 
 import { useBalanceHistory } from "../model/queries";
 import { RangeToggle } from "./range-toggle";
@@ -95,10 +96,12 @@ const BalanceChart = ({
   currency,
   months,
   points,
+  unconvertedCurrencies,
 }: {
   currency: string;
   months: number;
   points: BalancePoint[];
+  unconvertedCurrencies: readonly string[];
 }) => {
   const rows = toRows(points, currency);
   const labels = rows.map((row) => row.label);
@@ -144,6 +147,7 @@ const BalanceChart = ({
       <p className="text-muted-foreground text-xs text-pretty">
         {m.widget_net_worth_note()}
       </p>
+      <UnconvertedNote counts={{}} currencies={unconvertedCurrencies} />
     </>
   );
 };
@@ -194,6 +198,7 @@ export const NetWorthWidget = ({
           currency={query.data.currency}
           months={range}
           points={query.data.points}
+          unconvertedCurrencies={query.data.unconvertedCurrencies}
         />
       ) : null}
       {query.data && query.data.points === null ? (

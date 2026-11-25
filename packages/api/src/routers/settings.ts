@@ -1,8 +1,9 @@
 import prisma from "@freenary/db";
-import type { Prisma } from "@freenary/db";
+import type { TransactionClient } from "@freenary/db";
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
 
+import { availableRateCurrencies, latestRateDate } from "../fx/rates";
 import { protectedProcedure } from "../index";
 import { budgetMonthSettingInput } from "../lib/budget-month";
 import {
@@ -35,7 +36,7 @@ import {
 } from "../lib/taxonomy";
 import type { CategoryIconName } from "../lib/taxonomy";
 import { userBudgetMonthSetting } from "../lib/user-budget-month";
-import { userCurrency } from "../lib/user-currency";
+import { userCurrency, userCurrencySetting } from "../lib/user-currency";
 
 const customCategoryFields = {
   color: z.enum(CATEGORY_COLOR_VALUES),
@@ -70,11 +71,11 @@ const PARENT_REFUSAL_ERRORS = {
   { code: "BAD_REQUEST" | "NOT_FOUND"; message: string }
 >;
 
-const lockOwnCategories = (tx: Prisma.TransactionClient, userId: string) =>
+const lockOwnCategories = (tx: TransactionClient, userId: string) =>
   tx.$queryRaw`SELECT "id" FROM "custom_category" WHERE "userId" = ${userId} FOR UPDATE`;
 
 const resolveParentOrRefuse = async (
-  tx: Prisma.TransactionClient,
+  tx: TransactionClient,
   input: {
     categoryId: string | null;
     parentKey: string | null;
@@ -153,7 +154,7 @@ const toCategoryEntry = (custom: {
 });
 
 const nextSortOrder = async (
-  tx: Prisma.TransactionClient,
+  tx: TransactionClient,
   userId: string,
   parent: ResolvedCustomCategoryParent
 ) => {
@@ -164,6 +165,24 @@ const nextSortOrder = async (
   });
 
   return (last?.sortOrder ?? -1) + 1;
+};
+
+const CURRENCY_CODE = /^[A-Z]{3}$/u;
+
+const reportingCurrencyOf = async (userId: string) => {
+  const [setting, rated, ratesAsOf] = await Promise.all([
+    userCurrencySetting(userId),
+    availableRateCurrencies(),
+    latestRateDate(),
+  ]);
+
+  return {
+    ...setting,
+    options: [
+      ...new Set([...rated, setting.detected, setting.currency]),
+    ].toSorted(),
+    ratesAsOf: ratesAsOf?.toISOString() ?? null,
+  };
 };
 
 export const settingsRouter = {
@@ -291,6 +310,10 @@ export const settingsRouter = {
       })),
     };
   }),
+
+  getReportingCurrency: protectedProcedure.handler(({ context }) =>
+    reportingCurrencyOf(context.session.user.id)
+  ),
 
   listCategories: protectedProcedure.handler(async ({ context }) => {
     const customs = await prisma.customCategory.findMany({
@@ -443,6 +466,36 @@ export const settingsRouter = {
       ]);
 
       return { lineCount: budgetLines.length };
+    }),
+
+  saveReportingCurrency: protectedProcedure
+    .input(
+      z.object({
+        currency: z
+          .string()
+          .regex(CURRENCY_CODE, "An ISO 4217 code such as EUR")
+          .nullable(),
+      })
+    )
+    .handler(async ({ context, input }) => {
+      const userId = context.session.user.id;
+
+      if (input.currency !== null) {
+        const { options } = await reportingCurrencyOf(userId);
+
+        if (!options.includes(input.currency)) {
+          throw new ORPCError("BAD_REQUEST", {
+            message: "No exchange rate is known for this currency",
+          });
+        }
+      }
+
+      await prisma.user.update({
+        data: { reportingCurrency: input.currency },
+        where: { id: userId },
+      });
+
+      return reportingCurrencyOf(userId);
     }),
 
   updateCustomCategory: protectedProcedure

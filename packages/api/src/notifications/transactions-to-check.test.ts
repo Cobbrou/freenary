@@ -46,17 +46,35 @@ describe("isLowConfidence", () => {
 });
 
 describe("lowConfidenceTransactionIds", () => {
+  const now = new Date("2025-06-30T12:00:00Z");
+  const recent = new Date("2025-06-20T00:00:00Z");
+
   it("keeps the transactions whose resolution is low confidence, in order", () => {
     expect(
       lowConfidenceTransactionIds(
-        ["a", "b", "c", "d"],
+        ["a", "b", "c", "d"].map((id) => ({ date: recent, id })),
         [
           resolution({}),
           resolution({ band: "auto", confidence: 0.95 }),
           undefined,
           resolution({ stage: "cached-model" }),
-        ]
+        ],
+        now
       )
     ).toEqual(["a", "d"]);
+  });
+
+  it("leaves out transactions older than the last 60 days", () => {
+    expect(
+      lowConfidenceTransactionIds(
+        [
+          { date: new Date("2025-05-01T12:00:00Z"), id: "edge" },
+          { date: new Date("2025-04-30T00:00:00Z"), id: "old" },
+          { date: recent, id: "new" },
+        ],
+        [resolution({}), resolution({}), resolution({})],
+        now
+      )
+    ).toEqual(["edge", "new"]);
   });
 });

@@ -18,6 +18,12 @@ const printPublicUrl = (publicUrl: string | undefined): Plugin => ({
 });
 
 export default defineConfig({
+  build: {
+    reportCompressedSize: false,
+    rolldownOptions: {
+      experimental: { lazyBarrel: true },
+    },
+  },
   plugins: [
     paraglideVitePlugin({
       cookieName: "PARAGLIDE_LOCALE",

@@ -16,6 +16,7 @@ import { BudgetLineRow } from "./budget-line-row";
 import { BudgetMonthSection } from "./budget-month-section";
 import { BudgetProfilePreview } from "./budget-profile-preview";
 import { CustomCategoryDialog } from "./custom-category-dialog";
+import { ReportingCurrencySection } from "./reporting-currency-section";
 import { SettingsPane } from "./settings-section";
 
 interface BudgetingSectionProps {
@@ -71,6 +72,8 @@ export const BudgetingSection = ({
       title={m.settings_tab_budget()}
     >
       <BudgetMonthSection />
+
+      <ReportingCurrencySection />
 
       <BudgetProfilePreview
         categories={categories}

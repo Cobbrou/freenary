@@ -12,6 +12,7 @@ import { m } from "@/paraglide/messages.js";
 import { getLocale } from "@/paraglide/runtime.js";
 import { CHART_COLOR_VARS } from "@/shared/lib/chart-colors";
 import { formatCurrency } from "@/shared/lib/format-currency";
+import { UnconvertedNote } from "@/shared/ui/unconverted-note";
 
 import { STACKED_CATEGORIES_SHOWN, stackedWeeks } from "../model/finance";
 import type { StackedWeeks } from "../model/finance";
@@ -132,9 +133,11 @@ const Legend = ({
 const WeeksChart = ({
   currency,
   stacked,
+  unconvertedCount,
 }: {
   currency: string;
   stacked: StackedWeeks;
+  unconvertedCount: number;
 }) => {
   const hasOther = stacked.weeks.some((week) => week.otherMinor > 0);
 
@@ -168,6 +171,7 @@ const WeeksChart = ({
         />
       </BarChart>
       <Legend categories={stacked.categories} hasOther={hasOther} />
+      <UnconvertedNote counts={{ transactions: unconvertedCount }} />
     </figure>
   );
 };
@@ -203,7 +207,11 @@ export const SpendingByWeekWidget = ({
         />
       ) : null}
       {query.data && stacked && spent ? (
-        <WeeksChart currency={query.data.currency} stacked={stacked} />
+        <WeeksChart
+          currency={query.data.currency}
+          stacked={stacked}
+          unconvertedCount={query.data.unconvertedCount}
+        />
       ) : null}
       {query.data && !spent ? (
         <WidgetEmpty>{m.widget_spending_empty()}</WidgetEmpty>

@@ -10,6 +10,7 @@ import {
 const SESSION = "mock_2026-03-01_0f8b6c1e-2d4a-4b7e-9c3f-5a6b7c8d9e0f";
 const OTHER_SESSION = "mock_2026-03-01_7e1d2c3b-4a59-4687-b9a1-0c2d3e4f5a6b";
 const CHECKING = `${SESSION}:checking`;
+const MULTI_CURRENCY = `${SESSION}:multi-currency`;
 const TODAY = new Date("2026-03-31T10:00:00Z");
 const NEXT_MONTH = new Date("2026-04-30T10:00:00Z");
 
@@ -122,5 +123,103 @@ describe("mock bank data", () => {
     ).reduce((total, transaction) => total + transaction.amountMinor, 0);
 
     expect(balanceOn(NEXT_MONTH) - balanceOn(TODAY)).toBe(booked);
+  });
+});
+
+const multiCurrencyQuarter = generateTransactions(
+  MULTI_CURRENCY,
+  "2026-01-01",
+  "2026-03-31",
+  TODAY
+);
+
+const cardPaymentsIn = (currency: string) =>
+  multiCurrencyQuarter.filter(
+    (transaction) =>
+      transaction.currency === currency &&
+      transaction.amountMinor < 0 &&
+      transaction.merchantCategoryCode !== undefined
+  );
+
+const multiCurrencyAccountOn = (day: Date) =>
+  generateAccounts(SESSION, day).find(
+    (account) => account.providerAccountId === MULTI_CURRENCY
+  );
+
+const balanceIn = (day: Date, currency: string) =>
+  multiCurrencyAccountOn(day)?.balances?.find(
+    (balance) => balance.currency === currency
+  )?.balanceMinor ?? 0;
+
+const bookedInApril = (currency: string) =>
+  generateTransactions(MULTI_CURRENCY, "2026-04-01", "2026-04-30", NEXT_MONTH)
+    .filter((transaction) => transaction.currency === currency)
+    .reduce((total, transaction) => total + transaction.amountMinor, 0);
+
+describe("mock multi-currency account", () => {
+  it("joins every connection as a euro checking account", () => {
+    expect(
+      planAccounts(SESSION).find(
+        (account) => account.providerAccountId === MULTI_CURRENCY
+      )?.type
+    ).toBe("CHECKING");
+
+    expect(
+      planAccounts(OTHER_SESSION).some((account) =>
+        account.providerAccountId.endsWith(":multi-currency")
+      )
+    ).toBe(true);
+  });
+
+  it("books card payments in euros and in dollars", () => {
+    expect(cardPaymentsIn("EUR").length).toBeGreaterThanOrEqual(3);
+    expect(cardPaymentsIn("USD").length).toBeGreaterThanOrEqual(3);
+  });
+
+  it("exchanges euros into dollars inside the account on one day", () => {
+    const legs = multiCurrencyQuarter.filter((transaction) =>
+      transaction.remittanceLines[0]?.startsWith("CHANGE EUR/USD")
+    );
+
+    const sold = legs.find((leg) => leg.currency === "EUR");
+    const bought = legs.find((leg) => leg.currency === "USD");
+    const ratio = (bought?.amountMinor ?? 0) / -(sold?.amountMinor ?? 1);
+
+    expect(sold?.bookingDate).toBe(bought?.bookingDate);
+    expect(ratio).toBeGreaterThan(1.14);
+    expect(ratio).toBeLessThan(1.15);
+  });
+
+  it("keeps the pound amount of a euro card payment made in London", () => {
+    const inPounds = multiCurrencyQuarter.find(
+      (transaction) => transaction.originalCurrency === "GBP"
+    );
+
+    expect(inPounds?.currency).toBe("EUR");
+    expect(inPounds?.amountMinor).toBeLessThan(0);
+    expect(inPounds?.originalAmountMinor).toBeLessThan(0);
+    expect(Math.abs(inPounds?.amountMinor ?? 0)).toBeGreaterThan(
+      Math.abs(inPounds?.originalAmountMinor ?? 0)
+    );
+  });
+
+  it("reports one balance per currency, each moved by its own transactions", () => {
+    expect(
+      multiCurrencyAccountOn(TODAY)?.balances?.map(
+        (balance) => balance.currency
+      )
+    ).toEqual(["EUR", "USD"]);
+
+    expect(multiCurrencyAccountOn(TODAY)?.balanceMinor).toBe(
+      balanceIn(TODAY, "EUR")
+    );
+
+    expect(balanceIn(NEXT_MONTH, "EUR") - balanceIn(TODAY, "EUR")).toBe(
+      bookedInApril("EUR")
+    );
+
+    expect(balanceIn(NEXT_MONTH, "USD") - balanceIn(TODAY, "USD")).toBe(
+      bookedInApril("USD")
+    );
   });
 });

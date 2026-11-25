@@ -22,6 +22,8 @@ export interface ProviderTransaction {
   transactionDate?: string;
   amountMinor: number;
   currency: string;
+  originalAmountMinor?: number;
+  originalCurrency?: string;
   remittanceLines: string[];
   creditorName?: string;
   debtorName?: string;
@@ -51,6 +53,7 @@ export interface ProviderUserSession {
 export interface StartConnectionRequest {
   institutionId: string;
   country: string;
+  providerSessionId?: string;
   redirectUrl: string;
   state: string;
   user: ProviderUserSession | null;
@@ -58,6 +61,7 @@ export interface StartConnectionRequest {
 
 export interface CompleteConnectionRequest {
   callbackParams: Record<string, string>;
+  providerSessionId?: string;
   user: ProviderUserSession | null;
 }
 
@@ -68,12 +72,19 @@ export interface ConnectionRequest {
 
 export interface FetchTransactionsRequest extends ConnectionRequest {
   providerAccountId: string;
+  accountCurrency: string | null;
   dateFrom: string;
   dateTo: string;
 }
 
 export interface FetchHoldingsRequest extends ConnectionRequest {
   providerAccountId: string;
+}
+
+export interface ProviderBalance {
+  currency: string;
+  balanceMinor: number;
+  balanceAt?: string;
 }
 
 export interface ProviderAccount {
@@ -84,6 +95,7 @@ export interface ProviderAccount {
   currency?: string;
   balanceMinor?: number;
   balanceAt?: string;
+  balances?: ProviderBalance[];
 }
 
 export interface ProviderHolding {
@@ -110,6 +122,7 @@ export interface CompletedConnection {
     identificationHash?: string;
     name?: string;
     type?: ProviderAccountType;
+    currency?: string;
   }[];
 }
 
@@ -133,6 +146,7 @@ export interface BankingProvider {
   fetchTransactions: (
     request: FetchTransactionsRequest
   ) => Promise<ProviderTransaction[]>;
+  needsReconnect: (cause: unknown) => boolean;
   fetchAccounts?: (request: ConnectionRequest) => Promise<ProviderAccount[]>;
   fetchHoldings?: (request: FetchHoldingsRequest) => Promise<ProviderHolding[]>;
 }

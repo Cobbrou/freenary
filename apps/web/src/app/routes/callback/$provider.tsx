@@ -6,6 +6,9 @@ import {
   ConnectingBank,
   exchangeCallback,
 } from "@/pages/callback";
+import { m } from "@/paraglide/messages.js";
+
+import { pageHead } from "../../router/page-head";
 
 const callbackSearchSchema = z
   .record(z.string(), z.unknown())
@@ -28,4 +31,5 @@ export const Route = createFileRoute("/callback/$provider")({
   validateSearch: callbackSearchSchema,
   beforeLoad: ({ params, search }) => exchangeCallback({ params, search }),
   component: BankConnectionCallback,
+  head: pageHead(m.bank_callback_loading),
 });

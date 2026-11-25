@@ -14,6 +14,7 @@ import { m } from "@/paraglide/messages.js";
 import { orpc } from "@/shared/api";
 import { useNow } from "@/shared/lib/calendar-day";
 import type { AmountRange } from "@/shared/lib/text";
+import { UnconvertedNote } from "@/shared/ui/unconverted-note";
 
 import { recurringInsights, recurringSummary } from "../model/recurring";
 import type {
@@ -71,9 +72,12 @@ export const RecurringPage = () => {
     [asOf, recurring]
   );
 
+  const budgetCurrency = useBudgetCurrency();
+  const currency = recurring?.currency ?? budgetCurrency;
+
   const groups = useMemo(
-    () => groupRecurringItems(recurring?.items ?? [], filter, sort),
-    [recurring, filter, sort]
+    () => groupRecurringItems(recurring?.items ?? [], filter, sort, currency),
+    [currency, recurring, filter, sort]
   );
 
   const handleCategoriesChange = useCallback(
@@ -109,9 +113,6 @@ export const RecurringPage = () => {
       }),
     [applyPatch]
   );
-
-  const budgetCurrency = useBudgetCurrency();
-  const currency = recurring?.currency ?? budgetCurrency;
 
   if (
     recurring !== undefined &&
@@ -156,6 +157,17 @@ export const RecurringPage = () => {
         isPending={isPending}
         summary={derived?.summary}
       />
+
+      {recurring && derived ? (
+        <UnconvertedNote
+          className="-mt-3"
+          counts={{
+            balances: recurring.unconvertedBalanceCount,
+            payments: derived.summary.unconvertedItemCount,
+            transactions: recurring.unconvertedCount,
+          }}
+        />
+      ) : null}
 
       <RecurringCharts
         companion={companion}

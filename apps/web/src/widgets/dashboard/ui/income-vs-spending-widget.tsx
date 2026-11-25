@@ -11,6 +11,7 @@ import { m } from "@/paraglide/messages.js";
 import { getLocale } from "@/paraglide/runtime.js";
 import { CHART_COLOR_VARS } from "@/shared/lib/chart-colors";
 import { formatCurrency } from "@/shared/lib/format-currency";
+import { UnconvertedNote } from "@/shared/ui/unconverted-note";
 
 import type { CashFlow } from "../model/finance";
 import { useMonthlyCashFlow } from "../model/queries";
@@ -125,6 +126,7 @@ const MonthsChart = ({ cashFlow }: { cashFlow: CashFlow }) => {
             : m.widget_income_overspent({ amount })}
         </WidgetCaption>
       </div>
+      <UnconvertedNote counts={{ transactions: cashFlow.unconvertedCount }} />
     </figure>
   );
 };

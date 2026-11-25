@@ -2,7 +2,7 @@ import { afterAll, describe, expect, it } from "bun:test";
 
 import { localDayOfBankDate } from "@/shared/lib/calendar-day";
 
-import { upcomingPayments } from "./upcoming-payments";
+import { reportingTotalOf, upcomingPayments } from "./upcoming-payments";
 import type { RecurringItem } from "./upcoming-payments";
 
 const HORIZON_DAYS = 30;
@@ -20,6 +20,7 @@ const item = (overrides: Partial<RecurringItem> = {}): RecurringItem => ({
   merchantName: "Netflix",
   nextExpected: "2026-09-04T00:00:00.000Z",
   occurrences: 6,
+  reportingAmountMinor: overrides.typicalAmountMinor ?? 1000,
   typicalAmountMinor: 1000,
   ...overrides,
 });
@@ -91,6 +92,40 @@ describe("upcomingPayments", () => {
     expect(
       upcomingPayments([stalledAYearBackOnAFiveDayCadence], asOf, HORIZON_DAYS)
     ).toEqual([]);
+  });
+});
+
+describe("reportingTotalOf", () => {
+  const asOf = new Date(2026, 8, 8);
+
+  it("adds each payment in the reporting currency and counts the ones without a rate", () => {
+    const upcoming = upcomingPayments(
+      [
+        item({ nextExpected: "2026-09-10T00:00:00.000Z" }),
+        item({
+          currency: "USD",
+          merchantKey: "hosting",
+          nextExpected: "2026-09-12T00:00:00.000Z",
+          reportingAmountMinor: 920,
+          typicalAmountMinor: 1000,
+        }),
+        item({
+          currency: "XYZ",
+          merchantKey: "club",
+          nextExpected: "2026-09-14T00:00:00.000Z",
+          reportingAmountMinor: null,
+          typicalAmountMinor: 5000,
+        }),
+      ],
+      asOf,
+      HORIZON_DAYS
+    );
+
+    expect(reportingTotalOf(upcoming)).toEqual({
+      includedCount: 2,
+      totalMinor: 1920,
+      unconvertedCount: 1,
+    });
   });
 });
 

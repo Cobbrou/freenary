@@ -114,24 +114,135 @@ const mapCreditorFields = (tx: EBTransaction) => ({
   creditorTown: tx.creditor?.postal_address?.town_name,
 });
 
-const mapAmountFields = (tx: EBTransaction) => {
-  const currency = tx.transaction_amount?.currency ?? FALLBACK_CURRENCY;
-  const digits = minorUnitDigits(currency);
+interface MinorAmount {
+  amountMinor: number;
+  currency: string;
+}
+
+interface NormalisedAmount extends MinorAmount {
+  originalAmountMinor?: number;
+  originalCurrency?: string;
+}
+
+const DECIMAL_BASE = 10;
+
+const withSignOf = (reference: number, magnitude: number): number =>
+  reference < 0 ? -Math.abs(magnitude) : Math.abs(magnitude);
+
+const instructedAmountOf = (
+  tx: EBTransaction,
+  sign: number
+): MinorAmount | undefined => {
+  const instructed = tx.exchange_rate?.instructed_amount;
+
+  if (!(instructed?.amount && instructed.currency)) {
+    return undefined;
+  }
 
   return {
+    amountMinor: withSignOf(
+      sign,
+      parseMinorUnits(
+        instructed.amount,
+        CREDIT_INDICATOR,
+        minorUnitDigits(instructed.currency)
+      )
+    ),
+    currency: instructed.currency,
+  };
+};
+
+const parseRate = (raw: string | undefined): number | undefined => {
+  const rate = Number(raw);
+
+  return raw && Number.isFinite(rate) && rate > 0 ? rate : undefined;
+};
+
+const convertedAmountOf = (
+  tx: EBTransaction,
+  booked: MinorAmount,
+  accountCurrency: string
+): MinorAmount | undefined => {
+  const rate = parseRate(tx.exchange_rate?.exchange_rate);
+  const unitCurrency = tx.exchange_rate?.unit_currency;
+
+  if (
+    rate === undefined ||
+    (unitCurrency !== booked.currency && unitCurrency !== accountCurrency)
+  ) {
+    return undefined;
+  }
+
+  const foreign =
+    booked.amountMinor / DECIMAL_BASE ** minorUnitDigits(booked.currency);
+
+  const converted =
+    unitCurrency === booked.currency ? foreign * rate : foreign / rate;
+
+  return {
+    amountMinor: Math.round(
+      converted * DECIMAL_BASE ** minorUnitDigits(accountCurrency)
+    ),
+    currency: accountCurrency,
+  };
+};
+
+const asOriginal = (
+  amount: MinorAmount,
+  original: MinorAmount
+): NormalisedAmount => ({
+  ...amount,
+  originalAmountMinor: original.amountMinor,
+  originalCurrency: original.currency,
+});
+
+export const normaliseAmount = (
+  tx: EBTransaction,
+  accountCurrency: string | null
+): NormalisedAmount => {
+  const currency = tx.transaction_amount?.currency ?? FALLBACK_CURRENCY;
+  const booked = {
     amountMinor: parseMinorUnits(
       tx.transaction_amount?.amount ?? "0",
       tx.credit_debit_indicator,
-      digits
+      minorUnitDigits(currency)
     ),
-    balanceAfterMinor: tx.balance_after_transaction?.amount
+    currency,
+  };
+
+  const instructed = instructedAmountOf(tx, booked.amountMinor);
+
+  if (!accountCurrency || currency === accountCurrency) {
+    return instructed && instructed.currency !== currency
+      ? asOriginal(booked, instructed)
+      : booked;
+  }
+
+  if (instructed?.currency === accountCurrency) {
+    return asOriginal(instructed, booked);
+  }
+
+  const converted = convertedAmountOf(tx, booked, accountCurrency);
+
+  return converted ? asOriginal(converted, booked) : booked;
+};
+
+const mapAmountFields = (tx: EBTransaction, accountCurrency: string | null) => {
+  const balanceAfter = tx.balance_after_transaction;
+
+  return {
+    ...normaliseAmount(tx, accountCurrency),
+    balanceAfterMinor: balanceAfter?.amount
       ? parseMinorUnits(
-          tx.balance_after_transaction.amount,
+          balanceAfter.amount,
           CREDIT_INDICATOR,
-          digits
+          minorUnitDigits(
+            balanceAfter.currency ??
+              tx.transaction_amount?.currency ??
+              FALLBACK_CURRENCY
+          )
         )
       : undefined,
-    currency,
     exchangeRate: tx.exchange_rate?.exchange_rate,
   };
 };
@@ -139,9 +250,10 @@ const mapAmountFields = (tx: EBTransaction) => {
 const mapEBTransaction = (
   tx: EBTransaction,
   fallbackDate: string,
+  accountCurrency: string | null,
   providerTransactionId: string
 ): ProviderTransaction => ({
-  ...mapAmountFields(tx),
+  ...mapAmountFields(tx, accountCurrency),
   ...mapCreditorFields(tx),
   bankTransactionDescription: tx.bank_transaction_code?.description,
   bankTransactionFamilyCode: tx.bank_transaction_code?.code,
@@ -163,13 +275,19 @@ const mapEBTransaction = (
 
 export const mapEBTransactions = (
   transactions: readonly EBTransaction[],
-  fallbackDate: string
+  fallbackDate: string,
+  accountCurrency: string | null
 ): ProviderTransaction[] => {
   const fingerprintOccurrences = new Map<string, number>();
 
   return transactions.map((tx) => {
     if (tx.entry_reference !== undefined) {
-      return mapEBTransaction(tx, fallbackDate, tx.entry_reference);
+      return mapEBTransaction(
+        tx,
+        fallbackDate,
+        accountCurrency,
+        tx.entry_reference
+      );
     }
 
     const fingerprint = deriveFingerprint(tx);
@@ -180,6 +298,7 @@ export const mapEBTransactions = (
     return mapEBTransaction(
       tx,
       fallbackDate,
+      accountCurrency,
       `derived:${fingerprint}:${occurrence}`
     );
   });

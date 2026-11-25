@@ -3,6 +3,7 @@ import type { SpendingCategory } from "@freenary/api/lib/taxonomy";
 import {
   merchantLabel,
   NO_USABLE_CADENCE,
+  reportingTotalOf,
   upcomingPayments,
   usableCadenceDays,
 } from "@/entities/recurring";
@@ -33,6 +34,7 @@ export interface RecurringSummary extends SpendDenominator {
   monthlyMinor: number;
   remainingMinor: number | null;
   share: number | null;
+  unconvertedItemCount: number;
   upcomingCount: number;
   upcomingMinor: number;
 }
@@ -117,21 +119,39 @@ const MEAN_DAYS_PER_MONTH = MEAN_DAYS_PER_YEAR / 12;
 
 const DEFAULT_PURCHASE_FREQUENCY_LIMIT = 8;
 
-export const monthlyEquivalentMinor = (item: RecurringItem): number => {
+const perPeriodMinor = (
+  item: RecurringItem,
+  amountMinor: number,
+  periodDays: number
+): number => {
   const days = usableCadenceDays(item);
 
   return days === NO_USABLE_CADENCE
     ? 0
-    : Math.round((item.typicalAmountMinor * MEAN_DAYS_PER_MONTH) / days);
+    : Math.round((amountMinor * periodDays) / days);
 };
 
-export const annualCostMinor = (item: RecurringItem): number => {
-  const days = usableCadenceDays(item);
+export const monthlyEquivalentMinor = (item: RecurringItem): number =>
+  perPeriodMinor(item, item.typicalAmountMinor, MEAN_DAYS_PER_MONTH);
 
-  return days === NO_USABLE_CADENCE
-    ? 0
-    : Math.round((item.typicalAmountMinor * MEAN_DAYS_PER_YEAR) / days);
-};
+export const annualCostMinor = (item: RecurringItem): number =>
+  perPeriodMinor(item, item.typicalAmountMinor, MEAN_DAYS_PER_YEAR);
+
+export const reportingMonthlyMinor = (item: RecurringItem): number | null =>
+  item.reportingAmountMinor === null
+    ? null
+    : perPeriodMinor(item, item.reportingAmountMinor, MEAN_DAYS_PER_MONTH);
+
+export const reportingAnnualMinor = (item: RecurringItem): number | null =>
+  item.reportingAmountMinor === null
+    ? null
+    : perPeriodMinor(item, item.reportingAmountMinor, MEAN_DAYS_PER_YEAR);
+
+export const comparableMonthlyMinor = (item: RecurringItem): number =>
+  reportingMonthlyMinor(item) ?? monthlyEquivalentMinor(item);
+
+export const unconvertedItemCount = (items: readonly RecurringItem[]): number =>
+  items.filter((item) => item.reportingAmountMinor === null).length;
 
 const spendDenominator = (recurring: RecurringData): SpendDenominator => {
   const declaredPlan = recurring.plannedOutgoingMinor;
@@ -160,8 +180,8 @@ export const recurringSummary = (
   for (const item of recurring.items) {
     if (item.kind === "fixed") {
       activeCount += 1;
-      monthlyMinor += monthlyEquivalentMinor(item);
-      annualMinor += annualCostMinor(item);
+      monthlyMinor += reportingMonthlyMinor(item) ?? 0;
+      annualMinor += reportingAnnualMinor(item) ?? 0;
     } else {
       behavioralCount += 1;
     }
@@ -174,6 +194,7 @@ export const recurringSummary = (
   );
 
   const { denominatorKind, denominatorMinor } = spendDenominator(recurring);
+  const upcomingTotal = reportingTotalOf(upcoming);
 
   return {
     activeCount,
@@ -186,11 +207,9 @@ export const recurringSummary = (
     remainingMinor:
       denominatorMinor === null ? null : denominatorMinor - monthlyMinor,
     share: denominatorMinor === null ? null : monthlyMinor / denominatorMinor,
-    upcomingCount: upcoming.length,
-    upcomingMinor: upcoming.reduce(
-      (total, payment) => total + payment.amountMinor,
-      0
-    ),
+    unconvertedItemCount: unconvertedItemCount(recurring.items),
+    upcomingCount: upcomingTotal.includedCount,
+    upcomingMinor: upcomingTotal.totalMinor,
   };
 };
 
@@ -201,7 +220,11 @@ export const recurringByCategory = (
 
   for (const item of items) {
     const row = rows.get(item.category);
-    const monthlyMinor = monthlyEquivalentMinor(item);
+    const monthlyMinor = reportingMonthlyMinor(item);
+
+    if (monthlyMinor === null) {
+      continue;
+    }
 
     if (row) {
       row.count += 1;
@@ -218,11 +241,14 @@ export const recurringByCategory = (
   return [...rows.values()].toSorted((a, b) => b.monthlyMinor - a.monthlyMinor);
 };
 
-const frequencyRow = (item: RecurringItem): FrequencyRow => {
+const frequencyRow = (
+  item: RecurringItem,
+  annualMinor: number
+): FrequencyRow => {
   const days = usableCadenceDays(item);
 
   return {
-    annualMinor: annualCostMinor(item),
+    annualMinor,
     category: item.category,
     id: item.merchantKey,
     kind: item.kind,
@@ -232,19 +258,25 @@ const frequencyRow = (item: RecurringItem): FrequencyRow => {
   };
 };
 
+const frequencyRows = (items: RecurringItem[]): FrequencyRow[] =>
+  items.flatMap((item) => {
+    const annualMinor = reportingAnnualMinor(item);
+
+    return annualMinor === null ? [] : [frequencyRow(item, annualMinor)];
+  });
+
 export const purchaseFrequency = (
   items: RecurringItem[],
   limit = DEFAULT_PURCHASE_FREQUENCY_LIMIT
 ): FrequencyRow[] =>
-  items
-    .map(frequencyRow)
+  frequencyRows(items)
     .toSorted(
       (a, b) => b.occurrences - a.occurrences || b.annualMinor - a.annualMinor
     )
     .slice(0, limit);
 
 export const frequencyCostPoints = (items: RecurringItem[]): FrequencyRow[] =>
-  items.map(frequencyRow);
+  frequencyRows(items);
 
 export const forecastSeries = (
   recurring: RecurringData,
@@ -258,16 +290,19 @@ export const forecastSeries = (
   const dueByDay = new Map<number, { labels: string[]; minor: number }>();
 
   for (const payment of upcomingPayments(recurring.items, asOf, horizonDays)) {
+    const minor = payment.reportingAmountMinor;
+
+    if (minor === null) {
+      continue;
+    }
+
     const day = dueByDay.get(payment.daysAway);
 
     if (day) {
       day.labels.push(payment.label);
-      day.minor += payment.amountMinor;
+      day.minor += minor;
     } else {
-      dueByDay.set(payment.daysAway, {
-        labels: [payment.label],
-        minor: payment.amountMinor,
-      });
+      dueByDay.set(payment.daysAway, { labels: [payment.label], minor });
     }
   }
 
@@ -323,13 +358,13 @@ export const recurringSections = (
     const own = items
       .filter((item) => item.kind === kind)
       .toSorted(
-        (a, b) => monthlyEquivalentMinor(b) - monthlyEquivalentMinor(a)
+        (a, b) => comparableMonthlyMinor(b) - comparableMonthlyMinor(a)
       );
 
     let monthlyMinor = 0;
 
     for (const item of own) {
-      monthlyMinor += monthlyEquivalentMinor(item);
+      monthlyMinor += reportingMonthlyMinor(item) ?? 0;
     }
 
     return { items: own, kind, monthlyMinor };
@@ -375,15 +410,20 @@ export const recurringTrend = (
   return { direction: ratio > 0 ? "up" : "down", ratio };
 };
 
-const dearestCommitment = (items: RecurringItem[]): RecurringItem | null => {
-  let dearest: RecurringItem | null = null;
+const dearestCommitment = (
+  items: RecurringItem[]
+): { annualMinor: number; item: RecurringItem } | null => {
+  let dearest: { annualMinor: number; item: RecurringItem } | null = null;
 
   for (const item of items) {
+    const annualMinor = reportingAnnualMinor(item);
+
     if (
       item.kind === "fixed" &&
-      (dearest === null || annualCostMinor(item) > annualCostMinor(dearest))
+      annualMinor !== null &&
+      (dearest === null || annualMinor > dearest.annualMinor)
     ) {
-      dearest = item;
+      dearest = { annualMinor, item };
     }
   }
 
@@ -423,9 +463,9 @@ export const recurringInsights = (
 
   if (dearest) {
     mostActionableFirst.push({
-      annualMinor: annualCostMinor(dearest),
+      annualMinor: dearest.annualMinor,
       kind: "top-annual",
-      label: merchantLabel(dearest),
+      label: merchantLabel(dearest.item),
     });
   }
 
