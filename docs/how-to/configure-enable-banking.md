@@ -7,7 +7,7 @@ This page connects Freenary to Enable Banking, the other bank provider Freenary 
 
 ## Before you start
 
-- Freenary runs, and you can sign in as the operator. The operator is the first account created on the instance, and only the operator sees the setup screen and the **Services** list in **Settings**.
+- Freenary runs, and you can sign in as the operator. The operator is the account that claimed the instance (see [First run and the operator](../explanation/first-run-and-operator.md)), and only the operator sees the setup screen and the **Services** list in **Settings**.
 - You know the web address of your instance, for example `http://localhost:3001`. After a member connects a bank, Enable Banking sends them back to that address followed by `/callback/enable-banking`.
 - You have an application registered in the [Enable Banking control panel](https://enablebanking.com/sign-in/), with its application ID and its private key in PEM form.
 

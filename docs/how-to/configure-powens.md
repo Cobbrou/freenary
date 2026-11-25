@@ -7,7 +7,7 @@ This page connects Freenary to Powens, the bank provider that links members' ban
 
 ## Before you start
 
-- Freenary runs, and you can sign in as the operator. The operator is the first account created on the instance, and only the operator sees the setup screen and the **Services** list in **Settings**.
+- Freenary runs, and you can sign in as the operator. The operator is the account that claimed the instance (see [First run and the operator](../explanation/first-run-and-operator.md)), and only the operator sees the setup screen and the **Services** list in **Settings**.
 - You know the web address of your instance, for example `http://localhost:3001`. After a member connects a bank, Powens sends them back to that address followed by `/callback/powens`.
 - You have a Powens console account, or you create one in step 3. The app links to [the Powens registration page](https://console.powens.com/auth/register).
 

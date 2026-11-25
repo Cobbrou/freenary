@@ -116,6 +116,7 @@ The Access column comes from the middleware of each procedure in `packages/api/s
 | --- | --- | --- | --- |
 | `instance.bankConnectionCount` | `POST /api-reference/instance/bankConnectionCount` | Operator | none |
 | `instance.check` | `POST /api-reference/instance/check` | Operator | `integrationId` string, required; `values` object, required; `variantId` string, required |
+| `instance.claim` | `POST /api-reference/instance/claim` | Signed in | `token` string, required |
 | `instance.complete` | `POST /api-reference/instance/complete` | Operator | none |
 | `instance.describe` | `POST /api-reference/instance/describe` | Operator | none |
 | `instance.save` | `POST /api-reference/instance/save` | Operator | `integrationId` string, required; `values` object, required; `variantId` string, required |

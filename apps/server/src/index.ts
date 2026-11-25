@@ -250,8 +250,11 @@ await sealLegacyProviderTokens();
 
 const setupState = await Effect.runPromise(readSetupState());
 
+const unclaimedNotice =
+  env.SETUP_TOKEN === undefined
+    ? `This instance has no operator yet. The first account to sign in at ${env.CORS_ORIGIN} becomes the operator.`
+    : `This instance has no operator yet. Sign in at ${env.CORS_ORIGIN} and enter SETUP_TOKEN on the setup screen to become the operator.`;
+
 if (!setupState.claimed) {
-  console.log(
-    `This instance has no operator yet. The first account to sign in at ${env.CORS_ORIGIN} becomes the operator.`
-  );
+  console.log(unclaimedNotice);
 }

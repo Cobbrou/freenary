@@ -57,7 +57,7 @@ POSTGRES_PASSWORD=$(openssl rand -hex 16)
 BETTER_AUTH_SECRET=$(openssl rand -hex 32)
 BETTER_AUTH_URL=https://freenary.example.com
 CORS_ORIGIN=https://freenary.example.com
-WEB_PORT=127.0.0.1:3001
+SETUP_TOKEN=$(openssl rand -hex 16)
 EOF
 ```
 
@@ -69,7 +69,7 @@ What each line does:
 | `BETTER_AUTH_SECRET` | Signs sign-in cookies and encrypts settings you save in the app. Keep it with your backups. |
 | `BETTER_AUTH_URL` | The public address of the API. The web app passes API requests on, so it is the same address as the web app. An `https://` value marks the session cookie `Secure`. |
 | `CORS_ORIGIN` | The public address of the web app. The browser address must match it exactly, or sign-in fails. |
-| `WEB_PORT` | Publishes the web app on `127.0.0.1:3001` only. Without it, port `3001` is open to the whole network over plain HTTP, next to Caddy. |
+| `SETUP_TOKEN` | The value the setup screen asks for before your account becomes the operator. Without it, the first person to create an account at your address becomes the operator. |
 
 Both addresses have no trailing slash. [Configuration](../reference/configuration.md#public-origins-and-cookies) lists every related setting.
 
@@ -182,7 +182,17 @@ The web app sees every visitor as Caddy's address unless you tell it that Caddy 
 1. Open `https://freenary.example.com`.
 2. Select **No account yet? Create one**, enter your email, your name and a password, then select **Create account**.
 
-The first account becomes the operator, and the browser opens the setup screen with the **Bank provider** page. Create your account right after the start: until someone does, anyone who reaches the address can become the operator. See [First run and the operator](../explanation/first-run-and-operator.md).
+The browser opens the setup screen on **Claim this instance**.
+
+3. Print your setup token on the server:
+
+   ```bash
+   grep SETUP_TOKEN .env
+   ```
+
+4. Paste the value after `SETUP_TOKEN=` into **Setup token**, then select **Become the operator**.
+
+Your account becomes the operator, and the setup screen shows the **Bank provider** page. Someone else who creates an account before you cannot take the role without the token. See [First run and the operator](../explanation/first-run-and-operator.md).
 
 ## You're done
 
@@ -200,6 +210,6 @@ Next:
 - **`curl` to your domain fails, and `docker compose logs caddy` shows errors about the certificate.** The DNS record is wrong or not visible yet, or port 80 or 443 is blocked by a firewall or your hosting provider. Check [step 1](#1-point-your-domain-at-the-server) and your firewall, then run `docker compose restart caddy`.
 - **`Bind for 0.0.0.0:80 failed: port is already allocated`.** Another web server (for example nginx or Apache) runs on the server. Stop it, or use [Use an existing reverse proxy](../how-to/use-an-existing-reverse-proxy.md) to put Freenary behind it instead.
 - **Creating the account fails with Something went wrong. Try again.** The address in the browser differs from `CORS_ORIGIN`, for example `http://` instead of `https://`, or `www.` added. Fix `.env` and run `docker compose up -d --wait`.
-- **`web` shows `0.0.0.0:3001->3001/tcp`.** `WEB_PORT` is missing from `.env`. Add `WEB_PORT=127.0.0.1:3001`, then run `docker compose up -d --wait`.
+- **`web` shows `0.0.0.0:3001->3001/tcp`.** `WEB_PORT` in `.env` holds a bare port such as `3001`, which opens plain HTTP to the whole network next to Caddy. Remove the line, or set `WEB_PORT=127.0.0.1:3001`, then run `docker compose up -d --wait`.
 
 [Troubleshoot](../how-to/troubleshoot.md) covers more cases.

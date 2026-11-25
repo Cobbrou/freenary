@@ -196,11 +196,12 @@ const EXTERNAL: ExternalVariable[] = [
       "`deploy/docker-compose.yml` refuses an unset or empty value. A value that differs from the browser origin makes every sign-in fail.",
   },
   {
-    default: "`3001`",
-    description: "The host port of the web app.",
+    default: "`127.0.0.1:3001`",
+    description:
+      "The host address and port of the web app. The default answers on this machine alone; `3001` or `0.0.0.0:3001` opens it to the network, so set `SETUP_TOKEN` first.",
     envFile: "commented",
     envFileSection: "images",
-    example: "3001",
+    example: "127.0.0.1:3001",
     kind: "compose",
     name: "WEB_PORT",
   },

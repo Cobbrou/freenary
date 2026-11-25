@@ -192,6 +192,10 @@ export const createAuth = () =>
       session: {
         create: {
           after: async (session) => {
+            if (env.SETUP_TOKEN !== undefined) {
+              return;
+            }
+
             await Effect.runPromise(
               claimForFirstSession(session.userId).pipe(
                 Effect.catchTag("InstanceSetupUnavailable", (claimFailure) =>

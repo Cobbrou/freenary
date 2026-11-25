@@ -386,6 +386,20 @@ export const serverEnvSchema = {
     secret: true,
     section: "email",
   }),
+  SETUP_TOKEN: z
+    .string()
+    .min(16)
+    .optional()
+    .describe(
+      "While the instance has no operator, the setup screen asks for this value before it makes a signed-in account the operator. Unset, the first account to sign in becomes the operator."
+    )
+    .meta({
+      example: "a-long-random-value-you-keep",
+      onError:
+        "Under 16 characters stops the start. Set it before you make the web app reachable from other machines, so a stranger who signs up first cannot become the operator.",
+      secret: true,
+      section: "sign-in",
+    }),
   SMTP_HOST: z.string().optional().describe("The mail host.").meta({
     example: "smtp.example.com",
     onError: "`smtp` stops the start without it.",

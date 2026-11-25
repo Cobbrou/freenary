@@ -80,7 +80,7 @@ Keep this file. You need the same `BETTER_AUTH_SECRET` every time you start Free
 If port `3001` or `5432` is already in use on your computer, add one or both of these lines to `.env` with free ports:
 
 ```dotenv
-WEB_PORT=3002
+WEB_PORT=127.0.0.1:3002
 POSTGRES_PORT=5433
 ```
 
@@ -162,6 +162,8 @@ The exact layout of these lines depends on your Compose version. If the command 
 
 The first account created on a new instance becomes the **operator**: the person who configures the instance. See [First run and the operator](../explanation/first-run-and-operator.md).
 
+Freenary answers on this computer alone: other devices on your network cannot open it, so nobody else can create the first account. To open it to your network, see [Other devices cannot open Freenary](../how-to/troubleshoot.md#other-devices-cannot-open-freenary).
+
 1. Open `http://localhost:3001` in your browser. You land on a page titled **Welcome to Freenary**.
 
    ![The Freenary sign-in page, titled Welcome to Freenary, with Email and Password fields](../images/01-sign-in.png)
@@ -188,7 +190,7 @@ Freenary is running and you are its operator.
 ## If something goes wrong
 
 - **`required variable POSTGRES_PASSWORD is missing a value: Set POSTGRES_PASSWORD in .env`** (or the same message for `BETTER_AUTH_SECRET`). `.env` is missing, is in another folder, or has an empty value. Run the commands from `~/freenary`, then redo [step 3](#3-create-the-env-file).
-- **`Bind for 0.0.0.0:3001 failed: port is already allocated`** (or `127.0.0.1:5432`). Another program uses that port. Set `WEB_PORT` or `POSTGRES_PORT` as shown in [step 3](#3-create-the-env-file), then run `docker compose up -d --wait` again.
+- **`Bind for 127.0.0.1:3001 failed: port is already allocated`** (or `127.0.0.1:5432`). Another program uses that port. Set `WEB_PORT` or `POSTGRES_PORT` as shown in [step 3](#3-create-the-env-file), then run `docker compose up -d --wait` again.
 - **`dependency failed to start: container freenary-server-1 exited (1)`** or **`… is unhealthy`**. Read the server log with `docker compose logs server`. A line `Invalid environment variables` lists the setting that is wrong. A `BETTER_AUTH_SECRET` shorter than 32 characters is one example.
 - **The browser shows an error when you create the account.** Check that the address in the browser is exactly the `CORS_ORIGIN` value (`http://localhost:3001` by default). `http://127.0.0.1:3001` is a different address, and the server refuses it.
 

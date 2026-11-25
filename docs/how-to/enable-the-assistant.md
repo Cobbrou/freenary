@@ -7,7 +7,7 @@ This page connects the assistant, the chat behind **Ask** that answers questions
 
 ## Before you start
 
-- Freenary runs, and you can sign in as the operator. The operator is the first account created on the instance, and only the operator sees the **Services** list in **Settings**.
+- Freenary runs, and you can sign in as the operator. The operator is the account that claimed the instance (see [First run and the operator](../explanation/first-run-and-operator.md)), and only the operator sees the **Services** list in **Settings**.
 - To use **Settings**, you finished your own onboarding by connecting a bank: until then every page of the app, including **Settings**, sends you back to onboarding. See [First run and the operator](../explanation/first-run-and-operator.md#onboarding). The `.env` way works at any time.
 - You have the base URL of the endpoint, with its version path, for example `https://openrouter.ai/api/v1`. Freenary adds `/chat/completions` to it.
 - You have the model ID as that endpoint names it, for example `anthropic/claude-3.5-sonnet`, and an API key if the endpoint asks for one. A local endpoint may need no key.

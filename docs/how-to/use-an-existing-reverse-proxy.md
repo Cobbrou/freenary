@@ -10,7 +10,7 @@ This page puts Freenary behind a reverse proxy you already run in Docker, such a
 - Your reverse proxy runs in a Docker container, and you know the Docker network it is attached to. This page calls it `proxy`. To list the networks of a container, run `docker inspect <container> --format '{{range $name, $net := .NetworkSettings.Networks}}{{$name}} {{end}}'`.
 - A hostname, such as `freenary.example.com`, points at the server.
 
-If your proxy runs on the host instead of in a container, use the root `docker-compose.yml`. It publishes the web app on port `WEB_PORT` (default `3001`), and you set `BETTER_AUTH_URL` and `CORS_ORIGIN` to the public address in `.env`.
+If your proxy runs on the host instead of in a container, use the root `docker-compose.yml`. It publishes the web app on `WEB_PORT` (default `127.0.0.1:3001`, which a proxy on the host reaches), and you set `BETTER_AUTH_URL`, `CORS_ORIGIN` and `SETUP_TOKEN` in `.env`. Without `SETUP_TOKEN`, the first person to create an account at the public address becomes the operator.
 
 ## Steps
 

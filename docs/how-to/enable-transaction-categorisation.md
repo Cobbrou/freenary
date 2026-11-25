@@ -7,7 +7,7 @@ This page connects a classifier, a model that picks a category for a merchant th
 
 ## Before you start
 
-- Freenary runs, and you can sign in as the operator. The operator is the first account created on the instance, and only the operator sees the setup screen and the **Services** list in **Settings**.
+- Freenary runs, and you can sign in as the operator. The operator is the account that claimed the instance (see [First run and the operator](../explanation/first-run-and-operator.md)), and only the operator sees the setup screen and the **Services** list in **Settings**.
 - To use **Settings**, you finished your own onboarding by connecting a bank: until then every page of the app, including **Settings**, sends you back to onboarding. See [First run and the operator](../explanation/first-run-and-operator.md#onboarding). The `.env` way works at any time.
 - You have picked a classifier. The app offers three:
   - **Jev by TypeSafe**, hosted. It needs an API key from the [TypeSafe quickstart](https://docs.typesafe.ai/introduction/quickstart).

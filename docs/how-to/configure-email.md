@@ -7,7 +7,7 @@ This page connects Freenary to an email provider, so it can send one-time codes:
 
 ## Before you start
 
-- Freenary runs, and you can sign in as the operator. The operator is the first account created on the instance, and only the operator sees the **Services** list in **Settings**.
+- Freenary runs, and you can sign in as the operator. The operator is the account that claimed the instance (see [First run and the operator](../explanation/first-run-and-operator.md)), and only the operator sees the **Services** list in **Settings**.
 - To use **Settings**, you finished your own onboarding by connecting a bank: until then every page of the app, including **Settings**, sends you back to onboarding. See [First run and the operator](../explanation/first-run-and-operator.md#onboarding). The `.env` way works at any time.
 - You have a sender address, for example `Freenary <no-reply@example.com>`.
 - For Resend, you have a Resend API key. For SMTP, you have the host name of the mail server, and its user and password if it asks for them.

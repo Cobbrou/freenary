@@ -9,6 +9,7 @@ import type {
   StoredSettings,
 } from "@freenary/instance-config";
 import {
+  claimForFirstSession,
   environmentOwns,
   findIntegration,
   findVariant,
@@ -43,6 +44,7 @@ import {
   protectedProcedure,
   publicProcedure,
 } from "../index";
+import { admitsClaim, visibleSetupStatus } from "../instance/claim";
 import { maskEnvironmentValue } from "../instance/mask";
 import {
   candidateOf,
@@ -60,9 +62,12 @@ import {
   missingForSetup,
 } from "../instance/setup";
 import { updateCheck } from "../instance/update-check";
+import { callerBucket, consumeRateLimit } from "../lib/rate-limit";
 import { bankConnectionCount } from "./bank-connection-count";
 
 const RESTART_GRACE_MS = 250;
+const SETUP_TOKEN_MAX_LENGTH = 256;
+const SETUP_CLAIM_RATE_LIMIT = { max: 5, window: 900 };
 
 const readCurrentSettings = (): Promise<StoredSettings> =>
   Effect.runPromise(readStoredSettings(settings.BETTER_AUTH_SECRET));
@@ -348,6 +353,27 @@ export const instanceRouter = {
       return { outcome: "verified" as const };
     }),
 
+  claim: protectedProcedure
+    .input(z.object({ token: z.string().max(SETUP_TOKEN_MAX_LENGTH) }))
+    .handler(async ({ context, input }) => {
+      await consumeRateLimit(
+        `instance-claim:${callerBucket(context.headers)}`,
+        SETUP_CLAIM_RATE_LIMIT
+      );
+
+      if (!admitsClaim(settings.SETUP_TOKEN, input.token)) {
+        return { outcome: "refused" as const };
+      }
+
+      const taken = await Effect.runPromise(
+        claimForFirstSession(context.session.user.id)
+      );
+
+      return {
+        outcome: taken ? ("claimed" as const) : ("already-claimed" as const),
+      };
+    }),
+
   complete: operatorProcedure.handler(async () => {
     const stored = await readCurrentSettings();
     const missing = missingForSetup(
@@ -422,9 +448,14 @@ export const instanceRouter = {
   status: publicProcedure.handler(async ({ context }) => {
     const state = await Effect.runPromise(readSetupState());
     const userId = context.session?.user.id;
-    const operator = userId === undefined ? false : await isOperator(userId);
+    const viewer =
+      userId === undefined ? null : { isOperator: await isOperator(userId) };
 
-    return { ...state, isOperator: operator };
+    return visibleSetupStatus(
+      state,
+      viewer,
+      settings.SETUP_TOKEN !== undefined
+    );
   }),
 
   update: protectedProcedure.handler(async ({ context }) =>
