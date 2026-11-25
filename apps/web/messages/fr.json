@@ -371,10 +371,10 @@
   "bank_connect": "Connecter",
   "bank_connect_error": "Impossible de se connecter à {institution}. Réessayez plus tard.",
   "bank_connections_error_title": "Impossible de charger vos banques",
-  "bank_disconnect": "Déconnecter",
-  "bank_disconnect_aria_label": "Déconnecter {institution}",
+  "bank_disconnect": "Supprimer",
+  "bank_disconnect_aria_label": "Supprimer {institution}",
   "bank_disconnect_cancel": "Annuler",
-  "bank_disconnect_confirm": "Déconnecter la banque",
+  "bank_disconnect_confirm": "Supprimer la banque",
   "bank_disconnect_confirm_description": [
     {
       "declarations": ["input count", "local countPlural = count: plural"],
@@ -386,10 +386,10 @@
     }
   ],
   "bank_disconnect_confirm_description_none": "Cela demande à votre banque de révoquer l’accès de freenary. Aucun compte n’est lié, donc aucune transaction n’est supprimée.",
-  "bank_disconnect_confirm_title": "Déconnecter {institution} ?",
-  "bank_disconnect_error": "Impossible de déconnecter la banque. Réessayez.",
-  "bank_disconnect_revoke_warning": "{institution} déconnectée, mais freenary n’a pas pu demander à votre banque de révoquer l’accès. Révoquez-le depuis votre banque pour en être certain.",
-  "bank_disconnect_success": "{institution} déconnectée",
+  "bank_disconnect_confirm_title": "Supprimer {institution} ?",
+  "bank_disconnect_error": "Impossible de supprimer la banque. Réessayez.",
+  "bank_disconnect_revoke_warning": "{institution} supprimée, mais freenary n’a pas pu demander à votre banque de révoquer l’accès. Révoquez-le depuis votre banque pour en être certain.",
+  "bank_disconnect_success": "{institution} supprimée",
   "bank_disconnect_success_accounts": [
     {
       "declarations": [
@@ -399,8 +399,8 @@
       ],
       "selectors": ["countPlural"],
       "match": {
-        "countPlural=one": "{institution} déconnectée — {count} compte supprimé",
-        "countPlural=other": "{institution} déconnectée — {count} comptes supprimés"
+        "countPlural=one": "{institution} supprimée, avec {count} compte",
+        "countPlural=other": "{institution} supprimée, avec {count} comptes"
       }
     }
   ],
@@ -1352,8 +1352,8 @@
       "declarations": ["input count", "local countPlural = count: plural"],
       "selectors": ["countPlural"],
       "match": {
-        "countPlural=one": "Les connexions bancaires créées avec le fournisseur actuel ne peuvent plus se synchroniser. {count} connexion bancaire de ce serveur est concernée, tous membres confondus : son propriétaire doit déconnecter cette banque puis la reconnecter pour relancer la synchronisation.",
-        "countPlural=other": "Les connexions bancaires créées avec le fournisseur actuel ne peuvent plus se synchroniser. {count} connexions bancaires de ce serveur sont concernées, tous membres confondus : leurs propriétaires doivent déconnecter chaque banque puis la reconnecter pour relancer la synchronisation."
+        "countPlural=one": "Les connexions bancaires créées avec le fournisseur actuel ne peuvent plus se synchroniser. {count} connexion bancaire de ce serveur est concernée, tous membres confondus : son propriétaire doit supprimer cette banque puis la reconnecter pour relancer la synchronisation.",
+        "countPlural=other": "Les connexions bancaires créées avec le fournisseur actuel ne peuvent plus se synchroniser. {count} connexions bancaires de ce serveur sont concernées, tous membres confondus : leurs propriétaires doivent supprimer chaque banque puis la reconnecter pour relancer la synchronisation."
       }
     }
   ],
