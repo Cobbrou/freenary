@@ -7,6 +7,7 @@ import type { Transaction } from "@/entities/budget";
 import { m } from "@/paraglide/messages.js";
 import { formatCurrency } from "@/shared/lib/format-currency";
 import { ListSortToggle, useHoverIntent } from "@/shared/ui/list-controls";
+import { UnconvertedNote } from "@/shared/ui/unconverted-note";
 
 import type { MonthChoice } from "../model/filter-menus";
 import type { AccountChoice } from "../model/filter-suggestions";
@@ -73,7 +74,7 @@ export const TransactionList = ({
   onMonthPick?: (choice: MonthChoice) => void;
   transactions: Transaction[];
   currency: string;
-  totals: { incoming: number; outgoing: number };
+  totals: { incoming: number; outgoing: number; unconvertedCount: number };
   direction: TransactionDirection;
   onDirectionChange: (dir: TransactionDirection) => void;
   onDirectionIntent: (dir: TransactionDirection) => void;
@@ -193,6 +194,12 @@ export const TransactionList = ({
             />
           ))}
         </Tabs>
+        {isError ? null : (
+          <UnconvertedNote
+            className="px-1 pt-2"
+            counts={{ transactions: totals.unconvertedCount }}
+          />
+        )}
         {DIRECTIONS.map((candidate, index) => (
           <TabsPanel
             className="flex flex-1 flex-col"

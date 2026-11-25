@@ -1,3 +1,4 @@
+import type { Converter } from "../fx/converter";
 import type { ProviderAccountType } from "../providers/types";
 import type { AssetClass } from "./account-types";
 import {
@@ -5,11 +6,13 @@ import {
   accountTypeRule,
   signedBalanceOf,
 } from "./account-types";
-import { accountsSummary } from "./accounts-summary";
+import { accountsSummary, balancesOf } from "./accounts-summary";
+import type { HeldBalance } from "./accounts-summary";
 
 export interface ValuedAccount {
   balanceAt: Date | null;
   balanceMinor: number | null;
+  balances?: readonly HeldBalance[];
   currency: string | null;
   type: ProviderAccountType;
 }
@@ -21,12 +24,14 @@ export interface NetWorth {
   excludedAccountCount: number;
   liabilitiesMinor: number;
   netWorthMinor: number | null;
+  unconvertedAccountCount: number;
 }
 
 export interface CurrentAccounts {
   balanceMinor: number | null;
   balancesAt: Date | null;
   currency: string;
+  unconvertedBalanceCount: number;
 }
 
 const laterOf = (current: Date | null, candidate: Date | null) => {
@@ -38,47 +43,95 @@ const laterOf = (current: Date | null, candidate: Date | null) => {
 };
 
 export const currentAccountsOf = (
-  accounts: ValuedAccount[]
+  accounts: ValuedAccount[],
+  converter: Converter,
+  asOf: Date = new Date()
 ): CurrentAccounts => {
-  const { availableBalanceMinor, currency } = accountsSummary(accounts);
+  const { availableBalanceMinor, currency, unconvertedBalanceCount } =
+    accountsSummary(accounts, converter, asOf);
+
   let balancesAt: Date | null = null;
 
   for (const account of accounts) {
-    const isCounted =
-      accountTypeRule(account.type).countsInAvailableBalance &&
-      account.currency === currency &&
-      account.balanceMinor !== null;
-
-    if (isCounted) {
-      balancesAt = laterOf(balancesAt, account.balanceAt);
+    if (accountTypeRule(account.type).countsInAvailableBalance) {
+      for (const held of balancesOf(account)) {
+        if (
+          converter.convert(held.balanceMinor, held.currency, asOf) !== null
+        ) {
+          balancesAt = laterOf(balancesAt, held.balanceAt ?? account.balanceAt);
+        }
+      }
     }
   }
 
-  return { balanceMinor: availableBalanceMinor, balancesAt, currency };
+  return {
+    balanceMinor: availableBalanceMinor,
+    balancesAt,
+    currency,
+    unconvertedBalanceCount,
+  };
+};
+
+const convertedBalanceOf = (
+  account: ValuedAccount,
+  converter: Converter,
+  asOf: Date
+): number | null => {
+  const held = balancesOf(account);
+
+  if (held.length === 0) {
+    return null;
+  }
+
+  let total = 0;
+
+  for (const balance of held) {
+    const converted = converter.convert(
+      signedBalanceOf(account.type, balance.balanceMinor),
+      balance.currency,
+      asOf
+    );
+
+    if (converted === null) {
+      return null;
+    }
+
+    total += converted;
+  }
+
+  return total;
 };
 
 export const netWorthOf = (
   accounts: ValuedAccount[],
-  currency: string
+  converter: Converter,
+  asOf: Date = new Date()
 ): NetWorth => {
   const byClass = new Map<AssetClass, number>();
   let assetsMinor = 0;
   let liabilitiesMinor = 0;
   let excludedAccountCount = 0;
+  let unconvertedAccountCount = 0;
   let valuedAccountCount = 0;
   let balancesAt: Date | null = null;
 
   for (const account of accounts) {
-    if (account.balanceMinor === null || account.currency !== currency) {
+    const held = balancesOf(account);
+    const balanceMinor = convertedBalanceOf(account, converter, asOf);
+
+    if (balanceMinor === null) {
       excludedAccountCount += 1;
+      unconvertedAccountCount += held.length > 0 ? 1 : 0;
 
       continue;
     }
 
     valuedAccountCount += 1;
-    balancesAt = laterOf(balancesAt, account.balanceAt);
 
-    const balanceMinor = signedBalanceOf(account.type, account.balanceMinor);
+    for (const balance of held) {
+      balancesAt = laterOf(balancesAt, balance.balanceAt ?? account.balanceAt);
+    }
+
     const { assetClass } = accountTypeRule(account.type);
 
     if (balanceMinor < 0 || assetClass === null) {
@@ -103,6 +156,7 @@ export const netWorthOf = (
     liabilitiesMinor,
     netWorthMinor:
       valuedAccountCount > 0 ? assetsMinor - liabilitiesMinor : null,
+    unconvertedAccountCount,
   };
 };
 
@@ -118,6 +172,7 @@ export interface HoldingsSummary {
   costBasisMinor: number | null;
   holdingCount: number;
   topHoldings: Omit<ValuedHolding, "currency">[];
+  unconvertedHoldingCount: number;
   unrealisedGainMinor: number | null;
   valuationMinor: number;
 }
@@ -126,11 +181,33 @@ export const TOP_HOLDINGS_SHOWN = 3;
 
 export const holdingsSummaryOf = (
   holdings: ValuedHolding[],
-  currency: string
+  converter: Converter,
+  asOf: Date = new Date()
 ): HoldingsSummary => {
-  const inCurrency = holdings.filter(
-    (holding) => holding.currency === currency
-  );
+  const inCurrency = holdings.flatMap((holding) => {
+    const valuationMinor = converter.convert(
+      holding.valuationMinor,
+      holding.currency,
+      asOf
+    );
+
+    if (valuationMinor === null) {
+      return [];
+    }
+
+    const { unrealisedGainMinor } = holding;
+
+    return [
+      {
+        ...holding,
+        unrealisedGainMinor:
+          unrealisedGainMinor === null
+            ? null
+            : converter.convert(unrealisedGainMinor, holding.currency, asOf),
+        valuationMinor,
+      },
+    ];
+  });
 
   let valuationMinor = 0;
   let gainMinor = 0;
@@ -159,6 +236,7 @@ export const holdingsSummaryOf = (
         unrealisedGainMinor,
         valuationMinor: value,
       })),
+    unconvertedHoldingCount: holdings.length - inCurrency.length,
     unrealisedGainMinor: reportsGain ? gainMinor : null,
     valuationMinor,
   };

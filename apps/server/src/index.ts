@@ -1,5 +1,6 @@
 import { cors } from "@elysiajs/cors";
 import { createContext } from "@freenary/api/context";
+import { exchangeRateRefresh } from "@freenary/api/fx/rates";
 import { updateCheck } from "@freenary/api/instance/update-check";
 import { refusedApiKeyResponse } from "@freenary/api/lib/api-key-refusal";
 import { sealLegacyProviderTokens } from "@freenary/api/lib/bank-provider-user";
@@ -233,6 +234,8 @@ new Elysia()
   });
 
 updateCheck.start();
+
+exchangeRateRefresh.start();
 
 if (
   process.env.NODE_ENV === "production" &&

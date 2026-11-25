@@ -10,7 +10,7 @@ import type {
 } from "@freenary/api/lib/budget-month";
 import type { SpendingCategory } from "@freenary/api/lib/taxonomy";
 
-import { upcomingPayments } from "@/entities/recurring";
+import { reportingTotalOf, upcomingPayments } from "@/entities/recurring";
 import type { RecurringData, UpcomingPayment } from "@/entities/recurring";
 import { dayDelta } from "@/shared/lib/calendar-day";
 
@@ -39,6 +39,7 @@ export interface AvailableToSpend {
   billCount: number;
   billsMinor: number;
   monthEnd: Date;
+  unconvertedBillCount: number;
 }
 
 export interface CategoryShare {
@@ -55,6 +56,7 @@ interface CashFlowPeriod {
 export interface CashFlow {
   currency: string;
   periods: (CashFlowPeriod & { incoming: number })[];
+  unconvertedCount: number;
 }
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
@@ -175,23 +177,17 @@ export const availableToSpend = (
   }
 
   const monthEnd = localLastDayOf(dashboardMonths(today, rule).current);
-  const bills = commitmentsDue(
-    recurring,
-    today,
-    dayDelta(today, monthEnd)
-  ).filter((payment) => payment.currency === recurring.currency);
-
-  const billsMinor = bills.reduce(
-    (total, payment) => total + payment.amountMinor,
-    0
+  const bills = reportingTotalOf(
+    commitmentsDue(recurring, today, dayDelta(today, monthEnd))
   );
 
   return {
-    availableMinor: balanceMinor - billsMinor,
+    availableMinor: balanceMinor - bills.totalMinor,
     balanceMinor,
-    billCount: bills.length,
-    billsMinor,
+    billCount: bills.includedCount,
+    billsMinor: bills.totalMinor,
     monthEnd,
+    unconvertedBillCount: bills.unconvertedCount,
   };
 };
 

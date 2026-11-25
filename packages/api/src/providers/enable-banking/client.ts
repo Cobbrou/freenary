@@ -240,7 +240,14 @@ export const EBTransactionSchema = Schema.Struct({
   debtor_account: Schema.optional(Schema.Struct({ iban: OptionalString })),
   entry_reference: OptionalString,
   exchange_rate: Schema.optional(
-    Schema.Struct({ exchange_rate: OptionalString })
+    Schema.Struct({
+      exchange_rate: OptionalString,
+      instructed_amount: Schema.optional(EBAmountSchema),
+      rate_type: OptionalString,
+      source_currency: OptionalString,
+      target_currency: OptionalString,
+      unit_currency: OptionalString,
+    })
   ),
   merchant_category_code: OptionalString,
   note: OptionalString,
@@ -285,6 +292,7 @@ export const EBCompletedConnectionSchema = Schema.Struct({
         })
       ),
       cash_account_type: Schema.optional(Schema.NullOr(Schema.String)),
+      currency: OptionalString,
       name: OptionalString,
       product: Schema.optional(Schema.NullOr(Schema.String)),
       uid: Schema.String,
@@ -294,6 +302,39 @@ export const EBCompletedConnectionSchema = Schema.Struct({
     Schema.Struct({ group: OptionalString, name: OptionalString })
   ),
   session_id: Schema.String,
+});
+
+export const EBSessionSchema = Schema.Struct({
+  accounts: Schema.optional(Schema.NullOr(Schema.Array(Schema.String))),
+});
+
+export const EBAccountDetailsSchema = Schema.Struct({
+  account_id: Schema.optional(
+    Schema.NullOr(
+      Schema.Struct({
+        iban: Schema.optional(Schema.NullOr(Schema.String)),
+      })
+    )
+  ),
+  cash_account_type: Schema.optional(Schema.NullOr(Schema.String)),
+  currency: Schema.optional(Schema.NullOr(Schema.String)),
+  name: Schema.optional(Schema.NullOr(Schema.String)),
+  product: Schema.optional(Schema.NullOr(Schema.String)),
+  uid: Schema.optional(Schema.NullOr(Schema.String)),
+});
+
+const EBBalanceSchema = Schema.Struct({
+  balance_amount: Schema.Struct({
+    amount: Schema.String,
+    currency: Schema.String,
+  }),
+  balance_type: Schema.optional(Schema.NullOr(Schema.String)),
+  last_change_date_time: Schema.optional(Schema.NullOr(Schema.String)),
+  reference_date: Schema.optional(Schema.NullOr(Schema.String)),
+});
+
+export const EBBalancesSchema = Schema.Struct({
+  balances: Schema.optional(Schema.NullOr(Schema.Array(EBBalanceSchema))),
 });
 
 export const fetchTransactionPages = Effect.fn(
@@ -342,3 +383,7 @@ export type EBCreditorIdentification =
 export type EBTransaction = typeof EBTransactionSchema.Type;
 
 export type EBCompletedConnection = typeof EBCompletedConnectionSchema.Type;
+
+export type EBAccountDetails = typeof EBAccountDetailsSchema.Type;
+
+export type EBBalance = typeof EBBalanceSchema.Type;

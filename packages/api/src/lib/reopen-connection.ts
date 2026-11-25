@@ -81,14 +81,21 @@ export const reopenConnection = (
       known,
       completed.accounts
     )) {
-      const { iban, identificationHash, name, providerAccountId, type } =
-        account;
+      const {
+        currency,
+        iban,
+        identificationHash,
+        name,
+        providerAccountId,
+        type,
+      } = account;
 
       // eslint-disable-next-line no-await-in-loop -- sequential to avoid unique constraint races
       await (knownId === null
         ? db.bankAccount.create({
             data: {
               connectionId,
+              currency: currency ?? null,
               iban,
               identificationHash,
               name,
@@ -98,6 +105,7 @@ export const reopenConnection = (
           })
         : db.bankAccount.update({
             data: {
+              currency: currency ?? null,
               iban,
               identificationHash,
               inConsent: true,

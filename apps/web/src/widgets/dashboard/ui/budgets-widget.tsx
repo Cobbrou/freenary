@@ -6,6 +6,7 @@ import { Link } from "@tanstack/react-router";
 import { CategoryIcon, categoryLabel } from "@/entities/category";
 import { m } from "@/paraglide/messages.js";
 import { formatCurrency } from "@/shared/lib/format-currency";
+import { UnconvertedNote } from "@/shared/ui/unconverted-note";
 
 import { daysLeftInMonth, plannedLines } from "../model/finance";
 import type { BudgetLine } from "../model/finance";
@@ -132,6 +133,10 @@ export const BudgetsWidget = ({ title, today }: BudgetsWidgetProps) => {
               />
             ))}
           </ul>
+          <UnconvertedNote
+            className="pt-3"
+            counts={{ transactions: budget.unconvertedCount }}
+          />
         </div>
       ) : null}
       {query.data && lines.length === 0 ? (

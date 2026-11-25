@@ -102,7 +102,7 @@ The stack needs no `.env` file. A root `.env`, if you have one, reaches the cont
 
 ### Use the mock bank
 
-Outside production, the **Bank provider** step of the setup screen also lists **Mock bank (development only)**. Pick it to finish setup with no bank account and no credentials. The `mock` provider (`packages/api/src/providers/mock`) offers three made-up banks (Banque Lumière, Crédit Mistral, Néobanque Azur) and serves its own consent page at `/mock-bank/consent` on the API server, with **Decline** and **Approve** links. Its accounts, transactions and holdings are generated with Faker, seeded from the account and the day, so a day's data is the same on every sync. `BANKING_PROVIDER=mock` in `.env` selects it too. The server refuses `mock` when `NODE_ENV` is `production`.
+Outside production, the **Bank provider** step of the setup screen also lists **Mock bank (development only)**. Pick it to finish setup with no bank account and no credentials. The `mock` provider (`packages/api/src/providers/mock`) offers three made-up banks (Banque Lumière, Crédit Mistral, Néobanque Azur) and serves its own consent page at `/mock-bank/consent` on the API server, with **Decline** and **Approve** links. Its accounts, transactions and holdings are generated with Faker, seeded from the account and the day, so a day's data is the same on every sync. Each consent also adds **Compte multidevise**, a current account holding euros and dollars, with a monthly expense refund in euros, an exchange between the two, payments in dollars and a payment made in pounds. `BANKING_PROVIDER=mock` in `.env` selects it too. The server refuses `mock` when `NODE_ENV` is `production`.
 
 ## Check that it works
 

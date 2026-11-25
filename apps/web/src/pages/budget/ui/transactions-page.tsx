@@ -26,6 +26,7 @@ import { m } from "@/paraglide/messages.js";
 import { getLocale } from "@/paraglide/runtime.js";
 import { orpc } from "@/shared/api";
 import { useNow } from "@/shared/lib/calendar-day";
+import { UnconvertedNote } from "@/shared/ui/unconverted-note";
 
 import {
   isStaleView,
@@ -52,6 +53,7 @@ const overviewSections = (overview: PeriodOverview | undefined) => ({
   spendingBreakdown: overview?.spendingBreakdown,
   totalExpenses: overview?.sankey.totalExpenses ?? 0,
   totalIncome: overview?.sankey.totalIncome ?? 0,
+  unconvertedCount: overview?.sankey.unconvertedCount ?? 0,
 });
 
 const GROUPING_OF_RANGE = {
@@ -254,6 +256,13 @@ export const TransactionsPage = () => {
         planned={{ ...overviewState, data: overview.budgetVsActual }}
         view={view}
       />
+
+      {overviewState.isPending || overviewState.isError ? null : (
+        <UnconvertedNote
+          className="-mt-3"
+          counts={{ transactions: overview.unconvertedCount }}
+        />
+      )}
 
       <TransactionList
         {...transactionList}

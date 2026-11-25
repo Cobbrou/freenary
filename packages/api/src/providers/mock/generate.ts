@@ -12,9 +12,15 @@ import type {
 import { CARD_MERCHANTS, SECURITIES } from "./catalog";
 import { openedOnOf } from "./session";
 
-type MockAccountKind = "checking" | "savings" | "pea" | "life-insurance";
+type MockAccountKind =
+  | "checking"
+  | "savings"
+  | "pea"
+  | "life-insurance"
+  | "multi-currency";
 
 interface MockAccountPlan {
+  readonly currency: string;
   readonly iban?: string;
   readonly kind: MockAccountKind;
   readonly name: string;
@@ -45,9 +51,13 @@ interface DraftTransaction {
   readonly amountMinor: number;
   readonly creditorIban?: string;
   readonly creditorName?: string;
+  readonly currency?: string;
   readonly debtorIban?: string;
   readonly debtorName?: string;
+  readonly exchangeRate?: string;
   readonly merchantCategoryCode?: string;
+  readonly originalAmountMinor?: number;
+  readonly originalCurrency?: string;
   readonly pendingToday?: boolean;
   readonly remittance: string;
 }
@@ -61,6 +71,17 @@ interface DayContext {
 }
 
 const CURRENCY = "EUR";
+const SECOND_CURRENCY = "USD";
+const TRAVEL_CURRENCY = "GBP";
+const USD_PER_EUR = 1.15;
+const EXCHANGE_SPREAD = 0.005;
+const EUR_PER_GBP = 1.17;
+const EXCHANGE_RATE_DIGITS = 4;
+const MULTI_CURRENCY_TOP_UP_DAY = 1;
+const MULTI_CURRENCY_EUR_CARD_DAYS: readonly number[] = [4, 18];
+const MULTI_CURRENCY_EXCHANGE_DAY = 7;
+const MULTI_CURRENCY_USD_CARD_DAYS: readonly number[] = [9, 16, 23];
+const MULTI_CURRENCY_GBP_CARD_DAY = 25;
 const BOOKED = "BOOK";
 const PENDING = "PDNG";
 const CENTS_PER_EURO = 100;
@@ -112,9 +133,31 @@ const DAILY_CARD_COUNTS = [
   { value: 3, weight: 2 },
 ] as const;
 
+const EUR_CARD_MERCHANTS = [
+  { descriptor: "FNAC", merchantCategoryCode: "5732" },
+  { descriptor: "DECATHLON", merchantCategoryCode: "5941" },
+  { descriptor: "SNCF CONNECT", merchantCategoryCode: "4112" },
+] as const;
+
+const USD_CARD_MERCHANTS = [
+  { city: "SEATTLE", descriptor: "AMAZON.COM", merchantCategoryCode: "5942" },
+  {
+    city: "SAN FRANCISCO",
+    descriptor: "UBER *TRIP",
+    merchantCategoryCode: "4121",
+  },
+  { city: "NEW YORK", descriptor: "STARBUCKS", merchantCategoryCode: "5814" },
+  {
+    city: "CUPERTINO",
+    descriptor: "APPLE.COM/BILL",
+    merchantCategoryCode: "5818",
+  },
+] as const;
+
 const ACCOUNT_KINDS = {
   checking: { name: "Compte de chèques", type: "CHECKING" },
   "life-insurance": { name: "Assurance vie", type: "LIFE_INSURANCE" },
+  "multi-currency": { name: "Compte multidevise", type: "CHECKING" },
   pea: { name: "PEA", type: "PEA" },
   savings: { name: "Livret A", type: "LIVRET_A" },
 } as const satisfies Record<
@@ -197,9 +240,12 @@ export const planAccounts = (sessionId: string): MockAccountPlan[] => {
     kinds.push("life-insurance");
   }
 
+  kinds.push("multi-currency");
+
   return kinds.map((kind) => ({
+    currency: CURRENCY,
     iban:
-      kind === "checking" || kind === "savings"
+      kind === "checking" || kind === "savings" || kind === "multi-currency"
         ? random.finance.iban({ countryCode: "FR", formatted: false })
         : undefined,
     kind,
@@ -461,12 +507,117 @@ const lifeInsuranceDay = (context: DayContext): DraftTransaction[] =>
       ]
     : [];
 
+const exchangeRateText = (rate: number): string =>
+  rate.toFixed(EXCHANGE_RATE_DIGITS);
+
+const currencyExchange = (random: Faker): DraftTransaction[] => {
+  const soldMinor = random.number.int({ max: 6, min: 2 }) * 50 * CENTS_PER_EURO;
+  const rate = USD_PER_EUR * (1 - EXCHANGE_SPREAD);
+  const boughtMinor = Math.round(soldMinor * rate);
+
+  return [
+    {
+      amountMinor: -soldMinor,
+      exchangeRate: exchangeRateText(rate),
+      remittance: `CHANGE ${CURRENCY}/${SECOND_CURRENCY} VENTE ${CURRENCY}`,
+    },
+    {
+      amountMinor: boughtMinor,
+      currency: SECOND_CURRENCY,
+      exchangeRate: exchangeRateText(rate),
+      remittance: `CHANGE ${CURRENCY}/${SECOND_CURRENCY} ACHAT ${SECOND_CURRENCY}`,
+    },
+  ];
+};
+
+const multiCurrencyDay = (context: DayContext): DraftTransaction[] => {
+  const { day, profile, providerAccountId } = context;
+  const date = day.getUTCDate();
+  const random = seededBy(`${providerAccountId}:${isoDay(day)}`);
+  const eurCardIndex = MULTI_CURRENCY_EUR_CARD_DAYS.indexOf(date);
+
+  const usdCardIndex = MULTI_CURRENCY_USD_CARD_DAYS.indexOf(date);
+
+  if (date === MULTI_CURRENCY_TOP_UP_DAY) {
+    return [
+      {
+        amountMinor:
+          random.number.int({ max: 8, min: 5 }) * 50 * CENTS_PER_EURO,
+        debtorName: profile.employer,
+        remittance: `VIR SEPA RECU /DE ${profile.employer} /MOTIF FRAIS DE MISSION`,
+      },
+    ];
+  }
+
+  if (eurCardIndex !== -1) {
+    const merchant =
+      EUR_CARD_MERCHANTS[eurCardIndex % EUR_CARD_MERCHANTS.length] ??
+      EUR_CARD_MERCHANTS[0];
+
+    return [
+      {
+        amountMinor: -eurosToMinor(random, 12, 90),
+        merchantCategoryCode: merchant.merchantCategoryCode,
+        pendingToday: true,
+        remittance: cardRemittance(
+          profile,
+          day,
+          merchant.descriptor,
+          profile.homeCity
+        ),
+      },
+    ];
+  }
+
+  if (date === MULTI_CURRENCY_EXCHANGE_DAY) {
+    return currencyExchange(random);
+  }
+
+  if (usdCardIndex !== -1) {
+    const merchant = random.helpers.arrayElement(USD_CARD_MERCHANTS);
+
+    return [
+      {
+        amountMinor: -eurosToMinor(random, 4, 60),
+        currency: SECOND_CURRENCY,
+        merchantCategoryCode: merchant.merchantCategoryCode,
+        pendingToday: true,
+        remittance: cardRemittance(
+          profile,
+          day,
+          merchant.descriptor,
+          merchant.city
+        ),
+      },
+    ];
+  }
+
+  if (date === MULTI_CURRENCY_GBP_CARD_DAY) {
+    const poundsMinor = eurosToMinor(random, 8, 45);
+
+    return [
+      {
+        amountMinor: -Math.round(poundsMinor * EUR_PER_GBP),
+        exchangeRate: exchangeRateText(EUR_PER_GBP),
+        merchantCategoryCode: "5812",
+        originalAmountMinor: -poundsMinor,
+        originalCurrency: TRAVEL_CURRENCY,
+        pendingToday: true,
+        remittance: cardRemittance(profile, day, "PRET A MANGER", "LONDON"),
+      },
+    ];
+  }
+
+  return [];
+};
+
 const DAY_GENERATORS = {
   checking: (context) => [
     ...checkingRecurring(context),
     ...checkingEveryday(context),
   ],
   "life-insurance": lifeInsuranceDay,
+  "multi-currency": multiCurrencyDay,
   pea: () => [],
   savings: savingsDay,
 } satisfies Record<
@@ -490,10 +641,13 @@ const toProviderTransaction = (
     bookingDate: iso,
     creditorIban: draft.creditorIban,
     creditorName: draft.creditorName,
-    currency: CURRENCY,
+    currency: draft.currency ?? CURRENCY,
     debtorIban: draft.debtorIban,
     debtorName: draft.debtorName,
+    exchangeRate: draft.exchangeRate,
     merchantCategoryCode: draft.merchantCategoryCode,
+    originalAmountMinor: draft.originalAmountMinor,
+    originalCurrency: draft.originalCurrency,
     providerTransactionId: id,
     remittanceLines: [draft.remittance],
     status: isPending ? PENDING : BOOKED,
@@ -656,23 +810,48 @@ const ledgerStartOf = (sessionId: string, today: Date): string => {
   );
 };
 
-const balanceOf = (
+const openingBalancesOf = (
+  plan: MockAccountPlan,
+  profile: MockProfile
+): Map<string, number> => {
+  if (plan.kind === "multi-currency") {
+    const random = seededBy(`${plan.providerAccountId}:opening`);
+
+    return new Map([
+      [CURRENCY, eurosToMinor(random, 300, 1500)],
+      [SECOND_CURRENCY, eurosToMinor(random, 100, 600)],
+    ]);
+  }
+
+  return new Map([
+    [
+      CURRENCY,
+      plan.kind === "checking"
+        ? profile.checkingOpeningMinor
+        : profile.savingsOpeningMinor,
+    ],
+  ]);
+};
+
+const balancesOf = (
   plan: MockAccountPlan,
   profile: MockProfile,
   today: Date
-): number => {
+): Map<string, number> => {
   if (plan.kind === "pea" || plan.kind === "life-insurance") {
-    return generateHoldings(plan.providerAccountId, today).reduce(
-      (total, holding) => total + holding.valuationMinor,
-      0
-    );
+    return new Map([
+      [
+        CURRENCY,
+        sumMinor(
+          generateHoldings(plan.providerAccountId, today).map((holding) => ({
+            amountMinor: holding.valuationMinor,
+          }))
+        ),
+      ],
+    ]);
   }
 
-  const opening =
-    plan.kind === "checking"
-      ? profile.checkingOpeningMinor
-      : profile.savingsOpeningMinor;
-
+  const balances = openingBalancesOf(plan, profile);
   const history = generateTransactions(
     plan.providerAccountId,
     ledgerStartOf(sessionOf(plan.providerAccountId), today),
@@ -680,7 +859,14 @@ const balanceOf = (
     today
   );
 
-  return opening + sumMinor(history);
+  for (const transaction of history) {
+    balances.set(
+      transaction.currency,
+      (balances.get(transaction.currency) ?? 0) + transaction.amountMinor
+    );
+  }
+
+  return balances;
 };
 
 export const generateAccounts = (
@@ -688,14 +874,29 @@ export const generateAccounts = (
   today: Date
 ): ProviderAccount[] => {
   const profile = profileOf(sessionId);
+  const balanceAt = today.toISOString();
 
-  return planAccounts(sessionId).map((plan) => ({
-    balanceAt: today.toISOString(),
-    balanceMinor: balanceOf(plan, profile, today),
-    currency: CURRENCY,
-    iban: plan.iban,
-    name: plan.name,
-    providerAccountId: plan.providerAccountId,
-    type: plan.type,
-  }));
+  return planAccounts(sessionId).map((plan) => {
+    const balances = balancesOf(plan, profile, today);
+    const account = {
+      balanceAt,
+      balanceMinor: balances.get(plan.currency) ?? 0,
+      currency: plan.currency,
+      iban: plan.iban,
+      name: plan.name,
+      providerAccountId: plan.providerAccountId,
+      type: plan.type,
+    };
+
+    return balances.size > 1
+      ? {
+          ...account,
+          balances: [...balances].map(([currency, balanceMinor]) => ({
+            balanceAt,
+            balanceMinor,
+            currency,
+          })),
+        }
+      : account;
+  });
 };

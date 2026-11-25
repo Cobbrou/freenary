@@ -13,7 +13,7 @@ import { useState } from "react";
 
 import {
   ACCOUNT_TYPE_LABELS,
-  AccountBalance,
+  AccountBalanceBreakdown,
   accountName,
 } from "@/entities/account";
 import type { PortfolioAccount } from "@/entities/account";
@@ -33,7 +33,13 @@ const ACCOUNT_EMPTY_DESCRIPTIONS = {
   outgoing: m.bank_account_transactions_empty_outgoing,
 };
 
-const AccountHeader = ({ account }: { account: PortfolioAccount }) => (
+const AccountHeader = ({
+  account,
+  reportingCurrency,
+}: {
+  account: PortfolioAccount;
+  reportingCurrency: string;
+}) => (
   <header className="flex flex-col gap-3 pt-2">
     <div className="flex flex-col gap-0.5">
       <h1 className="text-base font-medium break-words">
@@ -46,9 +52,9 @@ const AccountHeader = ({ account }: { account: PortfolioAccount }) => (
         })}
       </p>
     </div>
-    <AccountBalance
+    <AccountBalanceBreakdown
       account={account}
-      className="text-4xl leading-none font-semibold tracking-tight sm:text-5xl"
+      reportingCurrency={reportingCurrency}
     />
   </header>
 );
@@ -198,9 +204,12 @@ export const BankAccountPage = () => {
 
   return (
     <div className="flex flex-1 flex-col gap-8 p-4">
-      <AccountHeader account={account} />
+      <AccountHeader
+        account={account}
+        reportingCurrency={overview.data.currency}
+      />
       <AccountTransactions
-        currency={account.currency ?? overview.data.currency}
+        currency={overview.data.currency}
         key={account.id}
         list={list}
         view={view}

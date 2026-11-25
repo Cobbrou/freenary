@@ -1,5 +1,7 @@
 import { describe, expect, it } from "bun:test";
 
+import { converterOf } from "../fx/converter";
+import { rateBookOf } from "../fx/rate-book";
 import type { RecurrenceTransaction, RecurringExpense } from "./recurrence";
 import {
   REGULAR_INTERVAL_SPREAD,
@@ -9,6 +11,7 @@ import {
   classifyRecurrence,
   recurringInWindow,
   recurringMonthsInWindow,
+  stableAmounts,
   stillRecurring,
   trailingCadence,
   trailingYear,
@@ -30,6 +33,7 @@ describe("RecurringExpense", () => {
       merchantName: "EDF",
       nextExpected: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
       occurrences: 12,
+      reportingAmountMinor: 8500,
       typicalAmountMinor: 8500,
     };
 
@@ -448,5 +452,143 @@ describe("recurringMonthsInWindow", () => {
 
   it("ignores spending outside the window", () => {
     expect(months.some((m) => m.month === "2024-05")).toBe(false);
+  });
+});
+
+const subscriptionCharge = (
+  date: Date,
+  amount: number,
+  original: { amount: number; currency: string } | null
+): RecurrenceTransaction => ({
+  amount: -amount,
+  category: "subscriptions",
+  counterpartyName: "github",
+  currency: "EUR",
+  date,
+  merchantKey: "github",
+  originalAmount: original === null ? null : -original.amount,
+  originalCurrency: original === null ? null : original.currency,
+  resolvedCategory: null,
+});
+
+describe("stableAmounts", () => {
+  const may = new Date(2026, 4, 5);
+
+  it("reads the amounts the merchant charged when all share one original currency", () => {
+    expect(
+      stableAmounts([
+        subscriptionCharge(may, 920, { amount: 1000, currency: "USD" }),
+        subscriptionCharge(may, 905, { amount: 1000, currency: "USD" }),
+      ])
+    ).toEqual([1000, 1000]);
+  });
+
+  it("reads the booked amounts when one charge has no original", () => {
+    expect(
+      stableAmounts([
+        subscriptionCharge(may, 920, { amount: 1000, currency: "USD" }),
+        subscriptionCharge(may, 905, null),
+      ])
+    ).toEqual([920, 905]);
+  });
+
+  it("reads the booked amounts when the originals are in different currencies", () => {
+    expect(
+      stableAmounts([
+        subscriptionCharge(may, 920, { amount: 1000, currency: "USD" }),
+        subscriptionCharge(may, 905, { amount: 800, currency: "GBP" }),
+      ])
+    ).toEqual([920, 905]);
+  });
+});
+
+describe("recurringInWindow in a foreign currency", () => {
+  const asOf = new Date(2026, 8, 15);
+  const window = { from: new Date(asOf.getTime() - WINDOW_MS), to: asOf };
+  const bookedInEuros = [840, 990, 850, 1000, 860, 980];
+
+  it("confirms a dollar subscription billed in euros that move with the rate", () => {
+    const [detected] = recurringInWindow(
+      bookedInEuros.map((amount, index) =>
+        subscriptionCharge(new Date(2025, 9 + index, 5), amount, {
+          amount: 1000,
+          currency: "USD",
+        })
+      ),
+      window
+    );
+
+    expect(detected?.amountSpread).toBe(0);
+    expect(detected?.kind).toBe("fixed");
+    expect(detected?.confidence).toBe("confirmed");
+  });
+
+  it("only reaches likely without the original amounts", () => {
+    const [detected] = recurringInWindow(
+      bookedInEuros.map((amount, index) =>
+        subscriptionCharge(new Date(2025, 9 + index, 5), amount, null)
+      ),
+      window
+    );
+
+    expect(detected?.amountSpread).toBeGreaterThan(STABLE_AMOUNT_SPREAD);
+    expect(detected?.confidence).toBe("likely");
+  });
+
+  it("keeps only the charges in the currency of the last one", () => {
+    const charges = monthlySeries("netflix", new Date(2025, 9, 5), 6).map(
+      (charge, index) => (index < 2 ? { ...charge, currency: "GBP" } : charge)
+    );
+
+    const [detected] = recurringInWindow(charges, window);
+
+    expect(detected?.currency).toBe("EUR");
+    expect(detected?.occurrences).toBe(4);
+  });
+});
+
+describe("recurringMonthsInWindow with a converter", () => {
+  const asOf = new Date(2026, 8, 15);
+  const window = { from: new Date(asOf.getTime() - WINDOW_MS), to: asOf };
+  const dollars = converterOf(
+    "EUR",
+    rateBookOf([
+      {
+        currency: "USD",
+        date: new Date("2026-01-01T00:00:00Z"),
+        ratePerEur: 1.25,
+      },
+    ])
+  );
+
+  const inDollars = (amount: number, date: Date): RecurrenceTransaction => ({
+    ...unmatched("shop", amount, date),
+    currency: "USD",
+  });
+
+  const inPounds = (amount: number, date: Date): RecurrenceTransaction => ({
+    ...unmatched("shop", amount, date),
+    currency: "GBP",
+  });
+
+  const transactions = [
+    unmatched("bakery", 1000, new Date(2026, 2, 3)),
+    inDollars(2500, new Date(2026, 2, 10)),
+    inPounds(4000, new Date(2026, 2, 12)),
+  ];
+
+  it("adds each transaction as the converter values it and skips what it cannot", () => {
+    expect(
+      recurringMonthsInWindow(transactions, window, [], (tx) =>
+        dollars.amountOf(tx)
+      )
+    ).toEqual([
+      {
+        behavioralMinor: 0,
+        discretionaryMinor: 3000,
+        fixedMinor: 0,
+        month: "2026-03",
+      },
+    ]);
   });
 });

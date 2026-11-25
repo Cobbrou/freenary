@@ -1,5 +1,32 @@
 {
   "$schema": "https://inlang.com/schema/inlang-message-format",
+  "account_balance_estimate": "Converti au taux du jour",
+  "account_balance_several": [
+    {
+      "declarations": [
+        "input count",
+        "input amount",
+        "local countPlural = count: plural"
+      ],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{amount} · {count} devise",
+        "countPlural=other": "{amount} · {count} devises"
+      }
+    }
+  ],
+  "account_balances_no_rate": "Pas encore de taux de change",
+  "account_balances_title": "Solde par devise",
+  "account_currency_count": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} devise",
+        "countPlural=other": "{count} devises"
+      }
+    }
+  ],
   "account_documentation": "Documentation",
   "account_menu_loading": "Chargement du compte",
   "account_menu_update_available": "Mise à jour disponible : v{version}",
@@ -449,6 +476,11 @@
   "budget_detail_close": "Fermer",
   "budget_detail_date_label": "Date",
   "budget_detail_description_label": "Description",
+  "budget_detail_exchange_cost_hint": "Ce que la conversion a coûté par rapport au taux de la Banque centrale européenne",
+  "budget_detail_exchange_cost_label": "Frais de change",
+  "budget_detail_exchange_rate_label": "Taux de change",
+  "budget_detail_exchange_rate_value": "1 {from} = {rate} {to}",
+  "budget_detail_original_amount_label": "Montant d’origine",
   "budget_detail_sr_description": "Consulter et modifier les détails de la transaction",
   "budget_detail_title": "Détails de la transaction",
   "budget_filter_account_unknown": "Compte supprimé",
@@ -777,6 +809,7 @@
   "budget_tab_outgoing": "Sorties · {amount}",
   "budget_tab_outgoing_unknown": "Sorties",
   "budget_transaction_meta": "{day} · {category}",
+  "budget_transaction_original": "{label}, à l’origine {amount}",
   "budget_transaction_paid": "{title}, payé {amount}",
   "budget_transaction_received": "{title}, reçu {amount}",
   "budget_transactions_empty_incoming": "Aucune entrée d’argent sur cette période.",
@@ -1416,6 +1449,14 @@
   "settings_recategorise_action": "Tout recatégoriser",
   "settings_recategorise_description": "Classer à nouveau chaque transaction dans une catégorie. Les catégories que vous avez choisies vous-même et les virements entre vos propres comptes restent inchangés.",
   "settings_recategorise_title": "Recatégoriser les transactions",
+  "settings_reporting_currency_automatic": "Automatique ({currency})",
+  "settings_reporting_currency_description": "Les totaux, les graphiques, les budgets et le patrimoine sont convertis dans cette devise. Chaque transaction garde la devise dans laquelle elle a été faite.",
+  "settings_reporting_currency_no_rate_error": "Aucun taux de change n’est encore connu pour cette devise",
+  "settings_reporting_currency_no_rates": "Aucun taux de change téléchargé pour l’instant.",
+  "settings_reporting_currency_rates": "Taux de change de la Banque centrale européenne, mis à jour le {date}.",
+  "settings_reporting_currency_save_error": "Impossible d’enregistrer votre devise de référence",
+  "settings_reporting_currency_saved": "Devise de référence enregistrée",
+  "settings_reporting_currency_title": "Devise de référence",
   "settings_retry": "Réessayer",
   "settings_save": "Enregistrer",
   "settings_save_changes": "Enregistrer les modifications",
@@ -1688,6 +1729,57 @@
   "ui_thinking_word_thinking": "Réflexion",
   "ui_time": "Heure",
   "ui_toggle_sidebar": "Afficher ou masquer la barre latérale",
+  "unconverted_accounts": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} compte dans une autre devise n’est pas inclus : pas encore de taux de change.",
+        "countPlural=other": "{count} comptes dans d’autres devises ne sont pas inclus : pas encore de taux de change."
+      }
+    }
+  ],
+  "unconverted_balances": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} solde dans une autre devise n’est pas inclus : pas encore de taux de change.",
+        "countPlural=other": "{count} soldes dans d’autres devises ne sont pas inclus : pas encore de taux de change."
+      }
+    }
+  ],
+  "unconverted_currencies": "Les soldes en {currencies} ne sont pas inclus : pas encore de taux de change.",
+  "unconverted_holdings": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} placement dans une autre devise n’est pas inclus : pas encore de taux de change.",
+        "countPlural=other": "{count} placements dans d’autres devises ne sont pas inclus : pas encore de taux de change."
+      }
+    }
+  ],
+  "unconverted_payments": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} paiement dans une autre devise n’est pas inclus : pas encore de taux de change.",
+        "countPlural=other": "{count} paiements dans d’autres devises ne sont pas inclus : pas encore de taux de change."
+      }
+    }
+  ],
+  "unconverted_transactions": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} transaction dans une autre devise n’est pas incluse : pas encore de taux de change.",
+        "countPlural=other": "{count} transactions dans d’autres devises ne sont pas incluses : pas encore de taux de change."
+      }
+    }
+  ],
   "update_banner_dismiss": "Masquer l’avis pour la v{version}",
   "update_banner_new_tab": "(s’ouvre dans un nouvel onglet)",
   "update_banner_title": "Freenary v{version} est disponible",

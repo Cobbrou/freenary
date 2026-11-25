@@ -26,6 +26,7 @@ const item = (overrides: Partial<RecurringItem> = {}): RecurringItem => ({
   merchantName: "Netflix",
   nextExpected: "2026-09-04T00:00:00.000Z",
   occurrences: 6,
+  reportingAmountMinor: overrides.typicalAmountMinor ?? 1000,
   typicalAmountMinor: 1000,
   ...overrides,
 });
@@ -52,6 +53,8 @@ const recurringData = (
   monthly: [],
   monthlyIncomeMinor: null,
   plannedOutgoingMinor: null,
+  unconvertedBalanceCount: 0,
+  unconvertedCount: 0,
   ...overrides,
 });
 
@@ -139,6 +142,37 @@ describe("recurringSummary", () => {
     expect(summary.share).toBeNull();
   });
 
+  it("totals commitments in other currencies at their converted amount, and counts the ones without a rate", () => {
+    const summary = recurringSummary(
+      recurringData({
+        items: [
+          item({ nextExpected: "2026-09-10T00:00:00.000Z" }),
+          item({
+            currency: "USD",
+            merchantKey: "hosting",
+            nextExpected: "2026-09-12T00:00:00.000Z",
+            reportingAmountMinor: 900,
+            typicalAmountMinor: 1000,
+          }),
+          item({
+            currency: "XYZ",
+            merchantKey: "club",
+            nextExpected: "2026-09-14T00:00:00.000Z",
+            reportingAmountMinor: null,
+            typicalAmountMinor: 50_000,
+          }),
+        ],
+      }),
+      asOf
+    );
+
+    expect(summary.activeCount).toBe(3);
+    expect(summary.monthlyMinor).toBe(1015 + 913);
+    expect(summary.upcomingMinor).toBe(1900);
+    expect(summary.upcomingCount).toBe(2);
+    expect(summary.unconvertedItemCount).toBe(1);
+  });
+
   it("separates what falls due this week from the whole horizon", () => {
     const summary = recurringSummary(
       recurringData({
@@ -189,6 +223,35 @@ describe("forecastSeries", () => {
     expect(points[2]?.dueMinor).toBe(91_000);
     expect(points[2]?.balanceMinor).toBe(9000);
     expect(points.at(-1)?.balanceMinor).toBe(9000);
+  });
+
+  it("draws a payment in another currency at its converted amount and skips one without a rate", () => {
+    const points = forecastSeries(
+      recurringData({
+        availableBalanceMinor: 100_000,
+        items: [
+          item({
+            currency: "USD",
+            nextExpected: "2026-09-09T00:00:00.000Z",
+            reportingAmountMinor: 9000,
+            typicalAmountMinor: 10_000,
+          }),
+          item({
+            currency: "XYZ",
+            merchantKey: "club",
+            nextExpected: "2026-09-09T00:00:00.000Z",
+            reportingAmountMinor: null,
+            typicalAmountMinor: 50_000,
+          }),
+        ],
+      }),
+      asOf,
+      2
+    );
+
+    expect(points[1]?.dueMinor).toBe(9000);
+    expect(points[1]?.labels).toEqual(["Netflix"]);
+    expect(points.at(-1)?.balanceMinor).toBe(91_000);
   });
 
   it("goes negative rather than clamping, because that is the warning", () => {
@@ -326,6 +389,34 @@ describe("recurringInsights", () => {
             merchantKey: "insurer",
             merchantName: "Insurer",
             typicalAmountMinor: 20_000,
+          }),
+        ],
+      }),
+      asOf
+    );
+
+    expect(insights.at(-1)).toEqual({
+      annualMinor: 243_500,
+      kind: "top-annual",
+      label: "Insurer",
+    });
+  });
+
+  it("weighs commitments by their cost in the reporting currency", () => {
+    const insights = recurringInsights(
+      recurringData({
+        items: [
+          item({
+            merchantKey: "insurer",
+            merchantName: "Insurer",
+            typicalAmountMinor: 20_000,
+          }),
+          item({
+            currency: "JPY",
+            merchantKey: "dojo",
+            merchantName: "Dojo",
+            reportingAmountMinor: 1000,
+            typicalAmountMinor: 500_000,
           }),
         ],
       }),

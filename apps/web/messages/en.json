@@ -1,5 +1,32 @@
 {
   "$schema": "https://inlang.com/schema/inlang-message-format",
+  "account_balance_estimate": "Converted at today's rate",
+  "account_balance_several": [
+    {
+      "declarations": [
+        "input count",
+        "input amount",
+        "local countPlural = count: plural"
+      ],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{amount} · {count} currency",
+        "countPlural=other": "{amount} · {count} currencies"
+      }
+    }
+  ],
+  "account_balances_no_rate": "No exchange rate yet",
+  "account_balances_title": "Balance per currency",
+  "account_currency_count": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} currency",
+        "countPlural=other": "{count} currencies"
+      }
+    }
+  ],
   "account_documentation": "Documentation",
   "account_menu_loading": "Loading account",
   "account_menu_update_available": "Update available: v{version}",
@@ -440,6 +467,11 @@
   "budget_detail_close": "Close",
   "budget_detail_date_label": "Date",
   "budget_detail_description_label": "Description",
+  "budget_detail_exchange_cost_hint": "What the conversion cost against the European Central Bank rate",
+  "budget_detail_exchange_cost_label": "Exchange cost",
+  "budget_detail_exchange_rate_label": "Exchange rate",
+  "budget_detail_exchange_rate_value": "1 {from} = {rate} {to}",
+  "budget_detail_original_amount_label": "Original amount",
   "budget_detail_sr_description": "View and edit transaction details",
   "budget_detail_title": "Transaction details",
   "budget_filter_account_unknown": "Removed account",
@@ -768,6 +800,7 @@
   "budget_tab_outgoing": "Outgoing · {amount}",
   "budget_tab_outgoing_unknown": "Outgoing",
   "budget_transaction_meta": "{day} · {category}",
+  "budget_transaction_original": "{label}, originally {amount}",
   "budget_transaction_paid": "{title}, paid {amount}",
   "budget_transaction_received": "{title}, received {amount}",
   "budget_transactions_empty_incoming": "No incoming transactions found for this period.",
@@ -1407,6 +1440,14 @@
   "settings_recategorise_action": "Re-categorise all",
   "settings_recategorise_description": "Sort every transaction into categories again. Categories you picked yourself and transfers between your own accounts stay as they are.",
   "settings_recategorise_title": "Re-categorise transactions",
+  "settings_reporting_currency_automatic": "Automatic ({currency})",
+  "settings_reporting_currency_description": "Totals, charts, budgets and net worth are converted into this currency. Each transaction keeps the currency it was made in.",
+  "settings_reporting_currency_no_rate_error": "No exchange rate is known for this currency yet",
+  "settings_reporting_currency_no_rates": "No exchange rates downloaded yet.",
+  "settings_reporting_currency_rates": "Exchange rates from the European Central Bank, last updated {date}.",
+  "settings_reporting_currency_save_error": "Could not save your reporting currency",
+  "settings_reporting_currency_saved": "Reporting currency saved",
+  "settings_reporting_currency_title": "Reporting currency",
   "settings_retry": "Try again",
   "settings_save": "Save",
   "settings_save_changes": "Save changes",
@@ -1679,6 +1720,57 @@
   "ui_thinking_word_thinking": "Thinking",
   "ui_time": "Time",
   "ui_toggle_sidebar": "Toggle sidebar",
+  "unconverted_accounts": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} account in another currency isn't included: no exchange rate yet.",
+        "countPlural=other": "{count} accounts in other currencies aren't included: no exchange rate yet."
+      }
+    }
+  ],
+  "unconverted_balances": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} balance in another currency isn't included: no exchange rate yet.",
+        "countPlural=other": "{count} balances in other currencies aren't included: no exchange rate yet."
+      }
+    }
+  ],
+  "unconverted_currencies": "Balances in {currencies} aren't included: no exchange rate yet.",
+  "unconverted_holdings": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} holding in another currency isn't included: no exchange rate yet.",
+        "countPlural=other": "{count} holdings in other currencies aren't included: no exchange rate yet."
+      }
+    }
+  ],
+  "unconverted_payments": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} payment in another currency isn't included: no exchange rate yet.",
+        "countPlural=other": "{count} payments in other currencies aren't included: no exchange rate yet."
+      }
+    }
+  ],
+  "unconverted_transactions": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} transaction in another currency isn't included: no exchange rate yet.",
+        "countPlural=other": "{count} transactions in other currencies aren't included: no exchange rate yet."
+      }
+    }
+  ],
   "update_banner_dismiss": "Dismiss the notice for v{version}",
   "update_banner_new_tab": "(opens in a new tab)",
   "update_banner_title": "Freenary v{version} is available",

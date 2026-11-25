@@ -42,6 +42,7 @@ import { ConfidenceBadge } from "./recurrence-badge";
 
 interface RecurringTableProps {
   asOf: Date;
+  currency: string;
   hasFilters: boolean;
   isError: boolean;
   isPending: boolean;
@@ -87,7 +88,30 @@ const RecurringTableHead = () => (
   </TableHeader>
 );
 
-const ItemRow = ({ asOf, item }: { asOf: Date; item: RecurringItem }) => {
+const ConvertedAmount = ({
+  currency,
+  item,
+}: {
+  currency: string;
+  item: RecurringItem;
+}) =>
+  item.currency === currency || item.reportingAmountMinor === null ? null : (
+    <span className="text-muted-foreground block">
+      {m.budget_recurring_amount_approx({
+        amount: formatCurrency(item.reportingAmountMinor, currency),
+      })}
+    </span>
+  );
+
+const ItemRow = ({
+  asOf,
+  currency,
+  item,
+}: {
+  asOf: Date;
+  currency: string;
+  item: RecurringItem;
+}) => {
   const { controlHeight } = useSize();
   const amount = formatCurrency(item.typicalAmountMinor, item.currency);
   const next = localDayOfBankDate(item.nextExpected);
@@ -109,9 +133,12 @@ const ItemRow = ({ asOf, item }: { asOf: Date; item: RecurringItem }) => {
         <ConfidenceBadge confidence={item.confidence} />
       </TableCell>
       <TableCell className={MONEY_CELL}>
-        {item.amountSpread > AMOUNT_SPREAD_APPROX
-          ? m.budget_recurring_amount_approx({ amount })
-          : amount}
+        <span className="block">
+          {item.amountSpread > AMOUNT_SPREAD_APPROX
+            ? m.budget_recurring_amount_approx({ amount })
+            : amount}
+        </span>
+        <ConvertedAmount currency={currency} item={item} />
       </TableCell>
       <TableCell className={FREQUENCY_COLUMN}>
         {frequencyLabel(item.frequency)}
@@ -161,6 +188,7 @@ const SkeletonRows = () => {
 
 export const RecurringTable = ({
   asOf,
+  currency,
   hasFilters,
   isError,
   isPending,
@@ -209,7 +237,12 @@ export const RecurringTable = ({
         ) : (
           <TableBody>
             {items.map((item) => (
-              <ItemRow asOf={asOf} item={item} key={item.merchantKey} />
+              <ItemRow
+                asOf={asOf}
+                currency={currency}
+                item={item}
+                key={item.merchantKey}
+              />
             ))}
           </TableBody>
         )}

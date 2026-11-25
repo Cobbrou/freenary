@@ -132,6 +132,60 @@ describe("mapPowensTransaction", () => {
     );
   });
 
+  test("keeps the amount a foreign purchase was made in, signed like the booked amount", () => {
+    const mapped = mapPowensTransaction(
+      transaction({
+        original_currency: { id: "USD", precision: 2 },
+        original_value: 21.6,
+        value: -20,
+      }),
+      "EUR",
+      2
+    );
+
+    expect(mapped?.amountMinor).toBe(-2000);
+    expect(mapped?.currency).toBe("EUR");
+    expect(mapped?.originalAmountMinor).toBe(-2160);
+    expect(mapped?.originalCurrency).toBe("USD");
+  });
+
+  test("falls back to the original currency's own digits without a precision", () => {
+    const mapped = mapPowensTransaction(
+      transaction({
+        original_currency: { id: "JPY" },
+        original_value: -1500,
+        value: -9.2,
+      }),
+      "EUR",
+      2
+    );
+
+    expect(mapped?.originalAmountMinor).toBe(-1500);
+    expect(mapped?.originalCurrency).toBe("JPY");
+  });
+
+  test("reports no original amount in the account currency or without a value", () => {
+    const sameCurrency = mapPowensTransaction(
+      transaction({
+        original_currency: { id: "EUR", precision: 2 },
+        original_value: -10,
+      }),
+      "EUR",
+      2
+    );
+
+    expect(sameCurrency?.originalCurrency).toBeUndefined();
+    expect(sameCurrency?.originalAmountMinor).toBeUndefined();
+
+    const withoutValue = mapPowensTransaction(
+      transaction({ original_currency: { id: "USD", precision: 2 } }),
+      "EUR",
+      2
+    );
+
+    expect(withoutValue?.originalCurrency).toBeUndefined();
+  });
+
   test("drops what cannot be booked", () => {
     expect(
       mapPowensTransaction(
