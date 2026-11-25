@@ -18,6 +18,7 @@ const FETCH_CONCURRENCY = 4;
 const RecordSchema = Schema.Struct({
   answers: AnswersSchema,
   existingLabels: Schema.Array(Schema.String),
+  existingType: Schema.optional(Schema.String),
   kind: Schema.Literals(["issue", "pull-request"]),
   number: Schema.Number,
   recordedAt: Schema.String,
@@ -100,7 +101,7 @@ const reviewedLabels = Effect.fnUntraced(function* reviewedLabels(
       prioritySetter !== WORKFLOW_ACTOR &&
       prioritySetter !== issue.user?.login);
 
-  return reviewed ? { labels } : undefined;
+  return reviewed ? { issueType: issue.type?.name, labels } : undefined;
 });
 
 const calibrate = Effect.fnUntraced(function* calibrate() {

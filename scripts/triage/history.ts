@@ -30,3 +30,33 @@ export const labelsRemovedByOthers = (
       lastActor(events, "unlabeled", name) !== workflowActor
   );
 };
+
+export interface IssueTypeEvent {
+  readonly event?: string | undefined;
+  readonly actor?: { readonly login: string } | null | undefined;
+  readonly prev_issue_type?: { readonly name: string } | null | undefined;
+}
+
+const TYPE_REPLACING_EVENTS: ReadonlySet<string> = new Set([
+  "issue_type_changed",
+  "issue_type_removed",
+]);
+
+export const issueTypesRemovedByOthers = (
+  events: readonly IssueTypeEvent[],
+  currentType: string | undefined,
+  workflowActor: string
+): string[] => [
+  ...new Set(
+    events.flatMap((event) => {
+      const removed = event.prev_issue_type?.name;
+
+      return TYPE_REPLACING_EVENTS.has(event.event ?? "") &&
+        removed !== undefined &&
+        removed !== currentType &&
+        event.actor?.login !== workflowActor
+        ? [removed]
+        : [];
+    })
+  ),
+];

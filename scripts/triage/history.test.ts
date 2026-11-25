@@ -1,6 +1,10 @@
 import { describe, expect, it } from "bun:test";
 
-import { labelsRemovedByOthers, lastActor } from "./history";
+import {
+  issueTypesRemovedByOthers,
+  labelsRemovedByOthers,
+  lastActor,
+} from "./history";
 
 const BOT = "github-actions[bot]";
 
@@ -46,5 +50,38 @@ describe("labelsRemovedByOthers", () => {
     expect(
       labelsRemovedByOthers(events, ["type: bug", "impact: low"], BOT)
     ).toEqual(["good first issue"]);
+  });
+});
+
+describe("issueTypesRemovedByOthers", () => {
+  it("lists the types someone else removed or replaced", () => {
+    const typeEvents = [
+      { actor: { login: BOT }, event: "issue_type_added" },
+      {
+        actor: { login: "maintainer" },
+        event: "issue_type_changed",
+        prev_issue_type: { name: "Bug" },
+      },
+      {
+        actor: { login: "maintainer" },
+        event: "issue_type_removed",
+        prev_issue_type: { name: "Feature" },
+      },
+      {
+        actor: { login: BOT },
+        event: "issue_type_removed",
+        prev_issue_type: { name: "Task" },
+      },
+      { actor: { login: "maintainer" }, event: "labeled" },
+    ];
+
+    expect(issueTypesRemovedByOthers(typeEvents, undefined, BOT)).toEqual([
+      "Bug",
+      "Feature",
+    ]);
+
+    expect(issueTypesRemovedByOthers(typeEvents, "Bug", BOT)).toEqual([
+      "Feature",
+    ]);
   });
 });

@@ -28,6 +28,8 @@ const LabelSchema = Schema.Struct({ name: Schema.String });
 
 const UserSchema = Schema.Struct({ login: Schema.String });
 
+const IssueTypeSchema = Schema.Struct({ name: Schema.String });
+
 export const IssueSchema = Schema.Struct({
   body: Schema.optional(Schema.NullOr(Schema.String)),
   labels: Schema.Array(LabelSchema),
@@ -35,6 +37,7 @@ export const IssueSchema = Schema.Struct({
   pull_request: Schema.optional(Schema.Unknown),
   state: Schema.optional(Schema.String),
   title: Schema.String,
+  type: Schema.optional(Schema.NullOr(IssueTypeSchema)),
   user: Schema.optional(Schema.NullOr(UserSchema)),
 });
 
@@ -340,6 +343,51 @@ export const listLabelEvents = Effect.fnUntraced(function* listLabelEvents(
     }
   }
 });
+
+export const setIssueType = (
+  client: GitHubClient,
+  number: number,
+  issueType: string
+) =>
+  request(
+    client,
+    "set issue type",
+    repoPath(client, `/issues/${number}`),
+    IssueSchema,
+    { body: { type: issueType }, method: "PATCH" }
+  );
+
+const IssueTypeEventSchema = Schema.Struct({
+  actor: Schema.optional(Schema.NullOr(UserSchema)),
+  event: Schema.optional(Schema.String),
+  issue_type: Schema.optional(Schema.NullOr(IssueTypeSchema)),
+  prev_issue_type: Schema.optional(Schema.NullOr(IssueTypeSchema)),
+});
+
+export const listIssueTypeEvents = Effect.fnUntraced(
+  function* listIssueTypeEvents(client: GitHubClient, number: number) {
+    const events: (typeof IssueTypeEventSchema.Type)[] = [];
+
+    for (let page = 1; page <= MAX_EVENT_PAGES; page += 1) {
+      const batch = yield* request(
+        client,
+        "list issue timeline",
+        repoPath(
+          client,
+          `/issues/${number}/timeline?per_page=${PAGE_SIZE}&page=${page}`
+        ),
+        Schema.Array(IssueTypeEventSchema),
+        {}
+      );
+
+      events.push(...batch);
+
+      if (batch.length < PAGE_SIZE) {
+        return events;
+      }
+    }
+  }
+);
 
 export const removeLabel = (
   client: GitHubClient,

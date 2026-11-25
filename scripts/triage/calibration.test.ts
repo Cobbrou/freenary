@@ -236,3 +236,37 @@ describe("blindSamples", () => {
     ]);
   });
 });
+
+describe("issue types in calibration", () => {
+  const answers = {
+    type: { choice: "documentation", confidence: 0.8, type: "choice" },
+  } as const;
+
+  it("compares the type with the issue type and the documentation label", () => {
+    expect(
+      samplesFor(answers, { issueType: "Task", labels: ["documentation"] })
+    ).toEqual([
+      { confidence: 0.8, kind: "label", matches: true, question: "type" },
+    ]);
+
+    expect(samplesFor(answers, { issueType: "Task", labels: [] })).toEqual([
+      { confidence: 0.8, kind: "label", matches: false, question: "type" },
+    ]);
+  });
+
+  it("skips a run whose input already carried an issue type", () => {
+    expect(
+      blindSamples(
+        [
+          {
+            answers,
+            existingLabels: [],
+            existingType: "maintenance",
+            recordedAt: "2026-10-01T00:00:00Z",
+          },
+        ],
+        { issueType: "Task", labels: ["documentation"] }
+      )
+    ).toEqual([]);
+  });
+});

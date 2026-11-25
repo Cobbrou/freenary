@@ -36,8 +36,10 @@ const planFor = (overrides: Partial<PlanInput>) =>
     docsExpected: false,
     duplicateCandidates: [9, 14],
     existingLabels: [],
+    existingType: undefined,
     kind: "issue",
     refusedLabels: [],
+    refusedTypes: [],
     ruleGaps: [],
     workflowGoodFirstIssue: false,
     workflowPriorities: [],
@@ -62,8 +64,11 @@ const duplicateAt = (probabilities: Record<string, number>) =>
 
 describe("planLabels", () => {
   it("labels the type, impact and priority of a confident answer set", () => {
-    expect(planFor({}).labels.toSorted()).toEqual(
-      ["impact: high", "priority: high", "type: bug"].toSorted()
+    const plan = planFor({});
+
+    expect(plan.type).toBe("bug");
+    expect(plan.labels.toSorted()).toEqual(
+      ["impact: high", "priority: high"].toSorted()
     );
   });
 
@@ -97,7 +102,7 @@ describe("planLabels", () => {
       checklist: undefined,
     });
 
-    expect(plan.labels).toContain("type: feature");
+    expect(plan.type).toBe("feature");
     expect(plan.notes).toContain(
       "type: feature (0.49; next documentation 0.46)"
     );
@@ -105,9 +110,11 @@ describe("planLabels", () => {
 
   it("never overrides a group a maintainer already labelled", () => {
     const plan = planFor({
-      existingLabels: ["type: feature", "impact: low", "priority: low"],
+      existingLabels: ["impact: low", "priority: low"],
+      existingType: "feature",
     });
 
+    expect(plan.type).toBeUndefined();
     expect(plan.labels).toEqual([]);
     expect(plan.removed).toEqual([]);
   });
@@ -296,12 +303,13 @@ describe("buildQuestions", () => {
 });
 
 describe("taxonomy", () => {
-  it("defines the twelve labels once", () => {
+  it("defines the thirteen labels once", () => {
     const names = LABELS.map((label) => label.name);
 
     expect(new Set(names).size).toBe(names.length);
     expect(names.toSorted()).toEqual(
       [
+        "documentation",
         "good first issue",
         "help wanted",
         "impact: high",
@@ -662,7 +670,7 @@ describe("top label wins", () => {
         },
       });
 
-      expect(plan.labels).toContain("type: maintenance");
+      expect(plan.type).toBe("maintenance");
     }
   });
 
@@ -693,7 +701,7 @@ describe("top label wins", () => {
       checklist: undefined,
     });
 
-    expect(plan.labels).toContain("type: feature");
+    expect(plan.type).toBe("feature");
   });
 });
 
@@ -730,13 +738,9 @@ describe("tie order", () => {
       },
     };
 
-    const runs = [1, 2, 3].map(() =>
-      planFor({ answers: tied }).labels.filter((label) =>
-        label.startsWith("type:")
-      )
-    );
+    const runs = [1, 2, 3].map(() => planFor({ answers: tied }).type);
 
-    expect(runs).toEqual([["type: bug"], ["type: bug"], ["type: bug"]]);
+    expect(runs).toEqual(["bug", "bug", "bug"]);
   });
 });
 
@@ -759,7 +763,7 @@ describe("unusable answers", () => {
       checklist: undefined,
     });
 
-    expect(plan.labels).toContain("type: feature");
+    expect(plan.type).toBe("feature");
     expect(plan.notes).toContain(
       "type: feature (0.50; next documentation 0.20)"
     );
@@ -778,8 +782,8 @@ describe("unusable answers", () => {
       },
     });
 
-    expect(plan.labels).toContain("type: bug");
-    expect(plan.labels).not.toContain("type: feature");
+    expect(plan.type).toBe("bug");
+    expect(plan.type).not.toBe("feature");
   });
 
   it("keeps the stated choice when every probability is unknown or not a number", () => {
@@ -801,7 +805,7 @@ describe("unusable answers", () => {
         checklist: undefined,
       });
 
-      expect(plan.labels).toContain("type: feature");
+      expect(plan.type).toBe("feature");
     }
   });
 
@@ -819,7 +823,7 @@ describe("unusable answers", () => {
       checklist: undefined,
     });
 
-    expect(plan.labels).toContain("type: feature");
+    expect(plan.type).toBe("feature");
     expect(plan.notes).toContain("type: feature (0.70; next bug 0.20)");
   });
 
@@ -837,7 +841,7 @@ describe("unusable answers", () => {
       checklist: undefined,
     });
 
-    expect(plan.labels.some((label) => label.startsWith("type:"))).toBe(false);
+    expect(plan.type).toBeUndefined();
     expect(plan.notes).toContain("type: no answer");
   });
 
@@ -845,7 +849,7 @@ describe("unusable answers", () => {
     const { type: _type, ...withoutType } = confidentBug;
     const plan = planFor({ answers: withoutType, checklist: undefined });
 
-    expect(plan.labels.some((label) => label.startsWith("type:"))).toBe(false);
+    expect(plan.type).toBeUndefined();
     expect(plan.gaps).toEqual([]);
     expect(plan.status).toBe("ready");
     expect(plan.notes).toContain("type: no answer");
@@ -866,11 +870,13 @@ describe("unusable answers", () => {
 describe("existing and refused labels", () => {
   it("never adds a pick over an existing group label and removes nothing", () => {
     const plan = planFor({
-      existingLabels: ["type: bug", "impact: low"],
+      existingLabels: ["impact: low"],
+      existingType: "bug",
     });
 
+    expect(plan.type).toBeUndefined();
     expect(
-      plan.labels.filter((label) => startsWithAny(label, ["type:", "impact:"]))
+      plan.labels.filter((label) => startsWithAny(label, ["impact:"]))
     ).toEqual([]);
 
     expect(plan.removed).toEqual([]);
@@ -879,7 +885,12 @@ describe("existing and refused labels", () => {
   it("adds nothing for a label a maintainer removed", () => {
     const plan = planFor({ refusedLabels: ["impact: high", "priority: high"] });
 
-    expect(plan.labels).toEqual(["type: bug"]);
+    expect(plan.labels).toEqual([]);
+    expect(plan.type).toBe("bug");
+  });
+
+  it("sets no type a maintainer removed", () => {
+    expect(planFor({ refusedTypes: ["bug"] }).type).toBeUndefined();
   });
 });
 

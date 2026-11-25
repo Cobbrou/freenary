@@ -11,6 +11,44 @@ export const TYPE_LABELS = {
   maintenance: "type: maintenance",
 } as const;
 
+export type TypeKey = keyof typeof TYPE_LABELS;
+
+export const DOCUMENTATION_LABEL = "documentation";
+
+export const ISSUE_TYPES = {
+  bug: "Bug",
+  documentation: "Task",
+  feature: "Feature",
+  maintenance: "Task",
+} as const satisfies Record<TypeKey, string>;
+
+const isTypeKey = (key: string): key is TypeKey =>
+  Object.hasOwn(TYPE_LABELS, key);
+
+const TYPE_KEYS: readonly TypeKey[] =
+  Object.keys(TYPE_LABELS).filter(isTypeKey);
+
+export const typeOfLabel = (label: string): TypeKey | undefined =>
+  TYPE_KEYS.find((key) => TYPE_LABELS[key] === label);
+
+export const typesOfIssueType = (name: string): TypeKey[] =>
+  TYPE_KEYS.filter((key) => ISSUE_TYPES[key] === name);
+
+export const typeOfIssue = (
+  issueType: string | undefined,
+  labels: readonly string[]
+): TypeKey | undefined => {
+  const keys = issueType === undefined ? [] : typesOfIssueType(issueType);
+
+  if (keys.length > 1) {
+    return labels.includes(DOCUMENTATION_LABEL)
+      ? "documentation"
+      : "maintenance";
+  }
+
+  return keys[0];
+};
+
 export const PRIORITY_LABELS = {
   high: "priority: high",
   low: "priority: low",
@@ -38,22 +76,29 @@ export const GROUP_PREFIXES = {
 export const LABELS: readonly LabelDefinition[] = [
   {
     color: "d73a4a",
-    description: "Something in Freenary behaves incorrectly",
+    description: "A pull request that fixes something Freenary does wrong",
     name: TYPE_LABELS.bug,
   },
   {
     color: "0e8a16",
-    description: "A new capability, or an improvement to an existing one",
+    description:
+      "A pull request that adds a capability or improves an existing one",
     name: TYPE_LABELS.feature,
   },
   {
     color: "0075ca",
-    description: "Documentation site, README or contributor guides",
+    description: "A pull request that only changes documentation",
     name: TYPE_LABELS.documentation,
   },
   {
+    color: "0075ca",
+    description: "A Task issue about the documentation site, README or guides",
+    name: DOCUMENTATION_LABEL,
+  },
+  {
     color: "fef2c0",
-    description: "Dependencies, refactoring, tooling, tests or chores",
+    description:
+      "A pull request for dependencies, refactoring, tooling, tests or chores",
     name: TYPE_LABELS.maintenance,
   },
   {

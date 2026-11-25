@@ -22,9 +22,8 @@ import {
   HELP_WANTED_LABEL,
   IMPACT_LEVELS,
   PRIORITY_LABELS,
-  TYPE_LABELS,
 } from "./taxonomy";
-import type { PriorityLabel } from "./taxonomy";
+import type { PriorityLabel, TypeKey } from "./taxonomy";
 
 export const MIN_SIGNAL_PROBABILITY = 0.8;
 export const MIN_DUPLICATE_CONFIDENCE = 0.85;
@@ -37,12 +36,15 @@ export interface PlanInput {
   readonly refusedLabels: readonly string[];
   readonly docsExpected: boolean;
   readonly existingLabels: readonly string[];
+  readonly existingType: TypeKey | undefined;
+  readonly refusedTypes: readonly TypeKey[];
   readonly workflowPriorities: readonly string[];
   readonly workflowGoodFirstIssue: boolean;
   readonly duplicateCandidates: readonly number[];
 }
 
 export interface Plan {
+  readonly type: TypeKey | undefined;
   readonly labels: string[];
   readonly removed: string[];
   readonly duplicateOf: number | undefined;
@@ -64,8 +66,6 @@ const isKnownKey = <T extends object>(
   table: T,
   key: string
 ): key is Extract<keyof T, string> => Object.hasOwn(table, key);
-
-type TypeKey = keyof typeof TYPE_LABELS;
 
 export const TYPE_TIE_ORDER = [
   "bug",
@@ -240,24 +240,21 @@ const isYes = (answers: Answers, key: string, notes: string[]): boolean => {
 const hasGroup = (labels: readonly string[], prefix: string): boolean =>
   labels.some((label) => label.startsWith(prefix));
 
-const planType = (answers: Answers, notes: string[]): string | undefined => {
+const planType = (
+  answers: Answers,
+  refusedTypes: readonly TypeKey[],
+  notes: string[]
+): TypeKey | undefined => {
   const choice = topChoice(answers, "type", TYPE_TIE_ORDER, notes);
 
-  return choice ? TYPE_LABELS[choice] : undefined;
+  return choice && !refusedTypes.includes(choice) ? choice : undefined;
 };
 
-export const resolveTypeLabel = (
+export const resolveType = (
   answers: Answers,
-  existingLabels: readonly string[],
-  refusedLabels: readonly string[]
-): string | undefined => {
-  const modelType = planType(answers, []);
-
-  return (
-    existingLabels.find((label) => label.startsWith(GROUP_PREFIXES.type)) ??
-    (modelType && !refusedLabels.includes(modelType) ? modelType : undefined)
-  );
-};
+  existingType: TypeKey | undefined,
+  refusedTypes: readonly TypeKey[]
+): TypeKey | undefined => existingType ?? planType(answers, refusedTypes, []);
 
 const isMet = (answers: Answers, key: string): boolean => {
   const answer = answers[key];
@@ -433,7 +430,8 @@ export const planLabels = (input: PlanInput): Plan => {
   const allowed = (label: string | undefined): string | undefined =>
     label !== undefined && !refused.has(label) ? label : undefined;
 
-  const type = allowed(planType(input.answers, notes));
+  const modelType = planType(input.answers, input.refusedTypes, notes);
+  const type = input.existingType === undefined ? modelType : undefined;
   const { impact, priority } = planImpactAndPriority(
     input,
     existing,
@@ -450,7 +448,6 @@ export const planLabels = (input: PlanInput): Plan => {
   );
 
   const grouped: readonly (readonly [string, readonly string[]])[] = [
-    [GROUP_PREFIXES.type, type ? [type] : []],
     [GROUP_PREFIXES.priority, priority ? [priority] : []],
     [GROUP_PREFIXES.impact, impact ? [impact] : []],
   ];
@@ -516,5 +513,6 @@ export const planLabels = (input: PlanInput): Plan => {
     removed,
     status,
     stillToDefineOpen,
+    type,
   };
 };

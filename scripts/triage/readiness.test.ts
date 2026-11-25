@@ -2,7 +2,7 @@ import { describe, expect, it } from "bun:test";
 import { readFileSync } from "node:fs";
 
 import { COMMENT_MARKER, planCommentAction, renderGapComment } from "./comment";
-import { planLabels, resolveTypeLabel } from "./plan";
+import { planLabels, resolveType } from "./plan";
 import type { PlanInput } from "./plan";
 import { buildQuestions } from "./questions";
 import {
@@ -38,8 +38,10 @@ const planFor = (overrides: Partial<PlanInput>) =>
     docsExpected: false,
     duplicateCandidates: [9, 14],
     existingLabels: [],
+    existingType: undefined,
     kind: "issue",
     refusedLabels: [],
+    refusedTypes: [],
     ruleGaps: [],
     workflowGoodFirstIssue: false,
     workflowPriorities: [],
@@ -96,7 +98,7 @@ describe("issue readiness", () => {
       },
     });
 
-    expect(plan.labels).toContain("type: feature");
+    expect(plan.type).toBe("feature");
     expect(plan.status).toBe("ready");
     expect(plan.gaps).toEqual([]);
   });
@@ -316,11 +318,11 @@ describe("docsExpected", () => {
 
 describe("checklists", () => {
   it("maps types to checklists", () => {
-    expect(checklistFor("type: bug")).toBe("bug");
-    expect(checklistFor("type: feature")).toBe("request");
-    expect(checklistFor("type: documentation")).toBe("documentation");
-    expect(checklistFor("type: maintenance")).toBe("maintenance");
-    expect(checklistFor("type: question")).toBeUndefined();
+    expect(checklistFor("bug")).toBe("bug");
+    expect(checklistFor("feature")).toBe("request");
+    expect(checklistFor("documentation")).toBe("documentation");
+    expect(checklistFor("maintenance")).toBe("maintenance");
+    expect(checklistFor(resolveType({}, undefined, []))).toBeUndefined();
   });
 
   it("keeps both rounds within sixteen questions", () => {
@@ -455,7 +457,8 @@ describe("refused labels", () => {
         ...requestMet,
         security: { noul: 0.95, type: "noul" },
       },
-      refusedLabels: ["priority: high", "type: feature"],
+      refusedLabels: ["priority: high"],
+      refusedTypes: ["feature"],
     });
 
     expect(plan.labels).not.toContain("priority: high");
@@ -476,7 +479,7 @@ describe("refused labels and readiness", () => {
           type: "choice",
         },
       },
-      refusedLabels: ["type: feature"],
+      refusedTypes: ["feature"],
     });
 
     expect(plan.labels.some((label) => label.startsWith("type:"))).toBe(false);
@@ -484,20 +487,18 @@ describe("refused labels and readiness", () => {
   });
 });
 
-describe("resolveTypeLabel", () => {
+describe("resolveType", () => {
   it("ignores a model type a maintainer removed", () => {
     const answers: Answers = {
       type: { choice: "bug", confidence: 0.9, type: "choice" },
     };
 
-    expect(checklistFor(resolveTypeLabel(answers, [], []))).toBe("bug");
+    expect(checklistFor(resolveType(answers, undefined, []))).toBe("bug");
     expect(
-      checklistFor(resolveTypeLabel(answers, [], ["type: bug"]))
+      checklistFor(resolveType(answers, undefined, ["bug"]))
     ).toBeUndefined();
 
-    expect(resolveTypeLabel(answers, ["type: feature"], ["type: bug"])).toBe(
-      "type: feature"
-    );
+    expect(resolveType(answers, "feature", ["bug"])).toBe("feature");
   });
 });
 

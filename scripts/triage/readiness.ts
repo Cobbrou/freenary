@@ -1,6 +1,6 @@
 import type { Question } from "./questions";
 import type { Answers } from "./subq";
-import { TYPE_LABELS } from "./taxonomy";
+import type { TypeKey } from "./taxonomy";
 
 export type GapOwner = "author" | "maintainer" | "waiting";
 
@@ -110,17 +110,17 @@ const CRITERIA: Readonly<
   },
 };
 
-const CHECKLIST_BY_TYPE: Readonly<Record<string, Checklist>> = {
-  [TYPE_LABELS.bug]: "bug",
-  [TYPE_LABELS.documentation]: "documentation",
-  [TYPE_LABELS.feature]: "request",
-  [TYPE_LABELS.maintenance]: "maintenance",
-};
+const CHECKLIST_BY_TYPE = {
+  bug: "bug",
+  documentation: "documentation",
+  feature: "request",
+  maintenance: "maintenance",
+} as const satisfies Record<TypeKey, Checklist>;
 
 export const checklistFor = (
-  typeLabel: string | undefined
+  type: TypeKey | undefined
 ): Checklist | undefined =>
-  typeLabel === undefined ? undefined : CHECKLIST_BY_TYPE[typeLabel];
+  type === undefined ? undefined : CHECKLIST_BY_TYPE[type];
 
 export const checklistQuestions = (
   checklist: Checklist

@@ -9,8 +9,10 @@ import type { Answers } from "./subq";
 import {
   GOOD_FIRST_ISSUE_LABEL,
   GROUP_PREFIXES,
-  TYPE_LABELS,
+  typeOfIssue,
+  typeOfLabel,
 } from "./taxonomy";
+import type { TypeKey } from "./taxonomy";
 
 export type Sample =
   | {
@@ -37,6 +39,7 @@ export const THRESHOLDS = [0.5, 0.6, 0.7, 0.8, 0.85, 0.9, 0.95] as const;
 
 export interface ReviewedItem {
   readonly labels: readonly string[];
+  readonly issueType?: string | undefined;
 }
 
 const GOOD_FIRST_ISSUE_QUESTION = "good_first_issue";
@@ -47,10 +50,16 @@ const groupLabel = (
   prefix: string
 ): string | undefined => labels.find((label) => label.startsWith(prefix));
 
-const typeSample = (answers: Answers, labels: readonly string[]): Sample[] => {
-  const answer = answers.type;
+const reviewedType = (item: ReviewedItem): TypeKey | undefined =>
+  item.issueType === undefined
+    ? item.labels.map(typeOfLabel).find((key) => key !== undefined)
+    : typeOfIssue(item.issueType, item.labels);
 
-  if (answer?.type !== "choice" || !groupLabel(labels, GROUP_PREFIXES.type)) {
+const typeSample = (answers: Answers, item: ReviewedItem): Sample[] => {
+  const answer = answers.type;
+  const actual = reviewedType(item);
+
+  if (answer?.type !== "choice" || actual === undefined) {
     return [];
   }
 
@@ -61,7 +70,7 @@ const typeSample = (answers: Answers, labels: readonly string[]): Sample[] => {
         {
           confidence: selection.probability,
           kind: "label",
-          matches: labels.includes(TYPE_LABELS[selection.top]),
+          matches: selection.top === actual,
           question: "type",
         },
       ]
@@ -125,7 +134,7 @@ const goodFirstIssueSample = (
 };
 
 export const samplesFor = (answers: Answers, item: ReviewedItem): Sample[] => [
-  ...typeSample(answers, item.labels),
+  ...typeSample(answers, item),
   ...impactSample(answers, item.labels),
   ...goodFirstIssueSample(answers, item.labels),
 ];
@@ -182,6 +191,7 @@ export const renderTable = (rows: readonly ThresholdRow[]): string =>
 export interface RecordedRun {
   readonly answers: Answers;
   readonly existingLabels: readonly string[];
+  readonly existingType?: string | undefined;
   readonly recordedAt: string;
 }
 
@@ -190,11 +200,13 @@ const PREFIX_BY_QUESTION: Readonly<Record<string, string>> = {
   type: GROUP_PREFIXES.type,
 };
 
-const inputCarriedAnswer = (
-  existingLabels: readonly string[],
-  question: string
-): boolean => {
+const inputCarriedAnswer = (run: RecordedRun, question: string): boolean => {
+  const { existingLabels } = run;
   const prefix = PREFIX_BY_QUESTION[question];
+
+  if (question === "type" && run.existingType !== undefined) {
+    return true;
+  }
 
   if (prefix !== undefined) {
     return existingLabels.some((label) => label.startsWith(prefix));
@@ -220,7 +232,7 @@ export const blindSamples = (
     for (const sample of samplesFor(run.answers, item)) {
       if (
         !byQuestion.has(sample.question) &&
-        !inputCarriedAnswer(run.existingLabels, sample.question)
+        !inputCarriedAnswer(run, sample.question)
       ) {
         byQuestion.set(sample.question, sample);
       }

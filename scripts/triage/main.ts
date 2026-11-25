@@ -12,16 +12,22 @@ import {
   getPullRequest,
   listComments,
   listCheckRuns,
+  listIssueTypeEvents,
   listLabelEvents,
   listOpenIssues,
   listPullRequestFiles,
   removeLabel,
+  setIssueType,
   updateComment,
   WORKFLOW_ACTOR,
 } from "./github";
-import type { Comment, GitHubClient } from "./github";
-import { labelsRemovedByOthers, lastActor } from "./history";
-import { planLabels, resolveTypeLabel } from "./plan";
+import type { Comment, GitHubClient, Issue } from "./github";
+import {
+  issueTypesRemovedByOthers,
+  labelsRemovedByOthers,
+  lastActor,
+} from "./history";
+import { planLabels, resolveType } from "./plan";
 import type { Plan } from "./plan";
 import { buildQuestions } from "./questions";
 import type { SubjectKind } from "./questions";
@@ -36,7 +42,17 @@ import {
 import type { Gap } from "./readiness";
 import { decide } from "./subq";
 import type { Answers, DecisionState } from "./subq";
-import { GOOD_FIRST_ISSUE_LABEL, GROUP_PREFIXES } from "./taxonomy";
+import {
+  DOCUMENTATION_LABEL,
+  GOOD_FIRST_ISSUE_LABEL,
+  GROUP_PREFIXES,
+  ISSUE_TYPES,
+  TYPE_LABELS,
+  typeOfIssue,
+  typeOfLabel,
+  typesOfIssueType,
+} from "./taxonomy";
+import type { TypeKey } from "./taxonomy";
 
 const MAX_BODY_CHARACTERS = 8000;
 const MAX_REPLY_CHARACTERS = 4000;
@@ -125,6 +141,8 @@ interface TriageRecord {
   readonly recordedAt: string;
   readonly answers: Answers;
   readonly existingLabels: readonly string[];
+  readonly existingType: TypeKey | undefined;
+  readonly type: TypeKey | undefined;
   readonly labels: readonly string[];
   readonly removed: readonly string[];
   readonly status: string;
@@ -175,6 +193,73 @@ const readOwnership = Effect.fnUntraced(function* readOwnership(
   };
 });
 
+const readTypes = Effect.fnUntraced(function* readTypes(
+  client: GitHubClient,
+  kind: SubjectKind,
+  subject: Issue,
+  refusedLabels: readonly string[]
+) {
+  const labels = subject.labels.map((label) => label.name);
+
+  if (kind === "pull-request") {
+    return {
+      existingType: labels.map(typeOfLabel).find((key) => key !== undefined),
+      refusedTypes: refusedLabels.flatMap((label) => {
+        const key = typeOfLabel(label);
+
+        return key === undefined ? [] : [key];
+      }),
+    };
+  }
+
+  const currentType = subject.type?.name;
+  const events = yield* listIssueTypeEvents(client, subject.number);
+
+  return {
+    existingType: typeOfIssue(currentType, labels),
+    refusedTypes: (events
+      ? issueTypesRemovedByOthers(events, currentType, WORKFLOW_ACTOR)
+      : []
+    ).flatMap(typesOfIssueType),
+  };
+});
+
+const typeLabelsFor = (
+  kind: SubjectKind,
+  type: TypeKey | undefined,
+  existingLabels: readonly string[],
+  refusedLabels: readonly string[]
+): string[] => {
+  if (type === undefined) {
+    return [];
+  }
+
+  if (kind === "pull-request") {
+    return [TYPE_LABELS[type]];
+  }
+
+  return type === "documentation" &&
+    !existingLabels.includes(DOCUMENTATION_LABEL) &&
+    !refusedLabels.includes(DOCUMENTATION_LABEL)
+    ? [DOCUMENTATION_LABEL]
+    : [];
+};
+
+const applyType = Effect.fnUntraced(function* applyType(
+  client: GitHubClient,
+  kind: SubjectKind,
+  number: number,
+  type: TypeKey | undefined
+) {
+  if (kind === "issue" && type !== undefined) {
+    yield* setIssueType(client, number, ISSUE_TYPES[type]);
+
+    return [`Issue type: ${ISSUE_TYPES[type]}`];
+  }
+
+  return [];
+});
+
 const triage = Effect.fnUntraced(function* triage() {
   const { kind, number, repository } = yield* readArguments();
   const token = yield* requireEnv("GITHUB_TOKEN", process.env.GITHUB_TOKEN);
@@ -213,6 +298,12 @@ const triage = Effect.fnUntraced(function* triage() {
 
   const existingLabels = subject.labels.map((label) => label.name);
   const ownership = yield* readOwnership(client, number, existingLabels);
+  const types = yield* readTypes(
+    client,
+    kind,
+    subject,
+    ownership.refusedLabels
+  );
 
   const body = subject.body ?? "";
   const comments = yield* listComments(client, number);
@@ -244,11 +335,7 @@ const triage = Effect.fnUntraced(function* triage() {
   const checklist =
     kind === "issue"
       ? checklistFor(
-          resolveTypeLabel(
-            classification,
-            existingLabels,
-            ownership.refusedLabels
-          )
+          resolveType(classification, types.existingType, types.refusedTypes)
         )
       : undefined;
 
@@ -271,8 +358,10 @@ const triage = Effect.fnUntraced(function* triage() {
     docsExpected: docsExpected(files),
     duplicateCandidates: candidates.map((candidate) => candidate.number),
     existingLabels,
+    existingType: types.existingType,
     kind,
     refusedLabels: ownership.refusedLabels,
+    refusedTypes: types.refusedTypes,
     ruleGaps,
     workflowGoodFirstIssue: ownership.workflowGoodFirstIssue,
     workflowPriorities: ownership.workflowPriorities,
@@ -282,8 +371,15 @@ const triage = Effect.fnUntraced(function* triage() {
     yield* removeLabel(client, number, label);
   }
 
-  if (plan.labels.length > 0) {
-    yield* addLabels(client, number, plan.labels);
+  const typeSummary = yield* applyType(client, kind, number, plan.type);
+
+  const added = [
+    ...typeLabelsFor(kind, plan.type, existingLabels, ownership.refusedLabels),
+    ...plan.labels,
+  ];
+
+  if (added.length > 0) {
+    yield* addLabels(client, number, added);
   }
 
   yield* syncGapComment(
@@ -304,20 +400,23 @@ const triage = Effect.fnUntraced(function* triage() {
   yield* writeRecord({
     answers,
     existingLabels,
+    existingType: types.existingType,
     gaps: plan.gaps,
     kind,
-    labels: plan.labels,
+    labels: added,
     notes: plan.notes,
     number,
     recordedAt: new Date().toISOString(),
     removed: plan.removed,
     status: plan.status,
+    type: plan.type,
   });
 
   yield* writeSummary([
     `### Triage of ${kind} #${number}`,
     "",
-    `Added: ${plan.labels.join(", ") || "nothing"}`,
+    ...typeSummary,
+    `Added: ${added.join(", ") || "nothing"}`,
     `Removed: ${plan.removed.join(", ") || "nothing"}`,
     ...(plan.duplicateOf === undefined
       ? []
