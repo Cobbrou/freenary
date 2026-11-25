@@ -29,6 +29,7 @@ import type { CategoriseInput, TransactionPath } from "../categorisation/types";
 import {
   deleteUserOverride,
   upsertUserOverride,
+  userCategoryUpdate,
 } from "../categorisation/user-override";
 import { convertRows } from "../fx/converter";
 import type { Converter } from "../fx/converter";
@@ -1863,6 +1864,7 @@ export const budgetRouter = {
           category: true,
           counterpartyName: true,
           id: true,
+          isInternalTransfer: true,
           merchantKey: true,
           resolvedCategory: true,
         },
@@ -1880,10 +1882,7 @@ export const budgetRouter = {
 
       const additionalUpdated = await prisma.$transaction(async (db) => {
         await db.transaction.update({
-          data: {
-            category: input.category,
-            categoryOverride: input.category !== null,
-          },
+          data: userCategoryUpdate(input.category, tx.isInternalTransfer),
           where: { id: input.transactionId },
         });
 

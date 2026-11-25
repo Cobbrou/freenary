@@ -57,6 +57,26 @@ export const loadUserOverrides = async (
   );
 };
 
+export const userCategoryUpdate = (
+  category: SpendingCategory | null,
+  isInternalTransfer: boolean
+): Prisma.TransactionUpdateInput => {
+  const chosen = { category, categoryOverride: category !== null };
+
+  if (category === null || !isInternalTransfer) {
+    return chosen;
+  }
+
+  return {
+    ...chosen,
+    exchangeFeeMinor: null,
+    isInternalTransfer: false,
+    resolutionConfidence: null,
+    resolutionStage: null,
+    resolvedCategory: null,
+  };
+};
+
 export const upsertUserOverride = async (
   userId: string,
   merchantKey: string,

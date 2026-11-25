@@ -21,6 +21,16 @@ The sync button on **Transactions**, labelled **Sync transactions**, first clear
 
 A member can move money between their own accounts, or between two currencies of one account. Freenary pairs an outgoing and an incoming transaction when they have the same amount, the same currency, sit on two different accounts, and are booked at most 24 hours apart. Legs in two different currencies pair when their amounts match at the bank's rate or within 3% at the reference rate, as [How currencies are converted](currencies.md#exchanges-and-transfers-between-currencies) explains. Both legs are marked as an internal transfer and skip categorisation. Transactions the member categorised by hand are never paired, and neither are the transactions of a loan account.
 
+Amounts and dates can match by chance, so Freenary also compares IBANs, ignoring spaces and case. An outgoing transaction can name the IBAN the money went to, and an incoming one the IBAN it came from:
+
+- When a transaction names an IBAN, the two pair only if at least one names the IBAN of the other account, and none names a different one.
+- When neither names an IBAN but both accounts have one, they pair only if it is the same IBAN, as with an account that holds two currencies.
+- When neither names an IBAN and at least one account has none, the amount, the currency and the date decide. Pairs confirmed by an IBAN are made first.
+
+A bank that gives the IBAN of its accounts but never the one a transfer went to or came from leaves nothing to confirm a transfer between two such accounts, so Freenary does not pair it.
+
+When the member sets the category of an internal transfer, that transaction stops being one: it counts as any other transaction again, and later syncs do not pair it. The other leg stays an internal transfer until the member sets its category too. Clearing the category lets a later sync pair the transaction again.
+
 When the money leaves a current account for a savings, investment or retirement account, the current-account leg gets the category `savings`, `securities` or `retirement`, with the stage `internal-transfer`. [How account types change the totals](account-types.md#transfers-between-your-own-accounts) lists which account gives which category.
 
 ## The steps, in order

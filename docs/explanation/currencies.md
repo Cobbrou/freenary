@@ -64,7 +64,7 @@ An amount in a currency with no rate is not counted. The figure then shows a lin
 - when the bank's original amount on one leg equals the amount of the other leg, or
 - when the reference rate of the outgoing leg's date turns its amount into the incoming amount within 3%.
 
-The legs must be booked at most 24 hours apart. They can sit on two accounts, or on the same account when it holds both currencies, as with an exchange inside a Wise or Revolut account. When several outgoing legs match, the closest one wins.
+The legs must be booked at most 24 hours apart. They can sit on two accounts, or on the same account when it holds both currencies, as with an exchange inside a Wise or Revolut account. When several outgoing legs match, the closest one wins. The IBAN rules on that page apply to these legs too.
 
 A paired exchange is neither income nor spending. What the exchange cost against the reference rate counts as spending in the `loans-bank-fees` category: the outgoing amount, minus the incoming amount converted back at the incoming leg's rate. Freenary stores it in the `exchangeFeeMinor` column of the outgoing leg, and the transaction details show it as **Exchange cost**. A fee the bank books as its own transaction is categorised like any other payment.
 

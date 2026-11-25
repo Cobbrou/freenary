@@ -1,4 +1,5 @@
 import prisma from "@freenary/db";
+import type { Prisma } from "@freenary/db";
 import { Option } from "effect";
 
 import type { RateBook } from "../fx/rate-book";
@@ -11,8 +12,10 @@ import {
 import type { Iso4217Currency } from "./types";
 
 export interface TransferCandidate {
+  accountIban?: string | null;
   accountId: string;
   amount: number;
+  counterpartyIban?: string | null;
   currency: Iso4217Currency;
   date: Date;
   id: string;
@@ -35,6 +38,52 @@ export interface TransferLegUpdates {
   flagged: string[];
   saved: Map<SavingCategory, string[]>;
 }
+
+type IbanEvidence = "confirmed" | "refuted" | "unknown";
+
+const ibanKey = (iban: string | null | undefined): string | null =>
+  iban?.replaceAll(/\s/gu, "").toUpperCase() || null;
+
+interface StoredLeg extends TransferCandidate {
+  creditorAccountIban: string | null;
+  debtorAccountIban: string | null;
+}
+
+export const transferCandidateOf = (
+  { creditorAccountIban, debtorAccountIban, ...leg }: StoredLeg,
+  accountIban: string | null | undefined
+): TransferCandidate => ({
+  ...leg,
+  accountIban: ibanKey(accountIban),
+  counterpartyIban: ibanKey(
+    leg.amount < 0 ? creditorAccountIban : debtorAccountIban
+  ),
+});
+
+const ibanEvidenceOf = (
+  outgoing: TransferCandidate,
+  incoming: TransferCandidate
+): IbanEvidence => {
+  const links = [
+    { account: incoming.accountIban, named: outgoing.counterpartyIban },
+    { account: outgoing.accountIban, named: incoming.counterpartyIban },
+  ].filter(({ named }) => named);
+
+  if (links.length === 0) {
+    const areDistinctIbans =
+      outgoing.accountIban &&
+      incoming.accountIban &&
+      outgoing.accountIban !== incoming.accountIban;
+
+    return areDistinctIbans ? "refuted" : "unknown";
+  }
+
+  const isConfirmed =
+    links.some(({ account, named }) => account === named) &&
+    links.every(({ account, named }) => !account || account === named);
+
+  return isConfirmed ? "confirmed" : "refuted";
+};
 
 const withinWindow = (a: TransferCandidate, b: TransferCandidate) =>
   Math.abs(a.date.getTime() - b.date.getTime()) <= PAIR_DATE_TOLERANCE_MS;
@@ -93,6 +142,7 @@ export const exchangeFeeOf = (
 const crossCurrencyPairs = (
   candidates: readonly TransferCandidate[],
   paired: Set<string>,
+  evidence: IbanEvidence,
   rates: RateBook
 ): TransferPair[] => {
   const pairs: TransferPair[] = [];
@@ -111,7 +161,8 @@ const crossCurrencyPairs = (
       const isOpposite =
         !paired.has(candidate.id) &&
         candidate.currency !== incoming.currency &&
-        withinWindow(candidate, incoming);
+        withinWindow(candidate, incoming) &&
+        ibanEvidenceOf(candidate, incoming) === evidence;
 
       if (isOpposite) {
         const gap = bankRateMatches(candidate, incoming)
@@ -143,12 +194,12 @@ const crossCurrencyPairs = (
   return pairs;
 };
 
-export const pairedLegs = (
+const sameCurrencyPairs = (
   candidates: readonly TransferCandidate[],
-  rates: RateBook | null = null
+  paired: Set<string>,
+  evidence: IbanEvidence
 ): TransferPair[] => {
   const pairs: TransferPair[] = [];
-  const paired = new Set<string>();
   const outgoingByAbsoluteAmount = new Map<number, TransferCandidate[]>();
 
   for (const tx of candidates) {
@@ -176,12 +227,12 @@ export const pairedLegs = (
     }
 
     for (const outgoing of sameAmountOutgoing) {
-      const gapMs = Math.abs(incoming.date.getTime() - outgoing.date.getTime());
       const isOppositeLeg =
         !paired.has(outgoing.id) &&
         outgoing.accountId !== incoming.accountId &&
         outgoing.currency === incoming.currency &&
-        gapMs <= PAIR_DATE_TOLERANCE_MS;
+        withinWindow(outgoing, incoming) &&
+        ibanEvidenceOf(outgoing, incoming) === evidence;
 
       if (isOppositeLeg) {
         paired.add(incoming.id);
@@ -193,11 +244,22 @@ export const pairedLegs = (
     }
   }
 
+  return pairs;
+};
+
+export const pairedLegs = (
+  candidates: readonly TransferCandidate[],
+  rates: RateBook | null = null
+): TransferPair[] => {
+  const paired = new Set<string>();
   const currencies = new Set(candidates.map((tx) => tx.currency));
 
-  return rates && currencies.size > 1
-    ? [...pairs, ...crossCurrencyPairs(candidates, paired, rates)]
-    : pairs;
+  return (["confirmed", "unknown"] as const).flatMap((evidence) => [
+    ...sameCurrencyPairs(candidates, paired, evidence),
+    ...(rates && currencies.size > 1
+      ? crossCurrencyPairs(candidates, paired, evidence, rates)
+      : []),
+  ]);
 };
 
 export const transferLegUpdates = (
@@ -229,12 +291,25 @@ export const transferLegUpdates = (
   return { fees, flagged, saved };
 };
 
+export const transferCandidatesWhere = (
+  accountIds: string[],
+  bookedSince: Date | null
+): Prisma.TransactionWhereInput => ({
+  accountId: { in: accountIds },
+  categoryOverride: false,
+  date:
+    bookedSince === null
+      ? undefined
+      : { gte: new Date(bookedSince.getTime() - PAIR_DATE_TOLERANCE_MS) },
+  isInternalTransfer: false,
+});
+
 const matchInternal = async (
   userId: string,
   bookedSince: Date | null
 ): Promise<number> => {
   const accounts = await prisma.bankAccount.findMany({
-    select: { id: true, type: true },
+    select: { iban: true, id: true, type: true },
     where: {
       connection: { userId },
       type: { in: INTERNAL_TRANSFER_ACCOUNT_TYPES },
@@ -245,27 +320,27 @@ const matchInternal = async (
     return 0;
   }
 
-  const candidates = await prisma.transaction.findMany({
+  const ibanOf = new Map(accounts.map(({ iban, id }) => [id, iban]));
+
+  const legs = await prisma.transaction.findMany({
     orderBy: { date: "asc" },
     select: {
       accountId: true,
       amount: true,
+      creditorAccountIban: true,
       currency: true,
       date: true,
+      debtorAccountIban: true,
       id: true,
       originalAmount: true,
       originalCurrency: true,
     },
-    where: {
-      accountId: { in: accounts.map((account) => account.id) },
-      categoryOverride: false,
-      date:
-        bookedSince === null
-          ? undefined
-          : { gte: new Date(bookedSince.getTime() - PAIR_DATE_TOLERANCE_MS) },
-      isInternalTransfer: false,
-    },
+    where: transferCandidatesWhere([...ibanOf.keys()], bookedSince),
   });
+
+  const candidates = legs.map((leg) =>
+    transferCandidateOf(leg, ibanOf.get(leg.accountId))
+  );
 
   const [first] = candidates;
   const last = candidates.at(-1);
