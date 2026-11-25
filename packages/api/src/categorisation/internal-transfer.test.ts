@@ -2,9 +2,15 @@ import { describe, expect, it } from "bun:test";
 
 import { rateBookOf } from "../fx/rate-book";
 import {
+  generateAccounts,
+  generateTransactions,
+} from "../providers/mock/generate";
+import {
   exchangeFeeOf,
   matchInternalTransfers,
   pairedLegs,
+  transferCandidateOf,
+  transferCandidatesWhere,
   transferLegUpdates,
 } from "./internal-transfer";
 import type { TransferCandidate, TransferPair } from "./internal-transfer";
@@ -100,6 +106,241 @@ const foreignLeg = (
 
 const pairIds = (pairs: readonly TransferPair[]) =>
   pairs.map((pair) => [pair.outgoing.id, pair.incoming.id]);
+
+const CHECKING_IBAN = "FR7630001007941234567890185";
+const LIVRET_IBAN = "FR7630004000031234567890143";
+const FRIEND_IBAN = "FR7630006000011234567890189";
+
+interface LegIbans {
+  account?: string;
+  named?: string;
+}
+
+const pairsWithIbans = (out: LegIbans, into: LegIbans) =>
+  pairIds(
+    pairedLegs([
+      foreignLeg("out", "checking", -2000, "EUR", {
+        accountIban: out.account,
+        counterpartyIban: out.named,
+      }),
+      foreignLeg("in", "livret", 2000, "EUR", {
+        accountIban: into.account,
+        counterpartyIban: into.named,
+      }),
+    ])
+  );
+
+describe("pairedLegs with IBANs", () => {
+  it("pairs two legs when either one names the other account", () => {
+    expect(
+      pairsWithIbans(
+        { account: CHECKING_IBAN },
+        { account: LIVRET_IBAN, named: CHECKING_IBAN }
+      )
+    ).toEqual([["out", "in"]]);
+
+    expect(
+      pairsWithIbans(
+        { account: CHECKING_IBAN, named: LIVRET_IBAN },
+        { account: LIVRET_IBAN }
+      )
+    ).toEqual([["out", "in"]]);
+
+    expect(
+      pairsWithIbans({ account: CHECKING_IBAN }, { named: CHECKING_IBAN })
+    ).toEqual([["out", "in"]]);
+  });
+
+  it("refuses two legs when the money came from someone else", () => {
+    expect(
+      pairsWithIbans(
+        { account: CHECKING_IBAN },
+        { account: LIVRET_IBAN, named: FRIEND_IBAN }
+      )
+    ).toEqual([]);
+
+    expect(
+      pairsWithIbans(
+        { account: CHECKING_IBAN, named: LIVRET_IBAN },
+        { account: LIVRET_IBAN, named: FRIEND_IBAN }
+      )
+    ).toEqual([]);
+  });
+
+  it("refuses a named account it cannot match to the other leg", () => {
+    expect(pairsWithIbans({ named: FRIEND_IBAN }, {})).toEqual([]);
+  });
+
+  it("refuses two known accounts when no leg names the other one", () => {
+    expect(
+      pairsWithIbans({ account: CHECKING_IBAN }, { account: LIVRET_IBAN })
+    ).toEqual([]);
+  });
+
+  it("falls back to amount, currency and date without IBANs to compare", () => {
+    expect(pairsWithIbans({ account: CHECKING_IBAN }, {})).toEqual([
+      ["out", "in"],
+    ]);
+
+    expect(
+      pairsWithIbans({ account: CHECKING_IBAN }, { account: CHECKING_IBAN })
+    ).toEqual([["out", "in"]]);
+  });
+
+  it("gives a leg to the pair an IBAN confirms first", () => {
+    const pairs = pairedLegs([
+      foreignLeg("out", "checking", -2000, "EUR", {
+        accountIban: CHECKING_IBAN,
+      }),
+      foreignLeg("unrelated", "pea", 2000, "EUR"),
+      foreignLeg("in", "livret", 2000, "EUR", {
+        accountIban: LIVRET_IBAN,
+        counterpartyIban: CHECKING_IBAN,
+      }),
+    ]);
+
+    expect(pairIds(pairs)).toEqual([["out", "in"]]);
+  });
+
+  it("refuses legs in two currencies when the money came from someone else", () => {
+    expect(
+      pairedLegs(
+        [
+          foreignLeg("eur-out", "checking", -10_000, "EUR", {
+            accountIban: CHECKING_IBAN,
+          }),
+          foreignLeg("usd-in", "dollars", 10_900, "USD", {
+            counterpartyIban: FRIEND_IBAN,
+          }),
+        ],
+        dollarRates
+      )
+    ).toEqual([]);
+  });
+
+  it("pairs an exchange inside one account that has an IBAN", () => {
+    const pairs = pairedLegs(
+      [
+        foreignLeg("eur-out", "multi", -10_000, "EUR", {
+          accountIban: CHECKING_IBAN,
+        }),
+        foreignLeg("usd-in", "multi", 10_900, "USD", {
+          accountIban: CHECKING_IBAN,
+        }),
+      ],
+      dollarRates
+    );
+
+    expect(pairIds(pairs)).toEqual([["eur-out", "usd-in"]]);
+  });
+});
+
+describe("transferCandidateOf", () => {
+  const stored = {
+    ...foreignLeg("leg", "checking", -2000, "EUR"),
+    creditorAccountIban: "fr76 3000 4000 0312 3456 7890 143",
+    debtorAccountIban: CHECKING_IBAN,
+  };
+
+  it("takes the creditor of money going out and the debtor of money coming in", () => {
+    expect(transferCandidateOf(stored, CHECKING_IBAN).counterpartyIban).toBe(
+      LIVRET_IBAN
+    );
+
+    expect(
+      transferCandidateOf({ ...stored, amount: 2000 }, null).counterpartyIban
+    ).toBe(CHECKING_IBAN);
+  });
+
+  it("ignores the spacing and case of an IBAN, and reads a blank one as unknown", () => {
+    expect(
+      transferCandidateOf(stored, " fr7630004000031234567890143 ").accountIban
+    ).toBe(LIVRET_IBAN);
+
+    expect(transferCandidateOf(stored, " ").accountIban).toBeNull();
+  });
+});
+
+describe("pairedLegs on the mock bank", () => {
+  const today = new Date("2026-03-31T10:00:00Z");
+  const session = "mock_2026-03-01_0f8b6c1e-2d4a-4b7e-9c3f-5a6b7c8d9e0f";
+  const accounts = generateAccounts(session, today);
+
+  const candidates = accounts.flatMap(({ iban, providerAccountId }) =>
+    generateTransactions(
+      providerAccountId,
+      "2026-01-01",
+      "2026-03-31",
+      today
+    ).map((tx) =>
+      transferCandidateOf(
+        {
+          accountId: providerAccountId,
+          amount: tx.amountMinor,
+          creditorAccountIban: tx.creditorIban ?? null,
+          currency: tx.currency,
+          date: new Date(tx.bookingDate),
+          debtorAccountIban: tx.debtorIban ?? null,
+          id: tx.providerTransactionId,
+        },
+        iban
+      )
+    )
+  );
+
+  it("pairs every monthly transfer to the Livret A", () => {
+    const intoLivret = pairedLegs(candidates).filter(
+      ({ incoming }) => incoming.accountId === `${session}:savings`
+    );
+
+    expect(intoLivret.map(({ outgoing }) => outgoing.accountId)).toEqual([
+      `${session}:checking`,
+      `${session}:checking`,
+      `${session}:checking`,
+    ]);
+  });
+
+  it("leaves a payment alone when a friend sends the same amount that day", () => {
+    const livret = accounts.find(({ name }) => name === "Livret A");
+    const payment = candidates.find(
+      (tx) =>
+        tx.accountId === `${session}:checking` &&
+        tx.amount < 0 &&
+        !tx.counterpartyIban
+    );
+
+    expect(livret?.iban).toBeDefined();
+    expect(payment).toBeDefined();
+
+    const legs = payment
+      ? [
+          payment,
+          {
+            ...payment,
+            accountIban: livret?.iban,
+            accountId: `${session}:savings`,
+            amount: -payment.amount,
+            id: "gift",
+          },
+        ]
+      : [];
+
+    expect(pairedLegs(legs)).toEqual([]);
+  });
+});
+
+describe("transferCandidatesWhere", () => {
+  it("leaves out the transactions categorised by hand and the ones already paired", () => {
+    expect(
+      transferCandidatesWhere(["checking"], new Date("2026-05-02T00:00:00Z"))
+    ).toEqual({
+      accountId: { in: ["checking"] },
+      categoryOverride: false,
+      date: { gte: new Date("2026-05-01T00:00:00Z") },
+      isInternalTransfer: false,
+    });
+  });
+});
 
 describe("pairedLegs across currencies", () => {
   it("pairs two accounts when the reference rate lands within tolerance", () => {
