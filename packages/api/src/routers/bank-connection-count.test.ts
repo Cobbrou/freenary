@@ -2,7 +2,7 @@ import { describe, expect, it } from "bun:test";
 
 import { call, ORPCError } from "@orpc/server";
 
-import type { Context } from "../context";
+import { contextOf } from "../testing";
 import { bankConnectionCountWith } from "./bank-connection-count";
 
 const OPERATOR = "operator";
@@ -11,31 +11,6 @@ const EVERY_MEMBERS_CONNECTIONS = 3;
 const bankConnectionCount = bankConnectionCountWith({
   countConnections: () => Promise.resolve(EVERY_MEMBERS_CONNECTIONS),
   isOperatorAccount: (userId) => Promise.resolve(userId === OPERATOR),
-});
-
-const SIGNED_IN_AT = new Date("2026-01-01T00:00:00.000Z");
-
-const contextOf = (userId: string, headers = new Headers()): Context => ({
-  auth: null,
-  headers,
-  session: {
-    session: {
-      createdAt: SIGNED_IN_AT,
-      expiresAt: SIGNED_IN_AT,
-      id: `session-${userId}`,
-      token: `token-${userId}`,
-      updatedAt: SIGNED_IN_AT,
-      userId,
-    },
-    user: {
-      createdAt: SIGNED_IN_AT,
-      email: `${userId}@example.test`,
-      emailVerified: true,
-      id: userId,
-      name: userId,
-      updatedAt: SIGNED_IN_AT,
-    },
-  },
 });
 
 describe("instance.bankConnectionCount", () => {
