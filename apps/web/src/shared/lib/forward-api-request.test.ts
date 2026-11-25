@@ -238,6 +238,20 @@ describe("forwardApiRequest", () => {
     expect(forwardedFor).toBe("198.51.100.9");
   });
 
+  it.each([
+    ["the proxy appended a trusted caller", "172.18.0.20"],
+    ["a trusted caller forged a trusted address", "172.18.0.99, 172.18.0.20"],
+    ["the chain is unreadable", "not-an-address"],
+  ])("falls back to the peer address when %s", async (_case, forwarded) => {
+    const forwardedFor = await forwardedForSent({
+      forwardedFor: forwarded,
+      peer: "172.18.0.1",
+      trustedProxies: "172.16.0.0/12",
+    });
+
+    expect(forwardedFor).toBe("172.18.0.1");
+  });
+
   it("sends no X-Forwarded-For when the peer address is unknown", async () => {
     const forwardedFor = await forwardedForSent({
       forwardedFor: "203.0.113.7",
