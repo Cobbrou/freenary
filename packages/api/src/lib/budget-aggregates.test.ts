@@ -1,11 +1,12 @@
 import { describe, expect, it } from "bun:test";
 
-import { cashFlowAccountsOf } from "../lib/account-types";
+import { cashFlowAccountsOf } from "./account-types";
 import {
   cashFlowPeriodsOf,
   countedTransactionsWhere,
+  sankeyOf,
   statRowOf,
-} from "./budget";
+} from "./budget-aggregates";
 
 const MAY_FIFTH = new Date("2026-05-05T10:00:00.000Z");
 
@@ -119,5 +120,40 @@ describe("cashFlowPeriodsOf", () => {
         "week"
       )
     ).toEqual([{ incoming: 0, label: "2026-05-04", outgoing: 500 }]);
+  });
+});
+
+describe("sankeyOf", () => {
+  it("averages the expenses over a month that only has income too", () => {
+    const sankey = sankeyOf(
+      [
+        {
+          amount: 300_000,
+          category: null,
+          counterpartyName: "Employer",
+          date: new Date("2026-01-10T00:00:00.000Z"),
+          merchantKey: null,
+          resolvedCategory: null,
+        },
+        {
+          amount: -10_000,
+          category: "groceries",
+          counterpartyName: "Shop",
+          date: new Date("2026-02-10T00:00:00.000Z"),
+          merchantKey: null,
+          resolvedCategory: null,
+        },
+      ],
+      {
+        aggregation: "average",
+        from: new Date("2026-01-01T00:00:00.000Z"),
+        rule: { anchor: "DAY_OF_MONTH", startDay: 1 },
+        to: new Date("2026-03-31T23:59:59.999Z"),
+      }
+    );
+
+    expect(sankey.incomeNodes).toEqual([{ name: "Employer", value: 150_000 }]);
+    expect(sankey.totalExpenses).toBe(5000);
+    expect(sankey.moneyLeft).toBe(145_000);
   });
 });
