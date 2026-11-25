@@ -57,6 +57,7 @@ export class PowensConnectionUnusable extends Data.TaggedError(
 
 const CONNECTION_ID = /^\d+$/u;
 const WEBVIEW_CONNECT_URL = "https://webview.powens.com/connect";
+const WEBVIEW_RECONNECT_URL = "https://webview.powens.com/reconnect";
 const FALLBACK_CURRENCY = "EUR";
 const DAY_START = "00:00:00";
 const CONNECTION_WITH_ACCOUNTS = "accounts";
@@ -119,7 +120,8 @@ const closeConnection = Effect.fn("powens.closeConnection")(
 const completeConnection = Effect.fn("powens.completeConnection")(
   function* completeConnection(request: CompleteConnectionRequest) {
     const user = yield* requireUser(request.user);
-    const connectionId = request.callbackParams.connection_id;
+    const connectionId =
+      request.providerSessionId ?? request.callbackParams.connection_id;
 
     if (!(connectionId && CONNECTION_ID.test(connectionId))) {
       return yield* new PowensConnectionUnusable({
@@ -263,11 +265,18 @@ const startConnection = Effect.fn("powens.startConnection")(
     const params = new URLSearchParams({
       client_id: clientId,
       code: single.code,
-      connector_uuids: request.institutionId,
       domain: powensHost(domain),
       redirect_uri: request.redirectUrl,
       state: request.state,
     });
+
+    if (request.providerSessionId) {
+      params.set("connection_id", request.providerSessionId);
+
+      return { url: `${WEBVIEW_RECONNECT_URL}?${params.toString()}` };
+    }
+
+    params.set("connector_uuids", request.institutionId);
 
     return { url: `${WEBVIEW_CONNECT_URL}?${params.toString()}` };
   }
@@ -289,5 +298,8 @@ export const powensProvider: BankingProvider = {
   id: "powens",
   isConfigured,
   listInstitutions,
+  needsReconnect: (cause) =>
+    cause instanceof PowensConnectionUnusable &&
+    cause.reason.kind === "needsUserAction",
   startConnection: (request) => Effect.runPromise(startConnection(request)),
 };

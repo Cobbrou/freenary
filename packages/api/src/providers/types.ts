@@ -53,6 +53,7 @@ export interface ProviderUserSession {
 export interface StartConnectionRequest {
   institutionId: string;
   country: string;
+  providerSessionId?: string;
   redirectUrl: string;
   state: string;
   user: ProviderUserSession | null;
@@ -60,6 +61,7 @@ export interface StartConnectionRequest {
 
 export interface CompleteConnectionRequest {
   callbackParams: Record<string, string>;
+  providerSessionId?: string;
   user: ProviderUserSession | null;
 }
 
@@ -144,6 +146,7 @@ export interface BankingProvider {
   fetchTransactions: (
     request: FetchTransactionsRequest
   ) => Promise<ProviderTransaction[]>;
+  needsReconnect: (cause: unknown) => boolean;
   fetchAccounts?: (request: ConnectionRequest) => Promise<ProviderAccount[]>;
   fetchHoldings?: (request: FetchHoldingsRequest) => Promise<ProviderHolding[]>;
 }

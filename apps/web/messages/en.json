@@ -389,10 +389,10 @@
   "bank_connect": "Connect",
   "bank_connect_error": "Could not connect to {institution}. Try again later.",
   "bank_connections_error_title": "Could not load your banks",
-  "bank_disconnect": "Disconnect",
-  "bank_disconnect_aria_label": "Disconnect {institution}",
+  "bank_disconnect": "Remove",
+  "bank_disconnect_aria_label": "Remove {institution}",
   "bank_disconnect_cancel": "Cancel",
-  "bank_disconnect_confirm": "Disconnect bank",
+  "bank_disconnect_confirm": "Remove bank",
   "bank_disconnect_confirm_description": [
     {
       "declarations": ["input count", "local countPlural = count: plural"],
@@ -404,10 +404,10 @@
     }
   ],
   "bank_disconnect_confirm_description_none": "This asks your bank to revoke freenary’s access. No account is linked, so no transaction is removed.",
-  "bank_disconnect_confirm_title": "Disconnect {institution}?",
-  "bank_disconnect_error": "Couldn’t disconnect the bank. Try again.",
-  "bank_disconnect_revoke_warning": "{institution} disconnected, but freenary could not ask your bank to revoke access. Revoke it from your bank to be sure.",
-  "bank_disconnect_success": "{institution} disconnected",
+  "bank_disconnect_confirm_title": "Remove {institution}?",
+  "bank_disconnect_error": "Couldn’t remove the bank. Try again.",
+  "bank_disconnect_revoke_warning": "{institution} removed, but freenary could not ask your bank to revoke access. Revoke it from your bank to be sure.",
+  "bank_disconnect_success": "{institution} removed",
   "bank_disconnect_success_accounts": [
     {
       "declarations": [
@@ -417,8 +417,8 @@
       ],
       "selectors": ["countPlural"],
       "match": {
-        "countPlural=one": "{institution} disconnected — {count} account removed",
-        "countPlural=other": "{institution} disconnected — {count} accounts removed"
+        "countPlural=one": "{institution} removed, with {count} account",
+        "countPlural=other": "{institution} removed, with {count} accounts"
       }
     }
   ],
@@ -431,6 +431,8 @@
   "bank_list_empty_title": "No banks available",
   "bank_list_error_title": "Could not load banks",
   "bank_list_loading": "Loading banks",
+  "bank_reconnect": "Reconnect",
+  "bank_reconnect_aria_label": "Reconnect {institution}",
   "bank_row_never_synced": "{accounts} · Not synced yet",
   "bank_row_reconnect": "{accounts} · Reconnect to resume importing",
   "bank_row_sync": "Re-sync {institution}",
@@ -1374,8 +1376,8 @@
       "declarations": ["input count", "local countPlural = count: plural"],
       "selectors": ["countPlural"],
       "match": {
-        "countPlural=one": "Bank connections made with the current provider can no longer sync. {count} bank connection on this server is affected, across every member: its owner has to disconnect that bank and connect it again to resume syncing.",
-        "countPlural=other": "Bank connections made with the current provider can no longer sync. {count} bank connections on this server are affected, across every member: their owners have to disconnect each bank and connect it again to resume syncing."
+        "countPlural=one": "Bank connections made with the current provider can no longer sync. {count} bank connection on this server is affected, across every member: its owner has to remove that bank and connect it again to resume syncing.",
+        "countPlural=other": "Bank connections made with the current provider can no longer sync. {count} bank connections on this server are affected, across every member: their owners have to remove each bank and connect it again to resume syncing."
       }
     }
   ],

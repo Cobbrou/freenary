@@ -18,7 +18,7 @@ model BankConnection {
   institutionBic    String?
   /// Banking group identifier from the provider (e.g. "Credit Agricole" for regional caisses).
   institutionGroup  String?
-  /// Status of the connection — active connections can sync transactions.
+  /// Status of the connection — active connections can sync transactions. An EXPIRED one waits for the user to reconnect it.
   status            BankConnectionStatus @default(ACTIVE)
   /// Last time transactions were successfully synchronized.
   lastSyncedAt      DateTime?
@@ -74,6 +74,8 @@ model BankAccount {
   balanceMinor       BigInt?
   /// When the provider last valued the balance.
   balanceAt          DateTime?
+  /// False once a reconnection came back without this account. Its history stays, and syncs skip it.
+  inConsent          Boolean         @default(true)
   createdAt          DateTime       @default(now())
   updatedAt          DateTime       @updatedAt
   transactions       Transaction[]

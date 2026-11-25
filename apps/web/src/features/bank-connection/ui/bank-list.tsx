@@ -13,7 +13,6 @@ import { useRef } from "react";
 
 import { m } from "@/paraglide/messages.js";
 
-import { institutionKey } from "../model/bank-rows";
 import type { BankRow } from "../model/bank-rows";
 import type { BankConnection } from "../model/use-bank-connections";
 import { BankCard } from "./bank-card";
@@ -27,6 +26,7 @@ interface BankListProps {
   isPending: boolean;
   onConnect: (row: BankRow) => void;
   onDisconnect: (connectionId: string) => void;
+  onReconnect: (connection: BankConnection) => void;
   onSync: (connection: BankConnection) => void;
   rows: BankRow[];
   syncingId: string | null;
@@ -42,6 +42,7 @@ export const BankList = ({
   isPending,
   onConnect,
   onDisconnect,
+  onReconnect,
   onSync,
   rows,
   syncingId,
@@ -108,16 +109,18 @@ export const BankList = ({
             {rows.map((row, index) => (
               <BankCard
                 key={row.id}
-                connecting={
-                  row.institution !== null &&
-                  connecting === institutionKey(row.institution)
-                }
+                connecting={connecting === row.id}
                 disconnecting={disconnectingId === row.connection?.id}
                 hoverIndex={index}
                 onConnect={() => onConnect(row)}
                 onDisconnect={() => {
                   if (row.connection) {
                     onDisconnect(row.connection.id);
+                  }
+                }}
+                onReconnect={() => {
+                  if (row.connection) {
+                    onReconnect(row.connection);
                   }
                 }}
                 onSync={() => {

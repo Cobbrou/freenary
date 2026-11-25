@@ -16,6 +16,7 @@ import { SyncButton } from "@/shared/ui/sync-button";
 
 import type { BankRow } from "../model/bank-rows";
 import { DisconnectBankDialog } from "./disconnect-bank-dialog";
+import { ReconnectBankButton } from "./reconnect-bank-button";
 
 interface BankCardProps {
   connecting: boolean;
@@ -23,6 +24,7 @@ interface BankCardProps {
   hoverIndex: number;
   onConnect: () => void;
   onDisconnect: () => void;
+  onReconnect: () => void;
   onSync: () => void;
   registerHoverItem: (index: number, element: HTMLElement | null) => void;
   row: BankRow;
@@ -35,6 +37,7 @@ export const BankCard = ({
   hoverIndex,
   onConnect,
   onDisconnect,
+  onReconnect,
   onSync,
   registerHoverItem,
   row,
@@ -65,12 +68,20 @@ export const BankCard = ({
       <ItemActions>
         {row.connection ? (
           <>
-            <SyncButton
-              isSyncing={syncing}
-              label={m.bank_row_sync({ institution: row.name })}
-              onSync={onSync}
-              size="icon-compact"
-            />
+            {row.connection.status === "ACTIVE" ? (
+              <SyncButton
+                isSyncing={syncing}
+                label={m.bank_row_sync({ institution: row.name })}
+                onSync={onSync}
+                size="icon-compact"
+              />
+            ) : (
+              <ReconnectBankButton
+                institutionName={row.name}
+                isReconnecting={connecting}
+                onReconnect={onReconnect}
+              />
+            )}
             <DisconnectBankDialog
               accountCount={row.connection.accounts.length}
               institutionName={row.name}

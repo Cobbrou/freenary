@@ -20,9 +20,10 @@ In the steps, `<id>` is the provider id, such as `powens` or `enable-banking`. T
    - `callbackPath`: `"/callback/<id>"`. The server sends the bank's consent page `${CORS_ORIGIN}${callbackPath}` as the redirect URL, and the web route `/callback/$provider` (`apps/web/src/app/routes/callback/$provider.tsx`) receives it for every provider.
    - `isConfigured`: `true` when the credentials are present. Powens and Enable Banking read them from `settings` of `@freenary/instance-config` in their `client.ts`.
    - `listInstitutions(country)`: an `Effect` that returns `ProviderInstitution[]`, or fails with `BankInstitutionsUnavailable`.
-   - `startConnection(request)`: returns `{ url }`, the consent page to send the user to. It must carry `request.redirectUrl` and `request.state`.
-   - `completeConnection(request)`: reads `request.callbackParams` (the query string of the callback) and returns a `CompletedConnection` with its accounts.
+   - `startConnection(request)`: returns `{ url }`, the consent page to send the user to. It must carry `request.redirectUrl` and `request.state`. When `request.providerSessionId` is set, the user reconnects that connection: return the page that reopens it if the provider has one, or a new consent page.
+   - `completeConnection(request)`: reads `request.callbackParams` (the query string of the callback) and returns a `CompletedConnection` with its accounts. `request.providerSessionId` is set for a reconnection. If the account ids differ from the first consent, return each account's `identificationHash` or `iban`, so `packages/api/src/lib/reopen-connection.ts` finds the stored account.
    - `closeConnection(request)` and `fetchTransactions(request)`.
+   - `needsReconnect(cause)`: `true` when an error thrown by `fetchAccounts` or `fetchTransactions` says that only the user can repair the connection, such as an expired consent. The connection then becomes `EXPIRED` and syncs skip it. Return `false` for a temporary failure.
 
    Optional members: `createUser` and `deleteUser` for a provider that scopes data per user (Powens does; the identity is stored in the `BankProviderUser` table), `fetchAccounts` for balances and `fetchHoldings` for investment positions. Amounts are in minor units (`amountMinor`, `balanceMinor`).
 

@@ -1002,6 +1002,7 @@ const runSyncAccounts = Effect.fnUntraced(function* runSyncAccounts(
             providerAccountId: true,
             type: true,
           },
+          where: { inConsent: true },
         },
       },
       where,

@@ -1,4 +1,4 @@
-import { Data, Effect, Option } from "effect";
+import { Data, Effect, Option, Schema } from "effect";
 
 import { BankInstitutionsUnavailable } from "../types";
 import type {
@@ -14,6 +14,7 @@ import {
   EBBalancesSchema,
   EBCompletedConnectionSchema,
   EBInstitutionsSchema,
+  EnableBankingRequestFailed,
   EBSessionSchema,
   ebDeleteIfPresent,
   ebJson,
@@ -33,6 +34,23 @@ export class EnableBankingCallbackIncomplete extends Data.TaggedError(
 const CONSENT_VALIDITY_DAYS = 90;
 const MILLISECONDS_PER_DAY = 24 * 60 * 60 * 1000;
 const PSU_TYPE = "personal";
+
+const ENDED_SESSION_ERRORS = {
+  CLOSED_SESSION: true,
+  EXPIRED_SESSION: true,
+  REVOKED_SESSION: true,
+} satisfies Record<string, true>;
+
+const decodeErrorBody = Schema.decodeUnknownOption(
+  Schema.fromJsonString(Schema.Struct({ error: Schema.String }))
+);
+
+const needsReconnect = (cause: unknown): boolean =>
+  cause instanceof EnableBankingRequestFailed &&
+  cause.reason.kind === "rejected" &&
+  Option.exists(decodeErrorBody(cause.reason.body), ({ error }) =>
+    Object.hasOwn(ENDED_SESSION_ERRORS, error)
+  );
 
 const closeConnection = (request: ConnectionRequest) =>
   ebDeleteIfPresent(
@@ -160,5 +178,6 @@ export const enableBankingProvider: BankingProvider = {
   id: "enable-banking",
   isConfigured,
   listInstitutions,
+  needsReconnect,
   startConnection: (request) => Effect.runPromise(startConnection(request)),
 };

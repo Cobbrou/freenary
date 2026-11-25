@@ -23,7 +23,7 @@ This page connects Freenary to Enable Banking, the other bank provider Freenary 
 4. On **Step 2 of 3**, select **Copy** next to **Redirect URL**, and add this redirect URL to your application in the Enable Banking control panel. Select **Next**.
 5. On **Step 3 of 3**, paste your application's private key in **Private key (PEM)**, the `BEGIN` and `END` lines included.
 6. Select **Save and continue** on the setup screen, or **Save** in **Settings**. Freenary first tests the credentials, then saves them.
-7. If members already connected banks through Powens, **Settings** asks **Switch the bank provider?** Their bank connections can no longer sync, and each owner has to disconnect the bank and connect it again. Select **Switch provider** to go on.
+7. If members already connected banks through Powens, **Settings** asks **Switch the bank provider?** Their bank connections can no longer sync, and each owner has to remove the bank and connect it again. Select **Switch provider** to go on.
 8. Apply the change. On the setup screen, go on to the **Done** step and select **Finish setup**. In **Settings**, select **Apply now** in the **Restart to apply your changes** notice. The page shows **Applying your settings…** while the server restarts.
 
 ### In `.env`
