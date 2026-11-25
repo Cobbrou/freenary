@@ -1,4 +1,4 @@
-import { Data, Effect } from "effect";
+import { Data, Effect, Option } from "effect";
 
 import { BankInstitutionsUnavailable } from "../types";
 import type {
@@ -9,15 +9,18 @@ import type {
   StartConnectionRequest,
 } from "../types";
 import {
+  EBAccountDetailsSchema,
   EBAuthorizationSchema,
+  EBBalancesSchema,
   EBCompletedConnectionSchema,
   EBInstitutionsSchema,
+  EBSessionSchema,
   ebDeleteIfPresent,
   ebJson,
   fetchTransactionPages,
   isConfigured,
 } from "./client";
-import { mapEBCompletedConnection } from "./map-connection";
+import { mapEBAccount, mapEBCompletedConnection } from "./map-connection";
 import { mapEBTransactions } from "./map-transaction";
 
 export class EnableBankingCallbackIncomplete extends Data.TaggedError(
@@ -64,7 +67,47 @@ const fetchTransactions = Effect.fn("enableBanking.fetchTransactions")(
       request.dateTo
     );
 
-    return mapEBTransactions(raw, request.dateTo);
+    return mapEBTransactions(raw, request.dateTo, request.accountCurrency);
+  }
+);
+
+const fetchAccount = Effect.fn("enableBanking.fetchAccount")(
+  function* fetchAccount(uid: string) {
+    const account = encodeURIComponent(uid);
+    const details = yield* ebJson(
+      "account details",
+      EBAccountDetailsSchema,
+      `/accounts/${account}/details`
+    );
+
+    const balances = yield* ebJson(
+      "balances",
+      EBBalancesSchema,
+      `/accounts/${account}/balances`
+    ).pipe(
+      Effect.map((listed) => listed.balances ?? []),
+      Effect.tapError((failure) =>
+        Effect.logWarning("Enable Banking balances unavailable", failure)
+      ),
+      Effect.option,
+      Effect.map(Option.getOrNull)
+    );
+
+    return mapEBAccount(uid, details, balances);
+  }
+);
+
+const fetchAccounts = Effect.fn("enableBanking.fetchAccounts")(
+  function* fetchAccounts(request: ConnectionRequest) {
+    const session = yield* ebJson(
+      "session",
+      EBSessionSchema,
+      `/sessions/${encodeURIComponent(request.providerSessionId)}`
+    );
+
+    return yield* Effect.all(
+      (session.accounts ?? []).map((uid) => fetchAccount(uid))
+    );
   }
 );
 
@@ -112,6 +155,7 @@ export const enableBankingProvider: BankingProvider = {
   closeConnection: (request) => Effect.runPromise(closeConnection(request)),
   completeConnection: (request) =>
     Effect.runPromise(completeConnection(request)),
+  fetchAccounts: (request) => Effect.runPromise(fetchAccounts(request)),
   fetchTransactions: (request) => Effect.runPromise(fetchTransactions(request)),
   id: "enable-banking",
   isConfigured,

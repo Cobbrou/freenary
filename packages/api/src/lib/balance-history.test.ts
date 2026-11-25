@@ -1,8 +1,31 @@
 import { describe, expect, it } from "bun:test";
 
-import { balanceHistory, monthEndsBefore } from "./balance-history";
+import { converterOf } from "../fx/converter";
+import { rateBookOf } from "../fx/rate-book";
+import {
+  balanceHistory,
+  monthEndsBefore,
+  unconvertedHistoryCurrencies,
+} from "./balance-history";
 
 const today = new Date("2026-11-18T10:00:00.000Z");
+const euros = converterOf("EUR", rateBookOf([]));
+
+const dollars = converterOf(
+  "EUR",
+  rateBookOf([
+    {
+      currency: "USD",
+      date: new Date("2026-10-30T00:00:00Z"),
+      ratePerEur: 1.25,
+    },
+    {
+      currency: "USD",
+      date: new Date("2026-11-17T00:00:00Z"),
+      ratePerEur: 1.1,
+    },
+  ])
+);
 
 describe("monthEndsBefore", () => {
   it("lists the last day of each month before this one, oldest first", () => {
@@ -32,15 +55,17 @@ describe("balanceHistory", () => {
           {
             accountId: "checking",
             amount: -20_000,
+            currency: "EUR",
             date: new Date("2026-10-15T00:00:00.000Z"),
           },
           {
             accountId: "checking",
             amount: 50_000,
+            currency: "EUR",
             date: new Date("2026-11-02T00:00:00.000Z"),
           },
         ],
-        "EUR",
+        euros,
         today,
         2
       )
@@ -51,7 +76,7 @@ describe("balanceHistory", () => {
     ]);
   });
 
-  it("leaves out accounts with no balance or in another currency", () => {
+  it("leaves out accounts with no balance or in a currency with no rate", () => {
     expect(
       balanceHistory(
         [
@@ -78,10 +103,11 @@ describe("balanceHistory", () => {
           {
             accountId: "usd",
             amount: 5000,
+            currency: "USD",
             date: new Date("2026-11-02T00:00:00.000Z"),
           },
         ],
-        "EUR",
+        euros,
         today,
         1
       )
@@ -112,10 +138,11 @@ describe("balanceHistory", () => {
           {
             accountId: "mortgage",
             amount: -10_000,
+            currency: "EUR",
             date: new Date("2026-11-05T00:00:00.000Z"),
           },
         ],
-        "EUR",
+        euros,
         today,
         1
       )
@@ -125,7 +152,93 @@ describe("balanceHistory", () => {
     ]);
   });
 
+  it("converts each month end at the rate of that day", () => {
+    expect(
+      balanceHistory(
+        [
+          {
+            balanceMinor: 110_000,
+            currency: "USD",
+            id: "usd",
+            type: "CHECKING",
+          },
+        ],
+        [
+          {
+            accountId: "usd",
+            amount: -15_000,
+            currency: "USD",
+            date: new Date("2026-11-02T00:00:00.000Z"),
+          },
+        ],
+        dollars,
+        today,
+        1
+      )
+    ).toEqual([
+      { balanceMinor: 100_000, date: "2026-10-31" },
+      { balanceMinor: 100_000, date: "2026-11-18" },
+    ]);
+  });
+
+  it("rewinds each currency an account holds with its own transactions", () => {
+    expect(
+      balanceHistory(
+        [
+          {
+            balanceMinor: null,
+            balances: [
+              { balanceAt: today, balanceMinor: 50_000, currency: "EUR" },
+              { balanceAt: today, balanceMinor: 11_000, currency: "USD" },
+            ],
+            currency: "EUR",
+            id: "multi",
+            type: "CHECKING",
+          },
+        ],
+        [
+          {
+            accountId: "multi",
+            amount: 10_000,
+            currency: "EUR",
+            date: new Date("2026-11-02T00:00:00.000Z"),
+          },
+          {
+            accountId: "multi",
+            amount: -5500,
+            currency: "USD",
+            date: new Date("2026-11-03T00:00:00.000Z"),
+          },
+        ],
+        dollars,
+        today,
+        1
+      )
+    ).toEqual([
+      { balanceMinor: 53_200, date: "2026-10-31" },
+      { balanceMinor: 60_000, date: "2026-11-18" },
+    ]);
+  });
+
   it("has no history when no account carries a balance", () => {
-    expect(balanceHistory([], [], "EUR", today, 6)).toBeNull();
+    expect(balanceHistory([], [], euros, today, 6)).toBeNull();
+  });
+});
+
+describe("unconvertedHistoryCurrencies", () => {
+  it("lists the currencies held with no rate, once and sorted", () => {
+    expect(
+      unconvertedHistoryCurrencies(
+        [
+          { balanceMinor: 100, currency: "EUR", id: "a", type: "CHECKING" },
+          { balanceMinor: 100, currency: "USD", id: "b", type: "CHECKING" },
+          { balanceMinor: 100, currency: "JPY", id: "c", type: "SAVINGS" },
+          { balanceMinor: 100, currency: "GBP", id: "d", type: "CHECKING" },
+          { balanceMinor: 100, currency: "GBP", id: "e", type: "SAVINGS" },
+        ],
+        dollars,
+        today
+      )
+    ).toEqual(["GBP", "JPY"]);
   });
 });

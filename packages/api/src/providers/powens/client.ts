@@ -274,6 +274,7 @@ export const PowensTransactionSchema = Schema.Struct({
   id: Schema.Number,
   id_account: Schema.optional(Schema.Number),
   original_currency: Schema.optional(Schema.NullOr(PowensCurrencySchema)),
+  original_value: NullableNumber,
   original_wording: NullableString,
   rdate: NullableString,
   simplified_wording: NullableString,

@@ -5,7 +5,7 @@ import type { CategoryGroup } from "./taxonomy";
 
 export type BudgetLineKind = "INVESTMENT" | "OUTGOING" | "REVENUE";
 
-export const MAX_AMOUNT_MINOR_UNITS = 2_147_483_647;
+export const MAX_AMOUNT_MINOR_UNITS = 999_999_999_999_999;
 
 export const MAX_BUDGET_LINE_LABEL_LENGTH = 60;
 

@@ -7,6 +7,8 @@ import type { ReactNode } from "react";
 import { m } from "@/paraglide/messages.js";
 import { getLocale } from "@/paraglide/runtime.js";
 import { formatCurrency } from "@/shared/lib/format-currency";
+import { UnconvertedNote } from "@/shared/ui/unconverted-note";
+import type { UnconvertedSubject } from "@/shared/ui/unconverted-note";
 
 import { availableToSpend, spendingPace } from "../model/finance";
 import type { CashFlow } from "../model/finance";
@@ -30,6 +32,7 @@ interface StatWidgetProps {
 interface StatValue {
   caption: string;
   tone: CaptionTone;
+  unconverted?: Partial<Record<UnconvertedSubject, number>>;
   value: string;
 }
 
@@ -121,6 +124,9 @@ const StatCard = ({ errorMessage, label, query }: StatCardProps) => {
         <WidgetCaption tone={query.data.tone}>
           {query.data.caption}
         </WidgetCaption>
+        {query.data.unconverted ? (
+          <UnconvertedNote counts={query.data.unconverted} />
+        ) : null}
       </div>
     );
   }
@@ -157,6 +163,7 @@ const SpentStat = ({ label, today }: { label: string; today: Date }) => {
       return {
         caption: difference === 0 ? m.home_spent_same() : caption,
         tone: difference > 0 ? "negative" : "positive",
+        unconverted: { transactions: now.unconvertedCount },
         value: formatCurrency(pace.monthTotalMinor, now.currency),
       };
     }
@@ -177,6 +184,7 @@ const IncomeStat = ({ label, today }: { label: string; today: Date }) => {
         amount: formatCurrency(incomingOf(before), before.currency),
       }),
       tone: "neutral",
+      unconverted: { transactions: now.unconvertedCount },
       value: formatCurrency(incomingOf(now), now.currency),
     })
   );
@@ -203,6 +211,7 @@ const SavedStat = ({ label, today }: { label: string; today: Date }) => {
           amount: formatCurrency(-savedMinor, now.currency),
         }),
         tone: "negative",
+        unconverted: { transactions: now.unconvertedCount },
         value: formatCurrency(savedMinor, now.currency),
       };
     }
@@ -217,6 +226,7 @@ const SavedStat = ({ label, today }: { label: string; today: Date }) => {
             })
           : m.widget_stat_saved_no_income(),
       tone: "positive",
+      unconverted: { transactions: now.unconvertedCount },
       value: formatCurrency(savedMinor, now.currency),
     };
   });
@@ -248,6 +258,10 @@ const AvailableStat = ({ label, today }: { label: string; today: Date }) => {
         date,
       }),
       tone: available.availableMinor < 0 ? "negative" : "neutral",
+      unconverted: {
+        balances: recurring.unconvertedBalanceCount,
+        payments: available.unconvertedBillCount,
+      },
       value: formatCurrency(available.availableMinor, recurring.currency),
     };
   });
@@ -277,6 +291,9 @@ const CurrentAccountsStat = ({ label }: { label: string }) => {
                 })
               : "",
             tone: "neutral",
+            unconverted: {
+              balances: currentAccounts.unconvertedBalanceCount,
+            },
             value: formatCurrency(
               currentAccounts.balanceMinor,
               currentAccounts.currency
@@ -308,6 +325,7 @@ const NetWorthStat = ({ label }: { label: string }) => {
                   })
                 : m.widget_stat_net_worth_caption({ count: accounts.length }),
             tone: "neutral",
+            unconverted: { accounts: netWorth.unconvertedAccountCount },
             value: formatCurrency(netWorth.netWorthMinor, currency),
           }
   );

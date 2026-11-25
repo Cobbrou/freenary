@@ -22,6 +22,8 @@ export interface ProviderTransaction {
   transactionDate?: string;
   amountMinor: number;
   currency: string;
+  originalAmountMinor?: number;
+  originalCurrency?: string;
   remittanceLines: string[];
   creditorName?: string;
   debtorName?: string;
@@ -68,12 +70,19 @@ export interface ConnectionRequest {
 
 export interface FetchTransactionsRequest extends ConnectionRequest {
   providerAccountId: string;
+  accountCurrency: string | null;
   dateFrom: string;
   dateTo: string;
 }
 
 export interface FetchHoldingsRequest extends ConnectionRequest {
   providerAccountId: string;
+}
+
+export interface ProviderBalance {
+  currency: string;
+  balanceMinor: number;
+  balanceAt?: string;
 }
 
 export interface ProviderAccount {
@@ -84,6 +93,7 @@ export interface ProviderAccount {
   currency?: string;
   balanceMinor?: number;
   balanceAt?: string;
+  balances?: ProviderBalance[];
 }
 
 export interface ProviderHolding {
@@ -110,6 +120,7 @@ export interface CompletedConnection {
     identificationHash?: string;
     name?: string;
     type?: ProviderAccountType;
+    currency?: string;
   }[];
 }
 

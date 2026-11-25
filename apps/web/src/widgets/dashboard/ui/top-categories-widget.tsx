@@ -12,6 +12,7 @@ import {
 import { m } from "@/paraglide/messages.js";
 import { getLocale } from "@/paraglide/runtime.js";
 import { formatCurrency } from "@/shared/lib/format-currency";
+import { UnconvertedNote } from "@/shared/ui/unconverted-note";
 
 import { topCategories, unsortedSpendMinor } from "../model/finance";
 import type { CategoryShare } from "../model/finance";
@@ -28,6 +29,7 @@ import {
 interface Breakdown {
   categories: { amount: number; category: SpendingCategory }[];
   currency: string;
+  unconvertedCount: number;
 }
 
 const SHARE_FORMAT: Intl.NumberFormatOptions = {
@@ -172,7 +174,14 @@ const TopCategoriesBody = ({
   const unsortedMinor = unsortedSpendMinor(breakdown.categories);
 
   if (rows.length === 0 && unsortedMinor === 0) {
-    return <WidgetEmpty>{m.home_categories_empty()}</WidgetEmpty>;
+    return (
+      <>
+        <WidgetEmpty>{m.home_categories_empty()}</WidgetEmpty>
+        <UnconvertedNote
+          counts={{ transactions: breakdown.unconvertedCount }}
+        />
+      </>
+    );
   }
 
   const percent = new Intl.NumberFormat(getLocale(), SHARE_FORMAT);
@@ -198,6 +207,7 @@ const TopCategoriesBody = ({
           currency={breakdown.currency}
         />
       ) : null}
+      <UnconvertedNote counts={{ transactions: breakdown.unconvertedCount }} />
     </>
   );
 };

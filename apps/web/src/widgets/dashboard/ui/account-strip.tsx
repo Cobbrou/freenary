@@ -6,6 +6,7 @@ import { AccountBalance, accountName } from "@/entities/account";
 import type { PortfolioAccount } from "@/entities/account";
 import { m } from "@/paraglide/messages.js";
 import { formatCurrency } from "@/shared/lib/format-currency";
+import { UnconvertedNote } from "@/shared/ui/unconverted-note";
 
 import { useOverview } from "../model/queries";
 import { WidgetError } from "./widget-card";
@@ -15,7 +16,13 @@ const SKELETON_TILES = 3;
 const TILE_CLASS =
   "bg-surface-1 shadow-surface-1 hover:bg-surface-2 focus-visible:ring-ring/50 flex w-40 shrink-0 snap-start flex-col gap-3 rounded-xl border border-transparent p-3 transition-colors duration-100 outline-none focus-visible:ring-[3px]";
 
-const AccountTile = ({ account }: { account: PortfolioAccount }) => (
+const AccountTile = ({
+  account,
+  reportingCurrency,
+}: {
+  account: PortfolioAccount;
+  reportingCurrency: string;
+}) => (
   <li className="flex">
     <Link
       className={TILE_CLASS}
@@ -33,6 +40,7 @@ const AccountTile = ({ account }: { account: PortfolioAccount }) => (
       <AccountBalance
         account={account}
         className="mt-auto text-base font-semibold"
+        reportingCurrency={reportingCurrency}
       />
     </Link>
   </li>
@@ -99,10 +107,19 @@ export const AccountStrip = () => {
       {query.data ? (
         <ul className="-mx-4 flex snap-x scroll-px-4 [scrollbar-width:thin] gap-3 overflow-x-auto overscroll-x-contain px-4 pt-0.5 pb-2">
           {query.data.accounts.map((account) => (
-            <AccountTile account={account} key={account.id} />
+            <AccountTile
+              account={account}
+              key={account.id}
+              reportingCurrency={query.data?.currency ?? "EUR"}
+            />
           ))}
           <ManageBanksTile />
         </ul>
+      ) : null}
+      {query.data && netWorth !== null && netWorth !== undefined ? (
+        <UnconvertedNote
+          counts={{ accounts: query.data.netWorth.unconvertedAccountCount }}
+        />
       ) : null}
     </section>
   );

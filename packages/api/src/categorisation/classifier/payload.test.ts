@@ -65,6 +65,40 @@ describe("classificationInputFrom", () => {
     ).toMatchObject({ amountBucket: "medium" });
   });
 
+  it("buckets by the amount in euros when it is given", () => {
+    expect(
+      classificationInputFrom(
+        input({
+          amountMinor: -150_000,
+          currency: "JPY",
+          referenceAmountMinor: -90_000,
+        })
+      )
+    ).toMatchObject({
+      amountBucket: "large",
+      currency: "JPY",
+      direction: "debit",
+    });
+
+    expect(
+      classificationInputFrom(
+        input({
+          amountMinor: -1500,
+          currency: "JPY",
+          referenceAmountMinor: -900,
+        })
+      )
+    ).toMatchObject({ amountBucket: "micro" });
+  });
+
+  it("buckets by the booked amount when no amount in euros is known", () => {
+    expect(
+      classificationInputFrom(
+        input({ amountMinor: -4599, referenceAmountMinor: null })
+      )
+    ).toMatchObject({ amountBucket: "small" });
+  });
+
   it("nulls an absent merchant key rather than sending an empty string", () => {
     expect(classificationInputFrom(input({ merchantKey: "" }))).toMatchObject({
       merchantKey: null,

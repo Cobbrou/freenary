@@ -40,11 +40,16 @@ it("labels today's bank date as today just after midnight in Paris", () => {
   expect(formatGroupLabel(key, "day", "en")).toBe(m.budget_group_today());
 });
 
-const transactionOn = (id: string, date: string, amount: number) => ({
+const transactionOn = (
+  id: string,
+  date: string,
+  amount: number,
+  currency = "EUR"
+) => ({
   amount,
   category: "groceries" as const,
   counterpartyName: id,
-  currency: "EUR",
+  currency,
   date,
   derivedCategory: "groceries" as const,
   description: id,
@@ -66,4 +71,21 @@ it("keys every header apart when a day heads two groups", () => {
   const keys = items.map((item) => item.key);
 
   expect(new Set(keys).size).toBe(keys.length);
+});
+
+it("totals a day's transactions per currency rather than adding dollars to euros", () => {
+  const [header] = buildVirtualItems(
+    [
+      transactionOn("a", "2026-10-05T00:00:00.000Z", -900),
+      transactionOn("b", "2026-10-05T00:00:00.000Z", -500, "USD"),
+      transactionOn("c", "2026-10-05T00:00:00.000Z", -100),
+    ],
+    "day",
+    "en"
+  );
+
+  expect(header?.type === "header" ? header.totals : []).toEqual([
+    { currency: "EUR", total: -1000 },
+    { currency: "USD", total: -500 },
+  ]);
 });

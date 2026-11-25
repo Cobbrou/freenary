@@ -21,6 +21,7 @@ const item = (overrides: Partial<RecurringItem> = {}): RecurringItem => ({
   merchantName: "Netflix",
   nextExpected: "2026-09-04T00:00:00.000Z",
   occurrences: 6,
+  reportingAmountMinor: overrides.typicalAmountMinor ?? 1000,
   typicalAmountMinor: 1000,
   ...overrides,
 });
@@ -29,6 +30,8 @@ const filter = (overrides: Partial<RecurringFilter> = {}): RecurringFilter => ({
   ...EMPTY_RECURRING_FILTER,
   ...overrides,
 });
+
+const REPORTING_CURRENCY = "EUR";
 
 const keys = (items: RecurringItem[]) =>
   items.map((entry) => entry.merchantKey);
@@ -43,7 +46,8 @@ describe("narrowing the recurring list", () => {
     const groups = groupRecurringItems(
       items,
       filter({ categories: { categories: [], groups: ["investments"] } }),
-      "cost"
+      "cost",
+      REPORTING_CURRENCY
     );
 
     expect(keys(groups.fixed.items)).toEqual(["savings-plan"]);
@@ -58,7 +62,8 @@ describe("narrowing the recurring list", () => {
     const groups = groupRecurringItems(
       items,
       filter({ search: "sncf" }),
-      "cost"
+      "cost",
+      REPORTING_CURRENCY
     );
 
     expect(keys(groups.fixed.items)).toEqual(["sncf-voyages"]);
@@ -84,7 +89,8 @@ describe("narrowing the recurring list", () => {
     const groups = groupRecurringItems(
       items,
       filter({ amount: { max: 0, min: 100 } }),
-      "cost"
+      "cost",
+      REPORTING_CURRENCY
     );
 
     expect(keys(groups.fixed.items)).toEqual(["gym"]);
@@ -101,7 +107,12 @@ describe("narrowing the recurring list", () => {
       }),
     ];
 
-    const groups = groupRecurringItems(items, EMPTY_RECURRING_FILTER, "cost");
+    const groups = groupRecurringItems(
+      items,
+      EMPTY_RECURRING_FILTER,
+      "cost",
+      REPORTING_CURRENCY
+    );
 
     expect(keys(groups.fixed.items)).toEqual(["netflix"]);
     expect(keys(groups.behavioral.items)).toEqual(["bakery"]);
@@ -115,14 +126,21 @@ describe("narrowing the recurring list", () => {
       item({ merchantKey: "sooner", nextExpected: "2026-09-10T00:00:00.000Z" }),
     ];
 
-    const byNext = groupRecurringItems(items, EMPTY_RECURRING_FILTER, "next");
+    const byNext = groupRecurringItems(
+      items,
+      EMPTY_RECURRING_FILTER,
+      "next",
+      REPORTING_CURRENCY
+    );
+
     const byCost = groupRecurringItems(
       [
         item({ merchantKey: "cheap", typicalAmountMinor: 100 }),
         item({ merchantKey: "dear", typicalAmountMinor: 9000 }),
       ],
       EMPTY_RECURRING_FILTER,
-      "cost"
+      "cost",
+      REPORTING_CURRENCY
     );
 
     expect(keys(byNext.fixed.items)).toEqual(["sooner", "later"]);
@@ -133,11 +151,69 @@ describe("narrowing the recurring list", () => {
     const groups = groupRecurringItems(
       [item({ merchantKey: "netflix" })],
       filter({ frequencies: ["weekly"] }),
-      "cost"
+      "cost",
+      REPORTING_CURRENCY
     );
 
     expect(groups.fixed.items).toEqual([]);
     expect(groups.behavioral.items).toEqual([]);
     expect(groups.fixed.monthlyMinor).toBe(0);
+  });
+
+  it("totals each side in the reporting currency and leaves out what has no rate", () => {
+    const items = [
+      item({ merchantKey: "netflix", typicalAmountMinor: 1000 }),
+      item({
+        currency: "USD",
+        merchantKey: "hosting",
+        reportingAmountMinor: 500,
+        typicalAmountMinor: 600,
+      }),
+      item({
+        currency: "XYZ",
+        merchantKey: "club",
+        reportingAmountMinor: null,
+        typicalAmountMinor: 9000,
+      }),
+    ];
+
+    const groups = groupRecurringItems(
+      items,
+      EMPTY_RECURRING_FILTER,
+      "cost",
+      REPORTING_CURRENCY
+    );
+
+    expect(groups.fixed.items).toHaveLength(3);
+    expect(groups.fixed.monthlyMinor).toBe(1015 + 507);
+  });
+
+  it("ranks and bounds an item in another currency by what it costs in the reporting one", () => {
+    const items = [
+      item({ merchantKey: "netflix", typicalAmountMinor: 3000 }),
+      item({
+        currency: "JPY",
+        merchantKey: "manga",
+        reportingAmountMinor: 6000,
+        typicalAmountMinor: 1000,
+      }),
+    ];
+
+    const byCost = groupRecurringItems(
+      items,
+      EMPTY_RECURRING_FILTER,
+      "cost",
+      REPORTING_CURRENCY
+    );
+
+    const aboveFifty = groupRecurringItems(
+      items,
+      filter({ amount: { max: 0, min: 50 } }),
+      "cost",
+      REPORTING_CURRENCY
+    );
+
+    expect(keys(byCost.fixed.items)).toEqual(["manga", "netflix"]);
+    expect(keys(aboveFifty.fixed.items)).toEqual(["manga"]);
   });
 });

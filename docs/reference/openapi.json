@@ -794,7 +794,7 @@
                             "value": {
                               "type": "integer",
                               "minimum": 0,
-                              "maximum": 2000000000
+                              "maximum": 999999999999999
                             }
                           },
                           "required": ["field", "operator", "value"]
@@ -1510,7 +1510,7 @@
                             "value": {
                               "type": "integer",
                               "minimum": 0,
-                              "maximum": 2000000000
+                              "maximum": 999999999999999
                             }
                           },
                           "required": ["field", "operator", "value"]
@@ -3227,6 +3227,28 @@
         }
       }
     },
+    "/settings/getReportingCurrency": {
+      "post": {
+        "operationId": "settings.getReportingCurrency",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {},
+                    {
+                      "not": {}
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/settings/listCategories": {
       "post": {
         "operationId": "settings.listCategories",
@@ -3365,7 +3387,7 @@
                         "amount": {
                           "type": "integer",
                           "minimum": 0,
-                          "maximum": 2147483647
+                          "maximum": 999999999999999
                         },
                         "categoryKey": {
                           "type": "string"
@@ -3380,6 +3402,52 @@
                   }
                 },
                 "required": ["lines"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {},
+                    {
+                      "not": {}
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/settings/saveReportingCurrency": {
+      "post": {
+        "operationId": "settings.saveReportingCurrency",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "currency": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^[A-Z]{3}$"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": ["currency"]
               }
             }
           }

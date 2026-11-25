@@ -15,7 +15,7 @@ import { useQuery } from "@tanstack/react-query";
 import { MessagesSparkle } from "kubai-icons-react";
 import { useMemo } from "react";
 
-import { accountName } from "@/entities/account";
+import { accountName, formatAccountBalances } from "@/entities/account";
 import { transactionTitle } from "@/entities/budget";
 import { categoryLabel, categoryMenuIcon } from "@/entities/category";
 import { conversationsQueryOptions } from "@/entities/conversation";
@@ -192,9 +192,8 @@ export const useCommandMenuItems = (query: string, open: boolean) => {
         : []),
       ...(overview.data?.accounts ?? []).map((account) => ({
         amount:
-          account.balanceMinor === null || account.currency === null
-            ? undefined
-            : formatCurrency(account.balanceMinor, account.currency),
+          formatAccountBalances(account, overview.data?.currency ?? "EUR") ??
+          undefined,
         description: account.institutionName ?? undefined,
         group: m.command_menu_group_accounts(),
         icon: ACCOUNT_ICON,

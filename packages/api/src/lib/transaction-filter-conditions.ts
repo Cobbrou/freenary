@@ -1,6 +1,7 @@
 import type { Prisma } from "@freenary/db";
 import { Match } from "effect";
 
+import { minorUnitDigits } from "./money";
 import { categoriesInGroup, isCategoryGroup } from "./taxonomy";
 import type { SpendingCategory } from "./taxonomy";
 import type {
@@ -126,18 +127,89 @@ const ABSOLUTE_AMOUNT_CONDITIONS = {
   lt: (minorUnits) => ({ amount: { gt: -minorUnits, lt: minorUnits } }),
 } satisfies Record<AmountFilterOperator, (minorUnits: number) => Condition>;
 
-const amountCondition = ({ operator, value }: AmountTransactionFilter) =>
-  ABSOLUTE_AMOUNT_CONDITIONS[operator](value);
+const NO_TRANSACTION: Condition = { id: { in: [] } };
 
-const conditionOf = Match.type<TransactionFilter>().pipe(
-  Match.discriminatorsExhaustive("field")({
-    account: accountCondition,
-    amount: amountCondition,
-    category: categoryCondition,
-    company: companyCondition,
-  })
-);
+const DECIMAL_BASE = 10;
+
+const currenciesByDigits = (): Map<number, string[]> => {
+  const groups = new Map<number, string[]>();
+
+  for (const currency of Intl.supportedValuesOf("currency")) {
+    const digits = minorUnitDigits(currency);
+    const group = groups.get(digits) ?? [];
+
+    group.push(currency);
+    groups.set(digits, group);
+  }
+
+  return groups;
+};
+
+let digitGroups: Map<number, string[]> | undefined;
+
+const scaledAmountCondition = (
+  operator: AmountFilterOperator,
+  scaled: number
+): Condition => {
+  if (Number.isInteger(scaled)) {
+    return ABSOLUTE_AMOUNT_CONDITIONS[operator](scaled);
+  }
+
+  if (operator === "eq") {
+    return NO_TRANSACTION;
+  }
+
+  return ABSOLUTE_AMOUNT_CONDITIONS[operator](
+    operator === "gt" ? Math.floor(scaled) : Math.ceil(scaled)
+  );
+};
+
+export const amountCondition = (
+  { operator, value }: AmountTransactionFilter,
+  filterCurrency: string
+): Condition => {
+  digitGroups ??= currenciesByDigits();
+
+  const filterDigits = minorUnitDigits(filterCurrency);
+  const otherDigitCurrencies: string[] = [];
+  const branches: Condition[] = [];
+
+  for (const [digits, currencies] of digitGroups) {
+    if (digits !== filterDigits) {
+      otherDigitCurrencies.push(...currencies);
+      branches.push({
+        AND: [
+          { currency: { in: currencies } },
+          scaledAmountCondition(
+            operator,
+            value * DECIMAL_BASE ** (digits - filterDigits)
+          ),
+        ],
+      });
+    }
+  }
+
+  branches.push({
+    AND: [
+      { currency: { notIn: otherDigitCurrencies } },
+      ABSOLUTE_AMOUNT_CONDITIONS[operator](value),
+    ],
+  });
+
+  return { OR: branches };
+};
+
+const conditionOf = (filter: TransactionFilter, filterCurrency: string) =>
+  Match.value(filter).pipe(
+    Match.discriminatorsExhaustive("field")({
+      account: accountCondition,
+      amount: (amount) => amountCondition(amount, filterCurrency),
+      category: categoryCondition,
+      company: companyCondition,
+    })
+  );
 
 export const transactionFilterConditions = (
-  filters: readonly TransactionFilter[]
-): Condition[] => filters.map(conditionOf);
+  filters: readonly TransactionFilter[],
+  filterCurrency: string
+): Condition[] => filters.map((filter) => conditionOf(filter, filterCurrency));

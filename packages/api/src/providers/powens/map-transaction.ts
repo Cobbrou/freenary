@@ -1,3 +1,4 @@
+import { minorUnitDigits } from "../../lib/money";
 import type { ProviderTransaction } from "../types";
 import type { PowensTransaction } from "./client";
 import { isReported, toMinorUnits } from "./client";
@@ -67,6 +68,36 @@ const remittanceLines = (transaction: PowensTransaction): string[] => {
   return lines;
 };
 
+const mapOriginalAmount = (
+  transaction: PowensTransaction,
+  value: number,
+  currency: string
+): Pick<ProviderTransaction, "originalAmountMinor" | "originalCurrency"> => {
+  const originalCurrency = transaction.original_currency?.id;
+  const originalValue = transaction.original_value;
+
+  if (
+    !originalCurrency ||
+    originalCurrency === currency ||
+    !isReported(originalValue)
+  ) {
+    return {};
+  }
+
+  const magnitude = Math.abs(
+    toMinorUnits(
+      originalValue,
+      transaction.original_currency?.precision ??
+        minorUnitDigits(originalCurrency)
+    )
+  );
+
+  return {
+    originalAmountMinor: value < 0 ? -magnitude : magnitude,
+    originalCurrency,
+  };
+};
+
 export const mapPowensTransaction = (
   transaction: PowensTransaction,
   currency: string,
@@ -85,6 +116,7 @@ export const mapPowensTransaction = (
 
   return {
     ...mapCounterparty(transaction, value),
+    ...mapOriginalAmount(transaction, value, currency),
     amountMinor: toMinorUnits(value, precision),
     bankTransactionDescription: type ?? undefined,
     bankTransactionFamilyCode: value < 0 ? codes?.issued : codes?.received,

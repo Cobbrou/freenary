@@ -56,11 +56,11 @@ An account imported before these types existed keeps its old type until Powens r
 
 ### Current accounts and Available to spend
 
-These add up the balances of the `CHECKING` accounts and take off what `CARD` accounts have spent, in the currency most of the current accounts use. With no current account that reports a balance, they show nothing. The same balance starts the balance forecast on **Recurring**.
+These add up the balances of the `CHECKING` accounts and take off what `CARD` accounts have spent, converted into your reporting currency. With no current account that reports a balance, they show nothing. The same balance starts the balance forecast on **Recurring**.
 
 ### Net worth
 
-**Net worth** adds every account that reports a balance in your currency, then takes off the debts. A `LOAN` or `CARD` balance is always a debt, whether the bank reports it as a negative balance or as the amount left to repay. Any other account with a negative balance, such as an overdrawn current account, counts as a debt too. The chart of net worth at the end of each month follows the same rules.
+**Net worth** adds every account that reports a balance, converted into your reporting currency, then takes off the debts. An account holding several currencies counts all of them. A `LOAN` or `CARD` balance is always a debt, whether the bank reports it as a negative balance or as the amount left to repay. Any other account with a negative balance, such as an overdrawn current account, counts as a debt too. The chart of net worth at the end of each month follows the same rules.
 
 ### Spending, income and cash flow
 
@@ -68,7 +68,9 @@ The spending breakdown, budget against actual, fixed against variable, weekly sp
 
 These figures also leave out internal transfers, except a move from a current account into a savings, investment or retirement account, described below. Moving money between two current accounts, or from a current account to a card, is neither income nor spending.
 
-The transaction list shows the transactions of every account, internal transfers included. Its totals count every account and leave every internal transfer out.
+A transaction in another currency is converted into your reporting currency. An exchange between two of your own currencies counts only what it cost. [How currencies are converted](currencies.md) explains the rates and the rules.
+
+The transaction list shows the transactions of every account and every currency, internal transfers included. Its totals count every account, leave every internal transfer out and convert every currency into your reporting currency.
 
 ## Transfers between your own accounts
 

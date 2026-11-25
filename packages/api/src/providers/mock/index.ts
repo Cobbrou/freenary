@@ -30,6 +30,7 @@ const completeConnection = Effect.fn("mock.completeConnection")(
 
     return {
       accounts: planAccounts(code).map((account) => ({
+        currency: account.currency,
         iban: account.iban,
         name: account.name,
         providerAccountId: account.providerAccountId,

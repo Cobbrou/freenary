@@ -10,6 +10,8 @@ const ROW_COLUMNS = [
   "amount",
   "category",
   "counterpartyName",
+  "currency",
+  "id",
   "normalisedDescriptor",
   "resolvedCategory",
 ] as const;
@@ -60,6 +62,7 @@ const comparisonSchema: z.ZodType<Comparison> = z.union([
 ]);
 
 interface Where {
+  AND?: Where[];
   NOT?: Where[];
   OR?: Where[];
   columns: Partial<Record<Column, Comparison>>;
@@ -68,17 +71,20 @@ interface Where {
 const whereSchema: z.ZodType<Where> = z.lazy(() =>
   z
     .object({
+      AND: z.array(whereSchema).optional(),
       NOT: z.array(whereSchema).optional(),
       OR: z.array(whereSchema).optional(),
       accountId: comparisonSchema.optional(),
       amount: comparisonSchema.optional(),
       category: comparisonSchema.optional(),
       counterpartyName: comparisonSchema.optional(),
+      currency: comparisonSchema.optional(),
+      id: comparisonSchema.optional(),
       normalisedDescriptor: comparisonSchema.optional(),
       resolvedCategory: comparisonSchema.optional(),
     })
     .strict()
-    .transform(({ NOT, OR, ...columns }) => ({ NOT, OR, columns }))
+    .transform(({ AND, NOT, OR, ...columns }) => ({ AND, NOT, OR, columns }))
 );
 
 const allOf = (truths: Truth[]): Truth => {
@@ -131,6 +137,7 @@ const comparisonHolds = (
 
 const evaluate = (where: Where, row: Row): Truth =>
   allOf([
+    ...(where.AND ? where.AND.map((part) => evaluate(part, row)) : []),
     ...(where.OR ? [anyOf(where.OR.map((part) => evaluate(part, row)))] : []),
     ...(where.NOT
       ? [allOf(where.NOT.map((part) => negation(evaluate(part, row))))]
@@ -144,8 +151,12 @@ const evaluate = (where: Where, row: Row): Truth =>
     }),
   ]);
 
-const postgresWouldKeep = (filter: TransactionFilter, row: Row): boolean => {
-  const conditions = transactionFilterConditions([filter]);
+const postgresWouldKeep = (
+  filter: TransactionFilter,
+  row: Row,
+  filterCurrency = "EUR"
+): boolean => {
+  const conditions = transactionFilterConditions([filter], filterCurrency);
   const parsed = whereSchema.parse(conditions[0]);
 
   return evaluate(parsed, row) === true;
@@ -161,6 +172,8 @@ const row = (overrides: Partial<Row>): Row => ({
   amount: -1000,
   category: null,
   counterpartyName: null,
+  currency: "EUR",
+  id: "transaction",
   normalisedDescriptor: null,
   resolvedCategory: null,
   ...overrides,
@@ -293,6 +306,10 @@ describe("category filters", () => {
   });
 });
 
+const yen = (amount: number) => row({ amount, currency: "JPY" });
+
+const dinars = (amount: number) => row({ amount, currency: "KWD" });
+
 describe("amount filters", () => {
   test("greater than compares the absolute amount, strictly", () => {
     expect(
@@ -334,6 +351,59 @@ describe("amount filters", () => {
     expect(
       postgresWouldKeep(comparing("eq", 1250), row({ amount: 1251 }))
     ).toBe(false);
+  });
+
+  test("rescales the filter to a currency with no minor unit", () => {
+    expect(postgresWouldKeep(comparing("eq", 1000), yen(-10))).toBe(true);
+    expect(postgresWouldKeep(comparing("eq", 1000), yen(1000))).toBe(false);
+    expect(postgresWouldKeep(comparing("gt", 1000), yen(11))).toBe(true);
+    expect(postgresWouldKeep(comparing("gt", 1000), yen(10))).toBe(false);
+    expect(postgresWouldKeep(comparing("lt", 1000), yen(9))).toBe(true);
+    expect(postgresWouldKeep(comparing("lt", 1000), yen(10))).toBe(false);
+  });
+
+  test("rescales the filter to a currency with three minor digits", () => {
+    expect(postgresWouldKeep(comparing("eq", 1000), dinars(10_000))).toBe(true);
+    expect(postgresWouldKeep(comparing("eq", 1000), dinars(1000))).toBe(false);
+    expect(postgresWouldKeep(comparing("gt", 1000), dinars(-10_001))).toBe(
+      true
+    );
+
+    expect(postgresWouldKeep(comparing("gt", 1000), dinars(10_000))).toBe(
+      false
+    );
+
+    expect(postgresWouldKeep(comparing("lt", 1000), dinars(9999))).toBe(true);
+    expect(postgresWouldKeep(comparing("lt", 1000), dinars(10_000))).toBe(
+      false
+    );
+  });
+
+  test("compares a filter between two whole yen without matching it exactly", () => {
+    expect(postgresWouldKeep(comparing("gt", 1050), yen(11))).toBe(true);
+    expect(postgresWouldKeep(comparing("gt", 1050), yen(10))).toBe(false);
+    expect(postgresWouldKeep(comparing("lt", 1050), yen(10))).toBe(true);
+    expect(postgresWouldKeep(comparing("lt", 1050), yen(11))).toBe(false);
+    expect(postgresWouldKeep(comparing("eq", 1050), yen(10))).toBe(false);
+    expect(postgresWouldKeep(comparing("eq", 1050), yen(11))).toBe(false);
+  });
+
+  test("reads the filter in the minor units of its own currency", () => {
+    expect(
+      postgresWouldKeep(
+        comparing("eq", 10),
+        row({ amount: -1000, currency: "EUR" }),
+        "JPY"
+      )
+    ).toBe(true);
+
+    expect(
+      postgresWouldKeep(
+        comparing("eq", 10),
+        row({ amount: 10, currency: "JPY" }),
+        "JPY"
+      )
+    ).toBe(true);
   });
 });
 

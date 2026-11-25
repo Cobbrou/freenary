@@ -3,9 +3,11 @@ import { Skeleton } from "@freenary/ui/components/skeleton";
 import { Link } from "@tanstack/react-router";
 
 import { CategoryIcon, categoryLabel } from "@/entities/category";
+import { reportingTotalOf } from "@/entities/recurring";
 import type { RecurringData, UpcomingPayment } from "@/entities/recurring";
 import { m } from "@/paraglide/messages.js";
 import { formatCurrency } from "@/shared/lib/format-currency";
+import { UnconvertedNote } from "@/shared/ui/unconverted-note";
 
 import { commitmentsDue, UPCOMING_ROWS_SHOWN } from "../model/finance";
 import { useRecurring } from "../model/queries";
@@ -50,7 +52,13 @@ const UpcomingSkeleton = () => (
   </WidgetLoading>
 );
 
-const PaymentRow = ({ payment }: { payment: UpcomingPayment }) => (
+const PaymentRow = ({
+  currency,
+  payment,
+}: {
+  currency: string;
+  payment: UpcomingPayment;
+}) => (
   <li className="flex items-center gap-3">
     <CategoryIcon
       {...predefinedCategoryAppearance(payment.category)}
@@ -65,8 +73,18 @@ const PaymentRow = ({ payment }: { payment: UpcomingPayment }) => (
         {categoryLabel(payment.category)}
       </span>
     </div>
-    <span className="text-sm tabular-nums">
-      {formatCurrency(payment.amountMinor, payment.currency)}
+    <span className="flex flex-col items-end">
+      <span className="text-sm whitespace-nowrap tabular-nums">
+        {formatCurrency(payment.amountMinor, payment.currency)}
+      </span>
+      {payment.currency === currency ||
+      payment.reportingAmountMinor === null ? null : (
+        <span className="text-muted-foreground text-xs whitespace-nowrap tabular-nums">
+          {m.budget_recurring_amount_approx({
+            amount: formatCurrency(payment.reportingAmountMinor, currency),
+          })}
+        </span>
+      )}
     </span>
   </li>
 );
@@ -86,29 +104,26 @@ const UpcomingBody = ({
     return <WidgetEmpty>{m.home_upcoming_empty({ days })}</WidgetEmpty>;
   }
 
-  const inCurrency = payments.filter(
-    (payment) => payment.currency === recurring.currency
-  );
-
-  const totalMinor = inCurrency.reduce(
-    (total, payment) => total + payment.amountMinor,
-    0
-  );
+  const total = reportingTotalOf(payments);
 
   return (
     <>
-      {inCurrency.length > 0 ? (
+      {total.includedCount > 0 ? (
         <p className="text-muted-foreground text-sm">
           {m.home_upcoming_summary({
-            amount: formatCurrency(totalMinor, recurring.currency),
-            count: inCurrency.length,
+            amount: formatCurrency(total.totalMinor, recurring.currency),
+            count: total.includedCount,
             days,
           })}
         </p>
       ) : null}
       <ul className="flex flex-col gap-3">
         {payments.slice(0, UPCOMING_ROWS_SHOWN).map((payment) => (
-          <PaymentRow key={payment.id} payment={payment} />
+          <PaymentRow
+            currency={recurring.currency}
+            key={payment.id}
+            payment={payment}
+          />
         ))}
       </ul>
       {payments.length > UPCOMING_ROWS_SHOWN ? (
@@ -118,6 +133,7 @@ const UpcomingBody = ({
           })}
         </p>
       ) : null}
+      <UnconvertedNote counts={{ payments: total.unconvertedCount }} />
     </>
   );
 };

@@ -49,6 +49,7 @@ Every page is plain Markdown.
 - [How the assistant finds a model](explanation/assistant.md): server model vs in-browser model
 - [How transactions get categories](explanation/categorisation.md): the categorisation order
 - [How account types change the totals](explanation/account-types.md): which accounts count in balances, net worth and spending
+- [How currencies are converted](explanation/currencies.md): own currency per transaction, reporting currency, European Central Bank rates, exchanges between currencies
 - [How budget months work](explanation/budget-months.md): the start day, which month a payday counts in, which figures follow it
 
 ## Optional

@@ -38,7 +38,7 @@ export const classificationInputFrom = (
   }
 
   return {
-    amountBucket: amountBucket(input.amountMinor),
+    amountBucket: amountBucket(input.referenceAmountMinor ?? input.amountMinor),
     channel: input.channel,
     counterpartyName: input.counterpartyName ?? null,
     country: input.country ?? null,

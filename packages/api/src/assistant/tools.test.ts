@@ -36,7 +36,7 @@ describe("searchFilters", () => {
   });
 
   it("drops a zero floor, and caps a ceiling the schema would refuse", () => {
-    expect(searchFilters({ maxAmount: 1e12, minAmount: 0 }, "EUR")).toEqual([
+    expect(searchFilters({ maxAmount: 1e16, minAmount: 0 }, "EUR")).toEqual([
       { field: "amount", operator: "lt", value: MAX_FILTER_AMOUNT_MINOR_UNITS },
     ]);
   });

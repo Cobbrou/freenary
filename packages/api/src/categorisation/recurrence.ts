@@ -1,6 +1,7 @@
 import prisma from "@freenary/db";
 import { Array as Arr } from "effect";
 
+import type { Converter } from "../fx/converter";
 import { cashFlowAccountsOf } from "../lib/account-types";
 import type { SpendingCategory } from "../lib/taxonomy";
 import { resolveCategorySlug } from "../lib/taxonomy";
@@ -25,6 +26,7 @@ export interface RecurringExpense {
   frequency: RecurrenceFrequency;
   typicalAmountMinor: number;
   currency: Iso4217Currency;
+  reportingAmountMinor: number | null;
   occurrences: number;
   lastSeen: Date;
   nextExpected: Date;
@@ -60,6 +62,8 @@ export interface RecurrenceTransaction {
   currency: Iso4217Currency;
   date: Date;
   merchantKey: string | null;
+  originalAmount?: number | null;
+  originalCurrency?: string | null;
   resolvedCategory: string | null;
 }
 
@@ -78,6 +82,7 @@ export interface RecurringMonthTotals {
 export interface RecurringDetection {
   expenses: RecurringExpense[];
   months: RecurringMonthTotals[];
+  unconvertedCount: number;
 }
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
@@ -245,11 +250,44 @@ const daysBetweenConsecutive = (
   return intervals;
 };
 
+export const stableAmounts = (
+  txs: readonly RecurrenceTransaction[]
+): number[] => {
+  const [first] = txs;
+  const madeIn = first?.originalCurrency ?? null;
+  const sameOriginal =
+    madeIn !== null &&
+    txs.every(
+      (tx) =>
+        tx.originalCurrency === madeIn &&
+        tx.originalAmount !== null &&
+        tx.originalAmount !== undefined
+    );
+
+  return txs.map((tx) =>
+    Math.abs(sameOriginal ? (tx.originalAmount ?? tx.amount) : tx.amount)
+  );
+};
+
+const inLastCurrency = (
+  txs: Arr.NonEmptyArray<RecurrenceTransaction>
+): RecurrenceTransaction[] => {
+  const { currency } = Arr.lastNonEmpty(txs);
+
+  return txs.filter((tx) => tx.currency === currency);
+};
+
 const recurringFrom = (
   merchantKey: string,
-  txs: Arr.NonEmptyArray<RecurrenceTransaction>
+  merchantTxs: Arr.NonEmptyArray<RecurrenceTransaction>
 ): RecurringExpense | null => {
-  txs.sort((a, b) => a.date.getTime() - b.date.getTime());
+  merchantTxs.sort((a, b) => a.date.getTime() - b.date.getTime());
+
+  const txs = inLastCurrency(merchantTxs);
+
+  if (!Arr.isArrayNonEmpty(txs)) {
+    return null;
+  }
 
   const intervals = daysBetweenConsecutive(txs).toSorted((a, b) => a - b);
   const medianInterval = median(intervals);
@@ -263,7 +301,7 @@ const recurringFrom = (
     .map((tx) => Math.abs(tx.amount))
     .toSorted((a, b) => a - b);
 
-  const amountSpread = relativeSpread(amounts);
+  const amountSpread = relativeSpread(stableAmounts(txs));
   const intervalSpread = relativeSpread(intervals);
   const { confidence, kind } = classifyRecurrence({
     amountSpread,
@@ -297,6 +335,7 @@ const recurringFrom = (
     merchantName: lastTx.counterpartyName,
     nextExpected: new Date(lastTx.date.getTime() + medianInterval * MS_PER_DAY),
     occurrences: txs.length,
+    reportingAmountMinor: null,
     typicalAmountMinor: Math.round(median(amounts)),
   };
 };
@@ -356,13 +395,20 @@ export const stillRecurring = (
 export const recurringMonthsInWindow = (
   transactions: RecurrenceTransaction[],
   window: RecurrenceWindow,
-  expenses: RecurringExpense[]
+  expenses: RecurringExpense[],
+  amountOf: (tx: RecurrenceTransaction) => number | null = (tx) => tx.amount
 ): RecurringMonthTotals[] => {
   const kinds = new Map(expenses.map((e) => [e.merchantKey, e.kind]));
   const months = new Map<string, RecurringMonthTotals>();
 
   for (const tx of transactions) {
     if (tx.date < window.from || tx.date > window.to) {
+      continue;
+    }
+
+    const converted = amountOf(tx);
+
+    if (converted === null) {
       continue;
     }
 
@@ -380,7 +426,7 @@ export const recurringMonthsInWindow = (
       months.set(month, totals);
     }
 
-    const amount = Math.abs(tx.amount);
+    const amount = Math.abs(converted);
     const kind =
       tx.merchantKey === null ? undefined : kinds.get(tx.merchantKey);
 
@@ -420,6 +466,8 @@ const outgoingInWindow = async (
       currency: true,
       date: true,
       merchantKey: true,
+      originalAmount: true,
+      originalCurrency: true,
       resolvedCategory: true,
     },
     where: {
@@ -433,22 +481,45 @@ const outgoingInWindow = async (
 
 export const detectRecurring = async (
   userId: string,
-  window: RecurrenceWindow
+  window: RecurrenceWindow,
+  converter: Converter,
+  asOf: Date = new Date()
 ): Promise<RecurringDetection> => {
   const transactions = await outgoingInWindow(userId, window);
-  const expenses = recurringInWindow(transactions, window);
+  const expenses = recurringInWindow(transactions, window).map((expense) => ({
+    ...expense,
+    reportingAmountMinor: converter.convert(
+      expense.typicalAmountMinor,
+      expense.currency,
+      asOf
+    ),
+  }));
 
-  return {
+  let unconvertedCount = 0;
+  const months = recurringMonthsInWindow(
+    transactions,
+    window,
     expenses,
-    months: recurringMonthsInWindow(transactions, window, expenses),
-  };
+    (tx) => {
+      const amount = converter.amountOf(tx);
+
+      if (amount === null) {
+        unconvertedCount += 1;
+      }
+
+      return amount;
+    }
+  );
+
+  return { expenses, months, unconvertedCount };
 };
 
 export const detectRecurringExpenses = async (
   userId: string,
-  window: RecurrenceWindow
+  window: RecurrenceWindow,
+  converter: Converter
 ): Promise<RecurringExpense[]> => {
-  const detected = await detectRecurring(userId, window);
+  const detected = await detectRecurring(userId, window, converter);
 
   return detected.expenses;
 };

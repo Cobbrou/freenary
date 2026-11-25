@@ -67,20 +67,55 @@ model BankAccount {
   name               String?
   /// Kind of account, as reported by the provider.
   type               BankAccountType @default(UNKNOWN)
-  /// ISO 4217 currency code of the account (e.g. "EUR").
+  /// ISO 4217 currency code of the account (e.g. "EUR"). For an account
+  /// holding several currencies, the currency of its main balance.
   currency           String?
   /// Signed balance in minor units of `currency`.
-  balanceMinor       Int?
+  balanceMinor       BigInt?
   /// When the provider last valued the balance.
   balanceAt          DateTime?
   createdAt          DateTime       @default(now())
   updatedAt          DateTime       @updatedAt
   transactions       Transaction[]
   holdings           Holding[]
+  balances           AccountBalance[]
 
   @@unique([connectionId, providerAccountId])
   @@index([connectionId])
   @@map("bank_account")
+}
+
+/// One balance of an account in one currency. A single-currency account has
+/// one row; an account holding several currencies has one row per currency.
+model AccountBalance {
+  id           String      @id @default(cuid())
+  accountId    String
+  account      BankAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  /// ISO 4217 currency code of this balance.
+  currency     String
+  /// Signed balance in minor units of `currency`.
+  balanceMinor BigInt
+  /// When the provider last valued the balance.
+  balanceAt    DateTime?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  @@unique([accountId, currency])
+  @@map("account_balance")
+}
+
+/// Euro foreign exchange reference rate of the European Central Bank for one
+/// currency on one working day.
+model ExchangeRate {
+  /// ISO 4217 currency code.
+  currency   String
+  /// Working day the rate was published for.
+  date       DateTime @db.Date
+  /// Units of `currency` for one euro.
+  ratePerEur Float
+
+  @@id([currency, date])
+  @@map("exchange_rate")
 }
 
 /// Kind of account. packages/api/src/lib/account-types.ts decides which
@@ -122,9 +157,9 @@ model Holding {
   unitCost            Decimal?    @db.Decimal(24, 6)
   unitValue           Decimal?    @db.Decimal(24, 6)
   /// Current value in minor units of `currency`.
-  valuationMinor      Int
+  valuationMinor      BigInt
   /// Unrealised gain/loss in minor units as reported by the provider.
-  unrealisedGainMinor Int?
+  unrealisedGainMinor BigInt?
   currency            String
   /// Valuation date reported by the provider.
   valuedAt            DateTime?
@@ -145,10 +180,16 @@ model Transaction {
   providerTransactionId String?
   /// Booking date of the transaction.
   date              DateTime
-  /// Signed amount in minor units (negative = outgoing, positive = incoming).
-  amount            Int
-  /// ISO 4217 currency code (e.g. "EUR", "USD").
+  /// Signed amount in minor units (negative = outgoing, positive = incoming),
+  /// in the currency of the balance the transaction moved.
+  amount            BigInt
+  /// ISO 4217 currency code of `amount` (e.g. "EUR", "USD").
   currency          String
+  /// Signed amount in minor units of `originalCurrency` when the transaction
+  /// was made in another currency than the one it was booked in.
+  originalAmount    BigInt?
+  /// ISO 4217 currency code the transaction was made in, when it differs from `currency`.
+  originalCurrency  String?
   /// Transaction description / narrative from the bank.
   description       String      @default("")
   /// Counterparty name when available.
@@ -166,7 +207,7 @@ model Transaction {
   /// Transaction date — card swipe or transfer acquisition date.
   transactionDate       DateTime?
   /// Balance in minor units after this transaction.
-  balanceAfterTransaction Int?
+  balanceAfterTransaction BigInt?
   /// Creditor (receiver) IBAN when available.
   creditorAccountIban   String?
   /// Debtor (sender) IBAN when available.
@@ -213,6 +254,9 @@ model Transaction {
   resolutionConfidence Float?
   /// True when this transaction is one leg of a movement between the user's own accounts.
   isInternalTransfer   Boolean     @default(false)
+  /// On the outgoing leg of a transfer between two currencies, what the
+  /// exchange cost against the reference rate, in minor units of `currency`.
+  exchangeFeeMinor     BigInt?
   createdAt         DateTime    @default(now())
   notifications     NotificationTransaction[]
 

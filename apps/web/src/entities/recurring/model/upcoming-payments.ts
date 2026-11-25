@@ -28,6 +28,13 @@ export interface UpcomingPayment {
   id: string;
   kind: RecurrenceKind;
   label: string;
+  reportingAmountMinor: number | null;
+}
+
+export interface ReportingTotal {
+  includedCount: number;
+  totalMinor: number;
+  unconvertedCount: number;
 }
 
 const MAX_PROJECTED_OCCURRENCES = 64;
@@ -91,6 +98,7 @@ export const upcomingPayments = (
         id: `${item.merchantKey}@${daysAway}`,
         kind: item.kind,
         label: merchantLabel(item),
+        reportingAmountMinor: item.reportingAmountMinor,
       });
 
       when = addDays(when, cadenceDays);
@@ -100,4 +108,25 @@ export const upcomingPayments = (
   }
 
   return payments.toSorted((a, b) => a.date.getTime() - b.date.getTime());
+};
+
+export const reportingTotalOf = (
+  amounts: readonly { reportingAmountMinor: number | null }[]
+): ReportingTotal => {
+  const total: ReportingTotal = {
+    includedCount: 0,
+    totalMinor: 0,
+    unconvertedCount: 0,
+  };
+
+  for (const { reportingAmountMinor } of amounts) {
+    if (reportingAmountMinor === null) {
+      total.unconvertedCount += 1;
+    } else {
+      total.includedCount += 1;
+      total.totalMinor += reportingAmountMinor;
+    }
+  }
+
+  return total;
 };

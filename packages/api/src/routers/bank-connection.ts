@@ -246,6 +246,7 @@ export const bankConnectionRouter = {
         await db.bankAccount.createMany({
           data: completed.accounts.map((account) => ({
             connectionId: created.id,
+            currency: account.currency ?? null,
             iban: account.iban ?? null,
             identificationHash: account.identificationHash ?? null,
             name: account.name ?? null,

@@ -56,6 +56,8 @@ export const AccountsWidget = ({ title }: { title?: string }) => {
                 <AccountBalance
                   account={account}
                   className="text-sm font-medium"
+                  layout="inline"
+                  reportingCurrency={query.data?.currency ?? "EUR"}
                 />
               </Link>
             </li>

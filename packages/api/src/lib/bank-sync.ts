@@ -5,6 +5,8 @@ import { deriveMerchantKey } from "../categorisation/merchant-key";
 import { getProvider } from "../providers/registry";
 import type {
   BankingProvider,
+  ProviderAccount,
+  ProviderBalance,
   ProviderHolding,
   ProviderTransaction,
   ProviderUserSession,
@@ -16,6 +18,7 @@ interface SyncAccount {
   id: string;
   providerAccountId: string;
   type: string;
+  currency: string | null;
 }
 
 export interface ConnectionWithAccounts {
@@ -97,6 +100,11 @@ const connectionFailure =
       },
     });
 
+const mapOriginalAmount = (tx: ProviderTransaction) => ({
+  originalAmount: tx.originalAmountMinor ?? null,
+  originalCurrency: tx.originalCurrency ?? null,
+});
+
 // SAFETY: Prisma requires DbNull (not plain null) to clear a Json? column
 const mapProviderFields = (tx: ProviderTransaction) => ({
   amount: tx.amountMinor,
@@ -121,6 +129,7 @@ const mapProviderFields = (tx: ProviderTransaction) => ({
   description: tx.remittanceLines.join(" "),
   exchangeRate: tx.exchangeRate ?? null,
   merchantCategoryCode: tx.merchantCategoryCode ?? null,
+  ...mapOriginalAmount(tx),
   psuNote: tx.psuNote ?? null,
   referenceNumber: tx.referenceNumber ?? null,
   referenceNumberScheme: tx.referenceNumberScheme ?? null,
@@ -170,10 +179,11 @@ type TransactionFields = ReturnType<typeof transactionFields>;
 type TransactionColumn = keyof TransactionFields;
 
 const NON_TEXT_COLUMN_TYPES: Partial<Record<TransactionColumn, string>> = {
-  amount: "integer",
-  balanceAfterTransaction: "integer",
+  amount: "bigint",
+  balanceAfterTransaction: "bigint",
   creditorIdentifications: "jsonb",
   date: "timestamp(3)",
+  originalAmount: "bigint",
   remittanceLines: "text[]",
   transactionDate: "timestamp(3)",
   valueDate: "timestamp(3)",
@@ -291,6 +301,80 @@ const upsertTransactionsInBatches = async (
   }
 };
 
+export const reportedBalances = (
+  account: ProviderAccount
+): ProviderBalance[] | null => {
+  if (account.balances) {
+    return [
+      ...new Map(
+        account.balances.map((balance) => [balance.currency, balance])
+      ).values(),
+    ];
+  }
+
+  const { balanceAt, balanceMinor, currency } = account;
+
+  if (currency === undefined || balanceMinor === undefined) {
+    return null;
+  }
+
+  return [{ balanceAt, balanceMinor, currency }];
+};
+
+const toBalanceAt = (balanceAt: string | undefined): Date | null =>
+  balanceAt ? new Date(balanceAt) : null;
+
+export const mainBalanceFields = (account: ProviderAccount) => {
+  const { balanceAt, balanceMinor, currency } = account;
+
+  if (currency !== undefined && balanceMinor !== undefined) {
+    return { balanceAt: toBalanceAt(balanceAt), balanceMinor, currency };
+  }
+
+  const balances = reportedBalances(account);
+
+  if (!balances) {
+    return currency === undefined ? {} : { currency };
+  }
+
+  const mainCurrency = currency ?? balances[0]?.currency ?? null;
+  const main = balances.find((balance) => balance.currency === mainCurrency);
+
+  return {
+    balanceAt: toBalanceAt(main?.balanceAt),
+    balanceMinor: main?.balanceMinor ?? null,
+    currency: mainCurrency,
+  };
+};
+
+const replaceBalances = async (
+  accountId: string,
+  balances: readonly ProviderBalance[]
+): Promise<void> => {
+  await prisma.$transaction([
+    prisma.accountBalance.deleteMany({
+      where: {
+        accountId,
+        currency: { notIn: balances.map((balance) => balance.currency) },
+      },
+    }),
+    ...balances.map((balance) => {
+      const fields = {
+        balanceAt: toBalanceAt(balance.balanceAt),
+        balanceMinor: balance.balanceMinor,
+      };
+
+      return prisma.accountBalance.upsert({
+        create: { ...fields, accountId, currency: balance.currency },
+        update: fields,
+        where: {
+          accountId_currency: { accountId, currency: balance.currency },
+        },
+      });
+    }),
+  ]);
+};
+
 const refreshProviderAccounts = async (
   provider: BankingProvider,
   connection: ConnectionWithAccounts,
@@ -311,9 +395,7 @@ const refreshProviderAccounts = async (
 
   for (const account of accounts) {
     const fields = {
-      balanceAt: account.balanceAt ? new Date(account.balanceAt) : null,
-      balanceMinor: account.balanceMinor ?? null,
-      currency: account.currency ?? null,
+      ...mainBalanceFields(account),
       iban: account.iban ?? null,
       name: account.name ?? null,
       type: account.type,
@@ -326,7 +408,7 @@ const refreshProviderAccounts = async (
         connectionId: connection.id,
         providerAccountId: account.providerAccountId,
       },
-      select: { id: true, providerAccountId: true, type: true },
+      select: { currency: true, id: true, providerAccountId: true, type: true },
       update: fields,
       where: {
         connectionId_providerAccountId: {
@@ -335,6 +417,13 @@ const refreshProviderAccounts = async (
         },
       },
     });
+
+    const balances = reportedBalances(account);
+
+    if (balances) {
+      // eslint-disable-next-line no-await-in-loop -- sequential to avoid unique constraint races
+      await replaceBalances(row.id, balances);
+    }
 
     rows.push(row);
   }
@@ -473,6 +562,7 @@ const importAccount = async (context: AccountSyncContext): Promise<void> => {
   } = context;
 
   const transactions = await provider.fetchTransactions({
+    accountCurrency: account.currency,
     dateFrom: window.dateFrom,
     dateTo: window.dateTo,
     providerAccountId: account.providerAccountId,

@@ -8,7 +8,7 @@ import {
 import type { TransactionsInput } from "../api/transactions-query";
 import type { SortMode, TransactionDirection } from "./list-search";
 
-const NO_TOTALS = { incoming: 0, outgoing: 0 };
+const NO_TOTALS = { incoming: 0, outgoing: 0, unconvertedCount: 0 };
 
 export const useTransactionListQuery = (
   input: TransactionsInput,

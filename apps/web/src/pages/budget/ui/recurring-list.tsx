@@ -242,6 +242,7 @@ export const RecurringList = ({
             </p>
             <RecurringTable
               asOf={asOf}
+              currency={currency}
               hasFilters={activeCount > 0 || search.length > 0}
               isError={isError}
               isPending={isPending}

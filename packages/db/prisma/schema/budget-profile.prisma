@@ -55,7 +55,7 @@ model BudgetLine {
   /// category's own name stands in at display time.
   label        String?
   /// Planned amount per month in minor units; always positive.
-  amount       Int
+  amount       BigInt
   /// Predefined category slug (a leaf of the hierarchy, never a group);
   /// null when categoryId is set.
   categorySlug String?
