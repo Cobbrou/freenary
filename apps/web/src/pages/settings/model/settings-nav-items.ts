@@ -1,4 +1,5 @@
 import {
+  ArchiveDown,
   CurrencyDollar,
   KeyRound,
   Landmark,
@@ -91,6 +92,18 @@ export const SETTINGS_NAV_CATEGORIES = [
       },
     ],
     label: m.settings_nav_group_security,
+  },
+  {
+    id: "data",
+    items: [
+      {
+        color: CHART_COLOR_VARS.green,
+        icon: ArchiveDown,
+        label: m.settings_tab_export,
+        section: "export",
+      },
+    ],
+    label: m.settings_nav_group_data,
   },
   {
     id: "instance",

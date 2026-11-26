@@ -25,11 +25,12 @@ describe("SETTINGS_NAV_ITEMS", () => {
 });
 
 describe("settingsNavCategoriesFor", () => {
-  it("groups the operator's tabs under four categories", () => {
+  it("groups the operator's tabs under five categories", () => {
     expect(sectionsByCategory("operator")).toEqual([
       ["preferences", ["appearance"]],
       ["finances", ["bank-accounts", "budget", "categories"]],
       ["security", ["sign-in", "sessions", "api-keys"]],
+      ["data", ["export"]],
       ["instance", ["services"]],
     ]);
   });
@@ -40,6 +41,7 @@ describe("settingsNavCategoriesFor", () => {
         "preferences",
         "finances",
         "security",
+        "data",
       ]);
     }
   });

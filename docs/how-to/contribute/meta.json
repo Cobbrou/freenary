@@ -2,6 +2,7 @@
   "title": "Contribute",
   "pages": [
     "run-from-source",
+    "test-with-your-own-data",
     "run-checks",
     "add-an-environment-variable",
     "change-the-database-schema",

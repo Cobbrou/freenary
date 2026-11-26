@@ -6,6 +6,7 @@ import { authRouter } from "./auth";
 import { bankConnectionRouter } from "./bank-connection";
 import { budgetRouter } from "./budget";
 import { dashboardsRouter } from "./dashboards";
+import { dataExportRouter } from "./data-export";
 import { instanceRouter } from "./instance";
 import { notificationsRouter } from "./notifications";
 import { onboardingRouter } from "./onboarding";
@@ -18,6 +19,7 @@ export const appRouter = {
   bankConnection: bankConnectionRouter,
   budget: budgetRouter,
   dashboards: dashboardsRouter,
+  dataExport: dataExportRouter,
   healthCheck: publicProcedure.handler(() => "OK"),
   instance: instanceRouter,
   notifications: notificationsRouter,

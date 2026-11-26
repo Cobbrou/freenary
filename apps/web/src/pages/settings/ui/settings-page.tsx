@@ -39,6 +39,7 @@ import {
 import { BankAccountsSection } from "./bank-accounts-section";
 import { BudgetingSection } from "./budgeting-section";
 import { CategoriesSection } from "./categories-section";
+import { DataExportPane } from "./data-export-pane";
 import { SecurityAccountsSection } from "./security-accounts-section";
 import type { OAuthProviderOption } from "./security-accounts-section";
 import { SecurityApiKeysSection } from "./security-api-keys-section";
@@ -183,6 +184,7 @@ const SettingsContent = ({
         loadError={categoriesLoadError}
       />
     ),
+    export: <DataExportPane />,
     services: <ServicesPane />,
     sessions: (
       <SecuritySessionsSection

@@ -17,6 +17,7 @@ Run each from the repository root.
 | `bun run docs:generate` | `bun scripts/docs-reference.ts` |
 | `bun run env:sync` | `bun scripts/env-sync.ts` |
 | `bun run env:check` | `bun scripts/env-sync.ts --check` |
+| `bun run fixtures:create` | `bun packages/api/scripts/create-fixture.ts` |
 | `bun run check:fsd` | `turbo run lint:fsd` |
 | `bun run dev:web` | `turbo run dev -F web --` |
 | `bun run dev:server` | `turbo run dev -F server --` |

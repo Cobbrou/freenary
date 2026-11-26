@@ -2564,6 +2564,28 @@
         }
       }
     },
+    "/dataExport/download": {
+      "post": {
+        "operationId": "dataExport.download",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {},
+                    {
+                      "not": {}
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/healthCheck": {
       "post": {
         "operationId": "healthCheck",

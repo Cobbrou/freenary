@@ -92,6 +92,7 @@ const SETTINGS_SECTION_LABELS = {
   "bank-accounts": m.settings_tab_bank_accounts,
   budget: m.settings_tab_budget,
   categories: m.settings_tab_categories,
+  export: m.settings_tab_export,
   services: m.settings_tab_services,
   sessions: m.settings_tab_sessions,
   "sign-in": m.settings_tab_sign_in,

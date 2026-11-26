@@ -18,6 +18,7 @@
     "./lib/bank-provider-user": "./src/lib/bank-provider-user.ts",
     "./lib/budget-month": "./src/lib/budget-month.ts",
     "./lib/budget-profile": "./src/lib/budget-profile.ts",
+    "./lib/data-export": "./src/lib/data-export.ts",
     "./lib/categories": "./src/lib/categories.ts",
     "./lib/exclusion-scope": "./src/lib/exclusion-scope.ts",
     "./lib/json-request": "./src/lib/json-request.ts",

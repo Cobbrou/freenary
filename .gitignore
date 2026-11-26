@@ -60,3 +60,6 @@ temp
 
 # Triage workflow output
 triage-record.json
+
+# Fixtures made from real data exports (bun run fixtures:create)
+packages/api/fixtures/

@@ -27,6 +27,7 @@ Every page is plain Markdown.
 - [Connect an AI agent over MCP](how-to/connect-an-ai-agent.md): point Claude Code or another agent at /mcp with an API key
 - [Update Freenary](how-to/update-freenary.md): image tags, pull, migrations
 - [Back up and restore](how-to/back-up-and-restore.md): pg_dump, pg_restore, keep .env
+- [Export your data](how-to/export-your-data.md): download your financial data as JSON from Settings › Export
 - [Troubleshoot](how-to/troubleshoot.md): real error messages and fixes
 
 ## Reference
@@ -55,6 +56,7 @@ Every page is plain Markdown.
 ## Optional
 
 - [Run from source](how-to/contribute/run-from-source.md): development stack
+- [Test with your own data](how-to/contribute/test-with-your-own-data.md): bun run fixtures:create turns an export into an anonymised fixture the mock bank replays
 - [Run the checks](how-to/contribute/run-checks.md): the CI steps locally
 - [Add an environment variable](how-to/contribute/add-an-environment-variable.md)
 - [Change the database schema](how-to/contribute/change-the-database-schema.md)

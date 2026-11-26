@@ -1,7 +1,8 @@
 import { env } from "@freenary/env/server";
 
 import { MOCK_INSTITUTIONS } from "./catalog";
-import { mockSessionCode } from "./session";
+import { fixtureInstitutions } from "./fixture/replay";
+import { fixtureSessionCode, mockSessionCode } from "./session";
 
 export const MOCK_CONSENT_PATH = "/mock-bank/consent";
 export const MOCK_CALLBACK_PATH = "/callback/mock";
@@ -41,8 +42,15 @@ const callbackWith = (
   return target.toString();
 };
 
+const GENERATED_ORIGIN =
+  "This is the mock banking provider. It stands in for the bank consent screen on a development stack, and every account and transaction it returns is generated.";
+
+const FIXTURE_ORIGIN =
+  "This is the mock banking provider. It stands in for the bank consent screen on a development stack, and replays the accounts and transactions of a fixture file.";
+
 const consentPage = (
   institutionName: string,
+  origin: string,
   approveUrl: string,
   declineUrl: string
 ): string => `<!doctype html>
@@ -65,7 +73,7 @@ a{flex:1;text-align:center;padding:.6rem 1rem;border-radius:.5rem;text-decoratio
 <body>
 <main>
 <h1>${escapeHtml(institutionName)}</h1>
-<p>This is the mock banking provider. It stands in for the bank consent screen on a development stack, and every account and transaction it returns is generated.</p>
+<p>${escapeHtml(origin)}</p>
 <nav>
 <a class="decline" href="${escapeHtml(declineUrl)}">Decline</a>
 <a class="approve" href="${escapeHtml(approveUrl)}">Approve</a>
@@ -82,9 +90,14 @@ export const handleMockConsent = (request: Request): Response => {
   const search = new URL(request.url).searchParams;
   const redirectUri = search.get("redirect_uri");
   const state = search.get("state");
-  const institution = MOCK_INSTITUTIONS.find(
-    (candidate) => candidate.id === search.get("institution")
+  const institutionId = search.get("institution");
+  const fixture = fixtureInstitutions().find(
+    (candidate) => candidate.id === institutionId
   );
+
+  const institution =
+    fixture ??
+    MOCK_INSTITUTIONS.find((candidate) => candidate.id === institutionId);
 
   if (redirectUri !== `${env.CORS_ORIGIN}${MOCK_CALLBACK_PATH}`) {
     return plainResponse(400, "redirect_uri is not this instance's callback");
@@ -95,7 +108,9 @@ export const handleMockConsent = (request: Request): Response => {
   }
 
   const approveUrl = callbackWith(redirectUri, {
-    code: mockSessionCode(new Date()),
+    code: fixture
+      ? fixtureSessionCode(fixture.id)
+      : mockSessionCode(new Date()),
     state,
   });
 
@@ -104,7 +119,13 @@ export const handleMockConsent = (request: Request): Response => {
     state,
   });
 
-  return new Response(consentPage(institution.name, approveUrl, declineUrl), {
-    headers: { "content-type": "text/html; charset=utf-8" },
-  });
+  return new Response(
+    consentPage(
+      institution.name,
+      fixture ? FIXTURE_ORIGIN : GENERATED_ORIGIN,
+      approveUrl,
+      declineUrl
+    ),
+    { headers: { "content-type": "text/html; charset=utf-8" } }
+  );
 };

@@ -40,6 +40,7 @@
     "docs:generate": "bun scripts/docs-reference.ts",
     "env:sync": "bun scripts/env-sync.ts",
     "env:check": "bun scripts/env-sync.ts --check",
+    "fixtures:create": "bun packages/api/scripts/create-fixture.ts",
     "check:fsd": "turbo run lint:fsd",
     "dev:web": "turbo run dev -F web --",
     "dev:server": "turbo run dev -F server --",

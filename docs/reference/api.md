@@ -112,6 +112,12 @@ The Access column comes from the middleware of each procedure in `packages/api/s
 | `dashboards.list` | `POST /api-reference/dashboards/list` | Signed in | none |
 | `dashboards.update` | `POST /api-reference/dashboards/update` | Signed in | `dashboardId` string, required; `title` string; `widgets` array of object |
 
+## dataExport
+
+| Procedure | HTTP route | Access | Input fields |
+| --- | --- | --- | --- |
+| `dataExport.download` | `POST /api-reference/dataExport/download` | Signed in | none |
+
 ## instance
 
 | Procedure | HTTP route | Access | Input fields |
