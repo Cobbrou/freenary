@@ -8,7 +8,7 @@ import type {
 } from "../categorisation/recurrence";
 import { convertRows } from "../fx/converter";
 import type { Converter } from "../fx/converter";
-import { cashFlowAccountsOf, SAVING_CATEGORIES } from "./account-types";
+import { cashFlowAccountsOf } from "./account-types";
 import { AGGREGATION_MODES } from "./aggregation";
 import type { AggregationMode } from "./aggregation";
 import {
@@ -20,6 +20,11 @@ import type { BudgetMonthRule } from "./budget-month";
 import type { PlannedLine } from "./budget-planned";
 import { periodMonthCount, plannedByCategory } from "./budget-planned";
 import { budgetLineKindOf } from "./budget-profile";
+import {
+  countedInFiguresWhere,
+  countedShareOf,
+  countedWholeWhere,
+} from "./counted-transactions";
 import { incomeNodesOf, incomeSourceOf } from "./income-nodes";
 import { escapeLikePattern } from "./like-pattern";
 import {
@@ -73,8 +78,6 @@ const WEEKLY_GRAIN_MAX_DAYS = 93;
 type CashFlowGrainName = "day" | "month" | "week";
 
 const EXCHANGE_FEE_CATEGORY: SpendingCategory = "loans-bank-fees";
-
-const SAVING_CATEGORY_SLUGS = new Set<string>(SAVING_CATEGORIES);
 
 const STAT_ROW_SELECT = {
   amount: true,
@@ -275,22 +278,13 @@ export const countedTransactionsWhere = (
   from: Date,
   to: Date
 ): Prisma.TransactionWhereInput => ({
-  OR: [
-    { isInternalTransfer: false },
-    { resolvedCategory: { in: [...SAVING_CATEGORIES] } },
-    { exchangeFeeMinor: { gt: 0 } },
-  ],
+  AND: [countedInFiguresWhere],
   account: cashFlowAccountsOf(userId),
   date: { gte: from, lte: to },
 });
 
 export const statRowOf = (row: StoredStatRow): StoredStatRow => {
-  const countsWhole =
-    !row.isInternalTransfer ||
-    (row.resolvedCategory !== null &&
-      SAVING_CATEGORY_SLUGS.has(row.resolvedCategory));
-
-  if (countsWhole) {
+  if (countedShareOf(row) === "whole") {
     return row;
   }
 
@@ -413,7 +407,7 @@ export const convertedTotals = async (
 ) => {
   const { amount: _direction, ...anyDirection } = where;
   const counted: Prisma.TransactionWhereInput = {
-    AND: [anyDirection, { isInternalTransfer: false }],
+    AND: [anyDirection, countedWholeWhere],
   };
 
   const [incoming, outgoing, foreign] = await Promise.all([

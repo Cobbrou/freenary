@@ -1,6 +1,6 @@
 import { categoryGroupAppearance } from "@freenary/api/lib/categories";
 import type { CategoryEntry } from "@freenary/api/lib/categories";
-import { CATEGORY_GROUPS } from "@freenary/api/lib/taxonomy";
+import { COUNTED_CATEGORY_GROUPS } from "@freenary/api/lib/taxonomy";
 
 import { categoryEntryLabel, categoryGroupLabel } from "@/entities/category";
 
@@ -21,11 +21,13 @@ export const categoryParentOptions = ({
     return [];
   }
 
-  const groups: CategoryParentOption[] = CATEGORY_GROUPS.map((group) => ({
-    appearance: categoryGroupAppearance(group),
-    key: group,
-    label: categoryGroupLabel(group),
-  }));
+  const groups: CategoryParentOption[] = COUNTED_CATEGORY_GROUPS.map(
+    (group) => ({
+      appearance: categoryGroupAppearance(group),
+      key: group,
+      label: categoryGroupLabel(group),
+    })
+  );
 
   const own: CategoryParentOption[] = categories.flatMap((entry) =>
     entry.isGroup && entry.isCustom && entry.key !== editedKey

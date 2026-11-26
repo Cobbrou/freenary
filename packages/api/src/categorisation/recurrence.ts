@@ -3,6 +3,7 @@ import { Array as Arr } from "effect";
 
 import type { Converter } from "../fx/converter";
 import { cashFlowAccountsOf } from "../lib/account-types";
+import { countedWholeWhere } from "../lib/counted-transactions";
 import type { SpendingCategory } from "../lib/taxonomy";
 import { resolveCategorySlug } from "../lib/taxonomy";
 import type { Iso4217Currency, OutgoingNegativeMinorUnits } from "./types";
@@ -471,10 +472,10 @@ const outgoingInWindow = async (
       resolvedCategory: true,
     },
     where: {
+      AND: [countedWholeWhere],
       accountId: { in: accounts.map((a) => a.id) },
       amount: { lt: 0 },
       date: { gte: window.from, lte: window.to },
-      isInternalTransfer: false,
     },
   });
 };

@@ -218,6 +218,8 @@ const budgetApi: AssistantToolApi["budget"] = {
           derivedCategory: "groceries",
           description: "CARREFOUR MARKET PARIS",
           exchangeFeeMinor: null,
+          exclusion: null,
+          hasMerchant: true,
           id: "txn_1",
           isInternalTransfer: false,
           normalisedDescriptor: "carrefour market paris",

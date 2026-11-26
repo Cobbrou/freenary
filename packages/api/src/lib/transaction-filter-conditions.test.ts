@@ -11,6 +11,7 @@ const ROW_COLUMNS = [
   "category",
   "counterpartyName",
   "currency",
+  "exclusion",
   "id",
   "normalisedDescriptor",
   "resolvedCategory",
@@ -79,6 +80,7 @@ const whereSchema: z.ZodType<Where> = z.lazy(() =>
       category: comparisonSchema.optional(),
       counterpartyName: comparisonSchema.optional(),
       currency: comparisonSchema.optional(),
+      exclusion: comparisonSchema.optional(),
       id: comparisonSchema.optional(),
       normalisedDescriptor: comparisonSchema.optional(),
       resolvedCategory: comparisonSchema.optional(),
@@ -173,6 +175,7 @@ const row = (overrides: Partial<Row>): Row => ({
   category: null,
   counterpartyName: null,
   currency: "EUR",
+  exclusion: null,
   id: "transaction",
   normalisedDescriptor: null,
   resolvedCategory: null,
@@ -450,5 +453,47 @@ describe("account filters", () => {
     expect(postgresWouldKeep(filter, row({ accountId: "checking" }))).toBe(
       true
     );
+  });
+});
+
+describe("exclusion filters", () => {
+  const excludedMerchant = row({ exclusion: "MERCHANT" });
+  const excludedTransaction = row({ exclusion: "TRANSACTION" });
+  const counted = row({});
+
+  test("is any of keeps every excluded row, whatever was excluded", () => {
+    const filter: TransactionFilter = {
+      field: "exclusion",
+      operator: "isAnyOf",
+      values: ["merchant", "transaction"],
+    };
+
+    expect(postgresWouldKeep(filter, excludedMerchant)).toBe(true);
+    expect(postgresWouldKeep(filter, excludedTransaction)).toBe(true);
+    expect(postgresWouldKeep(filter, counted)).toBe(false);
+  });
+
+  test("is keeps only the rows excluded that way", () => {
+    const filter: TransactionFilter = {
+      field: "exclusion",
+      operator: "is",
+      values: ["merchant"],
+    };
+
+    expect(postgresWouldKeep(filter, excludedMerchant)).toBe(true);
+    expect(postgresWouldKeep(filter, excludedTransaction)).toBe(false);
+    expect(postgresWouldKeep(filter, counted)).toBe(false);
+  });
+
+  test("is not keeps counted rows and the other exclusion", () => {
+    const filter: TransactionFilter = {
+      field: "exclusion",
+      operator: "isNot",
+      values: ["merchant"],
+    };
+
+    expect(postgresWouldKeep(filter, excludedMerchant)).toBe(false);
+    expect(postgresWouldKeep(filter, excludedTransaction)).toBe(true);
+    expect(postgresWouldKeep(filter, counted)).toBe(true);
   });
 });

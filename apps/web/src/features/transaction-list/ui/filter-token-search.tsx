@@ -22,6 +22,7 @@ import {
   AMOUNT_OPERATOR_SYMBOLS,
   categoryValueLabel,
   chipValue,
+  exclusionValueLabel,
   FILTER_FIELD_LABELS,
   filterChipValue,
   filterTokenSentence,
@@ -44,6 +45,7 @@ const suggestionKey = (suggestion: FilterSuggestion): string =>
       amount: ({ minorUnits }) => `amount:${minorUnits}`,
       category: ({ value }) => `category:${value}`,
       company: ({ name }) => `company:${name}`,
+      exclusion: ({ value }) => `exclusion:${value}`,
       field: ({ field }) => `field:${field}`,
       operator: ({ operator }) => `operator:${operator}`,
     })
@@ -57,7 +59,8 @@ const categoryAppearanceOf = (value: CategoryFilterValue) =>
 const isPicked = (suggestion: FilterSuggestion) =>
   (suggestion.kind === "company" ||
     suggestion.kind === "category" ||
-    suggestion.kind === "account") &&
+    suggestion.kind === "account" ||
+    suggestion.kind === "exclusion") &&
   suggestion.picked;
 
 const SuggestionContent = ({
@@ -87,6 +90,7 @@ const SuggestionContent = ({
         </span>
       ),
       company: ({ label }) => <span className="truncate">{label}</span>,
+      exclusion: ({ label }) => <span>{label}</span>,
       field: ({ label }) => <span className="font-medium">{label}</span>,
       operator: ({ label, symbol }) => (
         <span className="flex items-center gap-2">
@@ -107,6 +111,10 @@ const draftValueLabels = (
 ): string[] => {
   if (draft.field === "category") {
     return draft.values.map(categoryValueLabel);
+  }
+
+  if (draft.field === "exclusion") {
+    return draft.values.map(exclusionValueLabel);
   }
 
   return draft.field === "account"

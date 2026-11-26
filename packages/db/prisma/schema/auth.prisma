@@ -33,6 +33,8 @@ model User {
   bankConnections           BankConnection[]
   bankProviderUsers         BankProviderUser[]
   merchantOverrides         MerchantOverride[]
+  ownCounterparties         OwnCounterparty[]
+  excludedMerchants         ExcludedMerchant[]
   budgetLines               BudgetLine[]
   customCategories          CustomCategory[]
   conversations             Conversation[]

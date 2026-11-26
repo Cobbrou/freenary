@@ -29,6 +29,8 @@ export const CATEGORY_CRITERIA = {
   groceries: "Food and household shopping from a shop or a supermarket",
   health:
     "A doctor, a dentist, a hospital, a pharmacy, an optician or a health insurance premium",
+  "internal-transfer":
+    "Money the account holder moves between two of their own accounts: the other side is the account holder themself, never another person or a business",
   "investment-income":
     "A dividend, an interest payment, a coupon or the proceeds of a sale of an investment",
   "loans-bank-fees":

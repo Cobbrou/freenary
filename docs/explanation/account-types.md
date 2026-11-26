@@ -66,18 +66,27 @@ These add up the balances of the `CHECKING` accounts and take off what `CARD` ac
 
 The spending breakdown, budget against actual, fixed against variable, weekly spending, the Sankey diagram, the cash-flow chart, recurring expenses and monthly income read only the transactions of `CHECKING`, `CARD` and `UNKNOWN` accounts. Interest paid into a Livret A, an order bought inside a PEA or a repayment line on a loan account counts in none of them.
 
-These figures also leave out internal transfers, except a move from a current account into a savings, investment or retirement account, described below. Moving money between two current accounts, or from a current account to a card, is neither income nor spending.
+These figures also leave out internal transfers and every transaction under **Transfer between my accounts**, except a move from a current account into a savings, investment or retirement account, described below. Moving money between two current accounts, or from a current account to a card, is neither income nor spending. They leave out the transactions you excluded too, as [below](#transactions-you-exclude) explains.
 
 A transaction in another currency is converted into your reporting currency. An exchange between two of your own currencies counts only what it cost. [How currencies are converted](currencies.md) explains the rates and the rules.
 
-The transaction list shows the transactions of every account and every currency, internal transfers included. Its totals count every account, leave every internal transfer out and convert every currency into your reporting currency.
+The transaction list shows the transactions of every account and every currency, internal transfers and excluded transactions included. Its totals count every account, leave out every internal transfer, every transaction under **Transfer between my accounts** and every excluded transaction, and convert every currency into your reporting currency. The total under each day or week follows the same rule, in the currency of each transaction.
+
+### Transactions you exclude
+
+Two controls in the transaction details leave a transaction out of every figure above, whatever its account and its category:
+
+- The **Exclude from analytics** switch leaves out that transaction alone. Turned off, it counts again.
+- **Exclude this merchant**, in the **More actions** menu (⋮), leaves out every transaction with its merchant key, the ones already imported and the ones later syncs bring. It shows only when the transaction has a merchant key. While the merchant is excluded, the switch stays on and cannot be changed; **Count this merchant again**, in the same menu, brings the merchant back. Freenary stores the merchant in the `excluded_merchant` table.
+
+A transaction under **Transfer between my accounts** shows neither control: it never counts. An excluded transaction keeps its category and still goes through categorisation. The transaction list shows it with its amount struck through and the word **Excluded**. Each control undoes only its own exclusion: a transaction excluded alone stays excluded when its merchant is counted again.
 
 ## Transfers between your own accounts
 
-[How transactions get categories](categorisation.md#internal-transfers-come-first) explains how Freenary pairs the two legs of a transfer between your own accounts. The account types change two things:
+[How transactions get categories](categorisation.md#internal-transfers-come-first) explains how Freenary finds the transfers between your own accounts, linked to Freenary or not. The account types change two things:
 
-- A `LOAN` account takes no part in the pairing. A loan repayment from a current account is categorised like any other payment.
-- When money leaves a current account for a savings, investment or retirement account, the current-account leg gets a category from the account it went to: `savings` for the savings accounts and `LIFE_INSURANCE`, `securities` for `PEA`, `BROKERAGE`, `CROWDLENDING` and `REAL_ESTATE`, and `retirement` for `RETIREMENT` and `EMPLOYEE_SAVINGS`. These categories belong to the **Savings & investment** group, so the move shows there rather than as spending.
+- A `LOAN` account takes no part in internal transfers. A loan repayment from a current account is categorised like any other payment.
+- When money leaves a current account for a linked savings, investment or retirement account, the current-account leg gets a category from the account it went to: `savings` for the savings accounts and `LIFE_INSURANCE`, `securities` for `PEA`, `BROKERAGE`, `CROWDLENDING` and `REAL_ESTATE`, and `retirement` for `RETIREMENT` and `EMPLOYEE_SAVINGS`. These categories belong to the **Savings & investment** group, so the move shows there rather than as spending.
 
 ## Related
 

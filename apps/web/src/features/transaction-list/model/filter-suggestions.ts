@@ -1,6 +1,7 @@
 import { CATEGORY_GROUPS, categoriesInGroup } from "@freenary/api/lib/taxonomy";
 import {
   AMOUNT_FILTER_OPERATORS,
+  EXCLUSION_FILTER_VALUES,
   LIST_FILTER_OPERATORS,
   MAX_FILTER_AMOUNT_MINOR_UNITS,
   MAX_TRANSACTION_FILTERS,
@@ -9,6 +10,7 @@ import {
 import type {
   AmountFilterOperator,
   CategoryFilterValue,
+  ExclusionFilterValue,
   ListFilterOperator,
   TransactionFilter,
   TransactionFilterField,
@@ -24,6 +26,7 @@ import type {
   AmountDraft,
   CategoryDraft,
   CompanyDraft,
+  ExclusionDraft,
   FilterDraft,
 } from "./filter-draft";
 import {
@@ -31,6 +34,7 @@ import {
   AMOUNT_OPERATOR_SYMBOLS,
   canAddFilter,
   categoryValueLabel,
+  exclusionValueLabel,
   FILTER_FIELD_LABELS,
   LIST_OPERATOR_LABELS,
 } from "./filter-tokens";
@@ -51,6 +55,12 @@ export type FilterSuggestion =
       label: string;
       picked: boolean;
       value: CategoryFilterValue;
+    }
+  | {
+      kind: "exclusion";
+      label: string;
+      picked: boolean;
+      value: ExclusionFilterValue;
     }
   | { kind: "amount"; label: string; minorUnits: number };
 
@@ -181,6 +191,25 @@ export const accountSuggestions = (
       : []
   );
 
+export const exclusionSuggestions = (
+  draft: ExclusionDraft,
+  query: string
+): FilterSuggestion[] =>
+  EXCLUSION_FILTER_VALUES.flatMap((value) => {
+    const label = exclusionValueLabel(value);
+
+    return startsWithFolded(label, query)
+      ? [
+          {
+            kind: "exclusion" as const,
+            label,
+            picked: draft.values.includes(value),
+            value,
+          },
+        ]
+      : [];
+  });
+
 const amountSuggestion = (
   draft: AmountDraft,
   minorUnits: number,
@@ -240,6 +269,10 @@ export const filterSuggestionsFor = ({
     return accountSuggestions(draft, accounts, query);
   }
 
+  if (draft.field === "exclusion") {
+    return exclusionSuggestions(draft, query);
+  }
+
   return draft.field === "category"
     ? categorySuggestions(draft, query)
     : companySuggestions(draft, companies.names, companies.query);
@@ -282,6 +315,10 @@ export const filterSuggestionStatus = (
 
   if (draft.field === "account") {
     return m.budget_account_search_empty();
+  }
+
+  if (draft.field === "exclusion") {
+    return m.budget_exclusion_search_empty();
   }
 
   return draft.field === "category"

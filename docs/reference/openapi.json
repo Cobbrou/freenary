@@ -766,6 +766,7 @@
                                   "income",
                                   "investments",
                                   "spending",
+                                  "transfers",
                                   "salary",
                                   "self-employment",
                                   "investment-income",
@@ -792,7 +793,8 @@
                                   "loans-bank-fees",
                                   "people",
                                   "cash-withdrawal",
-                                  "uncategorised"
+                                  "uncategorised",
+                                  "internal-transfer"
                                 ],
                                 "type": "string"
                               }
@@ -818,6 +820,28 @@
                                 "type": "string",
                                 "minLength": 1,
                                 "maxLength": 64
+                              }
+                            }
+                          },
+                          "required": ["field", "operator", "values"]
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "field": {
+                              "const": "exclusion"
+                            },
+                            "operator": {
+                              "enum": ["is", "isNot", "isAnyOf"],
+                              "type": "string"
+                            },
+                            "values": {
+                              "type": "array",
+                              "minItems": 1,
+                              "maxItems": 50,
+                              "items": {
+                                "enum": ["merchant", "transaction"],
+                                "type": "string"
                               }
                             }
                           },
@@ -856,6 +880,88 @@
                   }
                 },
                 "required": ["filters", "name"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {},
+                    {
+                      "not": {}
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/budget/excludeMerchant": {
+      "post": {
+        "operationId": "budget.excludeMerchant",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "excluded": {
+                    "type": "boolean"
+                  },
+                  "transactionId": {
+                    "type": "string"
+                  }
+                },
+                "required": ["excluded", "transactionId"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {},
+                    {
+                      "not": {}
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/budget/excludeTransaction": {
+      "post": {
+        "operationId": "budget.excludeTransaction",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "excluded": {
+                    "type": "boolean"
+                  },
+                  "transactionId": {
+                    "type": "string"
+                  }
+                },
+                "required": ["excluded", "transactionId"]
               }
             }
           }
@@ -1482,6 +1588,7 @@
                                   "income",
                                   "investments",
                                   "spending",
+                                  "transfers",
                                   "salary",
                                   "self-employment",
                                   "investment-income",
@@ -1508,7 +1615,8 @@
                                   "loans-bank-fees",
                                   "people",
                                   "cash-withdrawal",
-                                  "uncategorised"
+                                  "uncategorised",
+                                  "internal-transfer"
                                 ],
                                 "type": "string"
                               }
@@ -1534,6 +1642,28 @@
                                 "type": "string",
                                 "minLength": 1,
                                 "maxLength": 64
+                              }
+                            }
+                          },
+                          "required": ["field", "operator", "values"]
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "field": {
+                              "const": "exclusion"
+                            },
+                            "operator": {
+                              "enum": ["is", "isNot", "isAnyOf"],
+                              "type": "string"
+                            },
+                            "values": {
+                              "type": "array",
+                              "minItems": 1,
+                              "maxItems": 50,
+                              "items": {
+                                "enum": ["merchant", "transaction"],
+                                "type": "string"
                               }
                             }
                           },
@@ -1712,7 +1842,8 @@
                           "loans-bank-fees",
                           "people",
                           "cash-withdrawal",
-                          "uncategorised"
+                          "uncategorised",
+                          "internal-transfer"
                         ],
                         "type": "string"
                       },
@@ -1977,7 +2108,8 @@
                                   "loans-bank-fees",
                                   "people",
                                   "cash-withdrawal",
-                                  "uncategorised"
+                                  "uncategorised",
+                                  "internal-transfer"
                                 ],
                                 "type": "string"
                               }
@@ -2368,7 +2500,8 @@
                                   "loans-bank-fees",
                                   "people",
                                   "cash-withdrawal",
-                                  "uncategorised"
+                                  "uncategorised",
+                                  "internal-transfer"
                                 ],
                                 "type": "string"
                               }

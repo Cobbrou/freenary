@@ -1,3 +1,4 @@
+import { countsInListTotals } from "@/entities/budget";
 import type { Transaction } from "@/entities/budget";
 import { m } from "@/paraglide/messages.js";
 import type { Locale } from "@/paraglide/runtime.js";
@@ -141,12 +142,13 @@ export const formatGroupLabel = (
 };
 
 const addToGroupTotals = (totals: GroupTotal[], tx: Transaction) => {
+  const amount = countsInListTotals(tx) ? tx.amount : 0;
   const inCurrency = totals.find((entry) => entry.currency === tx.currency);
 
   if (inCurrency) {
-    inCurrency.total += tx.amount;
+    inCurrency.total += amount;
   } else {
-    totals.push({ currency: tx.currency, total: tx.amount });
+    totals.push({ currency: tx.currency, total: amount });
   }
 };
 

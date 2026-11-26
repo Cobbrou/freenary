@@ -89,3 +89,25 @@ it("totals a day's transactions per currency rather than adding dollars to euros
     { currency: "USD", total: -500 },
   ]);
 });
+
+it("leaves excluded transactions and transfers between accounts out of a day's total", () => {
+  const [header] = buildVirtualItems(
+    [
+      transactionOn("a", "2026-10-05T00:00:00.000Z", -900),
+      {
+        ...transactionOn("b", "2026-10-05T00:00:00.000Z", -500),
+        exclusion: "TRANSACTION" as const,
+      },
+      {
+        ...transactionOn("c", "2026-10-05T00:00:00.000Z", -200),
+        category: "internal-transfer" as const,
+      },
+    ],
+    "day",
+    "en"
+  );
+
+  expect(header?.type === "header" ? header.totals : []).toEqual([
+    { currency: "EUR", total: -900 },
+  ]);
+});

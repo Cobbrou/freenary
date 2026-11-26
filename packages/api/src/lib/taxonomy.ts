@@ -73,7 +73,12 @@ export const TRANSACTION_DIRECTIONS = ["outgoing", "incoming"] as const;
 
 export type TransactionDirection = (typeof TRANSACTION_DIRECTIONS)[number];
 
-export const CATEGORY_GROUPS = ["income", "investments", "spending"] as const;
+export const CATEGORY_GROUPS = [
+  "income",
+  "investments",
+  "spending",
+  "transfers",
+] as const;
 
 export type CategoryGroup = (typeof CATEGORY_GROUPS)[number];
 
@@ -106,28 +111,35 @@ const CATEGORIES_BY_GROUP = {
     "cash-withdrawal",
     "uncategorised",
   ],
+  transfers: ["internal-transfer"],
 } as const satisfies Record<CategoryGroup, readonly string[]>;
 
 export const SPENDING_CATEGORIES = [
   ...CATEGORIES_BY_GROUP.income,
   ...CATEGORIES_BY_GROUP.investments,
   ...CATEGORIES_BY_GROUP.spending,
+  ...CATEGORIES_BY_GROUP.transfers,
 ] as const;
 
 export type SpendingCategory = (typeof SPENDING_CATEGORIES)[number];
 
-export const TAXONOMY_VERSION = 2;
+export const TAXONOMY_VERSION = 3;
+
+export const INTERNAL_TRANSFER_CATEGORY =
+  "internal-transfer" satisfies SpendingCategory;
 
 export const CATEGORY_GROUP_COLORS = {
   income: "green",
   investments: "purple",
   spending: "blue",
+  transfers: "grey",
 } as const satisfies Record<CategoryGroup, CategoryColor>;
 
 export const CATEGORY_GROUP_ICONS = {
   income: "BankIcon",
   investments: "PiggyBankIcon",
   spending: "CoinsIcon",
+  transfers: "ArrowsLeftRightIcon",
 } as const satisfies Record<CategoryGroup, CategoryIconName>;
 
 export const CATEGORY_GROUP_OF = {
@@ -140,6 +152,7 @@ export const CATEGORY_GROUP_OF = {
   "family-education": "spending",
   groceries: "spending",
   health: "spending",
+  "internal-transfer": "transfers",
   "investment-income": "income",
   "loans-bank-fees": "spending",
   "other-income": "income",
@@ -170,6 +183,7 @@ export const CATEGORY_DIRECTION_OF = {
   "family-education": "out",
   groceries: "out",
   health: "out",
+  "internal-transfer": "both",
   "investment-income": "in",
   "loans-bank-fees": "out",
   "other-income": "in",
@@ -200,6 +214,7 @@ export const CATEGORY_ICONS = {
   "family-education": "GraduationCapIcon",
   groceries: "ShoppingCartIcon",
   health: "FirstAidIcon",
+  "internal-transfer": "ArrowsLeftRightIcon",
   "investment-income": "TrendUpIcon",
   "loans-bank-fees": "CoinsIcon",
   "other-income": "BankIcon",
@@ -230,6 +245,7 @@ export const CATEGORY_PALETTE_SLOT_OF = {
   "family-education": "teal-alt",
   groceries: "orange",
   health: "brown",
+  "internal-transfer": "purple",
   "investment-income": "teal",
   "loans-bank-fees": "purple-alt",
   "other-income": "green",
@@ -254,6 +270,7 @@ export const CATEGORY_GROUP_FALLBACKS = {
   income: "other-income",
   investments: "savings",
   spending: "uncategorised",
+  transfers: "internal-transfer",
 } as const satisfies Record<CategoryGroup, SpendingCategory>;
 
 export const LEGACY_CATEGORY_SLUGS = {
@@ -284,7 +301,6 @@ export const LEGACY_CATEGORY_SLUGS = {
   income: "other-income",
   "income-tax": "taxes",
   insurance: "bills-utilities",
-  "internal-transfer": "uncategorised",
   "life-insurance": "retirement",
   "loan-repayment": "loans-bank-fees",
   medical: "health",
@@ -319,7 +335,7 @@ export const LEGACY_CATEGORY_SLUGS = {
   takeaway: "restaurants",
   taxi: "transport-travel",
   telecom: "bills-utilities",
-  transfers: "uncategorised",
+  transfers: "internal-transfer",
   transport: "transport-travel",
   travel: "transport-travel",
   tuition: "family-education",
@@ -340,7 +356,6 @@ export const LEGACY_CATEGORY_GROUPS = {
   shopping: "spending",
   subscriptions: "spending",
   taxes: "spending",
-  transfers: "spending",
   transport: "spending",
   travel: "spending",
   utilities: "spending",
@@ -351,6 +366,11 @@ export const isSpendingCategory = (value: string): value is SpendingCategory =>
 
 export const isCategoryGroup = (value: string): value is CategoryGroup =>
   Object.hasOwn(CATEGORY_GROUP_COLORS, value);
+
+export const isCountedGroup = (group: CategoryGroup): boolean =>
+  group !== "transfers";
+
+export const COUNTED_CATEGORY_GROUPS = CATEGORY_GROUPS.filter(isCountedGroup);
 
 export const isCategoryColor = (value: string): value is CategoryColor =>
   CATEGORY_COLOR_VALUES.some((color) => color === value);

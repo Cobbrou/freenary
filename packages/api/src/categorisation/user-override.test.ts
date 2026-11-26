@@ -24,6 +24,13 @@ describe("userCategoryUpdate", () => {
     });
   });
 
+  it("keeps the internal transfer when the member files it under transfers", () => {
+    expect(userCategoryUpdate("internal-transfer", true)).toEqual({
+      category: "internal-transfer",
+      categoryOverride: true,
+    });
+  });
+
   it("keeps the internal transfer when the category is cleared", () => {
     expect(userCategoryUpdate(null, true)).toEqual({
       category: null,

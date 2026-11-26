@@ -5,6 +5,7 @@ import type { TransactionFilter } from "@freenary/api/lib/transaction-filters";
 import {
   companySuggestions,
   accountSuggestions,
+  exclusionSuggestions,
   fieldSuggestions,
   highlightsByDefault,
   lastWordOf,
@@ -12,6 +13,7 @@ import {
   withoutLastWord,
 } from "./filter-suggestions";
 import {
+  filterTokenSentence,
   filterTokenText,
   highlightedChartCategories,
   searchKey,
@@ -141,6 +143,7 @@ describe("suggestions", () => {
       "Category",
       "Account",
       "Amount",
+      "Exclusion",
     ]);
 
     expect(fieldSuggestions("CA", true).map((s) => s.label)).toEqual([
@@ -155,6 +158,7 @@ describe("suggestions", () => {
       "Company",
       "Category",
       "Amount",
+      "Exclusion",
     ]);
   });
 
@@ -232,5 +236,49 @@ describe("suggestions", () => {
     expect(
       highlightsByDefault({ field: "amount", stage: "operator" }, "")
     ).toBe(true);
+  });
+});
+
+describe("exclusion filters", () => {
+  it("offers both kinds of exclusion, marking the picked ones", () => {
+    const draft = {
+      field: "exclusion" as const,
+      operator: "isAnyOf" as const,
+      stage: "values" as const,
+      values: ["merchant" as const],
+    };
+
+    expect(exclusionSuggestions(draft, "")).toEqual([
+      {
+        kind: "exclusion",
+        label: "Merchant",
+        picked: true,
+        value: "merchant",
+      },
+      {
+        kind: "exclusion",
+        label: "Transaction",
+        picked: false,
+        value: "transaction",
+      },
+    ]);
+
+    expect(
+      exclusionSuggestions(draft, "tra").map((suggestion) => suggestion.label)
+    ).toEqual(["Transaction"]);
+  });
+
+  it("reads an exclusion filter as a sentence", () => {
+    expect(
+      filterTokenSentence(
+        {
+          field: "exclusion",
+          operator: "isAnyOf",
+          values: ["merchant", "transaction"],
+        },
+        "en",
+        "EUR"
+      )
+    ).toBe("Exclusion is any of Merchant or Transaction");
   });
 });

@@ -20,6 +20,7 @@ import {
   withAccount,
   withCategory,
   withCompany,
+  withExclusion,
   withOperator,
 } from "./filter-draft";
 import type { FilterDraft } from "./filter-draft";
@@ -200,6 +201,19 @@ export const useFilterTokenSearch = ({
           }
 
           const next = withCompany(draft, name);
+
+          if (isReadyToApply(next)) {
+            apply(appliedValues(next));
+          } else {
+            enterStage(next);
+          }
+        },
+        exclusion: ({ value }) => {
+          if (draft?.stage !== "values" || draft.field !== "exclusion") {
+            return;
+          }
+
+          const next = withExclusion(draft, value);
 
           if (isReadyToApply(next)) {
             apply(appliedValues(next));

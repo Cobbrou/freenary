@@ -119,6 +119,11 @@ const mapOriginalAmount = (tx: ProviderTransaction) => ({
   originalCurrency: tx.originalCurrency ?? null,
 });
 
+const counterpartyNameOf = (tx: ProviderTransaction): string | null =>
+  (tx.amountMinor < 0
+    ? (tx.creditorName ?? tx.debtorName)
+    : (tx.debtorName ?? tx.creditorName)) ?? null;
+
 // SAFETY: Prisma requires DbNull (not plain null) to clear a Json? column
 const mapProviderFields = (tx: ProviderTransaction) => ({
   amount: tx.amountMinor,
@@ -126,7 +131,7 @@ const mapProviderFields = (tx: ProviderTransaction) => ({
   bankTransactionCode: tx.bankTransactionDescription ?? null,
   bankTransactionFamilyCode: tx.bankTransactionFamilyCode ?? null,
   bankTransactionSubCode: tx.bankTransactionSubCode ?? null,
-  counterpartyName: tx.creditorName ?? tx.debtorName ?? null,
+  counterpartyName: counterpartyNameOf(tx),
   creditorAccountIban: tx.creditorIban ?? null,
   creditorAgentBic: tx.creditorAgentBic ?? null,
   creditorCountry: tx.creditorCountry ?? null,

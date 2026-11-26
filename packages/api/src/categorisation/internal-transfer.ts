@@ -9,61 +9,100 @@ import {
   accountTypeRule,
   INTERNAL_TRANSFER_ACCOUNT_TYPES,
 } from "../lib/account-types";
-import type { Iso4217Currency } from "./types";
+import { INTERNAL_TRANSFER_CATEGORY } from "../lib/taxonomy";
+import {
+  ibanKeyOf,
+  isDeclaredOwn,
+  isOwnerNameKey,
+  loadOwnCounterparties,
+  namesOwnerOf,
+  OWN_COUNTERPARTY_STAGE,
+  ownerNameKeyOf,
+  rememberOwnerNames,
+  TRANSFER_CHANNELS,
+} from "./own-counterparty";
+import type { OwnCounterparties } from "./own-counterparty";
+import type { Iso4217Currency, ResolutionStage } from "./types";
 
 export interface TransferCandidate {
   accountIban?: string | null;
   accountId: string;
   amount: number;
+  channel?: string | null;
   counterpartyIban?: string | null;
+  counterpartyNameKey?: string | null;
   currency: Iso4217Currency;
   date: Date;
+  fundedByHolder?: boolean;
   id: string;
+  merchantKey?: string | null;
+  namesOwner?: boolean | null;
   originalAmount?: number | null;
   originalCurrency?: string | null;
 }
 
-const PAIR_DATE_TOLERANCE_MS = 24 * 60 * 60 * 1000;
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+const PAIR_DATE_TOLERANCE_MS = DAY_MS;
+
+const CONFIRMED_PAIR_DATE_TOLERANCE_MS = 4 * DAY_MS;
 
 export const CROSS_CURRENCY_TOLERANCE = 0.03;
 
+export type PairEvidence = "confirmed" | "destination" | "named" | "unknown";
+
 export interface TransferPair {
+  evidence?: PairEvidence;
   exchangeFeeMinor?: number | null;
   incoming: TransferCandidate;
   outgoing: TransferCandidate;
 }
 
+export interface OwnAccountLeg {
+  leg: TransferCandidate;
+  otherAccountId: string | null;
+}
+
+export type TransferStage = Extract<
+  ResolutionStage,
+  "internal-transfer" | "own-counterparty"
+>;
+
 export interface TransferLegUpdates {
   fees: Map<string, number>;
-  flagged: string[];
+  flagged: Map<TransferStage, string[]>;
   saved: Map<SavingCategory, string[]>;
 }
 
-type IbanEvidence = "confirmed" | "refuted" | "unknown";
-
-const ibanKey = (iban: string | null | undefined): string | null =>
-  iban?.replaceAll(/\s/gu, "").toUpperCase() || null;
+type LegEvidence = PairEvidence | "refuted" | "unnamed";
 
 interface StoredLeg extends TransferCandidate {
+  counterpartyName?: string | null;
   creditorAccountIban: string | null;
   debtorAccountIban: string | null;
 }
 
 export const transferCandidateOf = (
-  { creditorAccountIban, debtorAccountIban, ...leg }: StoredLeg,
+  {
+    counterpartyName,
+    creditorAccountIban,
+    debtorAccountIban,
+    ...leg
+  }: StoredLeg,
   accountIban: string | null | undefined
 ): TransferCandidate => ({
   ...leg,
-  accountIban: ibanKey(accountIban),
-  counterpartyIban: ibanKey(
+  accountIban: ibanKeyOf(accountIban),
+  counterpartyIban: ibanKeyOf(
     leg.amount < 0 ? creditorAccountIban : debtorAccountIban
   ),
+  counterpartyNameKey: ownerNameKeyOf(counterpartyName),
 });
 
 const ibanEvidenceOf = (
   outgoing: TransferCandidate,
   incoming: TransferCandidate
-): IbanEvidence => {
+): LegEvidence => {
   const links = [
     { account: incoming.accountIban, named: outgoing.counterpartyIban },
     { account: outgoing.accountIban, named: incoming.counterpartyIban },
@@ -75,7 +114,7 @@ const ibanEvidenceOf = (
       incoming.accountIban &&
       outgoing.accountIban !== incoming.accountIban;
 
-    return areDistinctIbans ? "refuted" : "unknown";
+    return areDistinctIbans ? "unnamed" : "unknown";
   }
 
   const isConfirmed =
@@ -85,8 +124,52 @@ const ibanEvidenceOf = (
   return isConfirmed ? "confirmed" : "refuted";
 };
 
-const withinWindow = (a: TransferCandidate, b: TransferCandidate) =>
-  Math.abs(a.date.getTime() - b.date.getTime()) <= PAIR_DATE_TOLERANCE_MS;
+const nameEvidenceOf = (
+  outgoing: TransferCandidate,
+  incoming: TransferCandidate
+): LegEvidence => {
+  const named = new Set(
+    [outgoing.namesOwner, incoming.namesOwner].filter(
+      (namesOwner) => namesOwner !== null && namesOwner !== undefined
+    )
+  );
+
+  return named.has(true) && !named.has(false) ? "named" : "refuted";
+};
+
+const movesIntoHolderAccount = (
+  outgoing: TransferCandidate,
+  incoming: TransferCandidate
+): boolean =>
+  incoming.fundedByHolder === true &&
+  TRANSFER_CHANNELS.has(outgoing.channel ?? "unknown");
+
+const evidenceOf = (
+  outgoing: TransferCandidate,
+  incoming: TransferCandidate
+): LegEvidence => {
+  const evidence = ibanEvidenceOf(outgoing, incoming);
+
+  if (evidence !== "unnamed") {
+    return evidence;
+  }
+
+  const byName = nameEvidenceOf(outgoing, incoming);
+
+  return byName === "refuted" && movesIntoHolderAccount(outgoing, incoming)
+    ? "destination"
+    : byName;
+};
+
+const withinWindow = (
+  a: TransferCandidate,
+  b: TransferCandidate,
+  evidence: PairEvidence
+) =>
+  Math.abs(a.date.getTime() - b.date.getTime()) <=
+  (evidence === "unknown"
+    ? PAIR_DATE_TOLERANCE_MS
+    : CONFIRMED_PAIR_DATE_TOLERANCE_MS);
 
 const bankRateMatches = (
   outgoing: TransferCandidate,
@@ -142,7 +225,7 @@ export const exchangeFeeOf = (
 const crossCurrencyPairs = (
   candidates: readonly TransferCandidate[],
   paired: Set<string>,
-  evidence: IbanEvidence,
+  evidence: PairEvidence,
   rates: RateBook
 ): TransferPair[] => {
   const pairs: TransferPair[] = [];
@@ -161,8 +244,8 @@ const crossCurrencyPairs = (
       const isOpposite =
         !paired.has(candidate.id) &&
         candidate.currency !== incoming.currency &&
-        withinWindow(candidate, incoming) &&
-        ibanEvidenceOf(candidate, incoming) === evidence;
+        withinWindow(candidate, incoming, evidence) &&
+        evidenceOf(candidate, incoming) === evidence;
 
       if (isOpposite) {
         const gap = bankRateMatches(candidate, incoming)
@@ -184,6 +267,7 @@ const crossCurrencyPairs = (
       paired.add(incoming.id);
       paired.add(best.leg.id);
       pairs.push({
+        evidence,
         exchangeFeeMinor: exchangeFeeOf(best.leg, incoming, rates),
         incoming,
         outgoing: best.leg,
@@ -197,7 +281,7 @@ const crossCurrencyPairs = (
 const sameCurrencyPairs = (
   candidates: readonly TransferCandidate[],
   paired: Set<string>,
-  evidence: IbanEvidence
+  evidence: PairEvidence
 ): TransferPair[] => {
   const pairs: TransferPair[] = [];
   const outgoingByAbsoluteAmount = new Map<number, TransferCandidate[]>();
@@ -231,13 +315,13 @@ const sameCurrencyPairs = (
         !paired.has(outgoing.id) &&
         outgoing.accountId !== incoming.accountId &&
         outgoing.currency === incoming.currency &&
-        withinWindow(outgoing, incoming) &&
-        ibanEvidenceOf(outgoing, incoming) === evidence;
+        withinWindow(outgoing, incoming, evidence) &&
+        evidenceOf(outgoing, incoming) === evidence;
 
       if (isOppositeLeg) {
         paired.add(incoming.id);
         paired.add(outgoing.id);
-        pairs.push({ incoming, outgoing });
+        pairs.push({ evidence, incoming, outgoing });
 
         break;
       }
@@ -254,37 +338,159 @@ export const pairedLegs = (
   const paired = new Set<string>();
   const currencies = new Set(candidates.map((tx) => tx.currency));
 
-  return (["confirmed", "unknown"] as const).flatMap((evidence) => [
-    ...sameCurrencyPairs(candidates, paired, evidence),
-    ...(rates && currencies.size > 1
-      ? crossCurrencyPairs(candidates, paired, evidence, rates)
-      : []),
-  ]);
+  return (["confirmed", "named", "destination", "unknown"] as const).flatMap(
+    (evidence) => [
+      ...sameCurrencyPairs(candidates, paired, evidence),
+      ...(rates && currencies.size > 1
+        ? crossCurrencyPairs(candidates, paired, evidence, rates)
+        : []),
+    ]
+  );
+};
+
+export type AccountsByIban = ReadonlyMap<string, readonly string[]>;
+
+export const accountsByIbanOf = (
+  accounts: readonly { iban: string | null; id: string }[]
+): AccountsByIban => {
+  const byIban = new Map<string, string[]>();
+
+  for (const { iban, id } of accounts) {
+    const key = ibanKeyOf(iban);
+
+    if (key !== null) {
+      const ids = byIban.get(key) ?? [];
+
+      ids.push(id);
+      byIban.set(key, ids);
+    }
+  }
+
+  return byIban;
+};
+
+export const linkedAccountOf = (
+  leg: TransferCandidate,
+  accountsByIban: AccountsByIban
+): string | null => {
+  const named = leg.counterpartyIban ?? null;
+
+  if (named === null) {
+    return null;
+  }
+
+  return accountsByIban.get(named)?.find((id) => id !== leg.accountId) ?? null;
+};
+
+export const ownAccountLegs = (
+  candidates: readonly TransferCandidate[],
+  paired: ReadonlySet<string>,
+  accountsByIban: AccountsByIban,
+  own: OwnCounterparties
+): OwnAccountLeg[] =>
+  candidates.flatMap<OwnAccountLeg>((leg) => {
+    if (paired.has(leg.id)) {
+      return [];
+    }
+
+    const linked = linkedAccountOf(leg, accountsByIban);
+
+    if (linked !== null) {
+      return [{ leg, otherAccountId: linked }];
+    }
+
+    return isDeclaredOwn(leg, own) || leg.namesOwner === true
+      ? [{ leg, otherAccountId: null }]
+      : [];
+  });
+
+export const ownerNamesConfirmedBy = (
+  candidates: readonly TransferCandidate[],
+  pairs: readonly TransferPair[],
+  accountsByIban: AccountsByIban
+): Set<string> => {
+  const confirmedLegs = [
+    ...candidates.filter(
+      (leg) => linkedAccountOf(leg, accountsByIban) !== null
+    ),
+    ...pairs.flatMap(({ evidence, incoming, outgoing }) =>
+      evidence === "confirmed" ? [incoming, outgoing] : []
+    ),
+  ];
+
+  return new Set(
+    confirmedLegs.flatMap(({ counterpartyNameKey }) =>
+      counterpartyNameKey && isOwnerNameKey(counterpartyNameKey)
+        ? [counterpartyNameKey]
+        : []
+    )
+  );
+};
+
+const savingCategoryOf = (
+  fromAccountId: string,
+  intoAccountId: string | null,
+  accountTypeOf: ReadonlyMap<string, string>
+): SavingCategory | null => {
+  if (intoAccountId === null) {
+    return null;
+  }
+
+  const from = accountTypeRule(accountTypeOf.get(fromAccountId) ?? "");
+  const into = accountTypeRule(accountTypeOf.get(intoAccountId) ?? "");
+
+  return from.countsInCashFlow ? into.savingCategory : null;
 };
 
 export const transferLegUpdates = (
   pairs: readonly TransferPair[],
-  accountTypeOf: ReadonlyMap<string, string>
+  accountTypeOf: ReadonlyMap<string, string>,
+  singles: readonly OwnAccountLeg[] = []
 ): TransferLegUpdates => {
-  const flagged: string[] = [];
+  const flagged = new Map<TransferStage, string[]>();
   const saved = new Map<SavingCategory, string[]>();
   const fees = new Map<string, number>();
 
+  const flag = (stage: TransferStage, ...ids: string[]) => {
+    const stageIds = flagged.get(stage) ?? [];
+
+    stageIds.push(...ids);
+    flagged.set(stage, stageIds);
+  };
+
+  const save = (category: SavingCategory | null, id: string) => {
+    if (category !== null) {
+      const categoryIds = saved.get(category) ?? [];
+
+      categoryIds.push(id);
+      saved.set(category, categoryIds);
+    }
+  };
+
   for (const { exchangeFeeMinor, incoming, outgoing } of pairs) {
-    flagged.push(incoming.id, outgoing.id);
+    flag("internal-transfer", incoming.id, outgoing.id);
 
     if (exchangeFeeMinor) {
       fees.set(outgoing.id, exchangeFeeMinor);
     }
 
-    const from = accountTypeRule(accountTypeOf.get(outgoing.accountId) ?? "");
-    const into = accountTypeRule(accountTypeOf.get(incoming.accountId) ?? "");
+    save(
+      savingCategoryOf(outgoing.accountId, incoming.accountId, accountTypeOf),
+      outgoing.id
+    );
+  }
 
-    if (from.countsInCashFlow && into.savingCategory !== null) {
-      const ids = saved.get(into.savingCategory) ?? [];
+  for (const { leg, otherAccountId } of singles) {
+    flag(
+      otherAccountId === null ? OWN_COUNTERPARTY_STAGE : "internal-transfer",
+      leg.id
+    );
 
-      ids.push(outgoing.id);
-      saved.set(into.savingCategory, ids);
+    if (leg.amount < 0) {
+      save(
+        savingCategoryOf(leg.accountId, otherAccountId, accountTypeOf),
+        leg.id
+      );
     }
   }
 
@@ -295,14 +501,118 @@ export const transferCandidatesWhere = (
   accountIds: string[],
   bookedSince: Date | null
 ): Prisma.TransactionWhereInput => ({
+  OR: [
+    { isInternalTransfer: false },
+    { isInternalTransfer: true, resolutionStage: OWN_COUNTERPARTY_STAGE },
+  ],
   accountId: { in: accountIds },
   categoryOverride: false,
   date:
     bookedSince === null
       ? undefined
-      : { gte: new Date(bookedSince.getTime() - PAIR_DATE_TOLERANCE_MS) },
-  isInternalTransfer: false,
+      : {
+          gte: new Date(
+            bookedSince.getTime() - CONFIRMED_PAIR_DATE_TOLERANCE_MS
+          ),
+        },
 });
+
+const HOLDER_FUNDED_SAVINGS = new Set<SavingCategory | null>([
+  "savings",
+  "securities",
+]);
+
+export const isFundedByHolder = (accountType: string): boolean =>
+  HOLDER_FUNDED_SAVINGS.has(accountTypeRule(accountType).savingCategory);
+
+export const withOwnerSignal = (
+  candidates: readonly TransferCandidate[],
+  own: OwnCounterparties
+): TransferCandidate[] =>
+  candidates.map((leg) => ({ ...leg, namesOwner: namesOwnerOf(leg, own) }));
+
+const withLearnedNames = (
+  own: OwnCounterparties,
+  names: ReadonlySet<string>
+): OwnCounterparties => ({
+  ...own,
+  ownerNames: new Set([...own.ownerNames, ...names]),
+});
+
+const FLAGGED_LEG = {
+  category: null,
+  isInternalTransfer: true,
+  resolutionConfidence: 1,
+} as const satisfies Prisma.TransactionUpdateManyMutationInput;
+
+interface StoredLegState {
+  category: string | null;
+  isInternalTransfer: boolean;
+  resolutionConfidence: number | null;
+  resolutionStage: string | null;
+  resolvedCategory: string | null;
+}
+
+const transferUpdates = (
+  { fees, flagged, saved }: TransferLegUpdates,
+  stateOf: ReadonlyMap<string, StoredLegState>
+) => {
+  const savedIds = new Set([...saved.values()].flat());
+
+  const needsUpdate =
+    (resolutionStage: TransferStage, resolvedCategory: string) =>
+    (id: string) => {
+      const state = stateOf.get(id);
+
+      return !(
+        state &&
+        state.category === FLAGGED_LEG.category &&
+        state.isInternalTransfer === FLAGGED_LEG.isInternalTransfer &&
+        state.resolutionConfidence === FLAGGED_LEG.resolutionConfidence &&
+        state.resolutionStage === resolutionStage &&
+        state.resolvedCategory === resolvedCategory
+      );
+    };
+
+  const flagUpdates = [...flagged].map(([stage, ids]) => ({
+    flaggedLeg: {
+      ...FLAGGED_LEG,
+      resolutionStage: stage,
+      resolvedCategory: INTERNAL_TRANSFER_CATEGORY,
+    },
+    ids: ids
+      .filter((id) => !savedIds.has(id))
+      .filter(needsUpdate(stage, INTERNAL_TRANSFER_CATEGORY)),
+  }));
+
+  const saveUpdates = [...saved].map(([category, ids]) => ({
+    flaggedLeg: {
+      ...FLAGGED_LEG,
+      resolutionStage: "internal-transfer" satisfies TransferStage,
+      resolvedCategory: category,
+    },
+    ids: ids.filter(needsUpdate("internal-transfer", category)),
+  }));
+
+  return [
+    ...[...flagUpdates, ...saveUpdates].flatMap(({ flaggedLeg, ids }) =>
+      ids.length === 0
+        ? []
+        : [
+            prisma.transaction.updateMany({
+              data: flaggedLeg,
+              where: { id: { in: ids } },
+            }),
+          ]
+    ),
+    ...[...fees].map(([id, exchangeFeeMinor]) =>
+      prisma.transaction.update({
+        data: { exchangeFeeMinor },
+        where: { id },
+      })
+    ),
+  ];
+};
 
 const matchInternal = async (
   userId: string,
@@ -321,33 +631,55 @@ const matchInternal = async (
   }
 
   const ibanOf = new Map(accounts.map(({ iban, id }) => [id, iban]));
-
-  const legs = await prisma.transaction.findMany({
-    orderBy: { date: "asc" },
-    select: {
-      accountId: true,
-      amount: true,
-      creditorAccountIban: true,
-      currency: true,
-      date: true,
-      debtorAccountIban: true,
-      id: true,
-      originalAmount: true,
-      originalCurrency: true,
-    },
-    where: transferCandidatesWhere([...ibanOf.keys()], bookedSince),
-  });
-
-  const candidates = legs.map((leg) =>
-    transferCandidateOf(leg, ibanOf.get(leg.accountId))
+  const fundedByHolder = new Set(
+    accounts.flatMap(({ id, type }) => (isFundedByHolder(type) ? [id] : []))
   );
 
-  const [first] = candidates;
-  const last = candidates.at(-1);
+  const accountsByIban = accountsByIbanOf(accounts);
+
+  const [legs, stored] = await Promise.all([
+    prisma.transaction.findMany({
+      orderBy: { date: "asc" },
+      select: {
+        accountId: true,
+        amount: true,
+        category: true,
+        channel: true,
+        counterpartyName: true,
+        creditorAccountIban: true,
+        currency: true,
+        date: true,
+        debtorAccountIban: true,
+        id: true,
+        isInternalTransfer: true,
+        merchantKey: true,
+        originalAmount: true,
+        originalCurrency: true,
+        resolutionConfidence: true,
+        resolutionStage: true,
+        resolvedCategory: true,
+      },
+      where: transferCandidatesWhere([...ibanOf.keys()], bookedSince),
+    }),
+    loadOwnCounterparties(userId),
+  ]);
+
+  const unsigned = legs.map((leg) => ({
+    ...transferCandidateOf(leg, ibanOf.get(leg.accountId)),
+    fundedByHolder: fundedByHolder.has(leg.accountId),
+  }));
+
+  const [first] = unsigned;
+  const last = unsigned.at(-1);
 
   if (!(first && last)) {
     return 0;
   }
+
+  const linkedOwnerNames = ownerNamesConfirmedBy(unsigned, [], accountsByIban);
+  const own = withLearnedNames(stored, linkedOwnerNames);
+
+  const candidates = withOwnerSignal(unsigned, own);
 
   const rates = await loadRateBook(
     [...new Set(candidates.map((tx) => tx.currency))],
@@ -355,39 +687,31 @@ const matchInternal = async (
     last.date
   );
 
-  const { fees, flagged, saved } = transferLegUpdates(
-    pairedLegs(candidates, rates),
-    new Map(accounts.map((account) => [account.id, account.type]))
+  const pairs = pairedLegs(candidates, rates);
+  const paired = new Set(
+    pairs.flatMap(({ incoming, outgoing }) => [incoming.id, outgoing.id])
   );
 
-  if (flagged.length === 0) {
-    return 0;
+  const singles = ownAccountLegs(candidates, paired, accountsByIban, own);
+
+  const updates = transferLegUpdates(
+    pairs,
+    new Map(accounts.map((account) => [account.id, account.type])),
+    singles
+  );
+
+  if (updates.flagged.size > 0) {
+    await prisma.$transaction(
+      transferUpdates(updates, new Map(legs.map((leg) => [leg.id, leg])))
+    );
   }
 
-  const [{ count }] = await prisma.$transaction([
-    prisma.transaction.updateMany({
-      data: { isInternalTransfer: true },
-      where: { id: { in: flagged } },
-    }),
-    ...[...saved].map(([category, ids]) =>
-      prisma.transaction.updateMany({
-        data: {
-          resolutionConfidence: 1,
-          resolutionStage: "internal-transfer",
-          resolvedCategory: category,
-        },
-        where: { id: { in: ids } },
-      })
-    ),
-    ...[...fees].map(([id, exchangeFeeMinor]) =>
-      prisma.transaction.update({
-        data: { exchangeFeeMinor },
-        where: { id },
-      })
-    ),
+  await rememberOwnerNames(userId, [
+    ...linkedOwnerNames,
+    ...ownerNamesConfirmedBy([], pairs, accountsByIban),
   ]);
 
-  return count;
+  return [...updates.flagged.values()].flat().length;
 };
 
 export const matchInternalTransfers = async (

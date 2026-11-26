@@ -13,6 +13,7 @@ const GROUP_MESSAGES = {
   income: m.category_group_income,
   investments: m.category_group_investments,
   spending: m.category_group_spending,
+  transfers: m.category_group_transfers,
 } satisfies Record<CategoryGroup, () => string>;
 
 const CATEGORY_MESSAGES = {
@@ -25,6 +26,7 @@ const CATEGORY_MESSAGES = {
   "family-education": m.category_family_education,
   groceries: m.category_groceries,
   health: m.category_health,
+  "internal-transfer": m.category_internal_transfer,
   "investment-income": m.category_investment_income,
   "loans-bank-fees": m.category_loans_bank_fees,
   "other-income": m.category_other_income,

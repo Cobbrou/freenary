@@ -2,7 +2,10 @@ import prisma from "@freenary/db";
 import type { Prisma, TransactionClient } from "@freenary/db";
 import { Option } from "effect";
 
-import { resolveCategorySlug } from "../lib/taxonomy";
+import {
+  INTERNAL_TRANSFER_CATEGORY,
+  resolveCategorySlug,
+} from "../lib/taxonomy";
 import type { SpendingCategory } from "../lib/taxonomy";
 
 interface OverrideClient {
@@ -63,7 +66,9 @@ export const userCategoryUpdate = (
 ): Prisma.TransactionUpdateInput => {
   const chosen = { category, categoryOverride: category !== null };
 
-  if (category === null || !isInternalTransfer) {
+  const keepsTheTransfer = category === INTERNAL_TRANSFER_CATEGORY;
+
+  if (category === null || !isInternalTransfer || keepsTheTransfer) {
     return chosen;
   }
 

@@ -5,6 +5,7 @@ import {
 import type {
   AmountFilterOperator,
   CategoryFilterValue,
+  ExclusionFilterValue,
   ListFilterOperator,
   TransactionFilter,
   TransactionFilterField,
@@ -43,7 +44,18 @@ export interface AccountDraft {
   values: string[];
 }
 
-export type ValuesDraft = AccountDraft | CategoryDraft | CompanyDraft;
+export interface ExclusionDraft {
+  field: "exclusion";
+  operator: ListFilterOperator;
+  stage: "values";
+  values: ExclusionFilterValue[];
+}
+
+export type ValuesDraft =
+  | AccountDraft
+  | CategoryDraft
+  | CompanyDraft
+  | ExclusionDraft;
 
 export type FilterDraft = AmountDraft | OperatorDraft | ValuesDraft;
 
@@ -67,7 +79,7 @@ export const withOperator = (
     return { field: "amount", operator, stage: "amount" };
   }
 
-  if (field === "category" || field === "account") {
+  if (field === "category" || field === "account" || field === "exclusion") {
     return { field, operator, stage: "values", values: [] };
   }
 
@@ -108,6 +120,11 @@ export const withAccount = (
   accountId: string
 ): AccountDraft => withPicked(draft, accountId);
 
+export const withExclusion = (
+  draft: ExclusionDraft,
+  value: ExclusionFilterValue
+): ExclusionDraft => withPicked(draft, value);
+
 export const isReadyToApply = (draft: ValuesDraft) =>
   !takesSeveralValues(draft.operator) && draft.values.length === 1;
 
@@ -130,6 +147,11 @@ export const appliedValues = (draft: ValuesDraft): TransactionFilter | null => {
       }),
       company: ({ operator, values }): TransactionFilter => ({
         field: "company",
+        operator,
+        values,
+      }),
+      exclusion: ({ operator, values }): TransactionFilter => ({
+        field: "exclusion",
         operator,
         values,
       }),
@@ -160,6 +182,10 @@ const withoutLastValue = (draft: ValuesDraft): ValuesDraft =>
       company: (company) => ({
         ...company,
         values: company.values.slice(0, -1),
+      }),
+      exclusion: (exclusion) => ({
+        ...exclusion,
+        values: exclusion.values.slice(0, -1),
       }),
     })
   );

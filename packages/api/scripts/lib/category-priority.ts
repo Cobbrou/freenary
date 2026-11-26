@@ -28,6 +28,7 @@ const CATEGORY_PRIORITY = {
   "family-education": rung("education"),
   groceries: rung("everyday-essentials"),
   health: rung("health"),
+  "internal-transfer": rung("no-standalone-intent"),
   "investment-income": rung("no-standalone-intent"),
   "loans-bank-fees": rung("financial"),
   "other-income": rung("no-standalone-intent"),

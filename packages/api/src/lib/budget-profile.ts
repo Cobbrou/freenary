@@ -15,6 +15,7 @@ const KIND_BY_GROUP = {
   income: "REVENUE",
   investments: "INVESTMENT",
   spending: "OUTGOING",
+  transfers: "OUTGOING",
 } as const satisfies Record<CategoryGroup, BudgetLineKind>;
 
 const KIND_OF_A_LINE_WITHOUT_A_GROUP = "OUTGOING" satisfies BudgetLineKind;

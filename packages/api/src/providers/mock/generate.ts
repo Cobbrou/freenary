@@ -102,6 +102,7 @@ const LIFE_INSURANCE_DAY = 10;
 const ELECTRICITY_DAY = 12;
 const STREAMING_DAY = 15;
 const MUSIC_DAY = 20;
+const OWN_ACCOUNT_ELSEWHERE_DAY = 18;
 const STREAMING_MINOR = 1349;
 const MUSIC_MINOR = 1214;
 const LIVRET_A_RATE = 0.024;
@@ -611,10 +612,33 @@ const multiCurrencyDay = (context: DayContext): DraftTransaction[] => {
   return [];
 };
 
+const ownAccountElsewhere = ({
+  day,
+  profile,
+  providerAccountId,
+}: DayContext): DraftTransaction[] => {
+  if (day.getUTCDate() !== OWN_ACCOUNT_ELSEWHERE_DAY) {
+    return [];
+  }
+
+  const random = seededBy(
+    `${sessionOf(providerAccountId)}:own-account-elsewhere`
+  );
+
+  return [
+    {
+      amountMinor: -random.number.int({ max: 6, min: 1 }) * 50 * CENTS_PER_EURO,
+      creditorName: profile.holder,
+      remittance: `VIR SEPA EMIS /A ${profile.holder} /MOTIF COMPTE PERSO`,
+    },
+  ];
+};
+
 const DAY_GENERATORS = {
   checking: (context) => [
     ...checkingRecurring(context),
     ...checkingEveryday(context),
+    ...ownAccountElsewhere(context),
   ],
   "life-insurance": lifeInsuranceDay,
   "multi-currency": multiCurrencyDay,

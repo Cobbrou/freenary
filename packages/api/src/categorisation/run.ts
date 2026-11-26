@@ -10,6 +10,7 @@ import {
   reportPipelineFailure,
 } from "../lib/sync-progress";
 import type { BudgetPipelineReason, SyncReporter } from "../lib/sync-progress";
+import { applyMerchantExclusions } from "../lib/transaction-exclusion";
 import {
   lowConfidenceTransactionIds,
   notifyTransactionsToCheck,
@@ -20,6 +21,7 @@ import {
   transactionClassifiers,
 } from "./classifier/registry";
 import { prismaClassificationStore } from "./classifier/store";
+import { matchInternalTransfers } from "./internal-transfer";
 import type { TransactionChannel } from "./normalise/types";
 import { categoriseBatch } from "./resolve";
 import type { CategoriseInput, TransactionPath } from "./types";
@@ -287,6 +289,8 @@ export const categoriseAfterSync = (
     catch: (cause) =>
       new BudgetPipelineFailed({ cause, reason: { kind: "categorisation" } }),
     try: async () => {
+      await applyMerchantExclusions(userId);
+
       if (force) {
         await clearResolutions({ connectionId, userId });
       }
@@ -302,8 +306,9 @@ export const categoriseAfterSync = (
     )
   );
 
-export const startRecategorisation = async (
-  userId: string
+const startCategorisation = async (
+  userId: string,
+  force: boolean
 ): Promise<Date | null> => {
   const claimedAt = await claimSyncRun(userId, "CATEGORISING");
 
@@ -314,7 +319,8 @@ export const startRecategorisation = async (
   const reporter = createSyncReporter(userId, "CATEGORISING", claimedAt);
 
   Effect.runFork(
-    categoriseAfterSync(userId, undefined, reporter, true).pipe(
+    Effect.promise(() => matchInternalTransfers(userId, null)).pipe(
+      Effect.andThen(categoriseAfterSync(userId, undefined, reporter, force)),
       Effect.tapCause(Effect.logError),
       Effect.matchCauseEffect({
         onFailure: () => Effect.promise(() => reporter.finished()),
@@ -331,3 +337,10 @@ export const startRecategorisation = async (
 
   return claimedAt;
 };
+
+export const startRecategorisation = (userId: string): Promise<Date | null> =>
+  startCategorisation(userId, true);
+
+export const startPendingCategorisation = (
+  userId: string
+): Promise<Date | null> => startCategorisation(userId, false);

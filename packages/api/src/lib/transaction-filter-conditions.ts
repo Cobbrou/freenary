@@ -1,6 +1,7 @@
 import type { Prisma } from "@freenary/db";
 import { Match } from "effect";
 
+import { EXCLUSION_OF_SCOPE } from "./exclusion-scope";
 import { minorUnitDigits } from "./money";
 import { categoriesInGroup, isCategoryGroup } from "./taxonomy";
 import type { SpendingCategory } from "./taxonomy";
@@ -11,6 +12,7 @@ import type {
   CategoryFilterValue,
   CategoryTransactionFilter,
   CompanyTransactionFilter,
+  ExclusionTransactionFilter,
   TransactionFilter,
 } from "./transaction-filters";
 
@@ -84,7 +86,7 @@ export const categoryIsOneOf = (
   return { OR: branches };
 };
 
-const categoryIsNoneOf = (
+export const categoryIsNoneOf = (
   categories: readonly SpendingCategory[]
 ): Condition => {
   const unwanted = [...categories];
@@ -118,6 +120,17 @@ const accountCondition = ({
   operator === "isNot"
     ? { accountId: { notIn: [...values] } }
     : { accountId: { in: [...values] } };
+
+export const exclusionCondition = ({
+  operator,
+  values,
+}: ExclusionTransactionFilter): Condition => {
+  const exclusions = values.map((scope) => EXCLUSION_OF_SCOPE[scope]);
+
+  return operator === "isNot"
+    ? { OR: [{ exclusion: null }, { exclusion: { notIn: exclusions } }] }
+    : { exclusion: { in: exclusions } };
+};
 
 const ABSOLUTE_AMOUNT_CONDITIONS = {
   eq: (minorUnits) => ({ amount: { in: [minorUnits, -minorUnits] } }),
@@ -206,6 +219,7 @@ const conditionOf = (filter: TransactionFilter, filterCurrency: string) =>
       amount: (amount) => amountCondition(amount, filterCurrency),
       category: categoryCondition,
       company: companyCondition,
+      exclusion: exclusionCondition,
     })
   );
 

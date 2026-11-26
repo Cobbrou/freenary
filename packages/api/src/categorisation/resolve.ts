@@ -1,7 +1,11 @@
 import { Data, Effect, Match, Option } from "effect";
 
 import type { SpendingCategory } from "../lib/taxonomy";
-import { categoryDirection, isSpendingCategory } from "../lib/taxonomy";
+import {
+  categoryDirection,
+  INTERNAL_TRANSFER_CATEGORY,
+  isSpendingCategory,
+} from "../lib/taxonomy";
 import { classificationInputFrom } from "./classifier/payload";
 import {
   classificationSignature,
@@ -248,10 +252,17 @@ const inDirection = (
     ? null
     : resolution;
 
+const NEVER_ASSIGNED_BY_A_LOOKUP = new Set<string>([
+  "uncategorised",
+  INTERNAL_TRANSFER_CATEGORY,
+]);
+
 const assigning = (
   resolution: ResolutionResult | null
 ): ResolutionResult | null =>
-  resolution?.category === "uncategorised" ? null : resolution;
+  resolution?.category && NEVER_ASSIGNED_BY_A_LOOKUP.has(resolution.category)
+    ? null
+    : resolution;
 
 const categoriseInternal = async (
   input: CategoriseInput,

@@ -18,6 +18,8 @@ import { remixIcon } from "@/shared/lib/remix-icon";
 
 import {
   AMOUNT_PRESETS,
+  EXCLUSION_PRESETS,
+  pickedExclusionPreset,
   replacingField,
   singleValueOf,
 } from "../model/filter-menus";
@@ -89,6 +91,7 @@ export const FilterMenus = ({
   const pickedCategory = singleValueOf(filters, "category");
   const pickedAccount = singleValueOf(filters, "account");
   const pickedAmount = filters.find((filter) => filter.field === "amount");
+  const pickedExclusion = pickedExclusionPreset(filters);
 
   const pick = (filter: TransactionFilter) =>
     onFiltersChange(replacingField(filters, filter));
@@ -154,6 +157,20 @@ export const FilterMenus = ({
                 value: preset.minorUnits,
               })
             }
+          />
+        ))}
+      </FilterMenu>
+      <FilterMenu
+        checkedIndex={pickedExclusion}
+        label={m.budget_filter_field_exclusion()}
+      >
+        {EXCLUSION_PRESETS.map((preset, index) => (
+          <MenuItem
+            checked={index === pickedExclusion}
+            index={index}
+            key={preset.filter.values.join("-")}
+            label={preset.label()}
+            onSelect={() => pick(preset.filter)}
           />
         ))}
       </FilterMenu>

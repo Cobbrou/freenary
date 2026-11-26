@@ -259,6 +259,8 @@ model Transaction {
   resolutionConfidence Float?
   /// True when this transaction is one leg of a movement between the user's own accounts.
   isInternalTransfer   Boolean     @default(false)
+  /// Why the member left this transaction out of every figure. Null counts it.
+  exclusion            TransactionExclusion?
   /// On the outgoing leg of a transfer between two currencies, what the
   /// exchange cost against the reference rate, in minor units of `currency`.
   exchangeFeeMinor     BigInt?
@@ -295,6 +297,53 @@ model MerchantOverride {
 /// A category a configured classifier answered for one merchant signature.
 /// Shared by every user: the signature is a hash and the row holds no key,
 /// descriptor, user or account. `category` null records an explicit abstention.
+/// Why a transaction is left out of every figure.
+enum TransactionExclusion {
+  /// The member excluded this transaction.
+  TRANSACTION
+  /// The member excluded every transaction of its merchant.
+  MERCHANT
+}
+
+/// A merchant the member left out of every figure, past and future transactions alike.
+model ExcludedMerchant {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// Lookup key: creditor IBAN or normalised descriptor, as on the transactions.
+  merchantKey  String
+  /// User-friendly merchant name when known.
+  merchantName String?
+  createdAt    DateTime @default(now())
+
+  @@unique([userId, merchantKey])
+  @@index([userId])
+  @@map("excluded_merchant")
+}
+
+/// A counterparty the member owns: an account they hold outside the linked
+/// banks, or the name a bank gives them. A transfer to or from it is a
+/// transfer between the member's own accounts.
+model OwnCounterparty {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// "iban" or "name".
+  kind      String
+  /// The IBAN without spaces in upper case, or the normalised name.
+  key       String
+  /// False when the member said this counterparty is not theirs.
+  isOwn     Boolean
+  /// "member" when the member decided, "pairing" when a confirmed transfer named it.
+  source    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, kind, key])
+  @@index([userId])
+  @@map("own_counterparty")
+}
+
 model MerchantClassification {
   signature       String   @id
   provider        String

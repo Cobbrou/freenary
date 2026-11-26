@@ -1,4 +1,6 @@
+import type { TransactionExclusion } from "@freenary/api/lib/exclusion-scope";
 import { fromMinor } from "@freenary/api/lib/money";
+import { INTERNAL_TRANSFER_CATEGORY } from "@freenary/api/lib/taxonomy";
 import type { SpendingCategory } from "@freenary/api/lib/taxonomy";
 
 import { merchantName } from "@/shared/lib/text";
@@ -16,8 +18,20 @@ export interface Transaction {
   originalAmount?: number | null;
   originalCurrency?: string | null;
   exchangeFeeMinor?: number | null;
+  exclusion?: TransactionExclusion | null;
+  hasMerchant?: boolean;
   isInternalTransfer?: boolean;
 }
+
+export const isExcluded = (transaction: Transaction): boolean =>
+  transaction.exclusion !== null && transaction.exclusion !== undefined;
+
+export const countsInListTotals = (transaction: Transaction): boolean =>
+  !(
+    isExcluded(transaction) ||
+    transaction.isInternalTransfer === true ||
+    transaction.category === INTERNAL_TRANSFER_CATEGORY
+  );
 
 export interface OriginalAmount {
   amountMinor: number;

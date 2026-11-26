@@ -29,6 +29,10 @@ import { formatCurrency } from "@/shared/lib/format-currency";
 import { useTransactionCategory } from "../model/use-transaction-category";
 import { TransactionCategoryPicker } from "./transaction-category-picker";
 import { TransactionDetailRow } from "./transaction-detail-row";
+import {
+  TransactionActionsMenu,
+  TransactionExclusionRow,
+} from "./transaction-exclusion-row";
 
 const HERO_BOX = {
   compact: "size-10 [&_svg]:size-5",
@@ -110,6 +114,10 @@ const TransactionDetails = ({ transaction }: { transaction: Transaction }) => {
         <DrawerDescription className="sr-only">
           {m.budget_detail_sr_description()}
         </DrawerDescription>
+        <TransactionActionsMenu
+          className="absolute end-12 top-4"
+          transaction={transaction}
+        />
         <DrawerClose
           render={
             <Button
@@ -168,6 +176,8 @@ const TransactionDetails = ({ transaction }: { transaction: Transaction }) => {
                 onReset={() => updateCategory.mutate(null)}
               />
             </TransactionDetailRow>
+
+            <TransactionExclusionRow transaction={transaction} />
           </ul>
         </div>
       </ScrollArea>

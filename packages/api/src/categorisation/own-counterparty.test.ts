@@ -1,0 +1,154 @@
+import { describe, expect, it } from "bun:test";
+
+import {
+  counterpartyKeysOf,
+  isDeclaredOwn,
+  namesOwnerOf,
+  ownCounterpartiesOf,
+  ownerNameKeyOf,
+} from "./own-counterparty";
+
+describe("ownerNameKeyOf", () => {
+  it("reads the same person whatever the order, title, case and accents", () => {
+    expect(ownerNameKeyOf("M. NOUCHET Marius")).toBe("MARIUS NOUCHET");
+    expect(ownerNameKeyOf("Marius Nouchet")).toBe("MARIUS NOUCHET");
+    expect(ownerNameKeyOf("MME Hélène  DUPONT")).toBe("DUPONT HELENE");
+  });
+
+  it("is unknown without a name", () => {
+    expect(ownerNameKeyOf(null)).toBeNull();
+    expect(ownerNameKeyOf("  ")).toBeNull();
+    expect(ownerNameKeyOf("M.")).toBeNull();
+  });
+});
+
+const own = ownCounterpartiesOf({
+  memberName: "Marius Nouchet",
+  overriddenMerchantKeys: ["marius nouchet loyer"],
+  stored: [
+    { isOwn: true, key: "DUPONT JEAN OU", kind: "name" },
+    { isOwn: false, key: "PAUL MARTIN", kind: "name" },
+    { isOwn: true, key: "LT601010012345678901", kind: "iban" },
+    { isOwn: false, key: "FR7630006000011234567890189", kind: "iban" },
+    { isOwn: true, key: "revolut", kind: "merchant" },
+  ],
+});
+
+describe("namesOwnerOf", () => {
+  it("knows the member by the name of their account and the names banks gave them", () => {
+    expect(
+      namesOwnerOf(
+        { channel: "transfer", counterpartyNameKey: "MARIUS NOUCHET" },
+        own
+      )
+    ).toBe(true);
+
+    expect(
+      namesOwnerOf(
+        { channel: null, counterpartyNameKey: "DUPONT JEAN OU" },
+        own
+      )
+    ).toBe(true);
+  });
+
+  it("reads anyone else as someone else", () => {
+    expect(
+      namesOwnerOf(
+        { channel: "transfer", counterpartyNameKey: "DUPONT PIERRE" },
+        own
+      )
+    ).toBe(false);
+
+    expect(
+      namesOwnerOf(
+        { channel: "transfer", counterpartyNameKey: "PAUL MARTIN" },
+        {
+          ...own,
+          ownerNames: new Set(["PAUL MARTIN"]),
+        }
+      )
+    ).toBe(false);
+  });
+
+  it("lets a category the member picked for the merchant win", () => {
+    expect(
+      namesOwnerOf(
+        {
+          channel: "transfer",
+          counterpartyNameKey: "MARIUS NOUCHET",
+          merchantKey: "marius nouchet loyer",
+        },
+        own
+      )
+    ).toBe(false);
+  });
+
+  it("only reads the name of a transfer", () => {
+    expect(
+      namesOwnerOf(
+        { channel: "card", counterpartyNameKey: "MARIUS NOUCHET" },
+        own
+      )
+    ).toBeNull();
+
+    expect(namesOwnerOf({ channel: "transfer" }, own)).toBeNull();
+  });
+
+  it("ignores a member name of one word", () => {
+    const oneWord = ownCounterpartiesOf({
+      memberName: "Marius",
+      overriddenMerchantKeys: [],
+      stored: [],
+    });
+
+    expect(
+      namesOwnerOf(
+        { channel: "transfer", counterpartyNameKey: "MARIUS" },
+        oneWord
+      )
+    ).toBe(false);
+  });
+});
+
+describe("isDeclaredOwn", () => {
+  it("follows what the member said about an IBAN or a merchant", () => {
+    expect(
+      isDeclaredOwn({ counterpartyIban: "LT601010012345678901" }, own)
+    ).toBe(true);
+
+    expect(isDeclaredOwn({ merchantKey: "revolut" }, own)).toBe(true);
+
+    expect(
+      isDeclaredOwn(
+        {
+          counterpartyIban: "FR7630006000011234567890189",
+          merchantKey: "revolut",
+        },
+        own
+      )
+    ).toBe(false);
+  });
+});
+
+describe("counterpartyKeysOf", () => {
+  it("remembers the IBAN and the name, and the merchant only without them", () => {
+    expect(
+      counterpartyKeysOf({
+        counterpartyIban: "lt60 1010 0123 4567 8901",
+        counterpartyName: "M NOUCHET MARIUS",
+        merchantKey: "LT601010012345678901",
+      })
+    ).toEqual([
+      { key: "LT601010012345678901", kind: "iban" },
+      { key: "MARIUS NOUCHET", kind: "name" },
+    ]);
+
+    expect(
+      counterpartyKeysOf({
+        counterpartyIban: null,
+        counterpartyName: null,
+        merchantKey: "revolut",
+      })
+    ).toEqual([{ key: "revolut", kind: "merchant" }]);
+  });
+});

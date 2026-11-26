@@ -1,7 +1,10 @@
 import type {
   AmountFilterOperator,
+  ExclusionTransactionFilter,
   TransactionFilter,
 } from "@freenary/api/lib/transaction-filters";
+
+import { m } from "@/paraglide/messages.js";
 
 export interface AmountPreset {
   minorUnits: number;
@@ -22,6 +25,53 @@ export const AMOUNT_PRESETS: readonly AmountPreset[] = [
   { minorUnits: 100 * CENTS, operator: "gt" },
   { minorUnits: 20 * CENTS, operator: "lt" },
 ];
+
+export interface ExclusionPreset {
+  filter: ExclusionTransactionFilter;
+  label: () => string;
+}
+
+export const EXCLUSION_PRESETS: readonly ExclusionPreset[] = [
+  {
+    filter: {
+      field: "exclusion",
+      operator: "isAnyOf",
+      values: ["merchant", "transaction"],
+    },
+    label: m.budget_filter_exclusion_any,
+  },
+  {
+    filter: { field: "exclusion", operator: "is", values: ["merchant"] },
+    label: m.budget_filter_exclusion_merchants,
+  },
+  {
+    filter: { field: "exclusion", operator: "is", values: ["transaction"] },
+    label: m.budget_filter_exclusion_transactions,
+  },
+];
+
+const sameExclusionFilter = (
+  left: ExclusionTransactionFilter,
+  right: ExclusionTransactionFilter
+) =>
+  left.operator === right.operator &&
+  left.values.length === right.values.length &&
+  left.values.every((value) => right.values.includes(value));
+
+export const pickedExclusionPreset = (
+  filters: readonly TransactionFilter[]
+): number => {
+  const matching = filters.filter((filter) => filter.field === "exclusion");
+  const [only] = matching;
+
+  if (matching.length !== 1 || only?.field !== "exclusion") {
+    return -1;
+  }
+
+  return EXCLUSION_PRESETS.findIndex((preset) =>
+    sameExclusionFilter(preset.filter, only)
+  );
+};
 
 const MONTHS_LISTED = 6;
 

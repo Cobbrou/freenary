@@ -3,6 +3,11 @@ import type { Prisma } from "@freenary/db";
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
 
+import { applyCategoryChoice } from "../categorisation/category-choice";
+import {
+  COUNTERPARTY_SELECT,
+  rememberCounterpartyFor,
+} from "../categorisation/internal-transfer-choice";
 import {
   cadenceWindow,
   detectRecurring,
@@ -11,12 +16,10 @@ import {
   trailingCadence,
   trailingYear,
 } from "../categorisation/recurrence";
-import { startRecategorisation } from "../categorisation/run";
 import {
-  deleteUserOverride,
-  upsertUserOverride,
-  userCategoryUpdate,
-} from "../categorisation/user-override";
+  startPendingCategorisation,
+  startRecategorisation,
+} from "../categorisation/run";
 import { protectedProcedure } from "../index";
 import { cashFlowAccountsOf } from "../lib/account-types";
 import { accountsSummary } from "../lib/accounts-summary";
@@ -40,6 +43,7 @@ import {
   zeroFilledMonths,
 } from "../lib/budget-aggregates";
 import { monthSpan } from "../lib/budget-planned";
+import { countedWholeWhere } from "../lib/counted-transactions";
 import { readSyncOutcome, readSyncProgress } from "../lib/sync-progress";
 import type { BudgetPipelineReason } from "../lib/sync-progress";
 import { SPENDING_CATEGORIES } from "../lib/taxonomy";
@@ -47,6 +51,10 @@ import {
   effectiveCategory,
   pipelineCategory,
 } from "../lib/transaction-category";
+import {
+  excludeMerchant,
+  excludeTransaction,
+} from "../lib/transaction-exclusion";
 import { transactionFilterConditions } from "../lib/transaction-filter-conditions";
 import {
   MAX_SEARCH_TEXT_LENGTH,
@@ -59,9 +67,46 @@ import { spendingWeeksStart, weeklySpending } from "../lib/weekly-spending";
 import { categorySuggestionProcedures } from "./category-suggestions";
 import { savedFilterProcedures } from "./saved-filters";
 
+const exclusionOrNotFound = <T>(outcome: T | null): T => {
+  if (outcome === null) {
+    throw new ORPCError("NOT_FOUND", { message: "Transaction not found" });
+  }
+
+  return outcome;
+};
+
+const exclusionInput = z.object({
+  excluded: z.boolean(),
+  transactionId: z.string(),
+});
+
 export const budgetRouter = {
   ...categorySuggestionProcedures,
   ...savedFilterProcedures,
+  excludeMerchant: protectedProcedure
+    .input(exclusionInput)
+    .handler(async ({ context, input }) =>
+      exclusionOrNotFound(
+        await excludeMerchant(
+          context.session.user.id,
+          input.transactionId,
+          input.excluded
+        )
+      )
+    ),
+
+  excludeTransaction: protectedProcedure
+    .input(exclusionInput)
+    .handler(async ({ context, input }) =>
+      exclusionOrNotFound(
+        await excludeTransaction(
+          context.session.user.id,
+          input.transactionId,
+          input.excluded
+        )
+      )
+    ),
+
   getAccounts: protectedProcedure.handler(async ({ context }) => {
     const userId = context.session.user.id;
 
@@ -236,10 +281,10 @@ export const budgetRouter = {
       accountsSummary(accounts, converter, asOf);
 
     const incomingWhere: Prisma.TransactionWhereInput = {
+      AND: [countedWholeWhere],
       account: cashFlowAccountsOf(userId),
       amount: { gt: 0 },
       date: { gte: observed.from, lte: observed.to },
-      isInternalTransfer: false,
     };
 
     const [detected, lines, incomingTotals, firstIncomingRow] =
@@ -519,8 +564,10 @@ export const budgetRouter = {
           date: true,
           description: true,
           exchangeFeeMinor: true,
+          exclusion: true,
           id: true,
           isInternalTransfer: true,
+          merchantKey: true,
           normalisedDescriptor: true,
           originalAmount: true,
           originalCurrency: true,
@@ -555,6 +602,8 @@ export const budgetRouter = {
           derivedCategory: pipelineCategory(t),
           description: t.description,
           exchangeFeeMinor: t.exchangeFeeMinor,
+          exclusion: t.exclusion,
+          hasMerchant: t.merchantKey !== null && t.merchantKey.length > 0,
           id: t.id,
           isInternalTransfer: t.isInternalTransfer,
           normalisedDescriptor: t.normalisedDescriptor,
@@ -596,11 +645,10 @@ export const budgetRouter = {
 
       const tx = await prisma.transaction.findFirst({
         select: {
+          ...COUNTERPARTY_SELECT,
           category: true,
-          counterpartyName: true,
           id: true,
           isInternalTransfer: true,
-          merchantKey: true,
           resolvedCategory: true,
         },
         where: {
@@ -615,52 +663,21 @@ export const budgetRouter = {
         });
       }
 
-      const additionalUpdated = await prisma.$transaction(async (db) => {
-        await db.transaction.update({
-          data: userCategoryUpdate(input.category, tx.isInternalTransfer),
-          where: { id: input.transactionId },
-        });
+      const { additionalUpdated, released } = await prisma.$transaction(
+        async (db) => ({
+          additionalUpdated: await applyCategoryChoice(db, userId, tx, input),
+          released: await rememberCounterpartyFor(
+            db,
+            userId,
+            tx,
+            input.category
+          ),
+        })
+      );
 
-        if (!tx.merchantKey) {
-          return 0;
-        }
-
-        if (input.category === null) {
-          await deleteUserOverride(userId, tx.merchantKey, db);
-
-          const siblingsCleared = await db.transaction.updateMany({
-            data: { category: null },
-            where: {
-              account: { connection: { userId } },
-              categoryOverride: false,
-              id: { not: input.transactionId },
-              merchantKey: tx.merchantKey,
-            },
-          });
-
-          return siblingsCleared.count;
-        }
-
-        await upsertUserOverride(
-          userId,
-          tx.merchantKey,
-          input.category,
-          tx.counterpartyName,
-          db
-        );
-
-        const siblingsPropagated = await db.transaction.updateMany({
-          data: { category: input.category },
-          where: {
-            account: { connection: { userId } },
-            categoryOverride: false,
-            id: { not: input.transactionId },
-            merchantKey: tx.merchantKey,
-          },
-        });
-
-        return siblingsPropagated.count;
-      });
+      if (released > 0) {
+        await startPendingCategorisation(userId);
+      }
 
       const updated = await prisma.transaction.findUniqueOrThrow({
         select: {

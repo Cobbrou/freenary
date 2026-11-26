@@ -4,6 +4,7 @@ import { MAX_TRANSACTION_FILTERS } from "@freenary/api/lib/transaction-filters";
 import type {
   AmountFilterOperator,
   CategoryFilterValue,
+  ExclusionFilterValue,
   ListFilterOperator,
   TransactionFilter,
   TransactionFilterField,
@@ -19,6 +20,7 @@ export const FILTER_FIELD_LABELS = {
   amount: m.budget_filter_field_amount,
   category: m.budget_filter_field_category,
   company: m.budget_filter_field_company,
+  exclusion: m.budget_filter_field_exclusion,
 } satisfies Record<TransactionFilterField, () => string>;
 
 export const LIST_OPERATOR_LABELS = {
@@ -38,6 +40,14 @@ export const AMOUNT_OPERATOR_LABELS = {
   gt: m.budget_filter_operator_gt,
   lt: m.budget_filter_operator_lt,
 } satisfies Record<AmountFilterOperator, () => string>;
+
+export const EXCLUSION_VALUE_LABELS = {
+  merchant: m.budget_filter_exclusion_merchant,
+  transaction: m.budget_filter_exclusion_transaction,
+} satisfies Record<ExclusionFilterValue, () => string>;
+
+export const exclusionValueLabel = (value: ExclusionFilterValue): string =>
+  EXCLUSION_VALUE_LABELS[value]();
 
 export const categoryValueLabel = (value: CategoryFilterValue): string =>
   isCategoryGroup(value) ? categoryGroupLabel(value) : categoryLabel(value);
@@ -64,6 +74,10 @@ export const filterValueLabels = (
 ): string[] => {
   if (filter.field === "category") {
     return filter.values.map(categoryValueLabel);
+  }
+
+  if (filter.field === "exclusion") {
+    return filter.values.map(exclusionValueLabel);
   }
 
   return filter.field === "account"

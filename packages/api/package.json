@@ -19,6 +19,7 @@
     "./lib/budget-month": "./src/lib/budget-month.ts",
     "./lib/budget-profile": "./src/lib/budget-profile.ts",
     "./lib/categories": "./src/lib/categories.ts",
+    "./lib/exclusion-scope": "./src/lib/exclusion-scope.ts",
     "./lib/json-request": "./src/lib/json-request.ts",
     "./lib/money": "./src/lib/money.ts",
     "./lib/public-holidays": "./src/lib/public-holidays.ts",

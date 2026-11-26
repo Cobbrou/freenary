@@ -1,6 +1,11 @@
 import { predefinedCategoryAppearance } from "@freenary/api/lib/categories";
+import { cn } from "@freenary/ui/lib/utils";
 
-import { TransactionAmount, transactionTitle } from "@/entities/budget";
+import {
+  isExcluded,
+  TransactionAmount,
+  transactionTitle,
+} from "@/entities/budget";
 import type { Transaction } from "@/entities/budget";
 import { CategoryIcon, categoryLabel } from "@/entities/category";
 import { m } from "@/paraglide/messages.js";
@@ -32,7 +37,9 @@ export const TransactionItem = ({
           {transactionTitle(transaction)}
         </span>
         <span className="text-muted-foreground truncate text-xs">
-          {m.budget_transaction_meta({
+          {(isExcluded(transaction)
+            ? m.budget_transaction_meta_excluded
+            : m.budget_transaction_meta)({
             category: categoryLabel(transaction.category),
             day: bankDayLabel(transaction.date, today, getLocale()),
           })}
@@ -40,7 +47,10 @@ export const TransactionItem = ({
       </span>
       <TransactionAmount
         amount={transaction.amount}
-        className="text-sm font-medium"
+        className={cn(
+          "text-sm font-medium",
+          isExcluded(transaction) && "text-muted-foreground line-through"
+        )}
         currency={transaction.currency}
       />
     </button>

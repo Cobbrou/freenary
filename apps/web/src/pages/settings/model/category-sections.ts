@@ -1,4 +1,5 @@
 import type { CategoryEntry } from "@freenary/api/lib/categories";
+import { isCategoryGroup, isCountedGroup } from "@freenary/api/lib/taxonomy";
 
 import { categoryEntryLabel } from "@/entities/category";
 import { foldForSearch } from "@/shared/lib/text";
@@ -33,6 +34,17 @@ export const toCustomCategoryTree = (
     ({ children, group }) => group.isCustom || children.length > 0
   );
 };
+
+const isInUncountedGroup = (key: string | null): boolean =>
+  key !== null && isCategoryGroup(key) && !isCountedGroup(key);
+
+export const budgetableCategories = (
+  categories: CategoryEntry[]
+): CategoryEntry[] =>
+  categories.filter(
+    (entry) =>
+      !(isInUncountedGroup(entry.key) || isInUncountedGroup(entry.parentKey))
+  );
 
 export const editedOf = (entry: CategoryEntry): EditedCustomCategory => ({
   color: entry.pickedColor ?? entry.color,

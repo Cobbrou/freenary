@@ -18,6 +18,7 @@ export type TransactionPath = "iban" | "card";
 export type ResolutionStage =
   | "channel"
   | "internal-transfer"
+  | "own-counterparty"
   | "user-override"
   | "dictionary"
   | "mcc"

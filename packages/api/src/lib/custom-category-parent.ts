@@ -1,5 +1,5 @@
 import { parseCategoryKey } from "./categories";
-import { isCategoryGroup } from "./taxonomy";
+import { isCategoryGroup, isCountedGroup } from "./taxonomy";
 import type { CategoryGroup } from "./taxonomy";
 
 export type ResolvedCustomCategoryParent =
@@ -50,7 +50,9 @@ export const resolveCustomCategoryParent = (input: {
   }
 
   if (isCategoryGroup(input.parentKey)) {
-    return { parent: { parentId: null, parentSlug: input.parentKey } };
+    return isCountedGroup(input.parentKey)
+      ? { parent: { parentId: null, parentSlug: input.parentKey } }
+      : { refusal: "not-a-category" };
   }
 
   const customId = parseCategoryKey(input.parentKey)?.customId ?? null;

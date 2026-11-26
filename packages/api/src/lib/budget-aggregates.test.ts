@@ -7,6 +7,7 @@ import {
   sankeyOf,
   statRowOf,
 } from "./budget-aggregates";
+import { countedInFiguresWhere } from "./counted-transactions";
 
 const MAY_FIFTH = new Date("2026-05-05T10:00:00.000Z");
 
@@ -28,16 +29,12 @@ const storedRow = (
 });
 
 describe("countedTransactionsWhere", () => {
-  it("keeps every currency and leaves internal transfers out unless they moved money into savings or cost an exchange fee", () => {
+  it("keeps every currency of the cash-flow accounts in the period, counted in figures", () => {
     const from = new Date("2026-10-01T00:00:00.000Z");
     const to = new Date("2026-10-31T23:59:59.999Z");
 
     expect(countedTransactionsWhere("user", from, to)).toEqual({
-      OR: [
-        { isInternalTransfer: false },
-        { resolvedCategory: { in: ["retirement", "savings", "securities"] } },
-        { exchangeFeeMinor: { gt: 0 } },
-      ],
+      AND: [countedInFiguresWhere],
       account: cashFlowAccountsOf("user"),
       date: { gte: from, lte: to },
     });

@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import type { ExclusionScope } from "./exclusion-scope";
 import { CATEGORY_GROUPS, SPENDING_CATEGORIES } from "./taxonomy";
 
 export const TRANSACTION_FILTER_FIELDS = [
@@ -7,7 +8,13 @@ export const TRANSACTION_FILTER_FIELDS = [
   "category",
   "account",
   "amount",
+  "exclusion",
 ] as const;
+
+export const EXCLUSION_FILTER_VALUES = [
+  "merchant",
+  "transaction",
+] as const satisfies readonly ExclusionScope[];
 
 export const LIST_FILTER_OPERATORS = ["is", "isNot", "isAnyOf"] as const;
 
@@ -37,6 +44,8 @@ export type AmountFilterOperator = (typeof AMOUNT_FILTER_OPERATORS)[number];
 
 export type CategoryFilterValue = (typeof CATEGORY_FILTER_VALUES)[number];
 
+export type ExclusionFilterValue = (typeof EXCLUSION_FILTER_VALUES)[number];
+
 export const takesSeveralValues = (operator: ListFilterOperator) =>
   operator === "isAnyOf";
 
@@ -63,6 +72,7 @@ export const transactionFilterSchema = z.discriminatedUnion("field", [
   ),
   listFilterSchema("category", z.enum(CATEGORY_FILTER_VALUES)),
   listFilterSchema("account", z.string().min(1).max(MAX_ACCOUNT_ID_LENGTH)),
+  listFilterSchema("exclusion", z.enum(EXCLUSION_FILTER_VALUES)),
   z.object({
     field: z.literal("amount"),
     operator: z.enum(AMOUNT_FILTER_OPERATORS),
@@ -89,6 +99,11 @@ export type CategoryTransactionFilter = Extract<
 export type AccountTransactionFilter = Extract<
   TransactionFilter,
   { field: "account" }
+>;
+
+export type ExclusionTransactionFilter = Extract<
+  TransactionFilter,
+  { field: "exclusion" }
 >;
 
 export type AmountTransactionFilter = Extract<

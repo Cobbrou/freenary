@@ -7,10 +7,12 @@ import {
 } from "@freenary/ui/components/item";
 import { useRegisterFluidHoverItem } from "@freenary/ui/hooks/use-fluid-hover";
 import { useSize } from "@freenary/ui/lib/size-context";
+import { cn } from "@freenary/ui/lib/utils";
 import { useCallback, useRef } from "react";
 
 import {
   CATEGORY_MEDIA_BOX,
+  isExcluded,
   originalAmountOf,
   TransactionAmount,
   transactionTitle,
@@ -48,9 +50,14 @@ export const TransactionRow = ({
     ? formatCurrency(Math.abs(original.amountMinor), original.currency)
     : null;
 
-  const label = isIncoming
+  const paidOrReceived = isIncoming
     ? m.budget_transaction_received({ amount, title })
     : m.budget_transaction_paid({ amount, title });
+
+  const excluded = isExcluded(transaction);
+  const label = excluded
+    ? m.budget_transaction_excluded_label({ label: paidOrReceived })
+    : paidOrReceived;
 
   const { variant } = useSize();
 
@@ -95,9 +102,15 @@ export const TransactionRow = ({
       <ItemContent className="items-end gap-0 font-medium">
         <TransactionAmount
           amount={transaction.amount}
+          className={cn(excluded && "text-muted-foreground line-through")}
           currency={transaction.currency}
         />
-        {originalText === null ? null : (
+        {excluded ? (
+          <span className="text-muted-foreground text-xs font-normal">
+            {m.budget_transaction_excluded()}
+          </span>
+        ) : null}
+        {originalText === null || excluded ? null : (
           <span className="text-muted-foreground text-xs font-normal whitespace-nowrap tabular-nums">
             {originalText}
           </span>

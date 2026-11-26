@@ -78,6 +78,8 @@ export class LlmClassificationFailed extends Data.TaggedError(
 
 const LLM_ANSWER_TOKEN_BUDGET = 2;
 const LLM_SAMPLING_TEMPERATURE = 0;
+
+const MAX_TOP_LOGPROBS = 20;
 const COMPLETIONS_PATH = "/chat/completions";
 const TRAILING_SLASHES = /\/+$/u;
 const ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -244,7 +246,7 @@ const readCompletion = Effect.fnUntraced(function* readCompletion(
             ],
             model: settings.model,
             temperature: LLM_SAMPLING_TEMPERATURE,
-            top_logprobs: table.offeredCount,
+            top_logprobs: Math.min(table.offeredCount, MAX_TOP_LOGPROBS),
           }),
           headers: endpointHeaders(settings.apiKey),
           method: "POST",
