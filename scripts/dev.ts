@@ -33,6 +33,7 @@ const STARTING_VERBS: Partial<Record<string, true>> = {
 };
 
 const QUOTE_EDGES = /^["']|["']$/gu;
+const INLINE_COMMENT = /\s+#.*$/u;
 
 const readWorktreeEnvFile = Option.liftThrowable((file: string): string =>
   readFileSync(file, "utf-8")
@@ -63,7 +64,12 @@ const readEnvOverride = (key: string): string | null => {
       Option.flatMapNullishOr(
         (contents) => contents.match(assignment)?.groups?.value
       ),
-      Option.map((value) => value.replaceAll(QUOTE_EDGES, "")),
+      Option.map((value) => {
+        const isQuoted = value.startsWith('"') || value.startsWith("'");
+        const unquoted = isQuoted ? value : value.replace(INLINE_COMMENT, "");
+
+        return unquoted.replaceAll(QUOTE_EDGES, "");
+      }),
       Option.filter((value) => value.length > 0)
     )
   );
