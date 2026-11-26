@@ -34,6 +34,9 @@ const inclusiveDayRange = (from: string, to: string) => ({
   to: new Date(`${to}T23:59:59.999Z`),
 });
 
+const isoTimestamp = (date: Date | string | null): string | null =>
+  date === null ? null : new Date(date).toISOString();
+
 const decimalAmount = (minorUnits: number, currency: string): string =>
   fromMinor(minorUnits, currency).toFixed(minorUnitDigits(currency));
 
@@ -175,15 +178,24 @@ export const assistantToolDefinitions = (
     description:
       "List the user's bank accounts and the date range transaction data covers. Call this first when you do not know whether any account is connected.",
     execute: async () => {
-      const { accounts, ...range } = await api.budget.getAccounts();
+      const {
+        accounts,
+        currency,
+        firstTransactionDate,
+        hasAccounts,
+        lastTransactionDate,
+      } = await api.budget.getAccounts();
 
       return {
-        ...range,
         accounts: accounts.map(({ id, institutionName, name }) => ({
           id,
           institutionName,
           name,
         })),
+        currency,
+        firstTransactionDate: isoTimestamp(firstTransactionDate),
+        hasAccounts,
+        lastTransactionDate: isoTimestamp(lastTransactionDate),
       };
     },
     inputSchema: z.object({}),
