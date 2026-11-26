@@ -1,0 +1,2 @@
+[test]
+preload = ["../db/src/testing.ts"]

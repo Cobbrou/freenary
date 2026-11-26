@@ -147,6 +147,8 @@ Both `components.json` files (the shadcn CLI configuration) use style `base-mira
 - The test runner is `bun test`, with `bun:test` imports. There is no root `test` script.
 - Test files are named `*.test.ts` or `*.test.tsx` and sit next to the code they test, in `apps/web`, `apps/fumadocs`, `packages/api`, `packages/auth`, `packages/email`, `packages/env`, `packages/instance-config`, `packages/ui` and `scripts`.
 - CI runs `bun test` in `packages/api` only.
+- A `bunfig.toml` at the root and in `packages/api`, `packages/auth` and `packages/instance-config` preloads `packages/db/src/testing.ts`, which points `DATABASE_URL` at a free local port. Run `bun test` from one of these folders: a test there never opens the development database.
+- A test that needs a database calls `startTestDatabase()` from `@freenary/db/testing` in `beforeAll`. It serves an in-memory PGlite, with every migration applied, on that port. The files of one run share it, so a test writes rows under its own ids. PGlite runs one transaction at a time.
 
 ## Commit hooks
 
