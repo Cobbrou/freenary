@@ -1,16 +1,8 @@
-import type { AppRouter } from "@freenary/api/routers/index";
-import type { InferRouterOutputs } from "@orpc/server";
 import type {
   InfiniteData,
   UseInfiniteQueryResult,
   UseQueryResult,
 } from "@tanstack/react-query";
-
-export type PortfolioOverview =
-  InferRouterOutputs<AppRouter>["portfolio"]["getOverview"];
-
-export type AssetClass =
-  PortfolioOverview["netWorth"]["assetClasses"][number]["assetClass"];
 
 export interface WidgetQuery<T> {
   data: T | undefined;
