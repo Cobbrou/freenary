@@ -1,6 +1,10 @@
 {
   $schema: "https://docs.renovatebot.com/renovate-schema.json",
-  extends: ["config:recommended", ":semanticCommits"],
+  extends: [
+    "config:recommended",
+    ":semanticCommits",
+    "helpers:pinGitHubActionDigests",
+  ],
 
   // Pull requests target the integration branch, like every other one. Renovate
   // reads this file from the default branch alone (useBaseBranchConfig defaults

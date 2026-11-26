@@ -28,12 +28,12 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       # This job writes bun.lock, so it runs the Bun the repository pins rather
       # than `latest`: another version can rewrite the whole file for its own
       # format, and that rewrite would ride in on an automerged branch.
-      - uses: oven-sh/setup-bun@v2
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
         with:
           bun-version-file: package.json
 
