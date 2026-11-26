@@ -15,7 +15,7 @@ Categorisation runs after each sync of a member's banks, in three phases:
 
 The sync button on **Transactions**, labelled **Sync transactions**, first clears every category the pipeline wrote for that member, except internal transfers and categories set by hand, so the whole history goes through the steps again. A later sync also clears the result of a transaction whose merchant key changed.
 
-**Re-categorise all**, under **Re-categorise transactions** in **Settings** › **Categories**, does the same without asking the banks for new transactions, and looks for internal transfers over the whole history first. It runs in the background and shows the same progress, **Sorting transactions into categories**. It does not start while a sync is running, and a sync does not start while it runs.
+**Re-categorise all**, under **Re-categorise transactions** in **Settings** › **Categories**, starts over without asking the banks for new transactions. It clears everything the pipeline wrote on every transaction the member did not categorise by hand, internal transfers included, then looks for internal transfers over the whole history and runs the steps below, as for a new transaction. Transactions categorised by hand keep their category. It runs in the background and shows the same progress, **Sorting transactions into categories**. It does not start while a sync is running, and a sync does not start while it runs.
 
 ## Internal transfers come first
 

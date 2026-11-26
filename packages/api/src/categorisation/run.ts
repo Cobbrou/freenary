@@ -1,4 +1,5 @@
 import prisma from "@freenary/db";
+import type { Prisma } from "@freenary/db";
 import { Effect } from "effect";
 
 import { REFERENCE_CURRENCY } from "../fx/rate-book";
@@ -56,6 +57,22 @@ const clearResolutions = ({
       categoryOverride: false,
       isInternalTransfer: false,
     },
+  });
+
+const PIPELINE_RESET = {
+  category: null,
+  exchangeFeeMinor: null,
+  intermediaryName: null,
+  isInternalTransfer: false,
+  resolutionConfidence: null,
+  resolutionStage: null,
+  resolvedCategory: null,
+} as const satisfies Prisma.TransactionUpdateManyMutationInput;
+
+const resetPipelineResults = (userId: string) =>
+  prisma.transaction.updateMany({
+    data: PIPELINE_RESET,
+    where: { account: { connection: { userId } }, categoryOverride: false },
   });
 
 const writeResolutions = (
@@ -319,7 +336,13 @@ const startCategorisation = async (
   const reporter = createSyncReporter(userId, "CATEGORISING", claimedAt);
 
   Effect.runFork(
-    Effect.promise(() => matchInternalTransfers(userId, null)).pipe(
+    Effect.promise(async () => {
+      if (force) {
+        await resetPipelineResults(userId);
+      }
+
+      return matchInternalTransfers(userId, null);
+    }).pipe(
       Effect.andThen(categoriseAfterSync(userId, undefined, reporter, force)),
       Effect.tapCause(Effect.logError),
       Effect.matchCauseEffect({
