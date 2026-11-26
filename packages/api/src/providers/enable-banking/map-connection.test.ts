@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
 import {
+  holderNamesOfEB,
   mapEBAccount,
   mapEBCompletedConnection,
   pickBalancePerCurrency,
@@ -165,6 +166,7 @@ describe("mapEBAccount", () => {
         { balanceAt: undefined, balanceMinor: 10_000, currency: "EUR" },
       ],
       currency: "EUR",
+      holderNames: ["Jane Doe"],
       iban: "FR761234",
       name: "Jane Doe",
       providerAccountId: "uid-1",
@@ -179,16 +181,32 @@ describe("mapEBAccount", () => {
     ]);
 
     expect(account.currency).toBe("USD");
+
     expect(account.balanceMinor).toBe(2000);
   });
 
   test("returns the account without balances when they could not be read", () => {
     expect(mapEBAccount("uid-1", details, null)).toEqual({
       currency: "EUR",
+      holderNames: ["Jane Doe"],
       iban: "FR761234",
       name: "Jane Doe",
       providerAccountId: "uid-1",
       type: "CHECKING",
     });
+  });
+});
+
+describe("holderNamesOfEB", () => {
+  test("reads the holder name unless the user is an attorney", () => {
+    expect(holderNamesOfEB({ name: "Marius Nouchet" })).toEqual([
+      "Marius Nouchet",
+    ]);
+
+    expect(
+      holderNamesOfEB({ name: "Paul Martin", psu_status: "Attorney" })
+    ).toEqual([]);
+
+    expect(holderNamesOfEB({ name: "  " })).toEqual([]);
   });
 });

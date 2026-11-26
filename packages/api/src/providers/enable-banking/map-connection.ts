@@ -113,12 +113,21 @@ export const pickBalancePerCurrency = (
   return [...preferred.values()].map(toProviderBalance);
 };
 
+const ATTORNEY = /attorney/iu;
+
+export const holderNamesOfEB = (details: EBAccountDetails): string[] => {
+  const name = details.name?.trim();
+
+  return name && !ATTORNEY.test(details.psu_status ?? "") ? [name] : [];
+};
+
 export const mapEBAccount = (
   uid: string,
   details: EBAccountDetails,
   balances: readonly EBBalance[] | null
 ): ProviderAccount => {
   const base = {
+    holderNames: holderNamesOfEB(details),
     iban: details.account_id?.iban ?? undefined,
     name: details.name ?? undefined,
     providerAccountId: uid,

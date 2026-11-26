@@ -77,6 +77,40 @@ export const isOwnerNameKey = (key: string): boolean =>
 export const ibanKeyOf = (iban: string | null | undefined): string | null =>
   iban?.replaceAll(/\s/gu, "").toUpperCase() || null;
 
+const DESCRIPTOR_LINK_WORDS = new Set(["A", "DE", "DU", "FROM", "TO", "VERS"]);
+
+export const descriptorNameKeyOf = (
+  merchantKey: string | null | undefined
+): string | null => {
+  const key = ownerNameKeyOf(merchantKey);
+
+  if (key === null) {
+    return null;
+  }
+
+  const words = new Set(
+    key.split(" ").filter((word) => !DESCRIPTOR_LINK_WORDS.has(word))
+  );
+
+  return words.size === 0 ? null : [...words].toSorted().join(" ");
+};
+
+const describesOwner = (
+  facts: CounterpartyFacts,
+  own: OwnCounterparties
+): boolean => {
+  const merchantKey = facts.merchantKey ?? null;
+  const name = descriptorNameKeyOf(merchantKey);
+
+  return (
+    name !== null &&
+    merchantKey !== null &&
+    !own.overriddenMerchantKeys.has(merchantKey) &&
+    !own.refusedNames.has(name) &&
+    own.ownerNames.has(name)
+  );
+};
+
 export const namesOwnerOf = (
   facts: CounterpartyFacts,
   own: OwnCounterparties
@@ -84,8 +118,12 @@ export const namesOwnerOf = (
   const name = facts.counterpartyNameKey ?? null;
   const channel = facts.channel ?? "unknown";
 
-  if (name === null || !TRANSFER_CHANNELS.has(channel)) {
+  if (!TRANSFER_CHANNELS.has(channel)) {
     return null;
+  }
+
+  if (name === null) {
+    return describesOwner(facts, own) ? true : null;
   }
 
   const isOverridden =
@@ -161,11 +199,9 @@ interface StoredOwnCounterparty {
 }
 
 export const ownCounterpartiesOf = ({
-  memberName,
   overriddenMerchantKeys,
   stored,
 }: {
-  memberName: string | null;
   overriddenMerchantKeys: readonly string[];
   stored: readonly StoredOwnCounterparty[];
 }): OwnCounterparties => {
@@ -177,11 +213,6 @@ export const ownCounterpartiesOf = ({
     );
 
   const ownerNames = keysWhere("name", true);
-  const memberNameKey = ownerNameKeyOf(memberName);
-
-  if (memberNameKey !== null && isOwnerNameKey(memberNameKey)) {
-    ownerNames.add(memberNameKey);
-  }
 
   return {
     declaredIbans: keysWhere("iban", true),
@@ -197,12 +228,11 @@ export const ownCounterpartiesOf = ({
 export const loadOwnCounterparties = async (
   userId: string
 ): Promise<OwnCounterparties> => {
-  const [stored, member, overrides] = await Promise.all([
+  const [stored, overrides] = await Promise.all([
     prisma.ownCounterparty.findMany({
       select: { isOwn: true, key: true, kind: true },
       where: { userId },
     }),
-    prisma.user.findUnique({ select: { name: true }, where: { id: userId } }),
     prisma.merchantOverride.findMany({
       select: { merchantKey: true },
       where: { category: { not: INTERNAL_TRANSFER_CATEGORY }, userId },
@@ -210,7 +240,6 @@ export const loadOwnCounterparties = async (
   ]);
 
   return ownCounterpartiesOf({
-    memberName: member?.name ?? null,
     overriddenMerchantKeys: overrides.map(({ merchantKey }) => merchantKey),
     stored,
   });
@@ -218,9 +247,18 @@ export const loadOwnCounterparties = async (
 
 export const rememberOwnerNames = async (
   userId: string,
-  names: Iterable<string>
+  names: Iterable<string>,
+  source: "holder" | "pairing"
 ): Promise<void> => {
-  const keys = [...new Set(names)].filter(isOwnerNameKey);
+  const keys = [
+    ...new Set(
+      [...names].flatMap((name) => {
+        const key = ownerNameKeyOf(name);
+
+        return key === null ? [] : [key];
+      })
+    ),
+  ].filter(isOwnerNameKey);
 
   if (keys.length === 0) {
     return;
@@ -231,7 +269,7 @@ export const rememberOwnerNames = async (
       isOwn: true,
       key,
       kind: "name",
-      source: "pairing",
+      source,
       userId,
     })),
     skipDuplicates: true,

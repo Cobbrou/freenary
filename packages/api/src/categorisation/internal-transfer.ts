@@ -706,10 +706,11 @@ const matchInternal = async (
     );
   }
 
-  await rememberOwnerNames(userId, [
-    ...linkedOwnerNames,
-    ...ownerNamesConfirmedBy([], pairs, accountsByIban),
-  ]);
+  await rememberOwnerNames(
+    userId,
+    [...linkedOwnerNames, ...ownerNamesConfirmedBy([], pairs, accountsByIban)],
+    "pairing"
+  );
 
   return [...updates.flagged.values()].flat().length;
 };

@@ -529,9 +529,8 @@ const accountTypeOf = new Map([
 ]);
 
 const memberOwn = ownCounterpartiesOf({
-  memberName: "Marius Nouchet",
   overriddenMerchantKeys: [],
-  stored: [],
+  stored: [{ isOwn: true, key: "MARIUS NOUCHET", kind: "name" }],
 });
 
 const named = (
@@ -653,7 +652,6 @@ describe("ownAccountLegs", () => {
 
   it("follows the counterparties the member declared", () => {
     const declared = ownCounterpartiesOf({
-      memberName: null,
       overriddenMerchantKeys: [],
       stored: [{ isOwn: true, key: REVOLUT_IBAN, kind: "iban" }],
     });
@@ -743,7 +741,6 @@ describe("own accounts on the mock bank", () => {
 
   it("learns the holder from the Livret A transfer and finds the transfers to their other bank", () => {
     const own = ownCounterpartiesOf({
-      memberName: null,
       overriddenMerchantKeys: [],
       stored: [...ownerNamesConfirmedBy(unsigned, [], linked)].map((key) => ({
         isOwn: true,

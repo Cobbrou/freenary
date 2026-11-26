@@ -1,10 +1,11 @@
 import { describe, expect, test } from "bun:test";
 
-import { mapPowensAccount } from "./map-account";
+import { holderNamesOf, mapPowensAccount } from "./map-account";
 
 describe("mapPowensAccount", () => {
   test("reads the type whether the provider sends a string or an object", () => {
     expect(mapPowensAccount({ id: 1, type: "checking" }).type).toBe("CHECKING");
+
     expect(mapPowensAccount({ id: 1, type: { name: "checking" } }).type).toBe(
       "CHECKING"
     );
@@ -12,12 +13,19 @@ describe("mapPowensAccount", () => {
 
   test("keeps the French savings and investment wrappers apart", () => {
     expect(mapPowensAccount({ id: 1, type: "pea" }).type).toBe("PEA");
+
     expect(mapPowensAccount({ id: 1, type: "market" }).type).toBe("BROKERAGE");
+
     expect(mapPowensAccount({ id: 1, type: "livret_a" }).type).toBe("LIVRET_A");
+
     expect(mapPowensAccount({ id: 1, type: "ldds" }).type).toBe("LDDS");
+
     expect(mapPowensAccount({ id: 1, type: "pel" }).type).toBe("PEL");
+
     expect(mapPowensAccount({ id: 1, type: "cel" }).type).toBe("CEL");
+
     expect(mapPowensAccount({ id: 1, type: "cat" }).type).toBe("TERM_DEPOSIT");
+
     expect(mapPowensAccount({ id: 1, type: "lifeinsurance" }).type).toBe(
       "LIFE_INSURANCE"
     );
@@ -51,7 +59,9 @@ describe("mapPowensAccount", () => {
     });
 
     expect(account.balanceMinor).toBe(1230);
+
     expect(account.currency).toBe("EUR");
+
     expect(account.providerAccountId).toBe("42");
   });
 
@@ -75,5 +85,47 @@ describe("mapPowensAccount", () => {
     expect(
       mapPowensAccount({ id: 1, name: null, original_name: "CCP 0001" }).name
     ).toBe("CCP 0001");
+  });
+});
+
+describe("holderNamesOf", () => {
+  test("keeps the parties that are the user", () => {
+    expect(
+      holderNamesOf({
+        multiple_holders: true,
+        parties: [
+          {
+            identity: { full_name: "M Marius Nouchet", is_user: true },
+            role: "co_holder",
+          },
+          {
+            identity: { full_name: "Mme Jeanne Nouchet", is_user: false },
+            role: "co_holder",
+          },
+        ],
+      })
+    ).toEqual(["M Marius Nouchet"]);
+  });
+
+  test("keeps a sole holder when Powens cannot tell who the user is", () => {
+    const holder = {
+      identity: { full_name: "Marius Nouchet" },
+      role: "holder",
+    };
+
+    expect(
+      holderNamesOf({ multiple_holders: false, parties: [holder] })
+    ).toEqual(["Marius Nouchet"]);
+
+    expect(
+      holderNamesOf({ multiple_holders: null, parties: [holder] })
+    ).toEqual([]);
+
+    expect(
+      holderNamesOf({
+        multiple_holders: false,
+        parties: [{ identity: { full_name: "Paul Martin" }, role: "attorney" }],
+      })
+    ).toEqual([]);
   });
 });

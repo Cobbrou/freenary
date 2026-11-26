@@ -906,6 +906,7 @@ export const generateAccounts = (
       balanceAt,
       balanceMinor: balances.get(plan.currency) ?? 0,
       currency: plan.currency,
+      holderNames: [profile.holder],
       iban: plan.iban,
       name: plan.name,
       providerAccountId: plan.providerAccountId,

@@ -91,6 +91,7 @@ export interface ProviderAccount {
   providerAccountId: string;
   name?: string;
   iban?: string;
+  holderNames?: readonly string[];
   type: ProviderAccountType;
   currency?: string;
   balanceMinor?: number;

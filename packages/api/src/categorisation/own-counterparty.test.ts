@@ -1,6 +1,7 @@
 import { describe, expect, it } from "bun:test";
 
 import {
+  isOwnerNameKey,
   counterpartyKeysOf,
   isDeclaredOwn,
   namesOwnerOf,
@@ -11,21 +12,25 @@ import {
 describe("ownerNameKeyOf", () => {
   it("reads the same person whatever the order, title, case and accents", () => {
     expect(ownerNameKeyOf("M. NOUCHET Marius")).toBe("MARIUS NOUCHET");
+
     expect(ownerNameKeyOf("Marius Nouchet")).toBe("MARIUS NOUCHET");
+
     expect(ownerNameKeyOf("MME Hélène  DUPONT")).toBe("DUPONT HELENE");
   });
 
   it("is unknown without a name", () => {
     expect(ownerNameKeyOf(null)).toBeNull();
+
     expect(ownerNameKeyOf("  ")).toBeNull();
+
     expect(ownerNameKeyOf("M.")).toBeNull();
   });
 });
 
 const own = ownCounterpartiesOf({
-  memberName: "Marius Nouchet",
   overriddenMerchantKeys: ["marius nouchet loyer"],
   stored: [
+    { isOwn: true, key: "MARIUS NOUCHET", kind: "name" },
     { isOwn: true, key: "DUPONT JEAN OU", kind: "name" },
     { isOwn: false, key: "PAUL MARTIN", kind: "name" },
     { isOwn: true, key: "LT601010012345678901", kind: "iban" },
@@ -94,19 +99,31 @@ describe("namesOwnerOf", () => {
     expect(namesOwnerOf({ channel: "transfer" }, own)).toBeNull();
   });
 
-  it("ignores a member name of one word", () => {
-    const oneWord = ownCounterpartiesOf({
-      memberName: "Marius",
-      overriddenMerchantKeys: [],
-      stored: [],
-    });
+  it("keeps a name of one word out of the owner names", () => {
+    expect(isOwnerNameKey("MARIUS")).toBe(false);
+
+    expect(isOwnerNameKey("MARIUS NOUCHET")).toBe(true);
+  });
+
+  it("reads the owner in a descriptor that only names them", () => {
+    const owns = (merchantKey: string) =>
+      namesOwnerOf({ channel: "transfer", merchantKey }, own);
+
+    expect(owns("m marius nouchet")).toBe(true);
+
+    expect(owns("vers m marius nouchet")).toBe(true);
+
+    expect(owns("m marius nouchet m marius nouchet m marius nouchet")).toBe(
+      true
+    );
+
+    expect(owns("dotblocks solutions salaire marius nouchet")).toBeNull();
+
+    expect(owns("marius nouchet loyer")).toBeNull();
 
     expect(
-      namesOwnerOf(
-        { channel: "transfer", counterpartyNameKey: "MARIUS" },
-        oneWord
-      )
-    ).toBe(false);
+      namesOwnerOf({ channel: "card", merchantKey: "marius nouchet" }, own)
+    ).toBeNull();
   });
 });
 

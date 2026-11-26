@@ -3,6 +3,7 @@ import { Data, Effect, Match } from "effect";
 
 import { matchInternalTransfers } from "../categorisation/internal-transfer";
 import { deriveMerchantKey } from "../categorisation/merchant-key";
+import { rememberOwnerNames } from "../categorisation/own-counterparty";
 import { categoriseAfterSync } from "../categorisation/run";
 import { refreshExchangeRatesNow } from "../fx/rates";
 import { getProvider } from "../providers/registry";
@@ -41,6 +42,7 @@ export interface ConnectionWithAccounts {
   institutionGroup: string | null;
   status: string;
   lastSyncedAt: Date | null;
+  userId: string;
   accounts: SyncAccount[];
 }
 
@@ -446,6 +448,12 @@ const refreshProviderAccounts = async (
 
     rows.push(row);
   }
+
+  await rememberOwnerNames(
+    connection.userId,
+    accounts.flatMap((account) => account.holderNames ?? []),
+    "holder"
+  );
 
   return rows;
 };

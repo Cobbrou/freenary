@@ -1,4 +1,4 @@
-import { Data, Effect, Match } from "effect";
+import { Data, Effect, Match, Result } from "effect";
 
 import { BankInstitutionsUnavailable } from "../types";
 import type {
@@ -12,6 +12,7 @@ import type {
 } from "../types";
 import type { PowensConnector } from "./client";
 import {
+  PowensAccountOwnershipsSchema,
   PowensConnectionSchema,
   PowensConnectorsSchema,
   PowensInvestmentsSchema,
@@ -27,7 +28,7 @@ import {
   precisionOf,
   requireCredentials,
 } from "./client";
-import { mapPowensAccount } from "./map-account";
+import { holderNamesOf, mapPowensAccount } from "./map-account";
 import { mapPowensConnection } from "./map-connection";
 import { mapPowensInvestments } from "./map-holding";
 import { mapPowensTransactions } from "./map-transaction";
@@ -160,6 +161,36 @@ const createUser = Effect.fn("powens.createUser")(function* createUser() {
   };
 });
 
+const holderNamesByAccount = Effect.fnUntraced(function* holderNamesByAccount(
+  token: string
+) {
+  const listed = yield* Effect.result(
+    powensJson(
+      "account ownerships",
+      PowensAccountOwnershipsSchema,
+      "/users/me/account_ownerships",
+      { token }
+    )
+  );
+
+  if (Result.isFailure(listed)) {
+    yield* Effect.logWarning(
+      "Powens account ownerships unavailable",
+      listed.failure
+    );
+
+    return new Map<number, string[]>();
+  }
+
+  return new Map(
+    (listed.success.account_ownerships ?? []).flatMap((ownership) =>
+      ownership.id_account === null || ownership.id_account === undefined
+        ? []
+        : [[ownership.id_account, holderNamesOf(ownership)] as const]
+    )
+  );
+});
+
 const fetchAccounts = Effect.fn("powens.fetchAccounts")(function* fetchAccounts(
   request: ConnectionRequest
 ) {
@@ -178,8 +209,12 @@ const fetchAccounts = Effect.fn("powens.fetchAccounts")(function* fetchAccounts(
     });
   }
 
+  const holders = yield* holderNamesByAccount(user.accessToken);
+
   return (connection.accounts ?? []).flatMap((account) =>
-    account.deleted ? [] : [mapPowensAccount(account)]
+    account.deleted
+      ? []
+      : [mapPowensAccount(account, holders.get(account.id) ?? [])]
   );
 });
 

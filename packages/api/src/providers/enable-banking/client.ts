@@ -320,6 +320,7 @@ export const EBAccountDetailsSchema = Schema.Struct({
   currency: Schema.optional(Schema.NullOr(Schema.String)),
   name: Schema.optional(Schema.NullOr(Schema.String)),
   product: Schema.optional(Schema.NullOr(Schema.String)),
+  psu_status: Schema.optional(Schema.NullOr(Schema.String)),
   uid: Schema.optional(Schema.NullOr(Schema.String)),
 });
 

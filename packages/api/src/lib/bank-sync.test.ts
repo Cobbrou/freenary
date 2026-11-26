@@ -66,6 +66,7 @@ const contextFailing = (
     provider: mockProvider.id,
     providerSessionId: "session-1",
     status: "ACTIVE",
+    userId: "user-1",
   },
   deleteTransactions,
   provider: {

@@ -2,7 +2,11 @@ import { Predicate } from "effect";
 
 import { refineAccountTypeByName } from "../../lib/account-types";
 import type { ProviderAccount, ProviderAccountType } from "../types";
-import type { PowensAccount, PowensAccountType } from "./client";
+import type {
+  PowensAccount,
+  PowensAccountOwnership,
+  PowensAccountType,
+} from "./client";
 import { isReported, precisionOf, toIsoDateTime, toMinorUnits } from "./client";
 
 const ACCOUNT_TYPE_MAP = {
@@ -43,7 +47,20 @@ const isKnownAccountType = (
 const accountTypeName = (type: PowensAccountType | null | undefined): string =>
   Predicate.isString(type) ? type : (type?.name ?? "");
 
-export const mapPowensAccount = (account: PowensAccount): ProviderAccount => {
+export const holderNamesOf = (ownership: PowensAccountOwnership): string[] =>
+  (ownership.parties ?? []).flatMap(({ identity, role }) => {
+    const name = identity?.full_name?.trim();
+    const isUser =
+      identity?.is_user ??
+      (role === "holder" && ownership.multiple_holders === false);
+
+    return name && isUser ? [name] : [];
+  });
+
+export const mapPowensAccount = (
+  account: PowensAccount,
+  holderNames: readonly string[] = []
+): ProviderAccount => {
   const precision = precisionOf(account);
   const { balance } = account;
   const typeName = accountTypeName(account.type);
@@ -55,6 +72,7 @@ export const mapPowensAccount = (account: PowensAccount): ProviderAccount => {
       ? toMinorUnits(balance, precision)
       : undefined,
     currency: account.currency?.id ?? undefined,
+    holderNames,
     iban: account.iban ?? undefined,
     name,
     providerAccountId: String(account.id),

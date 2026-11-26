@@ -248,6 +248,34 @@ export const PowensAccountSchema = Schema.Struct({
   type: Schema.optional(Schema.NullOr(PowensAccountTypeSchema)),
 });
 
+export const PowensAccountOwnershipSchema = Schema.Struct({
+  id_account: Schema.optional(Schema.NullOr(Schema.Number)),
+  multiple_holders: NullableBoolean,
+  parties: Schema.optional(
+    Schema.NullOr(
+      Schema.Array(
+        Schema.Struct({
+          identity: Schema.optional(
+            Schema.NullOr(
+              Schema.Struct({
+                full_name: NullableString,
+                is_user: NullableBoolean,
+              })
+            )
+          ),
+          role: NullableString,
+        })
+      )
+    )
+  ),
+});
+
+export const PowensAccountOwnershipsSchema = Schema.Struct({
+  account_ownerships: Schema.optional(
+    Schema.NullOr(Schema.Array(PowensAccountOwnershipSchema))
+  ),
+});
+
 export const PowensConnectionSchema = Schema.Struct({
   accounts: Schema.optional(Schema.NullOr(Schema.Array(PowensAccountSchema))),
   connector: Schema.optional(
@@ -398,6 +426,8 @@ export type PowensAccountType = typeof PowensAccountTypeSchema.Type;
 export type PowensAccount = typeof PowensAccountSchema.Type;
 
 export type PowensConnection = typeof PowensConnectionSchema.Type;
+
+export type PowensAccountOwnership = typeof PowensAccountOwnershipSchema.Type;
 
 export type PowensCounterparty = typeof PowensCounterpartySchema.Type;
 
