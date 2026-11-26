@@ -198,10 +198,17 @@ interface StoredOwnCounterparty {
   kind: string;
 }
 
+export const memberNameOf = (
+  member: { firstName: string; lastName: string | null } | null
+): string | null =>
+  member?.lastName ? `${member.firstName} ${member.lastName}` : null;
+
 export const ownCounterpartiesOf = ({
+  memberName = null,
   overriddenMerchantKeys,
   stored,
 }: {
+  memberName?: string | null;
   overriddenMerchantKeys: readonly string[];
   stored: readonly StoredOwnCounterparty[];
 }): OwnCounterparties => {
@@ -213,6 +220,11 @@ export const ownCounterpartiesOf = ({
     );
 
   const ownerNames = keysWhere("name", true);
+  const memberNameKey = ownerNameKeyOf(memberName);
+
+  if (memberNameKey !== null && isOwnerNameKey(memberNameKey)) {
+    ownerNames.add(memberNameKey);
+  }
 
   return {
     declaredIbans: keysWhere("iban", true),
@@ -228,10 +240,14 @@ export const ownCounterpartiesOf = ({
 export const loadOwnCounterparties = async (
   userId: string
 ): Promise<OwnCounterparties> => {
-  const [stored, overrides] = await Promise.all([
+  const [stored, member, overrides] = await Promise.all([
     prisma.ownCounterparty.findMany({
       select: { isOwn: true, key: true, kind: true },
       where: { userId },
+    }),
+    prisma.user.findUnique({
+      select: { firstName: true, lastName: true },
+      where: { id: userId },
     }),
     prisma.merchantOverride.findMany({
       select: { merchantKey: true },
@@ -240,6 +256,7 @@ export const loadOwnCounterparties = async (
   ]);
 
   return ownCounterpartiesOf({
+    memberName: memberNameOf(member),
     overriddenMerchantKeys: overrides.map(({ merchantKey }) => merchantKey),
     stored,
   });

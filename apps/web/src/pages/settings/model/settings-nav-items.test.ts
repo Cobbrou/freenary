@@ -25,8 +25,9 @@ describe("SETTINGS_NAV_ITEMS", () => {
 });
 
 describe("settingsNavCategoriesFor", () => {
-  it("groups the operator's tabs under five categories", () => {
+  it("groups the operator's tabs under six categories", () => {
     expect(sectionsByCategory("operator")).toEqual([
+      ["account", ["profile"]],
       ["preferences", ["appearance"]],
       ["finances", ["bank-accounts", "budget", "categories"]],
       ["security", ["sign-in", "sessions", "api-keys"]],
@@ -38,6 +39,7 @@ describe("settingsNavCategoriesFor", () => {
   it("drops the Instance category for a member and while pending", () => {
     for (const standing of ["member", "pending"] as const) {
       expect(sectionsByCategory(standing).map(([id]) => id)).toEqual([
+        "account",
         "preferences",
         "finances",
         "security",

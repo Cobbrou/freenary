@@ -172,7 +172,7 @@ Freenary answers on this computer alone: other devices on your network cannot op
 
    ![The sign-in page in create-account mode, with the Create account button](../images/02-create-account.png)
 
-3. Enter your email, your name and a password.
+3. Enter your email, your first name, your last name and a password.
 4. Select **Create account**.
 
 You see the message **Account created successfully**, and the browser opens the setup screen. Its progress bar shows three steps, **Bank**, **Categories** and **Done**, and the first page is titled **Bank provider**.

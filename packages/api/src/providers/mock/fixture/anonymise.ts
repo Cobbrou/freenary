@@ -1,4 +1,5 @@
 import { en, fr } from "@faker-js/faker";
+import { fullNameOf } from "@freenary/auth/person-name";
 
 import type {
   DataExport,
@@ -158,7 +159,7 @@ const personNamesOf = (
   exported: DataExport,
   extraNames: readonly string[]
 ): string[] => [
-  exported.user.name,
+  fullNameOf(exported.user),
   ...extraNames,
   ...allTransactions(exported).flatMap((transaction) =>
     transaction.counterpartyName &&

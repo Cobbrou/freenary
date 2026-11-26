@@ -93,6 +93,7 @@ const SETTINGS_SECTION_LABELS = {
   budget: m.settings_tab_budget,
   categories: m.settings_tab_categories,
   export: m.settings_tab_export,
+  profile: m.settings_tab_profile,
   services: m.settings_tab_services,
   sessions: m.settings_tab_sessions,
   "sign-in": m.settings_tab_sign_in,

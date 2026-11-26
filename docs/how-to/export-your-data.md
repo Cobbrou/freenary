@@ -21,14 +21,14 @@ Open the file in a text editor. It holds these two lines:
 
 ```json
   "format": "freenary-export",
-  "version": 1
+  "version": 2
 ```
 
 and these fields, for your account:
 
 | Field | Contents |
 | --- | --- |
-| `user` | Your name, email, tax countries, budget month settings and reporting currency. |
+| `user` | Your first name (`firstName`), last name (`lastName`, `null` when Freenary has none), email, tax countries, budget month settings and reporting currency. |
 | `connections` | Each bank connection: the bank's name, country, BIC and group, its status and its last sync. |
 | `connections[].accounts` | Each account: name, IBAN, type, currency and balances, its holdings, and every transaction with all its stored fields, categories included. |
 | `customCategories` | The categories you created. |

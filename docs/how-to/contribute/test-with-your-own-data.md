@@ -34,7 +34,7 @@ This page turns the data of a real Freenary account into a fixture, a file the m
 
 2. Read the report the command prints, then run it again with `--force` and the options below until the report is right:
 
-   - **Names replaced** lists each word the fixture replaces in every text, and its replacement. The words come from the account holder's name, from `--names`, and from the counterparty of each transfer whose name holds a known first name.
+   - **Names replaced** lists each word the fixture replaces in every text, and its replacement. The words come from the account holder's first and last name, from `--names`, and from the counterparty of each transfer whose name holds a known first name.
    - **Replaced names that card payments use too** lists replaced words that also appear in card payments. A merchant such as `LECLERC` replaced there changes how its payments get categories: pass `--keep LECLERC`.
    - **First names still in the fixture** lists first names the fixture keeps. A person's name among them goes in `--names`, such as `--names "Marie Martin"`; a merchant's or a place's stays.
 

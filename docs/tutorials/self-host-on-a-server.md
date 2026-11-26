@@ -180,7 +180,7 @@ The web app sees every visitor as Caddy's address unless you tell it that Caddy 
 ## 8. Create the first account
 
 1. Open `https://freenary.example.com`.
-2. Select **No account yet? Create one**, enter your email, your name and a password, then select **Create account**.
+2. Select **No account yet? Create one**, enter your email, your first name, your last name and a password, then select **Create account**.
 
 The browser opens the setup screen on **Claim this instance**.
 

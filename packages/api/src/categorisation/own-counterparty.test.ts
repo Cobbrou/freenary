@@ -4,10 +4,18 @@ import {
   isOwnerNameKey,
   counterpartyKeysOf,
   isDeclaredOwn,
+  memberNameOf,
   namesOwnerOf,
   ownCounterpartiesOf,
   ownerNameKeyOf,
 } from "./own-counterparty";
+
+const named = (memberName: string | null) =>
+  ownCounterpartiesOf({
+    memberName,
+    overriddenMerchantKeys: [],
+    stored: [],
+  });
 
 describe("ownerNameKeyOf", () => {
   it("reads the same person whatever the order, title, case and accents", () => {
@@ -103,6 +111,28 @@ describe("namesOwnerOf", () => {
     expect(isOwnerNameKey("MARIUS")).toBe(false);
 
     expect(isOwnerNameKey("MARIUS NOUCHET")).toBe(true);
+  });
+
+  it("counts the member's first and last name as theirs", () => {
+    const fromProfile = named(
+      memberNameOf({ firstName: "Marius", lastName: "Nouchet" })
+    );
+
+    expect([...fromProfile.ownerNames]).toEqual(["MARIUS NOUCHET"]);
+
+    expect(
+      namesOwnerOf(
+        { channel: "transfer", merchantKey: "vers m marius nouchet" },
+        fromProfile
+      )
+    ).toBe(true);
+
+    expect(
+      named(memberNameOf({ firstName: "Marius", lastName: null })).ownerNames
+        .size
+    ).toBe(0);
+
+    expect(named(memberNameOf(null)).ownerNames.size).toBe(0);
   });
 
   it("reads the owner in a descriptor that only names them", () => {

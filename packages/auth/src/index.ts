@@ -48,6 +48,7 @@ import {
   SESSION_EXPIRY_SECONDS,
   TRUSTED_DEVICE_SECONDS,
   USER_ADDITIONAL_FIELDS,
+  USER_NAME_FIELDS,
 } from "./policy";
 import {
   appleTrustedOrigins,
@@ -258,6 +259,7 @@ export const createAuth = () =>
 
     user: {
       additionalFields: USER_ADDITIONAL_FIELDS,
+      fields: USER_NAME_FIELDS,
     },
   });
 

@@ -11,7 +11,7 @@ import {
 } from "@/features/assistant-chat";
 import { m } from "@/paraglide/messages.js";
 import { orpc } from "@/shared/api";
-import { authClient } from "@/shared/auth";
+import { authClient, firstNameOf } from "@/shared/auth";
 import { startOfDay, useNow } from "@/shared/lib/calendar-day";
 
 import { AssistantAvatar } from "./assistant-avatar";
@@ -55,7 +55,7 @@ export const NewChatPage = () => {
         <div className="flex flex-col gap-1">
           <h1 className="font-heading text-xl font-semibold tracking-tight text-balance">
             {m.ask_new_chat_title({
-              name: session?.user.name.split(" ")[0] ?? "",
+              name: firstNameOf(session?.user),
             })}
           </h1>
           <p className="text-muted-foreground text-sm text-pretty">

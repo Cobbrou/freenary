@@ -30,7 +30,7 @@ import {
 } from "kubai-icons-react";
 
 import { m } from "@/paraglide/messages.js";
-import { authClient } from "@/shared/auth";
+import { authClient, fullNameOf } from "@/shared/auth";
 import { docsUrl, releaseNotesUrl, updateGuideUrl } from "@/shared/config";
 import { CHART_COLOR_VARS } from "@/shared/lib/chart-colors";
 import { kubaiIcon } from "@/shared/lib/kubai-icon";
@@ -98,7 +98,7 @@ export const SidebarUserMenu = () => {
             <UserIdentity
               email={session?.user.email}
               isPending={isPending}
-              name={session?.user.name}
+              name={fullNameOf(session?.user)}
             />
             <RiExpandUpDownLine className="ml-auto size-3.5 shrink-0" />
           </DropdownTrigger>
@@ -112,7 +112,7 @@ export const SidebarUserMenu = () => {
               <div className="flex items-center gap-2 text-left text-sm">
                 <UserIdentity
                   email={session?.user.email}
-                  name={session?.user.name}
+                  name={fullNameOf(session?.user)}
                 />
               </div>
             </DropdownLabel>

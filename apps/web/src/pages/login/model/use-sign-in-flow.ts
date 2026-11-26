@@ -26,6 +26,13 @@ export type SignInStep =
 
 export type SecondFactor = "app" | "recovery";
 
+export interface SignUpValues {
+  email: string;
+  firstName: string;
+  lastName: string;
+  password: string;
+}
+
 interface AuthAttempt<TData> {
   data: TData | null;
   error: AuthRequestError | null;
@@ -144,15 +151,11 @@ export const useSignInFlow = (passwordBounds: PasswordBounds | undefined) => {
     await finish(m.auth_signed_in_toast());
   };
 
-  const handleSignUpSubmit = async (values: {
-    email: string;
-    name: string;
-    password: string;
-  }) => {
+  const handleSignUpSubmit = async ({ firstName, ...values }: SignUpValues) => {
     setEmail(values.email);
     setIsSubmitting(true);
     const { data: signedUp, error } = await attemptAuthRequest(() =>
-      authClient.signUp.email(values)
+      authClient.signUp.email({ ...values, name: firstName })
     );
 
     setIsSubmitting(false);

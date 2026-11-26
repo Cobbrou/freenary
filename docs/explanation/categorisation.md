@@ -50,6 +50,7 @@ Freenary does not mark a transaction by its name, or by a counterparty the membe
 
 Banks name the person on the other side of a transfer in their own way, such as `M DUPONT JEAN` or `Jean Dupont`. Freenary compares names after removing accents, case, titles such as `M`, `MME` or `MR`, and the order of the words, so these two names are the same. The member's names are:
 
+- their first and last name, from **Settings** › **Profile**, when they have both. Freenary reads it at each matching, so a change applies from the next sync or **Re-categorise all**;
 - the name of the holder of each linked account, as the bank gives it at each sync. With Powens, Freenary keeps only the holders Powens identifies as the person who connected the bank, or the only holder of an account that has one; when Powens offers no account ownerships, it keeps none. With Enable Banking, it keeps the account's holder name, unless the member is an attorney on the account. Freenary stores these names in the `own_counterparty` table;
 - every name, of at least two words, a bank gave the other side of a transfer an IBAN confirmed: a transaction naming the IBAN of another linked account, or a leg of a confirmed pair. Freenary stores these names in the `own_counterparty` table;
 - the names the member marked as theirs, as below.

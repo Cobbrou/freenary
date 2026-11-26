@@ -1,6 +1,10 @@
 import { describe, expect, it } from "bun:test";
 
-import { exportHolding, exportTransaction } from "./data-export";
+import {
+  dataExportSchema,
+  exportHolding,
+  exportTransaction,
+} from "./data-export";
 import type { StoredTransaction } from "./data-export";
 
 const storedTransaction = (
@@ -111,5 +115,63 @@ describe("exportHolding", () => {
       valuationMinor: 650_150,
       valuedAt: "2026-03-05T00:00:00.000Z",
     });
+  });
+});
+
+interface ExportedName {
+  firstName?: string;
+  lastName?: string | null;
+  name?: string;
+}
+
+const exportWith = (version: number, user: ExportedName) => ({
+  budgetLines: [],
+  connections: [],
+  customCategories: [],
+  dashboards: [],
+  exportedAt: "2026-03-05T10:00:00.000Z",
+  format: "freenary-export",
+  merchantOverrides: [],
+  user: {
+    budgetMonthAnchor: "LAST_WORKING_DAY",
+    budgetMonthHolidayCountry: null,
+    budgetMonthStartDay: 1,
+    createdAt: "2026-01-01T00:00:00.000Z",
+    email: "jean.dupont@example.org",
+    reportingCurrency: null,
+    taxCountries: ["FR"],
+    ...user,
+  },
+  version,
+});
+
+describe("dataExportSchema", () => {
+  it("reads the first and last name", () => {
+    expect(
+      dataExportSchema.parse(
+        exportWith(2, { firstName: "Jean", lastName: "Dupont" })
+      ).user
+    ).toMatchObject({ firstName: "Jean", lastName: "Dupont" });
+  });
+
+  it("splits the single name of an export made before first and last names", () => {
+    const parsed = dataExportSchema.parse(
+      exportWith(1, { name: "Jean Pierre Dupont" })
+    );
+
+    expect(parsed.version).toBe(2);
+
+    expect(parsed.user).toMatchObject({
+      firstName: "Jean",
+      lastName: "Pierre Dupont",
+    });
+
+    expect(parsed.user).not.toHaveProperty("name");
+  });
+
+  it("refuses a single name in an export of the current version", () => {
+    expect(
+      dataExportSchema.safeParse(exportWith(2, { name: "Jean Dupont" })).success
+    ).toBe(false);
   });
 });

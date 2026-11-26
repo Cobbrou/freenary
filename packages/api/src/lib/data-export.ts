@@ -1,23 +1,35 @@
+import { splitFullName } from "@freenary/auth/person-name";
 import type { Prisma } from "@freenary/db";
 import { z } from "zod";
 
 import { PROVIDER_ACCOUNT_TYPES } from "../providers/types";
 
 export const DATA_EXPORT_FORMAT = "freenary-export";
-export const DATA_EXPORT_VERSION = 1;
+export const DATA_EXPORT_VERSION = 2;
+
+const SINGLE_NAME_EXPORT_VERSION = 1;
 
 const instant = z.string();
 
-const exportedUserSchema = z.object({
+const exportedUserSettings = {
   budgetMonthAnchor: z.string(),
   budgetMonthHolidayCountry: z.string().nullable(),
   budgetMonthStartDay: z.number(),
   createdAt: instant,
   email: z.string(),
-  name: z.string(),
   reportingCurrency: z.string().nullable(),
   taxCountries: z.array(z.string()),
+};
+
+const exportedUserSchema = z.object({
+  ...exportedUserSettings,
+  firstName: z.string(),
+  lastName: z.string().nullable(),
 });
+
+const singleNameUserSchema = z
+  .object({ ...exportedUserSettings, name: z.string() })
+  .transform(({ name, ...user }) => ({ ...user, ...splitFullName(name) }));
 
 const exportedBalanceSchema = z.object({
   balanceAt: instant.nullable(),
@@ -151,7 +163,7 @@ const exportedDashboardSchema = z.object({
   widgets: z.unknown(),
 });
 
-export const dataExportSchema = z.object({
+const exportedContent = {
   budgetLines: z.array(exportedBudgetLineSchema),
   connections: z.array(exportedConnectionSchema),
   customCategories: z.array(exportedCustomCategorySchema),
@@ -159,9 +171,22 @@ export const dataExportSchema = z.object({
   exportedAt: instant,
   format: z.literal(DATA_EXPORT_FORMAT),
   merchantOverrides: z.array(exportedMerchantOverrideSchema),
-  user: exportedUserSchema,
-  version: z.literal(DATA_EXPORT_VERSION),
-});
+};
+
+export const dataExportSchema = z.union([
+  z.object({
+    ...exportedContent,
+    user: exportedUserSchema,
+    version: z.literal(DATA_EXPORT_VERSION),
+  }),
+  z.object({
+    ...exportedContent,
+    user: singleNameUserSchema,
+    version: z
+      .literal(SINGLE_NAME_EXPORT_VERSION)
+      .transform(() => DATA_EXPORT_VERSION),
+  }),
+]);
 
 export type DataExport = z.infer<typeof dataExportSchema>;
 

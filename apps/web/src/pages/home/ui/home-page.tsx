@@ -6,7 +6,7 @@ import { useStartChat } from "@/features/assistant-chat";
 import { m } from "@/paraglide/messages.js";
 import { getLocale } from "@/paraglide/runtime.js";
 import { orpc } from "@/shared/api";
-import { authClient } from "@/shared/auth";
+import { authClient, firstNameOf } from "@/shared/auth";
 import { startOfDay, useNow } from "@/shared/lib/calendar-day";
 import { NoBankAccount } from "@/shared/ui/no-bank-account";
 import { AccountStrip, DashboardGrid } from "@/widgets/dashboard";
@@ -26,7 +26,7 @@ export const HomePage = () => {
   const overview = useQuery(orpc.portfolio.getOverview.queryOptions());
   const dashboards = useQuery(dashboardsQueryOptions());
   const { isStarting, startChat } = useStartChat();
-  const firstName = session?.user.name.split(" ")[0] ?? "";
+  const firstName = firstNameOf(session?.user);
 
   if (overview.data?.accounts.length === 0) {
     return (

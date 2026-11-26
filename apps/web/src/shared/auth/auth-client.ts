@@ -1,6 +1,10 @@
 import { apiKeyClient } from "@better-auth/api-key/client";
 import { passkeyClient } from "@better-auth/passkey/client";
-import { emailOTPClient, twoFactorClient } from "better-auth/client/plugins";
+import {
+  emailOTPClient,
+  inferAdditionalFields,
+  twoFactorClient,
+} from "better-auth/client/plugins";
 import { createAuthClient } from "better-auth/react";
 
 import { getServerUrl } from "../config/server-url";
@@ -14,5 +18,8 @@ export const authClient = createAuthClient({
     twoFactorClient(),
     passkeyClient(),
     apiKeyClient(),
+    inferAdditionalFields({
+      user: { lastName: { required: false, type: "string" } },
+    }),
   ],
 });

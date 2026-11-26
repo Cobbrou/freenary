@@ -8,6 +8,7 @@ import {
   ServerCog,
   ShieldLock,
   Tags,
+  User,
 } from "kubai-icons-react";
 import type { KubaiIconComponent } from "kubai-icons-react";
 
@@ -33,6 +34,18 @@ interface SettingsNavCategory {
 }
 
 export const SETTINGS_NAV_CATEGORIES = [
+  {
+    id: "account",
+    items: [
+      {
+        color: CHART_COLOR_VARS.blue,
+        icon: User,
+        label: m.settings_tab_profile,
+        section: "profile",
+      },
+    ],
+    label: m.settings_nav_group_account,
+  },
   {
     id: "preferences",
     items: [

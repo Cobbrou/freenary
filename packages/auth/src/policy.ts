@@ -52,7 +52,10 @@ export const RATE_LIMIT_DEFAULT = { max: 100, window: 60 };
 
 export const AI_CHAT_RATE_LIMIT = { max: 30, window: 300 };
 
+export const USER_NAME_FIELDS = { name: "firstName" } as const;
+
 export const USER_ADDITIONAL_FIELDS = {
+  lastName: { input: true, required: false, type: "string" },
   onboardingCompletedAt: { input: false, required: false, type: "date" },
   taxCountries: { input: false, required: false, type: "string[]" },
 } as const;

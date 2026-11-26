@@ -10,6 +10,7 @@ import { m } from "@/paraglide/messages.js";
 import { emailField, passwordField } from "@/shared/auth";
 
 import type { AuthCapabilities } from "../model/auth-capabilities";
+import type { SignUpValues } from "../model/use-sign-in-flow";
 import { AuthFormField } from "./auth-form-field";
 import { AuthSignInOptions } from "./auth-sign-in-options";
 
@@ -26,15 +27,9 @@ interface AuthCredentialsStepProps {
   onProvider: (provider: string) => void;
   onRetryCapabilities: () => void;
   onSignIn: (values: { email: string; password: string }) => Promise<void>;
-  onSignUp: (values: {
-    email: string;
-    name: string;
-    password: string;
-  }) => Promise<void>;
+  onSignUp: (values: SignUpValues) => Promise<void>;
   pendingProvider: string | null;
 }
-
-const NAME_MIN_LENGTH = 2;
 
 const REDUCED_REVEAL = {
   height: { duration: 0 },
@@ -51,8 +46,11 @@ const buildCredentialsSchemaForLocale = (
 
   return z.object({
     email: emailField(),
-    name: isSignUp
-      ? z.string().min(NAME_MIN_LENGTH, m.auth_error_name_too_short())
+    firstName: isSignUp
+      ? z.string().trim().min(1, m.auth_error_first_name_required())
+      : z.string(),
+    lastName: isSignUp
+      ? z.string().trim().min(1, m.auth_error_last_name_required())
       : z.string(),
     password: passwordField(isSignUp ? minPasswordLength : undefined),
   });
@@ -82,11 +80,21 @@ export const AuthCredentialsStep = ({
   );
 
   const form = useForm({
-    defaultValues: { email: defaultEmail, name: "", password: "" },
+    defaultValues: {
+      email: defaultEmail,
+      firstName: "",
+      lastName: "",
+      password: "",
+    },
     onSubmit: ({ value }) =>
       mode === "signin"
         ? onSignIn({ email: value.email, password: value.password })
-        : onSignUp(value),
+        : onSignUp({
+            email: value.email,
+            firstName: value.firstName.trim(),
+            lastName: value.lastName.trim(),
+            password: value.password,
+          }),
     validators: { onSubmit: schema },
   });
 
@@ -143,18 +151,35 @@ export const AuthCredentialsStep = ({
                   prefersReducedMotion ? REDUCED_REVEAL : spring.moderate
                 }
               >
-                <div className="pt-4">
-                  <form.Field name="name">
+                <div className="grid gap-4 pt-4 @sm/field-group:grid-cols-2">
+                  <form.Field name="firstName">
                     {(field) => (
                       <AuthFormField
-                        autoComplete="name"
+                        autoComplete="given-name"
                         autoFocus
                         errors={field.state.meta.errors.map(
                           (error) => error?.message
                         )}
                         id={field.name}
-                        label={m.auth_name_label()}
-                        placeholder={m.auth_name_placeholder()}
+                        label={m.auth_first_name_label()}
+                        placeholder={m.auth_first_name_placeholder()}
+                        value={field.state.value}
+                        onBlur={field.handleBlur}
+                        onChange={field.handleChange}
+                      />
+                    )}
+                  </form.Field>
+
+                  <form.Field name="lastName">
+                    {(field) => (
+                      <AuthFormField
+                        autoComplete="family-name"
+                        errors={field.state.meta.errors.map(
+                          (error) => error?.message
+                        )}
+                        id={field.name}
+                        label={m.auth_last_name_label()}
+                        placeholder={m.auth_last_name_placeholder()}
                         value={field.state.value}
                         onBlur={field.handleBlur}
                         onChange={field.handleChange}

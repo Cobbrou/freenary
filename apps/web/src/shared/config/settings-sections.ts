@@ -1,4 +1,5 @@
 export const SETTINGS_SECTIONS = [
+  "profile",
   "appearance",
   "bank-accounts",
   "budget",

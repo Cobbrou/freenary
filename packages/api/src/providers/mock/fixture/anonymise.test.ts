@@ -108,11 +108,12 @@ const exportOf = (accounts: ExportedAccount[]): DataExport => ({
     budgetMonthStartDay: 1,
     createdAt: "2026-01-01T00:00:00.000Z",
     email: "jean.dupont@example.org",
-    name: "Jean Dupont",
+    firstName: "Jean",
+    lastName: "Dupont",
     reportingCurrency: null,
     taxCountries: ["FR"],
   },
-  version: 1,
+  version: 2,
 });
 
 const salary = transactionOf({

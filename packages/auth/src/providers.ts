@@ -4,6 +4,7 @@ import type { BetterAuthOptions } from "better-auth";
 import type { GenericOAuthConfig } from "better-auth/plugins";
 
 import { resolveCookiePolicy } from "./cookies";
+import { betterAuthUserOf } from "./person-name";
 import {
   MAX_PASSWORD_LENGTH,
   MIN_PASSWORD_LENGTH,
@@ -38,6 +39,7 @@ const google =
     : {
         clientId: env.GOOGLE_CLIENT_ID,
         clientSecret: env.GOOGLE_CLIENT_SECRET,
+        mapProfileToUser: betterAuthUserOf,
       };
 
 const apple =
@@ -47,6 +49,7 @@ const apple =
         appBundleIdentifier: env.APPLE_APP_BUNDLE_IDENTIFIER,
         clientId: env.APPLE_CLIENT_ID,
         clientSecret: env.APPLE_CLIENT_SECRET,
+        mapProfileToUser: betterAuthUserOf,
       };
 
 const oidcName = env.OIDC_PROVIDER_NAME ?? null;
@@ -77,6 +80,7 @@ if (env.OIDC_DISCOVERY_URL !== undefined && env.OIDC_CLIENT_ID !== undefined) {
     clientId: env.OIDC_CLIENT_ID,
     clientSecret: env.OIDC_CLIENT_SECRET,
     discoveryUrl: env.OIDC_DISCOVERY_URL,
+    mapProfileToUser: betterAuthUserOf,
     name: oidcName ?? OIDC_PROVIDER_ID,
     providerId: OIDC_PROVIDER_ID,
     requireIdTokenVerification: true,

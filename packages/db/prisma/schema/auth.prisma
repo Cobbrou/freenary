@@ -1,6 +1,11 @@
 model User {
   id                        String             @id
-  name                      String
+  /// First name. Better Auth stores its `name` field here, so its sign-up
+  /// and sign-in providers fill it (see packages/auth).
+  firstName                 String
+  /// Last name. Null when no last name is known, such as for an account
+  /// whose former single name had only one word.
+  lastName                  String?
   email                     String
   emailVerified             Boolean            @default(false)
   twoFactorEnabled          Boolean            @default(false)
