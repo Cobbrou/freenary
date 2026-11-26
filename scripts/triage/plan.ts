@@ -16,14 +16,8 @@ import {
 } from "./readiness";
 import type { Checklist, Gap, ReadinessStatus } from "./readiness";
 import type { Answers } from "./subq";
-import {
-  GOOD_FIRST_ISSUE_LABEL,
-  GROUP_PREFIXES,
-  HELP_WANTED_LABEL,
-  IMPACT_LEVELS,
-  PRIORITY_LABELS,
-} from "./taxonomy";
-import type { PriorityLabel, TypeKey } from "./taxonomy";
+import { GOOD_FIRST_ISSUE_LABEL, HELP_WANTED_LABEL, LEVELS } from "./taxonomy";
+import type { FieldKey, FieldValues, Level, TypeKey } from "./taxonomy";
 
 export const MIN_SIGNAL_PROBABILITY = 0.8;
 export const MIN_DUPLICATE_CONFIDENCE = 0.85;
@@ -38,13 +32,17 @@ export interface PlanInput {
   readonly existingLabels: readonly string[];
   readonly existingType: TypeKey | undefined;
   readonly refusedTypes: readonly TypeKey[];
-  readonly workflowPriorities: readonly string[];
+  readonly existingFields: FieldValues;
+  readonly refusedFields: Readonly<Partial<Record<FieldKey, readonly Level[]>>>;
+  readonly workflowPriority: boolean;
   readonly workflowGoodFirstIssue: boolean;
   readonly duplicateCandidates: readonly number[];
 }
 
 export interface Plan {
   readonly type: TypeKey | undefined;
+  readonly fields: FieldValues;
+  readonly cleared: FieldKey[];
   readonly labels: string[];
   readonly removed: string[];
   readonly duplicateOf: number | undefined;
@@ -62,11 +60,6 @@ const SIGNAL_QUESTIONS = {
   security: SECURITY_SIGNAL,
 } as const satisfies Record<string, string>;
 
-const isKnownKey = <T extends object>(
-  table: T,
-  key: string
-): key is Extract<keyof T, string> => Object.hasOwn(table, key);
-
 export const TYPE_TIE_ORDER = [
   "bug",
   "documentation",
@@ -74,10 +67,7 @@ export const TYPE_TIE_ORDER = [
   "maintenance",
 ] as const satisfies readonly TypeKey[];
 
-type ImpactLevel = (typeof IMPACT_LEVELS)[number];
-
-export const IMPACT_TIE_ORDER: readonly ImpactLevel[] =
-  IMPACT_LEVELS.toReversed();
+export const IMPACT_TIE_ORDER: readonly Level[] = LEVELS.toReversed();
 
 const roundHalfUp: (score: number) => number = Math.round;
 
@@ -148,9 +138,9 @@ export const rankedTop = <Option extends string>(
 
 export const rankedImpact = (
   answer: ScoreAnswer
-): Selection<ImpactLevel> | undefined => {
+): Selection<Level> | undefined => {
   const ranked = rankOptions(
-    (level) => answer.probabilities?.[String(IMPACT_LEVELS.indexOf(level))],
+    (level) => answer.probabilities?.[String(LEVELS.indexOf(level))],
     IMPACT_TIE_ORDER
   );
 
@@ -162,10 +152,10 @@ export const rankedImpact = (
 
   const index = Math.min(
     Math.max(roundHalfUp(answer.score), 0),
-    IMPACT_LEVELS.length - 1
+    LEVELS.length - 1
   );
 
-  const top = IMPACT_LEVELS[index];
+  const top = LEVELS[index];
 
   return top ? { probability: answer.confidence, ranked, top } : undefined;
 };
@@ -205,10 +195,7 @@ const topChoice = <Option extends string>(
   return selection.top;
 };
 
-const topImpact = (
-  answers: Answers,
-  notes: string[]
-): ImpactLevel | undefined => {
+const topImpact = (answers: Answers, notes: string[]): Level | undefined => {
   const answer = answers.impact;
   const selection = answer?.type === "score" ? rankedImpact(answer) : undefined;
 
@@ -236,9 +223,6 @@ const isYes = (answers: Answers, key: string, notes: string[]): boolean => {
 
   return answer.noul >= MIN_SIGNAL_PROBABILITY;
 };
-
-const hasGroup = (labels: readonly string[], prefix: string): boolean =>
-  labels.some((label) => label.startsWith(prefix));
 
 const planType = (
   answers: Answers,
@@ -310,38 +294,25 @@ const planDuplicate = (
     : undefined;
 };
 
-const PRIORITY_BY_IMPACT = {
-  "impact: high": PRIORITY_LABELS.high,
-  "impact: low": PRIORITY_LABELS.low,
-  "impact: medium": PRIORITY_LABELS.medium,
-} as const satisfies Record<ImpactLevel, PriorityLabel>;
-
 const RAISED_PRIORITY = {
-  [PRIORITY_LABELS.high]: PRIORITY_LABELS.high,
-  [PRIORITY_LABELS.low]: PRIORITY_LABELS.medium,
-  [PRIORITY_LABELS.medium]: PRIORITY_LABELS.high,
-} as const satisfies Record<PriorityLabel, PriorityLabel>;
+  High: "High",
+  Low: "Medium",
+  Medium: "High",
+} as const satisfies Record<Level, Level>;
 
 export const derivePriority = (
-  impact: string | undefined,
+  impact: Level | undefined,
   signals: readonly string[]
-): PriorityLabel | undefined => {
-  const fromImpact =
-    impact && isKnownKey(PRIORITY_BY_IMPACT, impact)
-      ? PRIORITY_BY_IMPACT[impact]
-      : undefined;
-
-  if (fromImpact === undefined) {
+): Level | undefined => {
+  if (impact === undefined) {
     return undefined;
   }
 
   if (signals.includes(SECURITY_SIGNAL)) {
-    return PRIORITY_LABELS.high;
+    return "High";
   }
 
-  return signals.includes(REGRESSION_SIGNAL)
-    ? RAISED_PRIORITY[fromImpact]
-    : fromImpact;
+  return signals.includes(REGRESSION_SIGNAL) ? RAISED_PRIORITY[impact] : impact;
 };
 
 const planSignals = (input: PlanInput, notes: string[]): string[] =>
@@ -368,37 +339,58 @@ const collectGaps = (input: PlanInput, sources: GapSources): Gap[] => [
       ]),
 ];
 
-interface ImpactPlan {
-  readonly impact: string | undefined;
-  readonly priority: string | undefined;
+interface FieldPlan {
+  readonly fields: FieldValues;
+  readonly cleared: FieldKey[];
 }
 
-const planImpactAndPriority = (
-  input: PlanInput,
-  existing: readonly string[],
-  isAllowed: (label: string | undefined) => string | undefined,
-  notes: string[]
-): ImpactPlan => {
+const planFields = (input: PlanInput, notes: string[]): FieldPlan => {
   if (input.kind !== "issue") {
-    return { impact: undefined, priority: undefined };
+    return { cleared: [], fields: {} };
   }
 
-  const impact = isAllowed(topImpact(input.answers, notes));
+  const { existingFields, refusedFields, workflowPriority } = input;
+  const maintainerPriority =
+    existingFields.priority !== undefined && !workflowPriority;
 
-  const settledImpact =
-    existing.find((label) => label.startsWith(GROUP_PREFIXES.impact)) ?? impact;
+  const allowed = (
+    key: FieldKey,
+    level: Level | undefined
+  ): Level | undefined =>
+    level !== undefined && !(refusedFields[key] ?? []).includes(level)
+      ? level
+      : undefined;
 
-  const priority = isAllowed(
-    derivePriority(settledImpact, planSignals(input, notes))
+  const impact = allowed("impact", topImpact(input.answers, notes));
+  const priority = allowed(
+    "priority",
+    derivePriority(existingFields.impact ?? impact, planSignals(input, notes))
   );
 
   notes.push(
-    hasGroup(existing, GROUP_PREFIXES.priority)
-      ? "priority: kept the existing label"
+    maintainerPriority
+      ? "priority: kept the existing value"
       : `priority: ${priority ?? "none"} (from impact or a security or regression signal)`
   );
 
-  return { impact, priority };
+  const fields: FieldValues = {};
+
+  if (existingFields.impact === undefined && impact !== undefined) {
+    fields.impact = impact;
+  }
+
+  if (
+    !maintainerPriority &&
+    priority !== undefined &&
+    priority !== existingFields.priority
+  ) {
+    fields.priority = priority;
+  }
+
+  const cleared: FieldKey[] =
+    workflowPriority && priority === undefined ? ["priority"] : [];
+
+  return { cleared, fields };
 };
 
 const removedContributorLabels = (
@@ -420,27 +412,15 @@ const removedContributorLabels = (
 export const planLabels = (input: PlanInput): Plan => {
   const notes: string[] = [];
   const isIssue = input.kind === "issue";
-  const existing = input.existingLabels.filter(
-    (label) => !input.workflowPriorities.includes(label)
-  );
-
   const labels: string[] = [];
   const refused = new Set(input.refusedLabels);
-
-  const allowed = (label: string | undefined): string | undefined =>
-    label !== undefined && !refused.has(label) ? label : undefined;
 
   const modelType = isIssue
     ? planType(input.answers, input.refusedTypes, notes)
     : undefined;
 
   const type = input.existingType === undefined ? modelType : undefined;
-  const { impact, priority } = planImpactAndPriority(
-    input,
-    existing,
-    allowed,
-    notes
-  );
+  const { cleared, fields } = planFields(input, notes);
 
   const unmet = input.checklist
     ? unmetCriteria(input.checklist, input.answers)
@@ -449,17 +429,6 @@ export const planLabels = (input: PlanInput): Plan => {
   notes.push(
     `checklist ${input.checklist ?? "none"}: ${unmet.join(", ") || "all met"}`
   );
-
-  const grouped: readonly (readonly [string, readonly string[]])[] = [
-    [GROUP_PREFIXES.priority, priority ? [priority] : []],
-    [GROUP_PREFIXES.impact, impact ? [impact] : []],
-  ];
-
-  for (const [prefix, candidates] of grouped) {
-    if (!hasGroup(existing, prefix)) {
-      labels.push(...candidates);
-    }
-  }
 
   const duplicateOf = planDuplicate(
     input.answers,
@@ -491,25 +460,24 @@ export const planLabels = (input: PlanInput): Plan => {
     }
   }
 
-  const settledPriority = hasGroup(existing, GROUP_PREFIXES.priority)
-    ? undefined
-    : priority;
-
   const stillToDefineOpen = input.ruleGaps.some(
     (gap) => gap.text === STILL_TO_DEFINE_GAP_TEXT
   );
 
-  const removed = [
-    ...input.workflowPriorities.filter((label) => label !== settledPriority),
-    ...removedContributorLabels(input, specComplete, stillToDefineOpen),
-  ];
+  const removed = removedContributorLabels(
+    input,
+    specComplete,
+    stillToDefineOpen
+  );
 
   const added = [...new Set(labels)].filter(
     (label) => !input.existingLabels.includes(label) && !refused.has(label)
   );
 
   return {
+    cleared,
     duplicateOf,
+    fields,
     gaps,
     labels: added,
     notes,

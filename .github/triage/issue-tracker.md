@@ -8,7 +8,8 @@ Issues and specs for this repo live as GitHub issues. Use the `gh` CLI for all o
 - **Read an issue**: `gh issue view <number> --comments`, filtering comments by `jq` and also fetching labels.
 - **List issues**: `gh issue list --state open --json number,title,body,labels,comments --jq '[.[] | {number, title, body, labels: [.labels[].name], comments: [.comments[].body]}]'` with appropriate `--label` and `--state` filters.
 - **Comment on an issue**: `gh issue comment <number> --body "..."`
-- **Apply / remove labels**: `gh issue edit <number> --add-label "..."` / `--remove-label "..."`. The repo uses nine labels: see [`triage-labels.md`](triage-labels.md)
+- **Apply / remove labels**: `gh issue edit <number> --add-label "..."` / `--remove-label "..."`. The repo uses three labels: see [`triage-labels.md`](triage-labels.md)
+- **Set impact or priority**: `gh api -X POST repos/{owner}/{repo}/issues/<number>/issue-field-values --input -` with `{"issue_field_values":[{"field_id":<id>,"value":"High"}]}` (`High`, `Medium` or `Low`). List the field ids with `gh api graphql -f query='{ repository(owner:"<owner>",name:"<repo>"){ issueFields(first:20){ nodes{ ... on IssueFieldCommon { fullDatabaseId name } } } } }'`; read the values in the `issue_field_values` of `gh api repos/{owner}/{repo}/issues/<number>`
 - **Set the issue type**: `gh api -X PATCH repos/{owner}/{repo}/issues/<number> -f type=Bug` (`Bug`, `Feature` or `Task`)
 - **Close**: `gh issue close <number> --comment "..."`
 

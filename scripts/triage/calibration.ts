@@ -6,12 +6,8 @@ import {
 } from "./plan";
 import { GOOD_FIRST_ISSUE_CHOICE } from "./questions";
 import type { Answers } from "./subq";
-import {
-  GOOD_FIRST_ISSUE_LABEL,
-  GROUP_PREFIXES,
-  typeOfIssue,
-} from "./taxonomy";
-import type { TypeKey } from "./taxonomy";
+import { GOOD_FIRST_ISSUE_LABEL, typeOfIssue } from "./taxonomy";
+import type { FieldValues, TypeKey } from "./taxonomy";
 
 export type Sample =
   | {
@@ -38,16 +34,13 @@ export const THRESHOLDS = [0.5, 0.6, 0.7, 0.8, 0.85, 0.9, 0.95] as const;
 
 export interface ReviewedItem {
   readonly labels: readonly string[];
+  readonly fields?: FieldValues | undefined;
   readonly issueType?: string | undefined;
 }
 
 const GOOD_FIRST_ISSUE_QUESTION = "good_first_issue";
 const LEGACY_GOOD_FIRST_ISSUE_QUESTION = "good_first_issue (noul)";
-
-const groupLabel = (
-  labels: readonly string[],
-  prefix: string
-): string | undefined => labels.find((label) => label.startsWith(prefix));
+const LEGACY_IMPACT_PREFIX = "impact:";
 
 const reviewedType = (item: ReviewedItem): TypeKey | undefined =>
   item.issueType === undefined
@@ -76,12 +69,9 @@ const typeSample = (answers: Answers, item: ReviewedItem): Sample[] => {
     : [];
 };
 
-const impactSample = (
-  answers: Answers,
-  labels: readonly string[]
-): Sample[] => {
+const impactSample = (answers: Answers, item: ReviewedItem): Sample[] => {
   const answer = answers.impact;
-  const actual = groupLabel(labels, GROUP_PREFIXES.impact);
+  const actual = item.fields?.impact;
   const selection =
     answer?.type === "score" && actual ? rankedImpact(answer) : undefined;
 
@@ -134,7 +124,7 @@ const goodFirstIssueSample = (
 
 export const samplesFor = (answers: Answers, item: ReviewedItem): Sample[] => [
   ...typeSample(answers, item),
-  ...impactSample(answers, item.labels),
+  ...impactSample(answers, item),
   ...goodFirstIssueSample(answers, item.labels),
 ];
 
@@ -190,24 +180,23 @@ export const renderTable = (rows: readonly ThresholdRow[]): string =>
 export interface RecordedRun {
   readonly answers: Answers;
   readonly existingLabels: readonly string[];
+  readonly existingFields?: FieldValues | undefined;
   readonly existingType?: string | undefined;
   readonly recordedAt: string;
 }
 
-const PREFIX_BY_QUESTION: Readonly<Record<string, string>> = {
-  impact: GROUP_PREFIXES.impact,
-};
-
 const inputCarriedAnswer = (run: RecordedRun, question: string): boolean => {
   const { existingLabels } = run;
-  const prefix = PREFIX_BY_QUESTION[question];
 
   if (question === "type" && run.existingType !== undefined) {
     return true;
   }
 
-  if (prefix !== undefined) {
-    return existingLabels.some((label) => label.startsWith(prefix));
+  if (question === "impact") {
+    return (
+      run.existingFields?.impact !== undefined ||
+      existingLabels.some((label) => label.startsWith(LEGACY_IMPACT_PREFIX))
+    );
   }
 
   return (

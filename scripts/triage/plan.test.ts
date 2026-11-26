@@ -35,14 +35,16 @@ const planFor = (overrides: Partial<PlanInput>) =>
     checklist: "bug",
     docsExpected: false,
     duplicateCandidates: [9, 14],
+    existingFields: {},
     existingLabels: [],
     existingType: undefined,
     kind: "issue",
+    refusedFields: {},
     refusedLabels: [],
     refusedTypes: [],
     ruleGaps: [],
     workflowGoodFirstIssue: false,
-    workflowPriorities: [],
+    workflowPriority: false,
     ...overrides,
   });
 
@@ -63,13 +65,12 @@ const duplicateAt = (probabilities: Record<string, number>) =>
   }).duplicateOf;
 
 describe("planLabels", () => {
-  it("labels the type, impact and priority of a confident answer set", () => {
+  it("sets the type, impact and priority of a confident answer set", () => {
     const plan = planFor({});
 
     expect(plan.type).toBe("bug");
-    expect(plan.labels.toSorted()).toEqual(
-      ["impact: high", "priority: high"].toSorted()
-    );
+    expect(plan.fields).toEqual({ impact: "High", priority: "High" });
+    expect(plan.labels).toEqual([]);
   });
 
   it("never adds a status, area or signal label", () => {
@@ -108,13 +109,15 @@ describe("planLabels", () => {
     );
   });
 
-  it("never overrides a group a maintainer already labelled", () => {
+  it("never overrides a field a maintainer already set", () => {
     const plan = planFor({
-      existingLabels: ["impact: low", "priority: low"],
+      existingFields: { impact: "Low", priority: "Low" },
       existingType: "feature",
     });
 
     expect(plan.type).toBeUndefined();
+    expect(plan.fields).toEqual({});
+    expect(plan.cleared).toEqual([]);
     expect(plan.labels).toEqual([]);
     expect(plan.removed).toEqual([]);
   });
@@ -303,22 +306,12 @@ describe("buildQuestions", () => {
 });
 
 describe("taxonomy", () => {
-  it("defines the nine labels once", () => {
+  it("defines the three labels once", () => {
     const names = LABELS.map((label) => label.name);
 
     expect(new Set(names).size).toBe(names.length);
     expect(names.toSorted()).toEqual(
-      [
-        "documentation",
-        "good first issue",
-        "help wanted",
-        "impact: high",
-        "impact: low",
-        "impact: medium",
-        "priority: high",
-        "priority: low",
-        "priority: medium",
-      ].toSorted()
+      ["documentation", "good first issue", "help wanted"].toSorted()
     );
   });
 });
@@ -426,14 +419,14 @@ describe("good first issue", () => {
 
 describe("derivePriority", () => {
   it("maps impact to priority", () => {
-    expect(derivePriority("impact: high", [])).toBe("priority: high");
-    expect(derivePriority("impact: medium", [])).toBe("priority: medium");
-    expect(derivePriority("impact: low", [])).toBe("priority: low");
+    expect(derivePriority("High", [])).toBe("High");
+    expect(derivePriority("Medium", [])).toBe("Medium");
+    expect(derivePriority("Low", [])).toBe("Low");
     expect(derivePriority(undefined, [])).toBeUndefined();
   });
 
   it("gives a security risk priority high only with an impact", () => {
-    expect(derivePriority("impact: low", ["security"])).toBe("priority: high");
+    expect(derivePriority("Low", ["security"])).toBe("High");
     expect(derivePriority(undefined, ["security"])).toBeUndefined();
     expect(
       derivePriority(undefined, ["security", "regression"])
@@ -441,17 +434,9 @@ describe("derivePriority", () => {
   });
 
   it("raises the priority of an impact by one level for a regression", () => {
-    expect(derivePriority("impact: low", ["regression"])).toBe(
-      "priority: medium"
-    );
-
-    expect(derivePriority("impact: medium", ["regression"])).toBe(
-      "priority: high"
-    );
-
-    expect(derivePriority("impact: high", ["regression"])).toBe(
-      "priority: high"
-    );
+    expect(derivePriority("Low", ["regression"])).toBe("Medium");
+    expect(derivePriority("Medium", ["regression"])).toBe("High");
+    expect(derivePriority("High", ["regression"])).toBe("High");
   });
 
   it("gives a regression with no impact no priority", () => {
@@ -467,16 +452,16 @@ const impactAnswer = (
   impact: { confidence: 0.1, probabilities, score, type: "score" },
 });
 
-const labelsFor = (answers: Answers) => planFor({ answers }).labels;
+const fieldsFor = (answers: Answers) => planFor({ answers }).fields;
 
-const priorityLabelsAt = (key: "regression" | "security", noul: number) =>
+const priorityAt = (key: "regression" | "security", noul: number) =>
   planFor({
     answers: {
       ...confidentBug,
       impact: { confidence: 0.9, score: 0, type: "score" },
       [key]: { noul, type: "noul" },
     },
-  }).labels;
+  }).fields.priority;
 
 describe("impact and priority", () => {
   it("applies the most probable level and its priority at any confidence", () => {
@@ -484,27 +469,28 @@ describe("impact and priority", () => {
       answers: impactAnswer(2, { "0": 0.9, "1": 0.05, "2": 0.05 }),
     });
 
-    expect(plan.labels).toContain("impact: low");
-    expect(plan.labels).toContain("priority: low");
+    expect(plan.fields).toEqual({ impact: "Low", priority: "Low" });
     expect(plan.notes).toContain(
-      "impact: impact: low (score 2.00, 0.90; next impact: high 0.05)"
+      "impact: Low (score 2.00, 0.90; next High 0.05)"
     );
   });
 
   it("breaks an exact level tie toward the higher level", () => {
     const plan = planFor({ answers: impactAnswer(0, { "0": 0.5, "2": 0.5 }) });
 
-    expect(plan.labels).toContain("impact: high");
-    expect(plan.labels).toContain("priority: high");
+    expect(plan.fields).toEqual({ impact: "High", priority: "High" });
   });
 
   it("falls back to the score, rounded halfway up, without a level probability", () => {
-    expect(labelsFor(impactAnswer(0.5))).toContain("impact: medium");
-    expect(labelsFor(impactAnswer(0.5))).toContain("priority: medium");
-    expect(labelsFor(impactAnswer(1.5))).toContain("impact: high");
-    expect(labelsFor(impactAnswer(0.4, { "7": 0.9 }))).toContain("impact: low");
-    expect(labelsFor(impactAnswer(1, { "0": Number.NaN }))).toContain(
-      "impact: medium"
+    expect(fieldsFor(impactAnswer(0.5))).toEqual({
+      impact: "Medium",
+      priority: "Medium",
+    });
+
+    expect(fieldsFor(impactAnswer(1.5)).impact).toBe("High");
+    expect(fieldsFor(impactAnswer(0.4, { "7": 0.9 })).impact).toBe("Low");
+    expect(fieldsFor(impactAnswer(1, { "0": Number.NaN })).impact).toBe(
+      "Medium"
     );
   });
 
@@ -524,12 +510,7 @@ describe("impact and priority", () => {
         answers: { ...answers, security: { noul: 0.99, type: "noul" } },
       });
 
-      expect(
-        plan.labels.some((label) =>
-          startsWithAny(label, ["impact:", "priority:"])
-        )
-      ).toBe(false);
-
+      expect(plan.fields).toEqual({});
       expect(plan.notes).toContain("impact: no answer");
     }
   });
@@ -545,11 +526,8 @@ describe("impact and priority", () => {
       kind: "pull-request",
     });
 
-    expect(
-      plan.labels.some((label) =>
-        startsWithAny(label, ["impact:", "priority:"])
-      )
-    ).toBe(false);
+    expect(plan.fields).toEqual({});
+    expect(plan.cleared).toEqual([]);
   });
 
   it("raises priority for a confident security signal", () => {
@@ -561,8 +539,7 @@ describe("impact and priority", () => {
       },
     });
 
-    expect(plan.labels).toContain("impact: low");
-    expect(plan.labels).toContain("priority: high");
+    expect(plan.fields).toEqual({ impact: "Low", priority: "High" });
   });
 
   it("ignores a security or regression signal below the threshold", () => {
@@ -575,26 +552,15 @@ describe("impact and priority", () => {
       },
     });
 
-    expect(plan.labels).toContain("priority: low");
+    expect(plan.fields.priority).toBe("Low");
   });
 
   it("applies a security or regression signal from exactly the threshold", () => {
     expect(MIN_SIGNAL_PROBABILITY).toBe(0.8);
-    expect(priorityLabelsAt("security", MIN_SIGNAL_PROBABILITY)).toContain(
-      "priority: high"
-    );
-
-    expect(
-      priorityLabelsAt("security", MIN_SIGNAL_PROBABILITY - 0.01)
-    ).toContain("priority: low");
-
-    expect(priorityLabelsAt("regression", MIN_SIGNAL_PROBABILITY)).toContain(
-      "priority: medium"
-    );
-
-    expect(
-      priorityLabelsAt("regression", MIN_SIGNAL_PROBABILITY - 0.01)
-    ).toContain("priority: low");
+    expect(priorityAt("security", MIN_SIGNAL_PROBABILITY)).toBe("High");
+    expect(priorityAt("security", MIN_SIGNAL_PROBABILITY - 0.01)).toBe("Low");
+    expect(priorityAt("regression", MIN_SIGNAL_PROBABILITY)).toBe("Medium");
+    expect(priorityAt("regression", MIN_SIGNAL_PROBABILITY - 0.01)).toBe("Low");
   });
 
   it("raises regression priority by one level", () => {
@@ -606,53 +572,81 @@ describe("impact and priority", () => {
       },
     });
 
-    expect(plan.labels).toContain("priority: medium");
+    expect(plan.fields.priority).toBe("Medium");
   });
 });
 
 describe("planLabels priority", () => {
-  it("derives priority from an impact label a maintainer set", () => {
+  it("derives priority from an impact a maintainer set", () => {
     const plan = planFor({
       answers: {
         ...confidentBug,
         impact: { confidence: 0.3, score: 0, type: "score" },
       },
-      existingLabels: ["impact: medium"],
+      existingFields: { impact: "Medium" },
     });
 
-    expect(plan.labels).toContain("priority: medium");
+    expect(plan.fields).toEqual({ priority: "Medium" });
   });
 
   it("keeps a priority a maintainer set", () => {
-    const plan = planFor({ existingLabels: ["priority: low"] });
+    const plan = planFor({ existingFields: { priority: "Low" } });
 
-    expect(plan.labels.some((label) => label.startsWith("priority:"))).toBe(
-      false
-    );
+    expect(plan.fields.priority).toBeUndefined();
+    expect(plan.cleared).toEqual([]);
+    expect(plan.notes).toContain("priority: kept the existing value");
+  });
+
+  it("never sets a value someone else removed", () => {
+    const plan = planFor({
+      refusedFields: { impact: ["High"], priority: ["High"] },
+    });
+
+    expect(plan.fields).toEqual({});
+  });
+
+  it("derives priority from a refused impact only once a maintainer sets it", () => {
+    const plan = planFor({
+      existingFields: { impact: "High" },
+      refusedFields: { impact: ["High"] },
+    });
+
+    expect(plan.fields).toEqual({ priority: "High" });
   });
 });
 
 describe("workflow priority", () => {
   it("recomputes its own priority after a maintainer changes impact", () => {
     const plan = planFor({
-      existingLabels: ["impact: low", "priority: high", "type: bug"],
-      workflowPriorities: ["priority: high"],
+      existingFields: { impact: "Low", priority: "High" },
+      existingType: "bug",
+      workflowPriority: true,
     });
 
-    expect(plan.labels).toContain("priority: low");
-    expect(plan.removed).toContain("priority: high");
+    expect(plan.fields).toEqual({ priority: "Low" });
+    expect(plan.cleared).toEqual([]);
   });
 
-  it("removes its own priority once a maintainer sets one", () => {
+  it("leaves its own priority alone when it still holds", () => {
     const plan = planFor({
-      existingLabels: ["priority: low", "priority: high"],
-      workflowPriorities: ["priority: low"],
+      existingFields: { impact: "High", priority: "High" },
+      workflowPriority: true,
     });
 
-    expect(plan.removed).toContain("priority: low");
-    expect(plan.labels.some((label) => label.startsWith("priority:"))).toBe(
-      false
-    );
+    expect(plan.fields).toEqual({});
+    expect(plan.cleared).toEqual([]);
+  });
+
+  it("clears its own priority once no impact supports it", () => {
+    const { impact: _impact, ...withoutImpact } = confidentBug;
+    const plan = planFor({
+      answers: withoutImpact,
+      existingFields: { priority: "Medium" },
+      workflowPriority: true,
+    });
+
+    expect(plan.fields).toEqual({});
+    expect(plan.cleared).toEqual(["priority"]);
   });
 });
 
@@ -714,11 +708,7 @@ describe("tie order", () => {
   });
 
   it("gives an impact tie to the higher level", () => {
-    expect(IMPACT_TIE_ORDER).toEqual([
-      "impact: high",
-      "impact: medium",
-      "impact: low",
-    ]);
+    expect(IMPACT_TIE_ORDER).toEqual(["High", "Medium", "Low"]);
   });
 
   it("breaks an exact type tie by question order on every run", () => {

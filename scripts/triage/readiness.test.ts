@@ -37,14 +37,16 @@ const planFor = (overrides: Partial<PlanInput>) =>
     checklist: "request",
     docsExpected: false,
     duplicateCandidates: [9, 14],
+    existingFields: {},
     existingLabels: [],
     existingType: undefined,
     kind: "issue",
+    refusedFields: {},
     refusedLabels: [],
     refusedTypes: [],
     ruleGaps: [],
     workflowGoodFirstIssue: false,
-    workflowPriorities: [],
+    workflowPriority: false,
     ...overrides,
   });
 
@@ -117,12 +119,10 @@ describe("issue readiness", () => {
       },
     });
 
-    expect(plan.labels).toContain("impact: low");
-
-    expect(plan.labels).toContain("priority: low");
+    expect(plan.fields).toEqual({ impact: "Low", priority: "Low" });
 
     expect(plan.notes).toContain(
-      "impact: impact: low (score 0.55, 0.50; next impact: medium 0.45)"
+      "impact: Low (score 0.55, 0.50; next Medium 0.45)"
     );
 
     expect(plan.status).toBe("ready");
@@ -449,20 +449,20 @@ describe("planCommentAction", () => {
   });
 });
 
-describe("refused labels", () => {
-  it("never adds back a label a maintainer removed", () => {
+describe("refused values", () => {
+  it("never sets back a value or type a maintainer removed", () => {
     const plan = planFor({
       answers: {
         ...settled,
         ...requestMet,
         security: { noul: 0.95, type: "noul" },
       },
-      refusedLabels: ["priority: high"],
+      refusedFields: { priority: ["High"] },
       refusedTypes: ["feature"],
     });
 
-    expect(plan.labels).not.toContain("priority: high");
-    expect(plan.labels).not.toContain("type: feature");
+    expect(plan.fields.priority).toBeUndefined();
+    expect(plan.type).toBeUndefined();
   });
 });
 
@@ -503,7 +503,7 @@ describe("resolveType", () => {
 });
 
 describe("refused picks and comment wording", () => {
-  it("tells a maintainer-only comment that a label reruns triage", () => {
+  it("tells a maintainer-only comment that a field reruns triage", () => {
     const comment = renderGapComment("issue", [
       {
         owner: "maintainer",
@@ -511,9 +511,7 @@ describe("refused picks and comment wording", () => {
       },
     ]);
 
-    expect(comment).toContain(
-      "a maintainer setting a `priority:` label closes this list"
-    );
+    expect(comment).toContain("a maintainer setting Priority closes this list");
 
     expect(comment).not.toContain("reply here");
   });

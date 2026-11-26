@@ -1,10 +1,13 @@
 import { describe, expect, it } from "bun:test";
 
 import {
+  fieldValuesRemovedByOthers,
   issueTypesRemovedByOthers,
   labelsRemovedByOthers,
   lastActor,
+  lastFieldActor,
 } from "./history";
+import type { IssueFieldEvent } from "./history";
 
 const BOT = "github-actions[bot]";
 
@@ -83,5 +86,62 @@ describe("issueTypesRemovedByOthers", () => {
     expect(issueTypesRemovedByOthers(typeEvents, "Bug", BOT)).toEqual([
       "Feature",
     ]);
+  });
+});
+
+const fieldEvent = (
+  event: Partial<IssueFieldEvent> & Pick<IssueFieldEvent, "kind">
+): IssueFieldEvent => ({
+  actor: undefined,
+  field: "Priority",
+  previous: undefined,
+  value: undefined,
+  ...event,
+});
+
+describe("issue field history", () => {
+  const fieldEvents = [
+    fieldEvent({ actor: BOT, kind: "added", value: "High" }),
+    fieldEvent({
+      actor: "maintainer",
+      kind: "changed",
+      previous: "High",
+      value: "Low",
+    }),
+    fieldEvent({ actor: BOT, field: "Impact", kind: "added", value: "Low" }),
+    fieldEvent({
+      actor: "maintainer",
+      field: "Impact",
+      kind: "removed",
+      previous: "Low",
+    }),
+    fieldEvent({ actor: BOT, field: "Impact", kind: "added", value: "Medium" }),
+    fieldEvent({
+      actor: BOT,
+      field: "Impact",
+      kind: "changed",
+      previous: "Medium",
+      value: "High",
+    }),
+  ];
+
+  it("names who last set a field", () => {
+    expect(lastFieldActor(fieldEvents, "Priority")).toBe("maintainer");
+    expect(lastFieldActor(fieldEvents, "Impact")).toBe(BOT);
+    expect(lastFieldActor(fieldEvents, "Effort")).toBeUndefined();
+  });
+
+  it("lists the values someone else removed or replaced", () => {
+    expect(
+      fieldValuesRemovedByOthers(fieldEvents, "Priority", "Low", BOT)
+    ).toEqual(["High"]);
+
+    expect(
+      fieldValuesRemovedByOthers(fieldEvents, "Impact", "High", BOT)
+    ).toEqual(["Low"]);
+
+    expect(
+      fieldValuesRemovedByOthers(fieldEvents, "Priority", "High", BOT)
+    ).toEqual([]);
   });
 });

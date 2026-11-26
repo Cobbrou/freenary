@@ -6,26 +6,33 @@ import { Data, Effect } from "effect";
 import { planCommentAction, renderGapComment } from "./comment";
 import {
   addLabels,
+  clearIssueFieldValue,
   createComment,
   deleteComment,
+  fieldEntriesOf,
   getIssue,
   getPullRequest,
   listComments,
   listCheckRuns,
+  listIssueFieldEvents,
+  listIssueFields,
   listIssueTypeEvents,
   listLabelEvents,
   listOpenIssues,
   listPullRequestFiles,
   removeLabel,
+  setIssueFieldValues,
   setIssueType,
   updateComment,
   WORKFLOW_ACTOR,
 } from "./github";
 import type { Comment, GitHubClient, Issue } from "./github";
 import {
+  fieldValuesRemovedByOthers,
   issueTypesRemovedByOthers,
   labelsRemovedByOthers,
   lastActor,
+  lastFieldActor,
 } from "./history";
 import { planLabels, resolveType } from "./plan";
 import type { Plan } from "./plan";
@@ -44,13 +51,16 @@ import { decide } from "./subq";
 import type { Answers, DecisionState } from "./subq";
 import {
   DOCUMENTATION_LABEL,
+  FIELD_KEYS,
+  fieldValuesOf,
   GOOD_FIRST_ISSUE_LABEL,
-  GROUP_PREFIXES,
+  isLevel,
+  ISSUE_FIELDS,
   ISSUE_TYPES,
   typeOfIssue,
   typesOfIssueType,
 } from "./taxonomy";
-import type { TypeKey } from "./taxonomy";
+import type { FieldKey, FieldValues, Level, TypeKey } from "./taxonomy";
 
 const MAX_BODY_CHARACTERS = 8000;
 const MAX_REPLY_CHARACTERS = 4000;
@@ -140,7 +150,10 @@ interface TriageRecord {
   readonly answers: Answers;
   readonly existingLabels: readonly string[];
   readonly existingType: TypeKey | undefined;
+  readonly existingFields: FieldValues;
   readonly type: TypeKey | undefined;
+  readonly fields: FieldValues;
+  readonly cleared: readonly FieldKey[];
   readonly labels: readonly string[];
   readonly removed: readonly string[];
   readonly status: string;
@@ -184,11 +197,116 @@ const readOwnership = Effect.fnUntraced(function* readOwnership(
       ? labelsRemovedByOthers(events, existingLabels, WORKFLOW_ACTOR)
       : [],
     workflowGoodFirstIssue: ownedByWorkflow(GOOD_FIRST_ISSUE_LABEL),
-    workflowPriorities: existingLabels.filter(
-      (label) =>
-        label.startsWith(GROUP_PREFIXES.priority) && ownedByWorkflow(label)
-    ),
   };
+});
+
+interface FieldState {
+  readonly existingFields: FieldValues;
+  readonly refusedFields: Partial<Record<FieldKey, Level[]>>;
+  readonly workflowPriority: boolean;
+}
+
+const NO_FIELDS: FieldState = {
+  existingFields: {},
+  refusedFields: {},
+  workflowPriority: false,
+};
+
+const readFields = Effect.fnUntraced(function* readFields(
+  client: GitHubClient,
+  kind: SubjectKind,
+  subject: Issue
+) {
+  if (kind === "pull-request") {
+    return NO_FIELDS;
+  }
+
+  const existingFields = fieldValuesOf(fieldEntriesOf(subject));
+  const events = yield* listIssueFieldEvents(client, subject.number);
+
+  const refusedFields: Partial<Record<FieldKey, Level[]>> = {};
+
+  for (const key of FIELD_KEYS) {
+    refusedFields[key] = fieldValuesRemovedByOthers(
+      events,
+      ISSUE_FIELDS[key],
+      existingFields[key],
+      WORKFLOW_ACTOR
+    ).filter(isLevel);
+  }
+
+  const state: FieldState = {
+    existingFields,
+    refusedFields,
+    workflowPriority:
+      existingFields.priority !== undefined &&
+      lastFieldActor(events, ISSUE_FIELDS.priority) === WORKFLOW_ACTOR,
+  };
+
+  return state;
+});
+
+const applyFields = Effect.fnUntraced(function* applyFields(
+  client: GitHubClient,
+  number: number,
+  plan: Plan
+) {
+  const keys = FIELD_KEYS.filter(
+    (key) => plan.fields[key] !== undefined || plan.cleared.includes(key)
+  );
+
+  if (keys.length === 0) {
+    return [];
+  }
+
+  const defined = yield* listIssueFields(client);
+  const idOf = (key: FieldKey): number | undefined =>
+    defined.find((field) => field.name === ISSUE_FIELDS[key])?.id;
+
+  const missing = keys.filter((key) => idOf(key) === undefined);
+
+  for (const key of missing) {
+    yield* Effect.sync(() =>
+      console.log(
+        `::warning::The repository owner has no ${ISSUE_FIELDS[key]} issue field, so triage left it unset.`
+      )
+    );
+  }
+
+  const values = FIELD_KEYS.flatMap((key) => {
+    const id = idOf(key);
+    const value = plan.fields[key];
+
+    return id !== undefined && value !== undefined
+      ? [{ field_id: id, value }]
+      : [];
+  });
+
+  if (values.length > 0) {
+    yield* setIssueFieldValues(client, number, values);
+  }
+
+  for (const key of plan.cleared) {
+    const id = idOf(key);
+
+    if (id !== undefined) {
+      yield* clearIssueFieldValue(client, number, id);
+    }
+  }
+
+  return [
+    ...FIELD_KEYS.flatMap((key) => {
+      const value = plan.fields[key];
+
+      return value !== undefined && idOf(key) !== undefined
+        ? [`${ISSUE_FIELDS[key]}: ${value}`]
+        : [];
+    }),
+    ...plan.cleared.flatMap((key) =>
+      idOf(key) === undefined ? [] : [`${ISSUE_FIELDS[key]}: cleared`]
+    ),
+    ...missing.map((key) => `${ISSUE_FIELDS[key]}: no such issue field`),
+  ];
 });
 
 const readTypes = Effect.fnUntraced(function* readTypes(
@@ -279,6 +397,7 @@ const triage = Effect.fnUntraced(function* triage() {
   const existingLabels = subject.labels.map((label) => label.name);
   const ownership = yield* readOwnership(client, number, existingLabels);
   const types = yield* readTypes(client, kind, subject);
+  const fieldState = yield* readFields(client, kind, subject);
 
   const body = subject.body ?? "";
   const comments = yield* listComments(client, number);
@@ -332,14 +451,16 @@ const triage = Effect.fnUntraced(function* triage() {
     checklist,
     docsExpected: docsExpected(files),
     duplicateCandidates: candidates.map((candidate) => candidate.number),
+    existingFields: fieldState.existingFields,
     existingLabels,
     existingType: types.existingType,
     kind,
+    refusedFields: fieldState.refusedFields,
     refusedLabels: ownership.refusedLabels,
     refusedTypes: types.refusedTypes,
     ruleGaps,
     workflowGoodFirstIssue: ownership.workflowGoodFirstIssue,
-    workflowPriorities: ownership.workflowPriorities,
+    workflowPriority: fieldState.workflowPriority,
   });
 
   for (const label of plan.removed) {
@@ -347,6 +468,7 @@ const triage = Effect.fnUntraced(function* triage() {
   }
 
   const typeSummary = yield* applyType(client, kind, number, plan.type);
+  const fieldSummary = yield* applyFields(client, number, plan);
 
   const added = [
     ...typeLabelsFor(plan.type, existingLabels, ownership.refusedLabels),
@@ -364,18 +486,18 @@ const triage = Effect.fnUntraced(function* triage() {
     commentBodyFor(
       kind,
       plan,
-      existingLabels.some(
-        (label) =>
-          label.startsWith(GROUP_PREFIXES.priority) &&
-          !ownership.workflowPriorities.includes(label)
-      )
+      fieldState.existingFields.priority !== undefined &&
+        !fieldState.workflowPriority
     )
   );
 
   yield* writeRecord({
     answers,
+    cleared: plan.cleared,
+    existingFields: fieldState.existingFields,
     existingLabels,
     existingType: types.existingType,
+    fields: plan.fields,
     gaps: plan.gaps,
     kind,
     labels: added,
@@ -391,6 +513,7 @@ const triage = Effect.fnUntraced(function* triage() {
     `### Triage of ${kind} #${number}`,
     "",
     ...typeSummary,
+    ...fieldSummary,
     `Added: ${added.join(", ") || "nothing"}`,
     `Removed: ${plan.removed.join(", ") || "nothing"}`,
     ...(plan.duplicateOf === undefined

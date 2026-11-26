@@ -8,7 +8,7 @@ import {
 } from "./calibration";
 
 describe("samplesFor", () => {
-  it("compares each answer with the labels a maintainer kept, naming a legacy noul apart", () => {
+  it("compares each answer with the fields and labels a maintainer kept, naming a legacy noul apart", () => {
     const samples = samplesFor(
       {
         good_first_issue: { noul: 0.1, type: "noul" },
@@ -16,8 +16,9 @@ describe("samplesFor", () => {
         type: { choice: "feature", confidence: 0.6, type: "choice" },
       },
       {
+        fields: { impact: "Low" },
         issueType: "Task",
-        labels: ["impact: low"],
+        labels: [],
       }
     );
 
@@ -55,7 +56,7 @@ describe("samplesFor", () => {
           type: "choice",
         },
       },
-      { issueType: "Bug", labels: ["impact: high"] }
+      { fields: { impact: "High" }, issueType: "Bug", labels: [] }
     );
 
     expect(samples).toEqual([
@@ -114,7 +115,7 @@ describe("samplesFor", () => {
           type: "choice",
         },
       },
-      { issueType: "Bug", labels: ["impact: high"] }
+      { fields: { impact: "High" }, issueType: "Bug", labels: [] }
     );
 
     expect(samples).toEqual([
@@ -206,9 +207,10 @@ describe("measureAgreement", () => {
 describe("blindSamples", () => {
   it("skips a run whose input already carried the answer", () => {
     const item = {
+      fields: { impact: "Low" },
       issueType: "Bug",
-      labels: ["impact: low"],
-    };
+      labels: [],
+    } as const;
 
     const samples = blindSamples(
       [
@@ -225,7 +227,8 @@ describe("blindSamples", () => {
             impact: { confidence: 0.9, score: 0, type: "score" },
             type: { choice: "bug", confidence: 0.9, type: "choice" },
           },
-          existingLabels: ["impact: low", "priority: low"],
+          existingFields: { impact: "Low", priority: "Low" },
+          existingLabels: [],
           existingType: "bug",
           recordedAt: "2026-10-02T00:00:00Z",
         },
@@ -237,6 +240,21 @@ describe("blindSamples", () => {
       { confidence: 0.7, kind: "label", matches: false, question: "type" },
       { confidence: 0.7, kind: "label", matches: false, question: "impact" },
     ]);
+  });
+
+  it("reads an impact carried as a label in a record from before the fields", () => {
+    const samples = blindSamples(
+      [
+        {
+          answers: { impact: { confidence: 0.9, score: 0, type: "score" } },
+          existingLabels: ["impact: low"],
+          recordedAt: "2026-10-02T00:00:00Z",
+        },
+      ],
+      { fields: { impact: "Low" }, labels: [] }
+    );
+
+    expect(samples).toEqual([]);
   });
 });
 

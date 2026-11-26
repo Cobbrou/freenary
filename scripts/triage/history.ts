@@ -60,3 +60,36 @@ export const issueTypesRemovedByOthers = (
     })
   ),
 ];
+
+export interface IssueFieldEvent {
+  readonly kind: "added" | "changed" | "removed";
+  readonly field: string | undefined;
+  readonly actor: string | undefined;
+  readonly value: string | undefined;
+  readonly previous: string | undefined;
+}
+
+export const lastFieldActor = (
+  events: readonly IssueFieldEvent[],
+  field: string
+): string | undefined =>
+  events.findLast((event) => event.field === field)?.actor;
+
+export const fieldValuesRemovedByOthers = (
+  events: readonly IssueFieldEvent[],
+  field: string,
+  currentValue: string | undefined,
+  workflowActor: string
+): string[] => [
+  ...new Set(
+    events.flatMap((event) =>
+      event.field === field &&
+      event.kind !== "added" &&
+      event.previous !== undefined &&
+      event.previous !== currentValue &&
+      event.actor !== workflowActor
+        ? [event.previous]
+        : []
+    )
+  ),
+];

@@ -20,7 +20,7 @@ This page helps you turn a change into a pull request against `suiramdev/freenar
    - **Specified task**: work with a complete spec (**Context**, **Expected behavior**, **Acceptance criteria**, **Relevant files**, **Still to define**), ready for someone to build.
    - **Other**: a question, a documentation gap or anything else.
 
-   The `Triage` workflow sets the issue type and the `impact:` and `priority:` labels on new issues when the repository has its `SUBQ_API_KEY` secret. A maintainer sets the final type and labels. The triage rules are in <https://github.com/suiramdev/freenary/blob/dev/.github/triage/triage.md>.
+   The `Triage` workflow sets the issue type and the Impact and Priority issue fields on new issues when the repository has its `SUBQ_API_KEY` secret. A maintainer sets the final type and fields. The triage rules are in <https://github.com/suiramdev/freenary/blob/dev/.github/triage/triage.md>.
 
 2. Start a branch from `dev`, the default branch:
 

@@ -22,7 +22,7 @@ Anyone can contribute, and you do not need to be a maintainer or ask first to op
 
 **Open the pull request.** Follow [Open a pull request](../docs/how-to/contribute/open-a-pull-request.md). Write `Closes #n` in the Notes of the pull request, and check each acceptance criterion of the issue before you ask for a review. If the spec turns out to be wrong or incomplete, say so in the issue instead of guessing.
 
-**Report something new.** Use the [issue forms](https://github.com/suiramdev/freenary/issues/new/choose). A maintainer sets the type and the labels, and the `Triage` workflow suggests them and lists what is missing from the description. If you can specify the work completely, use the **Specified task** form. The triage rules are in [`.github/triage/triage.md`](triage/triage.md).
+**Report something new.** Use the [issue forms](https://github.com/suiramdev/freenary/issues/new/choose). A maintainer sets the type, the labels and the Impact and Priority fields, and the `Triage` workflow suggests them and lists what is missing from the description. If you can specify the work completely, use the **Specified task** form. The triage rules are in [`.github/triage/triage.md`](triage/triage.md).
 
 ## Licensing Your Contribution
 

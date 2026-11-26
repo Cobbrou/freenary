@@ -40,65 +40,53 @@ export const typeOfIssue = (
   return keys[0];
 };
 
-export const PRIORITY_LABELS = {
-  high: "priority: high",
-  low: "priority: low",
-  medium: "priority: medium",
+export const LEVELS = ["Low", "Medium", "High"] as const;
+
+export type Level = (typeof LEVELS)[number];
+
+export const isLevel = (value: string | undefined): value is Level =>
+  LEVELS.some((level) => level === value);
+
+export const ISSUE_FIELDS = {
+  impact: "Impact",
+  priority: "Priority",
 } as const;
 
-export type PriorityLabel =
-  (typeof PRIORITY_LABELS)[keyof typeof PRIORITY_LABELS];
+export type FieldKey = keyof typeof ISSUE_FIELDS;
 
-export const IMPACT_LEVELS = [
-  "impact: low",
-  "impact: medium",
-  "impact: high",
-] as const;
+export const FIELD_KEYS: readonly FieldKey[] = ["impact", "priority"];
+
+export type FieldValues = Partial<Record<FieldKey, Level>>;
+
+export const fieldValuesOf = (
+  values: readonly {
+    readonly name: string | undefined;
+    readonly value: string | undefined;
+  }[]
+): FieldValues => {
+  const levels: FieldValues = {};
+
+  for (const key of FIELD_KEYS) {
+    const value = values.find(
+      (entry) => entry.name === ISSUE_FIELDS[key]
+    )?.value;
+
+    if (isLevel(value)) {
+      levels[key] = value;
+    }
+  }
+
+  return levels;
+};
 
 export const GOOD_FIRST_ISSUE_LABEL = "good first issue";
 export const HELP_WANTED_LABEL = "help wanted";
-
-export const GROUP_PREFIXES = {
-  impact: "impact:",
-  priority: "priority:",
-} as const;
 
 export const LABELS: readonly LabelDefinition[] = [
   {
     color: "0075ca",
     description: "A Task issue about the documentation site, README or guides",
     name: DOCUMENTATION_LABEL,
-  },
-  {
-    color: "b60205",
-    description: "Do this first: the next release",
-    name: PRIORITY_LABELS.high,
-  },
-  {
-    color: "fbca04",
-    description: "Normal: an upcoming release",
-    name: PRIORITY_LABELS.medium,
-  },
-  {
-    color: "c2e0c6",
-    description: "Nice to have: no deadline",
-    name: PRIORITY_LABELS.low,
-  },
-  {
-    color: "8a63d2",
-    description:
-      "A main flow breaks for many users, or data or credentials are at risk",
-    name: "impact: high",
-  },
-  {
-    color: "b392f0",
-    description: "A feature degrades for some users, a workaround exists",
-    name: "impact: medium",
-  },
-  {
-    color: "e1d4fb",
-    description: "Cosmetic, or few users affected",
-    name: "impact: low",
   },
   {
     color: "7057ff",

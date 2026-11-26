@@ -2,6 +2,7 @@ import { describe, expect, it } from "bun:test";
 
 import {
   DOCUMENTATION_LABEL,
+  fieldValuesOf,
   ISSUE_TYPES,
   typeOfIssue,
   typesOfIssueType,
@@ -26,5 +27,24 @@ describe("issue types", () => {
     expect(typeOfIssue("Task", [DOCUMENTATION_LABEL])).toBe("documentation");
     expect(typeOfIssue(undefined, [DOCUMENTATION_LABEL])).toBeUndefined();
     expect(typeOfIssue("Epic", [])).toBeUndefined();
+  });
+});
+
+describe("issue fields", () => {
+  it("reads the Impact and Priority levels and ignores the rest", () => {
+    expect(
+      fieldValuesOf([
+        { name: "Impact", value: "High" },
+        { name: "Priority", value: "Low" },
+        { name: "Effort", value: "High" },
+      ])
+    ).toEqual({ impact: "High", priority: "Low" });
+
+    expect(
+      fieldValuesOf([
+        { name: "Priority", value: "Urgent" },
+        { name: "Impact", value: undefined },
+      ])
+    ).toEqual({});
   });
 });

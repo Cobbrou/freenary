@@ -6,17 +6,28 @@ import { Glob } from "bun";
 import { Data, Effect, Schema } from "effect";
 
 import { blindSamples, measureAgreement, renderTable } from "./calibration";
-import { getIssue, listLabelEvents, WORKFLOW_ACTOR } from "./github";
+import {
+  fieldEntriesOf,
+  getIssue,
+  listIssueFieldEvents,
+  listLabelEvents,
+  WORKFLOW_ACTOR,
+} from "./github";
 import type { GitHubClient } from "./github";
-import { lastActor } from "./history";
+import { lastFieldActor } from "./history";
 import { AnswersSchema } from "./subq";
-import { GROUP_PREFIXES } from "./taxonomy";
+import { fieldValuesOf, ISSUE_FIELDS, LEVELS } from "./taxonomy";
 
 const RECORD_GLOB = "**/triage-record.json";
 const FETCH_CONCURRENCY = 4;
 
+const LevelSchema = Schema.optional(Schema.Literals(LEVELS));
+
 const RecordSchema = Schema.Struct({
   answers: AnswersSchema,
+  existingFields: Schema.optional(
+    Schema.Struct({ impact: LevelSchema, priority: LevelSchema })
+  ),
   existingLabels: Schema.Array(Schema.String),
   existingType: Schema.optional(Schema.String),
   kind: Schema.Literals(["issue", "pull-request"]),
@@ -66,15 +77,13 @@ const groupByItem = (records: readonly TriageRecord[]): ItemRuns[] => {
   });
 };
 
-const reviewedLabels = Effect.fnUntraced(function* reviewedLabels(
+const reviewedItem = Effect.fnUntraced(function* reviewedItem(
   client: GitHubClient,
   record: TriageRecord
 ) {
   const issue = yield* getIssue(client, record.number);
   const labels = issue.labels.map((label) => label.name);
-  const priority = labels.find((label) =>
-    label.startsWith(GROUP_PREFIXES.priority)
-  );
+  const fields = fieldValuesOf(fieldEntriesOf(issue));
 
   const events = yield* listLabelEvents(client, record.number);
 
@@ -82,9 +91,13 @@ const reviewedLabels = Effect.fnUntraced(function* reviewedLabels(
     return;
   }
 
-  const prioritySetter = priority
-    ? lastActor(events, "labeled", priority)
-    : undefined;
+  const prioritySetter =
+    fields.priority === undefined
+      ? undefined
+      : lastFieldActor(
+          yield* listIssueFieldEvents(client, record.number),
+          ISSUE_FIELDS.priority
+        );
 
   const closer = events.findLast((event) => event.event === "closed")?.actor
     ?.login;
@@ -101,7 +114,7 @@ const reviewedLabels = Effect.fnUntraced(function* reviewedLabels(
       prioritySetter !== WORKFLOW_ACTOR &&
       prioritySetter !== issue.user?.login);
 
-  return reviewed ? { issueType: issue.type?.name, labels } : undefined;
+  return reviewed ? { fields, issueType: issue.type?.name, labels } : undefined;
 });
 
 const calibrate = Effect.fnUntraced(function* calibrate() {
@@ -128,7 +141,7 @@ const calibrate = Effect.fnUntraced(function* calibrate() {
   const reviewedItems = yield* Effect.forEach(
     runsByItem,
     ({ first, runs }) =>
-      reviewedLabels(client, first).pipe(
+      reviewedItem(client, first).pipe(
         Effect.map((item) => (item ? [{ item, runs }] : []))
       ),
     { concurrency: FETCH_CONCURRENCY }
