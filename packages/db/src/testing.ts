@@ -1,3 +1,4 @@
+import { afterAll } from "bun:test";
 import { readdir, readFile } from "node:fs/promises";
 
 const HOST = "127.0.0.1";
@@ -17,6 +18,11 @@ const freePort = (): number => {
 };
 
 const port = freePort();
+const exitCodeBeforeTests = process.exitCode ?? 0;
+
+afterAll(() => {
+  process.exitCode = exitCodeBeforeTests;
+});
 
 process.env.DATABASE_URL = `postgresql://postgres@${HOST}:${port}/postgres`;
 
