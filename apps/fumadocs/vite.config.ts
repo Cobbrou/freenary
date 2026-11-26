@@ -20,7 +20,6 @@ const printPublicUrl = (publicUrl: string | undefined): Plugin => ({
 export default defineConfig({
   server: {
     allowedHosts: true,
-    port: 3000,
   },
   plugins: [
     fumadocsMdx(),

@@ -128,7 +128,6 @@ services:
     working_dir: /app/apps/fumadocs
     command: bun run dev -- --host 0.0.0.0
     environment:
-      DOCS_PORT: ${DOCS_PORT:-4000}
       DEV_PUBLIC_URL: ${FREENARY_DEV_SCHEME:-https}://${DOCS_HOST:-docs.freenary.kiri.localhost}
     labels:
       dev.kiri.domain: ${DOCS_HOST:-docs.freenary.kiri.localhost}

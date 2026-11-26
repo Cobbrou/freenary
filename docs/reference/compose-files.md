@@ -180,7 +180,7 @@ The development stack: PostgreSQL, the database migrations, the API server, the 
 - Build: build `.docker/dockerfile.dev` in context `.`
 - Command: `bun run dev -- --host 0.0.0.0`
 - Published ports: none
-- Environment it sets: `DEV_PUBLIC_URL`, `DOCS_PORT`
+- Environment it sets: `DEV_PUBLIC_URL`
 - Restart: `unless-stopped`
 
 ### Required variables
@@ -196,7 +196,6 @@ A variable that is unset or empty takes this value.
 | `AUTH_COOKIE_DOMAIN`  | empty                                   |
 | `BETTER_AUTH_SECRET`  | `dev_secret_change_me_at_least_32chars` |
 | `DOCS_HOST`           | `docs.freenary.kiri.localhost`          |
-| `DOCS_PORT`           | `4000`                                  |
 | `FREENARY_DEV_SCHEME` | `https`                                 |
 | `POSTGRES_DB`         | `freenary`                              |
 | `POSTGRES_PASSWORD`   | `password`                              |

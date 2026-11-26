@@ -283,13 +283,6 @@ const EXTERNAL: ExternalVariable[] = [
     name: "MAIL_HOST",
   },
   {
-    default: "`4000`",
-    description: "The documentation port inside its own container.",
-    envFile: "none",
-    kind: "compose-dev",
-    name: "DOCS_PORT",
-  },
-  {
     description:
       "The address the web and documentation dev servers print in place of their container address. Compose sets it from `WEB_HOST` and `DOCS_HOST`.",
     envFile: "none",

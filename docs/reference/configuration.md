@@ -190,7 +190,6 @@ The development stack reads these, and the production Compose files ignore them.
 | `WEB_HOST` | `web.<slug>.freenary.kiri.localhost` | The web app hostname, in its Kiri label. It fills `CORS_ORIGIN`. |
 | `DOCS_HOST` | `docs.<slug>.freenary.kiri.localhost` | The documentation hostname, in its Kiri label alone. |
 | `MAIL_HOST` | `mail.<slug>.freenary.kiri.localhost` | The Mailpit inbox hostname, in its Kiri label alone. It applies to `bun run dev:mail`. |
-| `DOCS_PORT` | `4000` | The documentation port inside its own container. |
 
 ## Inert variables
 
