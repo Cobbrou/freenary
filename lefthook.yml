@@ -18,7 +18,7 @@ pre-commit:
       # The schema is the only authored source: .env.example and
       # docs/reference/configuration.md are generated from it. stage_fixed
       # restages only the matched files, so the outputs are added explicitly.
-      glob: "{packages/env/src/schema*.ts,docker-compose*.yml,deploy/docker-compose.yml,scripts/env-sync.ts,scripts/docs-markdown.ts}"
+      glob: "{packages/env/src/schema*.ts,docker-compose*.yml,deploy/docker-compose.yml,scripts/env-sync.ts,scripts/docs-markdown.ts,apps/*/src/**/*.ts,apps/*/src/**/*.tsx,apps/*/scripts/**/*.ts,apps/*/*.config.ts,packages/*/src/**/*.ts,packages/*/scripts/**/*.ts,packages/*/*.config.ts,scripts/**/*.ts}"
       run: bun run env:sync && git add .env.example docs/reference/configuration.md
     - name: docs-reference
       # The API, commands and compose-file reference pages and the OpenAPI
