@@ -9,9 +9,6 @@ import type {
 export type PortfolioOverview =
   InferRouterOutputs<AppRouter>["portfolio"]["getOverview"];
 
-export type AssetClass =
-  PortfolioOverview["netWorth"]["assetClasses"][number]["assetClass"];
-
 export interface WidgetQuery<T> {
   data: T | undefined;
   isError: boolean;
