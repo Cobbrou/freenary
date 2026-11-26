@@ -26,3 +26,9 @@ pre-commit:
       # package.json and the compose files.
       glob: "{package.json,docker-compose*.yml,deploy/docker-compose.yml,apps/server/src/index.ts,packages/api/src/**/*.ts,scripts/docs-reference.ts,scripts/docs-markdown.ts}"
       run: bun run docs:generate && git add docs/reference/openapi.json docs/reference/api.md docs/reference/commands.md docs/reference/compose-files.md
+
+post-merge:
+  jobs:
+    - name: bun-install
+      glob: bun.lock
+      run: bun install
