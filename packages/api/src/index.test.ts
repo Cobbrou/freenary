@@ -76,11 +76,11 @@ beforeAll(async () => {
     data: [
       {
         email: "operator@authorization.test",
+        firstName: OPERATOR,
         id: OPERATOR,
-        name: OPERATOR,
         role: "OPERATOR",
       },
-      { email: "member@authorization.test", id: MEMBER, name: MEMBER },
+      { email: "member@authorization.test", firstName: MEMBER, id: MEMBER },
     ],
   });
 });

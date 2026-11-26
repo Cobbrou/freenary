@@ -47,8 +47,8 @@ beforeEach(async () => {
   await prisma.user.createMany({
     data: CLAIMANTS.map((id) => ({
       email: `${id}@example.test`,
+      firstName: id,
       id,
-      name: id,
     })),
   });
 });

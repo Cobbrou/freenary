@@ -26,7 +26,7 @@ const createUser = async (name: string): Promise<string> => {
   const id = `${name}-${randomUUID()}`;
 
   await prisma.user.create({
-    data: { email: `${id}@example.test`, id, name },
+    data: { email: `${id}@example.test`, firstName: name, id },
   });
 
   return id;
