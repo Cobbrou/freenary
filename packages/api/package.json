@@ -13,6 +13,7 @@
     "./dashboards/widgets": "./src/dashboards/widgets.ts",
     "./fx/rates": "./src/fx/rates.ts",
     "./instance/update-check": "./src/instance/update-check.ts",
+    "./lib/account-name": "./src/lib/account-name.ts",
     "./lib/aggregation": "./src/lib/aggregation.ts",
     "./lib/api-key-refusal": "./src/lib/api-key-refusal.ts",
     "./lib/bank-provider-user": "./src/lib/bank-provider-user.ts",

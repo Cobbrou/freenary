@@ -277,6 +277,11 @@ const REFUSED: [string, Attempt][] = [
       notifications.clearTransactionsToCheck({ id: notificationId }),
   ],
   [
+    "portfolio.renameAccount",
+    ({ portfolio }, { accountId }) =>
+      portfolio.renameAccount({ accountId, name: "Taken over" }),
+  ],
+  [
     "dashboards.update",
     ({ dashboards }, { dashboardId }) =>
       dashboards.update({ dashboardId, title: "Taken over" }),
@@ -387,6 +392,57 @@ describe("budget.syncAccounts", () => {
     ).toEqual({ categorised: 0, failures: [], success: true });
 
     expect(await rowsOf(household)).toEqual(before);
+  });
+
+  it("keeps the name the owner gave an account", async () => {
+    const owner = clientOf(household.ownerId);
+    const accountsOf = async () => {
+      const { accounts } = await owner.portfolio.getOverview();
+
+      return accounts;
+    };
+
+    const accountOf = async (accountId: string) => {
+      const accounts = await accountsOf();
+
+      return accounts.find(({ id }) => id === accountId);
+    };
+
+    await syncToTheEnd(owner, household.connectionId);
+
+    const imported = await accountsOf();
+    const synced = imported.find(
+      ({ bankName, id }) => bankName !== null && id !== household.accountId
+    );
+
+    if (!synced) {
+      throw new TypeError("The sync imported no named account");
+    }
+
+    await prisma.bankAccount.update({
+      data: { name: "Stale" },
+      where: { id: synced.id },
+    });
+
+    await owner.portfolio.renameAccount({
+      accountId: synced.id,
+      name: "  Joint account  ",
+    });
+
+    await syncToTheEnd(owner, household.connectionId);
+
+    expect(await accountOf(synced.id)).toMatchObject({
+      bankName: synced.bankName,
+      customName: "Joint account",
+      name: "Joint account",
+    });
+
+    await owner.portfolio.renameAccount({ accountId: synced.id, name: "" });
+
+    expect(await accountOf(synced.id)).toMatchObject({
+      customName: null,
+      name: synced.bankName,
+    });
   });
 
   it("imports into the owner's connection", async () => {

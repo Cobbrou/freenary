@@ -21,6 +21,7 @@ import { ExclusionReasonField } from "@/shared/ui/exclusion-reason-field";
 
 import { operatorStandingOf } from "../model/settings-nav-items";
 import { useAccountExclusion } from "../model/use-account-exclusion";
+import { AccountRename } from "./account-rename";
 import { SettingsNav } from "./settings-nav";
 import {
   SettingsList,
@@ -56,6 +57,17 @@ const DisplaySection = ({ account }: { account: PortfolioAccount }) => {
       title={m.settings_bank_account_display_title()}
     >
       <SettingsList>
+        <Item size="sm">
+          <ItemContent>
+            <ItemTitle>{m.bank_account_rename_label()}</ItemTitle>
+            <ItemDescription className="break-words">
+              {accountName(account)}
+            </ItemDescription>
+          </ItemContent>
+          <ItemActions>
+            <AccountRename account={account} />
+          </ItemActions>
+        </Item>
         <Item size="sm">
           <ItemContent>
             <ItemTitle id={labelId}>{m.bank_account_exclude_label()}</ItemTitle>
@@ -122,7 +134,7 @@ const AccountSettingsContent = ({ account }: { account: PortfolioAccount }) => {
         <dl className="flex flex-col">
           <DetailRow
             label={m.settings_bank_account_detail_name()}
-            value={accountName(account)}
+            value={account.bankName ?? ACCOUNT_TYPE_LABELS[account.type]()}
           />
           <DetailRow
             label={m.settings_bank_account_detail_institution()}

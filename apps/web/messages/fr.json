@@ -418,6 +418,13 @@
       }
     }
   ],
+  "bank_account_rename": "Renommer",
+  "bank_account_rename_confirm": "Enregistrer",
+  "bank_account_rename_description": "Freenary affiche ce nom à la place de celui de votre banque, {bankName}. Les synchronisations le conservent. Laissez-le vide pour reprendre le nom de la banque.",
+  "bank_account_rename_error": "Impossible de renommer ce compte.",
+  "bank_account_rename_label": "Nom",
+  "bank_account_rename_restore": "Reprendre le nom de la banque",
+  "bank_account_rename_title": "Renommer le compte",
   "bank_account_transactions_empty_incoming": "Aucune entrée d’argent sur ce compte.",
   "bank_account_transactions_empty_outgoing": "Aucune sortie d’argent sur ce compte.",
   "bank_actions_label": "Actions pour {institution}",

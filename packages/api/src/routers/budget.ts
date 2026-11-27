@@ -159,6 +159,7 @@ export const budgetRouter = {
         connection: {
           select: { institutionName: true },
         },
+        customName: true,
         iban: true,
         id: true,
         name: true,
@@ -182,7 +183,7 @@ export const budgetRouter = {
         iban: a.iban,
         id: a.id,
         institutionName: a.connection.institutionName,
-        name: a.name,
+        name: a.customName ?? a.name,
       })),
       currency,
       firstTransactionDate: transactionDateBounds._min.date,

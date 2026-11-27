@@ -1,7 +1,9 @@
 import prisma from "@freenary/db";
+import { ORPCError } from "@orpc/server";
 import { z } from "zod";
 
 import { protectedProcedure } from "../index";
+import { MAX_ACCOUNT_NAME_LENGTH } from "../lib/account-name";
 import { countedAccountsOf } from "../lib/account-types";
 import { balancesOf } from "../lib/accounts-summary";
 import {
@@ -84,6 +86,7 @@ export const portfolioRouter = {
           balances: BALANCES_SELECT,
           connection: { select: { institutionName: true } },
           currency: true,
+          customName: true,
           excluded: true,
           exclusionReason: true,
           id: true,
@@ -117,12 +120,14 @@ export const portfolioRouter = {
           ),
           currency: held.currency,
         })),
+        bankName: account.name,
         currency: account.currency,
+        customName: account.customName,
         excluded: account.excluded,
         exclusionReason: account.exclusionReason,
         id: account.id,
         institutionName: account.connection.institutionName,
-        name: account.name,
+        name: account.customName ?? account.name,
         type: account.type,
       })),
       currency: converter.currency,
@@ -132,4 +137,27 @@ export const portfolioRouter = {
       ratesAsOf: converter.ratesAsOf?.toISOString() ?? null,
     };
   }),
+
+  renameAccount: protectedProcedure
+    .input(
+      z.object({
+        accountId: z.string().max(64),
+        name: z.string().trim().max(MAX_ACCOUNT_NAME_LENGTH).nullable(),
+      })
+    )
+    .handler(async ({ context, input }) => {
+      const { count } = await prisma.bankAccount.updateMany({
+        data: { customName: input.name || null },
+        where: {
+          connection: { userId: context.session.user.id },
+          id: input.accountId,
+        },
+      });
+
+      if (count === 0) {
+        throw new ORPCError("NOT_FOUND", { message: "Account not found" });
+      }
+
+      return { ok: true };
+    }),
 };

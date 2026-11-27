@@ -53,6 +53,7 @@ export default defineConfig({
                   "!@freenary/api/assistant/turn",
                   "!@freenary/api/assistant/ui",
                   "!@freenary/api/dashboards/widgets",
+                  "!@freenary/api/lib/account-name",
                   "!@freenary/api/lib/aggregation",
                   "!@freenary/api/lib/budget-month",
                   "!@freenary/api/lib/budget-profile",

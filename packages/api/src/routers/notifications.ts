@@ -197,6 +197,7 @@ export const notificationsRouter = {
           account: {
             select: {
               connection: { select: { institutionName: true } },
+              customName: true,
               name: true,
             },
           },
@@ -220,7 +221,10 @@ export const notificationsRouter = {
 
       return {
         transactions: transactions.map((t) => ({
-          accountName: t.account.name ?? t.account.connection.institutionName,
+          accountName:
+            t.account.customName ??
+            t.account.name ??
+            t.account.connection.institutionName,
           amount: t.amount,
           category: effectiveCategory(t),
           counterpartyName: t.counterpartyName,

@@ -67,7 +67,10 @@ model BankAccount {
   iban               String?
   /// Provider-assigned opaque account hash for cross-account matching.
   identificationHash String?
+  /// Name the bank reports. Each sync overwrites it.
   name               String?
+  /// Name the user gave the account, shown instead of `name`. Syncs never write it.
+  customName         String?
   /// Kind of account, as reported by the provider.
   type               BankAccountType @default(UNKNOWN)
   /// ISO 4217 currency code of the account (e.g. "EUR"). For an account

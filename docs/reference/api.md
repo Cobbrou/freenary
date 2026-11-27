@@ -159,6 +159,7 @@ The Access column comes from the middleware of each procedure in `packages/api/s
 | --- | --- | --- | --- |
 | `portfolio.getBalanceHistory` | `POST /api-reference/portfolio/getBalanceHistory` | Signed in | `months` integer, required; `today` string (date), required |
 | `portfolio.getOverview` | `POST /api-reference/portfolio/getOverview` | Signed in | none |
+| `portfolio.renameAccount` | `POST /api-reference/portfolio/renameAccount` | Signed in | `accountId` string, required; `name` string or null, required |
 
 ## settings
 

@@ -409,6 +409,13 @@
       }
     }
   ],
+  "bank_account_rename": "Rename",
+  "bank_account_rename_confirm": "Save",
+  "bank_account_rename_description": "Freenary shows this name instead of the one from your bank, {bankName}. Syncs keep it. Leave it empty to use the bank's name.",
+  "bank_account_rename_error": "Could not rename this account.",
+  "bank_account_rename_label": "Name",
+  "bank_account_rename_restore": "Use the bank's name",
+  "bank_account_rename_title": "Rename account",
   "bank_account_transactions_empty_incoming": "No incoming transactions found on this account.",
   "bank_account_transactions_empty_outgoing": "No outgoing transactions found on this account.",
   "bank_actions_label": "Actions for {institution}",
