@@ -72,3 +72,38 @@ describe("mock consent page", () => {
     expect(page).not.toContain('"<x>"');
   });
 });
+
+const LUMIERE = {
+  institution: "mock-banque-lumiere",
+  redirect_uri: CALLBACK,
+  state: "signed-state",
+};
+
+describe("mock consent page language", () => {
+  it("renders in English when no locale is given", async () => {
+    const page = await consentFor(LUMIERE).text();
+
+    expect(page).toContain('<html lang="en">');
+    expect(page).toContain("<title>Mock bank consent</title>");
+    expect(page).toContain(">Approve</a>");
+  });
+
+  it("renders in French for fr", async () => {
+    const page = await consentFor({ ...LUMIERE, locale: "fr" }).text();
+
+    expect(page).toContain('<html lang="fr">');
+    expect(page).toContain("<title>Consentement de la banque fictive</title>");
+    expect(page).toContain(">Refuser</a>");
+    expect(page).toContain(">Accepter</a>");
+  });
+
+  it("falls back to English for an unknown value without reflecting it", async () => {
+    const page = await consentFor({
+      ...LUMIERE,
+      locale: '"><script>x</script>',
+    }).text();
+
+    expect(page).toContain('<html lang="en">');
+    expect(page).not.toContain("<script>");
+  });
+});

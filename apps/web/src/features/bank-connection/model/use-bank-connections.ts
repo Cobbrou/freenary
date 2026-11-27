@@ -6,6 +6,7 @@ import { toast } from "sonner";
 
 import { invalidateBudgetData, syncAccountsToEnd } from "@/entities/budget";
 import { m } from "@/paraglide/messages.js";
+import { getLocale } from "@/paraglide/runtime.js";
 import { client, orpc } from "@/shared/api";
 
 import { institutionKey } from "./bank-rows";
@@ -145,6 +146,7 @@ export const useBankConnections = ({
       client.bankConnection.startConnection({
         bankCountry: bank.country,
         institutionId: bank.id,
+        locale: getLocale(),
         returnTo,
         state: crypto.randomUUID(),
       })
@@ -156,6 +158,7 @@ export const useBankConnections = ({
       connection.institutionName,
       client.bankConnection.reconnect({
         connectionId: connection.id,
+        locale: getLocale(),
         returnTo,
       })
     );

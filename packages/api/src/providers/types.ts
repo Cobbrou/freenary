@@ -53,6 +53,7 @@ export interface ProviderUserSession {
 export interface StartConnectionRequest {
   institutionId: string;
   country: string;
+  locale?: string;
   providerSessionId?: string;
   redirectUrl: string;
   state: string;
