@@ -42,13 +42,15 @@ let sidebarModule: typeof SidebarModule;
 let labelsModule: typeof LabelsModule;
 let runtimeModule: typeof RuntimeModule;
 let uiLabelsModule: typeof UiLabelsModule;
-const previousGlobals = new Map<string, unknown>();
+const previousGlobals = new Map<string, PropertyDescriptor>();
 
 beforeAll(async () => {
   for (const [name, value] of Object.entries(BROWSER_GLOBALS)) {
-    if (name in globalThis) {
-      previousGlobals.set(name, (globalThis as Record<string, unknown>)[name]);
+    const descriptor = Object.getOwnPropertyDescriptor(globalThis, name);
+    if (descriptor !== undefined) {
+      previousGlobals.set(name, descriptor);
     }
+
     Object.defineProperty(globalThis, name, { configurable: true, value });
   }
 
@@ -62,13 +64,15 @@ beforeAll(async () => {
 
 afterAll(() => {
   for (const name of Object.keys(BROWSER_GLOBALS)) {
-    if (previousGlobals.has(name)) {
-      Object.defineProperty(globalThis, name, { configurable: true, value: previousGlobals.get(name) });
+    const descriptor = previousGlobals.get(name);
+    if (descriptor !== undefined) {
+      Object.defineProperty(globalThis, name, descriptor);
     } else {
       Reflect.deleteProperty(globalThis, name);
     }
   }
 });
+
 afterEach(() => { runtimeModule?.overwriteGetLocale(() => "en"); });
 
 type Locale = "en" | "fr";
