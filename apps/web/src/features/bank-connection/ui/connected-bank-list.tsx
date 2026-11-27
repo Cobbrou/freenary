@@ -16,7 +16,6 @@ import { ACCOUNT_TYPE_LABELS, accountName } from "@/entities/account";
 import { m } from "@/paraglide/messages.js";
 import { getLocale } from "@/paraglide/runtime.js";
 import { orpc } from "@/shared/api";
-import { SyncButton } from "@/shared/ui/sync-button";
 
 import { accountsOf, buildBankRows } from "../model/bank-rows";
 import type { BankRow } from "../model/bank-rows";
@@ -210,17 +209,19 @@ export const ConnectedBankList = ({ banks }: ConnectedBankListProps) => {
           ) : null}
           {row.connection ? (
             <ul className="flex flex-col gap-1 ps-10.5 pb-2.5">
-              {accountsOf(row.connection)
-                .filter((account) => !account.inConsent)
-                .map((account) => (
-                  <li key={account.id}>
-                    <ConnectedAccountRow
-                      account={account}
-                      isDeleting={deletingIds.has(account.id)}
-                      onDelete={() => deleteAccounts.mutate([account.id])}
-                    />
-                  </li>
-                ))}
+              {accountsOf(row.connection).flatMap((account) =>
+                account.inConsent
+                  ? []
+                  : [
+                      <li key={account.id}>
+                        <ConnectedAccountRow
+                          account={account}
+                          isDeleting={deletingIds.has(account.id)}
+                          onDelete={() => deleteAccounts.mutate([account.id])}
+                        />
+                      </li>,
+                    ]
+              )}
             </ul>
           ) : null}
         </li>
