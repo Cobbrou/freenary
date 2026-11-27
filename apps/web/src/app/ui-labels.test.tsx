@@ -47,6 +47,7 @@ const previousGlobals = new Map<string, PropertyDescriptor>();
 beforeAll(async () => {
   for (const [name, value] of Object.entries(BROWSER_GLOBALS)) {
     const descriptor = Object.getOwnPropertyDescriptor(globalThis, name);
+
     if (descriptor !== undefined) {
       previousGlobals.set(name, descriptor);
     }
@@ -65,10 +66,11 @@ beforeAll(async () => {
 afterAll(() => {
   for (const name of Object.keys(BROWSER_GLOBALS)) {
     const descriptor = previousGlobals.get(name);
-    if (descriptor !== undefined) {
-      Object.defineProperty(globalThis, name, descriptor);
-    } else {
+
+if (descriptor === undefined) {
       Reflect.deleteProperty(globalThis, name);
+    } else {
+      Object.defineProperty(globalThis, name, descriptor);
     }
   }
 });
