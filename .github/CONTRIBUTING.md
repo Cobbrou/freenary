@@ -8,6 +8,8 @@ The steps live in the documentation:
 4. [Update the docs](../docs/how-to/contribute/update-the-docs.md): a change to documented behaviour updates `docs/` in the same pull request.
 5. [Open a pull request](../docs/how-to/contribute/open-a-pull-request.md): pull requests target `dev` and use every section of the [pull request template](pull_request_template.md).
 
+Write every contribution in English: code, comments, commit messages, issues, pull requests and documentation. The only exception is translated interface strings, such as `apps/web/messages/fr.json`.
+
 Releases are done by maintainers: see [Release a version](../docs/how-to/contribute/release-a-version.md). Do not tag, and do not bump a version unless a maintainer asks.
 
 ## Working on an Issue
