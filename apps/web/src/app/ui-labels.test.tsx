@@ -74,7 +74,7 @@ afterAll(() => {
   for (const name of Object.keys(BROWSER_GLOBALS)) {
     const descriptor = previousGlobals.get(name);
 
-if (descriptor === undefined) {
+    if (descriptor === undefined) {
       Reflect.deleteProperty(globalThis, name);
     } else {
       Object.defineProperty(globalThis, name, descriptor);
