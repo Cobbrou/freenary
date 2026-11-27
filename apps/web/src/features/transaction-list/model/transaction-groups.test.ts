@@ -24,7 +24,6 @@ afterAll(() => {
   }
 });
 
-
 it("groups a bank date of the 1st under the 1st west of UTC", () => {
   expect(groupKey(FIRST_OF_OCTOBER, "day")).toBe("2026-10-01");
   expect(groupKey(FIRST_OF_OCTOBER, "month")).toBe("2026-10");
