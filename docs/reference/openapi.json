@@ -501,6 +501,10 @@
                   "connectionId": {
                     "type": "string"
                   },
+                  "locale": {
+                    "type": "string",
+                    "pattern": "^[a-z]{2}(?:-[A-Z]{2})?$"
+                  },
                   "returnTo": {
                     "enum": ["onboarding", "settings"],
                     "type": "string"
@@ -546,6 +550,10 @@
                   },
                   "institutionId": {
                     "type": "string"
+                  },
+                  "locale": {
+                    "type": "string",
+                    "pattern": "^[a-z]{2}(?:-[A-Z]{2})?$"
                   },
                   "returnTo": {
                     "enum": ["onboarding", "settings"],

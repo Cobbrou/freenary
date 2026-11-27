@@ -43,3 +43,28 @@ describe("mock provider", () => {
     ).rejects.toThrow("The mock bank callback carries no session code");
   });
 });
+
+const LUMIERE_START = {
+  country: "FR",
+  institutionId: "mock-banque-lumiere",
+  redirectUrl: "https://app.test/callback/mock",
+  state: "signed-state",
+  user: null,
+};
+
+describe("mock provider consent URL", () => {
+  it("passes the member's locale to the consent page", async () => {
+    const { url } = await mockProvider.startConnection({
+      ...LUMIERE_START,
+      locale: "fr",
+    });
+
+    expect(new URL(url).searchParams.get("locale")).toBe("fr");
+  });
+
+  it("leaves the locale out when there is none", async () => {
+    const { url } = await mockProvider.startConnection(LUMIERE_START);
+
+    expect(new URL(url).searchParams.has("locale")).toBe(false);
+  });
+});

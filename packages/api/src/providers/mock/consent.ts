@@ -42,23 +42,52 @@ const callbackWith = (
   return target.toString();
 };
 
-const GENERATED_ORIGIN =
-  "This is the mock banking provider. It stands in for the bank consent screen on a development stack, and every account and transaction it returns is generated.";
+interface ConsentCopy {
+  readonly approve: string;
+  readonly decline: string;
+  readonly fixtureOrigin: string;
+  readonly generatedOrigin: string;
+  readonly lang: string;
+  readonly title: string;
+}
 
-const FIXTURE_ORIGIN =
-  "This is the mock banking provider. It stands in for the bank consent screen on a development stack, and replays the accounts and transactions of a fixture file.";
+const ENGLISH: ConsentCopy = {
+  approve: "Approve",
+  decline: "Decline",
+  fixtureOrigin:
+    "This is the mock banking provider. It stands in for the bank consent screen on a development stack, and replays the accounts and transactions of a fixture file.",
+  generatedOrigin:
+    "This is the mock banking provider. It stands in for the bank consent screen on a development stack, and every account and transaction it returns is generated.",
+  lang: "en",
+  title: "Mock bank consent",
+};
+
+const FRENCH: ConsentCopy = {
+  approve: "Accepter",
+  decline: "Refuser",
+  fixtureOrigin:
+    "Ceci est le fournisseur bancaire fictif. Il remplace l'écran de consentement de la banque sur un environnement de développement, et rejoue les comptes et les transactions d'un fichier de fixture.",
+  generatedOrigin:
+    "Ceci est le fournisseur bancaire fictif. Il remplace l'écran de consentement de la banque sur un environnement de développement, et chaque compte et chaque transaction qu'il renvoie est généré.",
+  lang: "fr",
+  title: "Consentement de la banque fictive",
+};
+
+const copyFor = (locale: string | null): ConsentCopy =>
+  locale?.split("-")[0] === "fr" ? FRENCH : ENGLISH;
 
 const consentPage = (
+  copy: ConsentCopy,
   institutionName: string,
   origin: string,
   approveUrl: string,
   declineUrl: string
 ): string => `<!doctype html>
-<html lang="en">
+<html lang="${copy.lang}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Mock bank consent</title>
+<title>${escapeHtml(copy.title)}</title>
 <style>
 body{font-family:system-ui,sans-serif;display:grid;place-items:center;min-height:100vh;margin:0;background:#f5f5f4;color:#1c1917}
 main{max-width:26rem;padding:2rem;border-radius:1rem;background:#fff;box-shadow:0 1px 3px #0002}
@@ -75,8 +104,8 @@ a{flex:1;text-align:center;padding:.6rem 1rem;border-radius:.5rem;text-decoratio
 <h1>${escapeHtml(institutionName)}</h1>
 <p>${escapeHtml(origin)}</p>
 <nav>
-<a class="decline" href="${escapeHtml(declineUrl)}">Decline</a>
-<a class="approve" href="${escapeHtml(approveUrl)}">Approve</a>
+<a class="decline" href="${escapeHtml(declineUrl)}">${escapeHtml(copy.decline)}</a>
+<a class="approve" href="${escapeHtml(approveUrl)}">${escapeHtml(copy.approve)}</a>
 </nav>
 </main>
 </body>
@@ -91,6 +120,7 @@ export const handleMockConsent = (request: Request): Response => {
   const redirectUri = search.get("redirect_uri");
   const state = search.get("state");
   const institutionId = search.get("institution");
+  const copy = copyFor(search.get("locale"));
   const fixture = fixtureInstitutions().find(
     (candidate) => candidate.id === institutionId
   );
@@ -121,8 +151,9 @@ export const handleMockConsent = (request: Request): Response => {
 
   return new Response(
     consentPage(
+      copy,
       institution.name,
-      fixture ? FIXTURE_ORIGIN : GENERATED_ORIGIN,
+      fixture ? copy.fixtureOrigin : copy.generatedOrigin,
       approveUrl,
       declineUrl
     ),

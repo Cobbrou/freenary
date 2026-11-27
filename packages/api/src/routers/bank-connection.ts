@@ -7,6 +7,7 @@ import { ORPCError } from "@orpc/server";
 import { Data, Effect, Option } from "effect";
 import { z } from "zod";
 
+import { LOCALE } from "../assistant/turn";
 import { protectedProcedure } from "../index";
 import type {
   BankConnectionReturnTarget,
@@ -183,6 +184,7 @@ const loadInstitutions = institutionsLoaderWith();
 interface ConsentRequest {
   readonly connection?: { readonly id: string; readonly sessionId: string };
   readonly institution: ProviderInstitution;
+  readonly locale?: string;
   readonly original?: string;
   readonly provider: BankingProvider;
   readonly returnTo: BankConnectionReturnTarget;
@@ -192,6 +194,7 @@ interface ConsentRequest {
 const startConsent = async ({
   connection,
   institution,
+  locale,
   original,
   provider,
   returnTo,
@@ -203,6 +206,7 @@ const startConsent = async ({
   return await provider.startConnection({
     country: institution.country,
     institutionId: institution.id,
+    locale,
     providerSessionId: connection?.sessionId,
     redirectUrl: `${env.CORS_ORIGIN}${provider.callbackPath}`,
     state: encodeBankConnectionState({
@@ -492,6 +496,7 @@ export const bankConnectionRouter = {
     .input(
       z.object({
         connectionId: z.string(),
+        locale: z.string().regex(LOCALE).optional(),
         returnTo: z.enum(BANK_CONNECTION_RETURN_TARGETS),
       })
     )
@@ -515,6 +520,7 @@ export const bankConnectionRouter = {
           id: connection.institutionId,
           name: connection.institutionName,
         },
+        locale: input.locale,
         provider: resolveProvider(connection.provider),
         returnTo: input.returnTo,
         userId,
@@ -526,6 +532,7 @@ export const bankConnectionRouter = {
       z.object({
         bankCountry: isoAlpha2CountryCode,
         institutionId: z.string(),
+        locale: z.string().regex(LOCALE).optional(),
         returnTo: z.enum(BANK_CONNECTION_RETURN_TARGETS),
         state: z.string().optional(),
       })
@@ -549,6 +556,7 @@ export const bankConnectionRouter = {
 
       return await startConsent({
         institution,
+        locale: input.locale,
         original: input.state,
         provider,
         returnTo: input.returnTo,
