@@ -8,6 +8,7 @@ import {
   COUNTERPARTY_SELECT,
   rememberCounterpartyFor,
 } from "../categorisation/internal-transfer-choice";
+import { refreshHolderNames } from "../categorisation/own-counterparty";
 import {
   cadenceWindow,
   detectRecurring,
@@ -19,9 +20,10 @@ import {
 import {
   startPendingCategorisation,
   startRecategorisation,
+  startTransferRematch,
 } from "../categorisation/run";
 import { protectedProcedure } from "../index";
-import { cashFlowAccountsOf } from "../lib/account-types";
+import { cashFlowAccountsOf, countedAccountsOf } from "../lib/account-types";
 import { accountsSummary } from "../lib/accounts-summary";
 import { startAccountSync } from "../lib/bank-sync";
 import {
@@ -44,6 +46,7 @@ import {
 } from "../lib/budget-aggregates";
 import { monthSpan } from "../lib/budget-planned";
 import { countedWholeWhere } from "../lib/counted-transactions";
+import { MAX_EXCLUSION_REASON_LENGTH } from "../lib/exclusion-scope";
 import { readSyncOutcome, readSyncProgress } from "../lib/sync-progress";
 import type { BudgetPipelineReason } from "../lib/sync-progress";
 import { SPENDING_CATEGORIES } from "../lib/taxonomy";
@@ -52,8 +55,10 @@ import {
   pipelineCategory,
 } from "../lib/transaction-category";
 import {
+  excludeAccount,
   excludeMerchant,
   excludeTransaction,
+  exclusionReasonsOf,
 } from "../lib/transaction-exclusion";
 import { transactionFilterConditions } from "../lib/transaction-filter-conditions";
 import {
@@ -67,31 +72,71 @@ import { spendingWeeksStart, weeklySpending } from "../lib/weekly-spending";
 import { categorySuggestionProcedures } from "./category-suggestions";
 import { savedFilterProcedures } from "./saved-filters";
 
-const exclusionOrNotFound = <T>(outcome: T | null): T => {
+const exclusionOrNotFound = <T>(
+  outcome: T | null,
+  message = "Transaction not found"
+): T => {
   if (outcome === null) {
-    throw new ORPCError("NOT_FOUND", { message: "Transaction not found" });
+    throw new ORPCError("NOT_FOUND", { message });
   }
 
   return outcome;
 };
 
+const exclusionReasonInput = z
+  .string()
+  .max(MAX_EXCLUSION_REASON_LENGTH)
+  .nullable()
+  .optional();
+
 const exclusionInput = z.object({
   excluded: z.boolean(),
+  reason: exclusionReasonInput,
   transactionId: z.string(),
 });
 
 export const budgetRouter = {
   ...categorySuggestionProcedures,
   ...savedFilterProcedures,
+  excludeAccount: protectedProcedure
+    .input(
+      z.object({
+        accountId: z.string(),
+        excluded: z.boolean(),
+        reason: exclusionReasonInput,
+      })
+    )
+    .handler(async ({ context, input }) => {
+      const userId = context.session.user.id;
+      const outcome = exclusionOrNotFound(
+        await excludeAccount(userId, input.accountId, {
+          isExcluded: input.excluded,
+          reason: input.reason,
+        }),
+        "Account not found"
+      );
+
+      if (outcome.changed) {
+        await refreshHolderNames(userId);
+        await startTransferRematch(userId);
+      }
+
+      return {
+        excluded: outcome.excluded,
+        exclusionReason: outcome.exclusionReason,
+        rematchStarted: outcome.changed,
+        updated: outcome.updated,
+      };
+    }),
+
   excludeMerchant: protectedProcedure
     .input(exclusionInput)
     .handler(async ({ context, input }) =>
       exclusionOrNotFound(
-        await excludeMerchant(
-          context.session.user.id,
-          input.transactionId,
-          input.excluded
-        )
+        await excludeMerchant(context.session.user.id, input.transactionId, {
+          isExcluded: input.excluded,
+          reason: input.reason,
+        })
       )
     ),
 
@@ -99,11 +144,10 @@ export const budgetRouter = {
     .input(exclusionInput)
     .handler(async ({ context, input }) =>
       exclusionOrNotFound(
-        await excludeTransaction(
-          context.session.user.id,
-          input.transactionId,
-          input.excluded
-        )
+        await excludeTransaction(context.session.user.id, input.transactionId, {
+          isExcluded: input.excluded,
+          reason: input.reason,
+        })
       )
     ),
 
@@ -272,7 +316,7 @@ export const budgetRouter = {
           currency: true,
           type: true,
         },
-        where: { connection: { userId } },
+        where: countedAccountsOf(userId),
       }),
       userConverter(userId, cadence.from, asOf),
     ]);
@@ -551,43 +595,41 @@ export const budgetRouter = {
       }
 
       const largestAmountFirst = direction === "incoming" ? "desc" : "asc";
-      const findManyOpts: Prisma.TransactionFindManyArgs = {
-        orderBy:
-          sort === "amount"
-            ? [{ amount: largestAmountFirst }, { id: "desc" }]
-            : [{ date: "desc" }, { id: "desc" }],
-        select: {
-          amount: true,
-          category: true,
-          counterpartyName: true,
-          currency: true,
-          date: true,
-          description: true,
-          exchangeFeeMinor: true,
-          exclusion: true,
-          id: true,
-          isInternalTransfer: true,
-          merchantKey: true,
-          normalisedDescriptor: true,
-          originalAmount: true,
-          originalCurrency: true,
-          resolvedCategory: true,
-        },
-        take: limit + 1,
-        where: baseWhere,
-      };
-
-      if (cursor) {
-        findManyOpts.cursor = { id: cursor };
-        findManyOpts.skip = 1;
-      }
-
       const [fetched, totals] = await Promise.all([
-        prisma.transaction.findMany(findManyOpts),
+        prisma.transaction.findMany({
+          cursor: cursor ? { id: cursor } : undefined,
+          orderBy:
+            sort === "amount"
+              ? [{ amount: largestAmountFirst }, { id: "desc" }]
+              : [{ date: "desc" }, { id: "desc" }],
+          select: {
+            account: { select: { exclusionReason: true } },
+            amount: true,
+            category: true,
+            counterpartyName: true,
+            currency: true,
+            date: true,
+            description: true,
+            exchangeFeeMinor: true,
+            exclusion: true,
+            exclusionReason: true,
+            id: true,
+            isInternalTransfer: true,
+            merchantKey: true,
+            normalisedDescriptor: true,
+            originalAmount: true,
+            originalCurrency: true,
+            resolvedCategory: true,
+          },
+          skip: cursor ? 1 : undefined,
+          take: limit + 1,
+          where: baseWhere,
+        }),
         cursor ? null : convertedTotals(baseWhere, converter),
       ]);
 
       const { nextCursor, transactions } = transactionPage(fetched, limit);
+      const exclusionReasons = await exclusionReasonsOf(userId, transactions);
 
       return {
         currency: converter.currency,
@@ -603,6 +645,7 @@ export const budgetRouter = {
           description: t.description,
           exchangeFeeMinor: t.exchangeFeeMinor,
           exclusion: t.exclusion,
+          exclusionReason: exclusionReasons.get(t.id) ?? null,
           hasMerchant: t.merchantKey !== null && t.merchantKey.length > 0,
           id: t.id,
           isInternalTransfer: t.isInternalTransfer,

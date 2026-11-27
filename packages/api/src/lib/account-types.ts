@@ -115,6 +115,11 @@ export const INTERNAL_TRANSFER_ACCOUNT_TYPES = typesWhere(
   (rule) => rule.pairsInternalTransfers
 );
 
+export const countedAccountsOf = (userId: string) => ({
+  connection: { userId },
+  excluded: false,
+});
+
 export const cashFlowAccountsOf = (userId: string) => ({
   connection: { userId },
   type: { in: CASH_FLOW_ACCOUNT_TYPES },

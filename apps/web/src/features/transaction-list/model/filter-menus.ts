@@ -36,9 +36,13 @@ export const EXCLUSION_PRESETS: readonly ExclusionPreset[] = [
     filter: {
       field: "exclusion",
       operator: "isAnyOf",
-      values: ["merchant", "transaction"],
+      values: ["account", "merchant", "transaction"],
     },
     label: m.budget_filter_exclusion_any,
+  },
+  {
+    filter: { field: "exclusion", operator: "is", values: ["account"] },
+    label: m.budget_filter_exclusion_accounts,
   },
   {
     filter: { field: "exclusion", operator: "is", values: ["merchant"] },

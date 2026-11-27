@@ -19,6 +19,7 @@ import {
   OWN_COUNTERPARTY_STAGE,
   ownerNameKeyOf,
   rememberOwnerNames,
+  replaceLearnedOwnerNames,
   TRANSFER_CHANNELS,
 } from "./own-counterparty";
 import type { OwnCounterparties } from "./own-counterparty";
@@ -614,21 +615,67 @@ const transferUpdates = (
   ];
 };
 
+const TRANSFER_STAGES = ["internal-transfer", OWN_COUNTERPARTY_STAGE];
+
+const UNFLAGGED_LEG = {
+  category: null,
+  exchangeFeeMinor: null,
+  isInternalTransfer: false,
+  resolutionConfidence: null,
+  resolutionStage: null,
+  resolvedCategory: null,
+} as const satisfies Prisma.TransactionUpdateManyMutationInput;
+
+const flaggedLegsWhere = (userId: string): Prisma.TransactionWhereInput => ({
+  account: { connection: { userId } },
+  categoryOverride: false,
+  isInternalTransfer: true,
+  resolutionStage: { in: TRANSFER_STAGES },
+});
+
+const rematchCandidatesWhere = (
+  accountIds: string[]
+): Prisma.TransactionWhereInput => ({
+  OR: [
+    { isInternalTransfer: false },
+    { isInternalTransfer: true, resolutionStage: { in: TRANSFER_STAGES } },
+  ],
+  accountId: { in: accountIds },
+  categoryOverride: false,
+});
+
+interface MatchScope {
+  bookedSince: Date | null;
+  isRematch: boolean;
+  loadRates?: typeof loadRateBook;
+}
+
+const NO_UPDATES: TransferLegUpdates = {
+  fees: new Map(),
+  flagged: new Map(),
+  saved: new Map(),
+};
+
 const matchInternal = async (
   userId: string,
-  bookedSince: Date | null
+  { bookedSince, isRematch, loadRates = loadRateBook }: MatchScope
 ): Promise<number> => {
-  const accounts = await prisma.bankAccount.findMany({
-    select: { iban: true, id: true, type: true },
-    where: {
-      connection: { userId },
-      type: { in: INTERNAL_TRANSFER_ACCOUNT_TYPES },
-    },
-  });
-
-  if (accounts.length === 0) {
-    return 0;
-  }
+  const [accounts, previouslyFlagged] = await Promise.all([
+    prisma.bankAccount.findMany({
+      select: { iban: true, id: true, type: true },
+      where: {
+        connection: { userId },
+        excluded: false,
+        type: { in: INTERNAL_TRANSFER_ACCOUNT_TYPES },
+      },
+    }),
+    isRematch
+      ? prisma.transaction.findMany({
+          select: { id: true },
+          where: flaggedLegsWhere(userId),
+        })
+      : [],
+  ]);
 
   const ibanOf = new Map(accounts.map(({ iban, id }) => [id, iban]));
   const fundedByHolder = new Set(
@@ -638,30 +685,34 @@ const matchInternal = async (
   const accountsByIban = accountsByIbanOf(accounts);
 
   const [legs, stored] = await Promise.all([
-    prisma.transaction.findMany({
-      orderBy: { date: "asc" },
-      select: {
-        accountId: true,
-        amount: true,
-        category: true,
-        channel: true,
-        counterpartyName: true,
-        creditorAccountIban: true,
-        currency: true,
-        date: true,
-        debtorAccountIban: true,
-        id: true,
-        isInternalTransfer: true,
-        merchantKey: true,
-        originalAmount: true,
-        originalCurrency: true,
-        resolutionConfidence: true,
-        resolutionStage: true,
-        resolvedCategory: true,
-      },
-      where: transferCandidatesWhere([...ibanOf.keys()], bookedSince),
-    }),
-    loadOwnCounterparties(userId),
+    accounts.length === 0
+      ? []
+      : prisma.transaction.findMany({
+          orderBy: { date: "asc" },
+          select: {
+            accountId: true,
+            amount: true,
+            category: true,
+            channel: true,
+            counterpartyName: true,
+            creditorAccountIban: true,
+            currency: true,
+            date: true,
+            debtorAccountIban: true,
+            id: true,
+            isInternalTransfer: true,
+            merchantKey: true,
+            originalAmount: true,
+            originalCurrency: true,
+            resolutionConfidence: true,
+            resolutionStage: true,
+            resolvedCategory: true,
+          },
+          where: isRematch
+            ? rematchCandidatesWhere([...ibanOf.keys()])
+            : transferCandidatesWhere([...ibanOf.keys()], bookedSince),
+        }),
+    loadOwnCounterparties(userId, { withLearned: !isRematch }),
   ]);
 
   const unsigned = legs.map((leg) => ({
@@ -672,45 +723,86 @@ const matchInternal = async (
   const [first] = unsigned;
   const last = unsigned.at(-1);
 
-  if (!(first && last)) {
-    return 0;
-  }
-
   const linkedOwnerNames = ownerNamesConfirmedBy(unsigned, [], accountsByIban);
   const own = withLearnedNames(stored, linkedOwnerNames);
 
-  const candidates = withOwnerSignal(unsigned, own);
+  const rates =
+    first && last
+      ? await loadRates(
+          [...new Set(unsigned.map((tx) => tx.currency))],
+          first.date,
+          last.date
+        )
+      : null;
 
-  const rates = await loadRateBook(
-    [...new Set(candidates.map((tx) => tx.currency))],
-    first.date,
-    last.date
+  const pairsOf = (legsWithSignal: readonly TransferCandidate[]) =>
+    pairedLegs(legsWithSignal, rates);
+
+  const pairedOwnerNames = ownerNamesConfirmedBy(
+    [],
+    pairsOf(withOwnerSignal(unsigned, own)),
+    accountsByIban
   );
 
-  const pairs = pairedLegs(candidates, rates);
+  const ownWithPaired = withLearnedNames(own, pairedOwnerNames);
+  const candidates = withOwnerSignal(unsigned, ownWithPaired);
+  const pairs = pairsOf(candidates);
+
   const paired = new Set(
     pairs.flatMap(({ incoming, outgoing }) => [incoming.id, outgoing.id])
   );
 
-  const singles = ownAccountLegs(candidates, paired, accountsByIban, own);
-
-  const updates = transferLegUpdates(
-    pairs,
-    new Map(accounts.map((account) => [account.id, account.type])),
-    singles
+  const singles = ownAccountLegs(
+    candidates,
+    paired,
+    accountsByIban,
+    ownWithPaired
   );
 
-  if (updates.flagged.size > 0) {
-    await prisma.$transaction(
-      transferUpdates(updates, new Map(legs.map((leg) => [leg.id, leg])))
-    );
+  const updates =
+    candidates.length === 0
+      ? NO_UPDATES
+      : transferLegUpdates(
+          pairs,
+          new Map(accounts.map((account) => [account.id, account.type])),
+          singles
+        );
+
+  const stillFlagged = new Set(
+    [...updates.flagged.values(), ...updates.saved.values()].flat()
+  );
+
+  const unflagged = previouslyFlagged.flatMap(({ id }) =>
+    stillFlagged.has(id) ? [] : [id]
+  );
+
+  const learnedOwnerNames = [
+    ...linkedOwnerNames,
+    ...ownerNamesConfirmedBy([], pairs, accountsByIban),
+  ];
+
+  const writes = [
+    ...(unflagged.length === 0
+      ? []
+      : [
+          prisma.transaction.updateMany({
+            data: UNFLAGGED_LEG,
+            where: { id: { in: unflagged } },
+          }),
+        ]),
+    ...(updates.flagged.size === 0
+      ? []
+      : transferUpdates(updates, new Map(legs.map((leg) => [leg.id, leg])))),
+    ...(isRematch ? replaceLearnedOwnerNames(userId, learnedOwnerNames) : []),
+  ];
+
+  if (writes.length > 0) {
+    await prisma.$transaction(writes);
   }
 
-  await rememberOwnerNames(
-    userId,
-    [...linkedOwnerNames, ...ownerNamesConfirmedBy([], pairs, accountsByIban)],
-    "pairing"
-  );
+  if (!isRematch && candidates.length > 0) {
+    await rememberOwnerNames(userId, learnedOwnerNames, "pairing");
+  }
 
   return [...updates.flagged.values()].flat().length;
 };
@@ -720,7 +812,7 @@ export const matchInternalTransfers = async (
   bookedSince: Date | null
 ): Promise<number> =>
   Option.getOrElse(
-    await matchInternal(userId, bookedSince)
+    await matchInternal(userId, { bookedSince, isRematch: false })
       .then(Option.some)
       .catch((error) => {
         console.warn(
@@ -732,3 +824,9 @@ export const matchInternalTransfers = async (
       }),
     () => 0
   );
+
+export const rematchInternalTransfers = (
+  userId: string,
+  { loadRates }: { loadRates?: typeof loadRateBook } = {}
+): Promise<number> =>
+  matchInternal(userId, { bookedSince: null, isRematch: true, loadRates });

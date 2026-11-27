@@ -42,6 +42,7 @@ export const AMOUNT_OPERATOR_LABELS = {
 } satisfies Record<AmountFilterOperator, () => string>;
 
 export const EXCLUSION_VALUE_LABELS = {
+  account: m.budget_filter_exclusion_account,
   merchant: m.budget_filter_exclusion_merchant,
   transaction: m.budget_filter_exclusion_transaction,
 } satisfies Record<ExclusionFilterValue, () => string>;

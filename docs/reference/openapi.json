@@ -840,7 +840,7 @@
                               "minItems": 1,
                               "maxItems": 50,
                               "items": {
-                                "enum": ["merchant", "transaction"],
+                                "enum": ["account", "merchant", "transaction"],
                                 "type": "string"
                               }
                             }
@@ -903,6 +903,58 @@
         }
       }
     },
+    "/budget/excludeAccount": {
+      "post": {
+        "operationId": "budget.excludeAccount",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "accountId": {
+                    "type": "string"
+                  },
+                  "excluded": {
+                    "type": "boolean"
+                  },
+                  "reason": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 200
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": ["accountId", "excluded"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {},
+                    {
+                      "not": {}
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/budget/excludeMerchant": {
       "post": {
         "operationId": "budget.excludeMerchant",
@@ -915,6 +967,17 @@
                 "properties": {
                   "excluded": {
                     "type": "boolean"
+                  },
+                  "reason": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 200
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
                   },
                   "transactionId": {
                     "type": "string"
@@ -956,6 +1019,17 @@
                 "properties": {
                   "excluded": {
                     "type": "boolean"
+                  },
+                  "reason": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 200
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
                   },
                   "transactionId": {
                     "type": "string"
@@ -1662,7 +1736,7 @@
                               "minItems": 1,
                               "maxItems": 50,
                               "items": {
-                                "enum": ["merchant", "transaction"],
+                                "enum": ["account", "merchant", "transaction"],
                                 "type": "string"
                               }
                             }

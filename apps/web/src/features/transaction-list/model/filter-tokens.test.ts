@@ -240,7 +240,7 @@ describe("suggestions", () => {
 });
 
 describe("exclusion filters", () => {
-  it("offers both kinds of exclusion, marking the picked ones", () => {
+  it("offers every kind of exclusion, marking the picked ones", () => {
     const draft = {
       field: "exclusion" as const,
       operator: "isAnyOf" as const,
@@ -249,6 +249,12 @@ describe("exclusion filters", () => {
     };
 
     expect(exclusionSuggestions(draft, "")).toEqual([
+      {
+        kind: "exclusion",
+        label: "Account",
+        picked: false,
+        value: "account",
+      },
       {
         kind: "exclusion",
         label: "Merchant",

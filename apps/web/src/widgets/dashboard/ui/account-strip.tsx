@@ -34,7 +34,11 @@ const AccountTile = ({
           {accountName(account)}
         </span>
         <span className="text-muted-foreground truncate text-xs">
-          {account.institutionName}
+          {account.excluded
+            ? m.home_account_excluded({
+                institution: account.institutionName,
+              })
+            : account.institutionName}
         </span>
       </span>
       <AccountBalance

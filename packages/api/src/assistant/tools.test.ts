@@ -219,6 +219,7 @@ const budgetApi: AssistantToolApi["budget"] = {
           description: "CARREFOUR MARKET PARIS",
           exchangeFeeMinor: null,
           exclusion: null,
+          exclusionReason: null,
           hasMerchant: true,
           id: "txn_1",
           isInternalTransfer: false,

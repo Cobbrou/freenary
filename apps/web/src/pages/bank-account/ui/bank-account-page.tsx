@@ -27,6 +27,7 @@ import { m } from "@/paraglide/messages.js";
 import { orpc } from "@/shared/api";
 
 import { useAccountTransactionsView } from "../model/use-account-transactions-view";
+import { AccountExclusion } from "./account-exclusion";
 
 const ACCOUNT_EMPTY_DESCRIPTIONS = {
   incoming: m.bank_account_transactions_empty_incoming,
@@ -46,7 +47,9 @@ const AccountHeader = ({
         {accountName(account)}
       </h1>
       <p className="text-muted-foreground text-sm">
-        {m.home_accounts_meta({
+        {(account.excluded
+          ? m.bank_account_meta_excluded
+          : m.home_accounts_meta)({
           institution: account.institutionName,
           type: ACCOUNT_TYPE_LABELS[account.type](),
         })}
@@ -208,6 +211,7 @@ export const BankAccountPage = () => {
         account={account}
         reportingCurrency={overview.data.currency}
       />
+      <AccountExclusion account={account} key={`exclusion-${account.id}`} />
       <AccountTransactions
         currency={overview.data.currency}
         key={account.id}

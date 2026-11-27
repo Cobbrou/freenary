@@ -13,6 +13,23 @@ import { getLocale } from "@/paraglide/runtime.js";
 
 import { bankDayLabel } from "../lib/day-label";
 
+const transactionMeta = (transaction: Transaction, today: Date): string => {
+  const meta = {
+    category: categoryLabel(transaction.category),
+    day: bankDayLabel(transaction.date, today, getLocale()),
+  };
+
+  if (!isExcluded(transaction)) {
+    return m.budget_transaction_meta(meta);
+  }
+
+  const reason = transaction.exclusionReason ?? null;
+
+  return reason === null
+    ? m.budget_transaction_meta_excluded(meta)
+    : m.budget_transaction_meta_excluded_reason({ ...meta, reason });
+};
+
 export const TransactionItem = ({
   onSelect,
   today,
@@ -37,12 +54,7 @@ export const TransactionItem = ({
           {transactionTitle(transaction)}
         </span>
         <span className="text-muted-foreground truncate text-xs">
-          {(isExcluded(transaction)
-            ? m.budget_transaction_meta_excluded
-            : m.budget_transaction_meta)({
-            category: categoryLabel(transaction.category),
-            day: bankDayLabel(transaction.date, today, getLocale()),
-          })}
+          {transactionMeta(transaction, today)}
         </span>
       </span>
       <TransactionAmount

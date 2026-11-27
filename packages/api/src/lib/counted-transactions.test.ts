@@ -71,9 +71,10 @@ describe("countedShareOf", () => {
     expect(countedShareOf(row({}))).toBe("whole");
   });
 
-  it("leaves out a transaction the member excluded, alone or with its merchant", () => {
+  it("leaves out a transaction the member excluded, alone, with its merchant or with its account", () => {
     expect(countedShareOf(row({ exclusion: "TRANSACTION" }))).toBe("none");
     expect(countedShareOf(row({ exclusion: "MERCHANT" }))).toBe("none");
+    expect(countedShareOf(row({ exclusion: "ACCOUNT" }))).toBe("none");
   });
 
   it("leaves out a transaction filed under transfers between the member's accounts", () => {

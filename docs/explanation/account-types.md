@@ -54,6 +54,8 @@ An account imported before these types existed keeps its old type until Powens r
 | `LOAN` | Left out | Counted as a debt | Left out |
 | `UNKNOWN` | Left out | Counted as other | Counted |
 
+An account you exclude counts in none of these figures, whatever its type, as [Accounts you exclude](#accounts-you-exclude) explains.
+
 ### Current accounts and Available to spend
 
 These add up the balances of the `CHECKING` accounts and take off what `CARD` accounts have spent, converted into your reporting currency. With no current account that reports a balance, they show nothing. The same balance starts the balance forecast on **Recurring**.
@@ -66,7 +68,7 @@ These add up the balances of the `CHECKING` accounts and take off what `CARD` ac
 
 The spending breakdown, budget against actual, fixed against variable, weekly spending, the Sankey diagram, the cash-flow chart, recurring expenses and monthly income read only the transactions of `CHECKING`, `CARD` and `UNKNOWN` accounts. Interest paid into a Livret A, an order bought inside a PEA or a repayment line on a loan account counts in none of them.
 
-These figures also leave out internal transfers and every transaction under **Transfer between my accounts**, except a move from a current account into a savings, investment or retirement account, described below. Moving money between two current accounts, or from a current account to a card, is neither income nor spending. They leave out the transactions you excluded too, as [below](#transactions-you-exclude) explains.
+These figures also leave out internal transfers and every transaction under **Transfer between my accounts**, except a move from a current account into a savings, investment or retirement account, described below. Moving money between two current accounts, or from a current account to a card, is neither income nor spending. They leave out the transactions you excluded too, as [below](#transactions-you-exclude) explains, and every transaction of an [account you exclude](#accounts-you-exclude).
 
 A transaction in another currency is converted into your reporting currency. An exchange between two of your own currencies counts only what it cost. [How currencies are converted](currencies.md) explains the rates and the rules.
 
@@ -79,7 +81,20 @@ Two controls in the transaction details leave a transaction out of every figure 
 - The **Exclude from analytics** switch leaves out that transaction alone. Turned off, it counts again.
 - **Exclude this merchant**, in the **More actions** menu (⋮), leaves out every transaction with its merchant key, the ones already imported and the ones later syncs bring. It shows only when the transaction has a merchant key. While the merchant is excluded, the switch stays on and cannot be changed; **Count this merchant again**, in the same menu, brings the merchant back. Freenary stores the merchant in the `excluded_merchant` table.
 
-A transaction under **Transfer between my accounts** shows neither control: it never counts. An excluded transaction keeps its category and still goes through categorisation. The transaction list shows it with its amount struck through and the word **Excluded**. Each control undoes only its own exclusion: a transaction excluded alone stays excluded when its merchant is counted again.
+A transaction under **Transfer between my accounts** shows neither control: it never counts. An excluded transaction keeps its category and still goes through categorisation. The transaction list shows it with its amount struck through and the word **Excluded**. Each control undoes only its own exclusion: a transaction excluded alone stays excluded when its merchant is counted again, and a transaction counted again alone stays excluded while its merchant or its account is.
+
+Once a transaction or its merchant is excluded, a **Reason (optional)** field shows under the switch in the transaction details. **Save** stores the text you typed, up to 200 characters; an empty field stores no reason. Freenary keeps the reason of a transaction in the `exclusionReason` column of `transaction`, and the reason of a merchant in the `reason` column of `excluded_merchant`. The transaction list then shows **Excluded:** followed by the reason. Counting the transaction or the merchant again deletes its reason.
+
+### Accounts you exclude
+
+The **Exclude from analytics** switch on the page of a bank account leaves that account out of every figure on this page: **Current accounts**, **Available to spend**, **Net worth** and its chart, the holdings, and every spending, income and cash-flow figure. Use it for an account you see through your bank but do not want in your own figures, such as a joint account.
+
+- The transactions of the account stay in the transaction list, struck through, and the transaction details say **Excluded with every transaction from this account.** Their **Exclude from analytics** switch stays on and cannot be changed there.
+- The transactions later syncs bring into the account are excluded too.
+- A move between the account and your other accounts is no longer an internal transfer. Money you move into it counts as spending from the account it left, and money it sends you counts as income. Freenary also forgets two kinds of owner names, so a later transfer to one of them counts as spending too: the names it learned from moves with the account, unless a move between two accounts you still count also shows them, and the holder names your bank reported for the account at its last sync, unless an account you still count reports them too. Syncs keep the holder names of each account in the `holderNameKeys` column of `bank_account`, and remember as yours only those of the accounts you count. An account last synced before Freenary kept these names has none to forget until its next sync. The names you marked as yours stay yours. Each time you turn the switch on or off, Freenary matches the internal transfers again in the background, and categorises the moves it releases. When a sync or a categorisation is already running, it does so once that run finishes; until then the transfers keep their previous state.
+- A **Reason (optional)** field shows under the switch while the account is excluded. Its reason shows on each of its transactions. Freenary stores the exclusion in the `excluded` and `exclusionReason` columns of `bank_account`.
+- The account stays on **Home**, marked **Excluded** after its bank, and its own page says **Excluded from analytics** under its name.
+- Turned off, the switch deletes the reason, and every transaction of the account counts again, except the ones you excluded alone or with their merchant.
 
 ## Transfers between your own accounts
 
