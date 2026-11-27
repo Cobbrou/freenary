@@ -1,11 +1,4 @@
-import {
-  afterAll,
-  afterEach,
-  beforeAll,
-  describe,
-  expect,
-  it,
-} from "bun:test";
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "bun:test";
 
 import type * as DialogModule from "@freenary/ui/components/dialog";
 import type * as SidebarModule from "@freenary/ui/components/sidebar-core";
