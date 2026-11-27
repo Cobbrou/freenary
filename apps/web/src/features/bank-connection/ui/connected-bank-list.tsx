@@ -16,15 +16,18 @@ import { ACCOUNT_TYPE_LABELS, accountName } from "@/entities/account";
 import { m } from "@/paraglide/messages.js";
 import { getLocale } from "@/paraglide/runtime.js";
 import { orpc } from "@/shared/api";
-import { SyncButton } from "@/shared/ui/sync-button";
 
-import { buildBankRows } from "../model/bank-rows";
+import { accountsOf, buildBankRows } from "../model/bank-rows";
 import type { BankRow } from "../model/bank-rows";
 import { useBankConnections } from "../model/use-bank-connections";
 import type { BankInstitution } from "../model/use-bank-connections";
+import {
+  useDeleteAccounts,
+  useDeletingAccountIds,
+} from "../model/use-delete-accounts";
+import { BankActionsMenu } from "./bank-actions-menu";
 import { BankListSkeleton } from "./bank-list-skeleton";
-import { DisconnectBankDialog } from "./disconnect-bank-dialog";
-import { ReconnectBankButton } from "./reconnect-bank-button";
+import { ConnectedAccountRow } from "./connected-account-row";
 
 interface ConnectedBankListProps {
   banks: BankInstitution[];
@@ -114,6 +117,9 @@ export const ConnectedBankList = ({ banks }: ConnectedBankListProps) => {
     resyncingId,
   } = useBankConnections({ returnTo: "settings" });
 
+  const deleteAccounts = useDeleteAccounts();
+  const deletingIds = useDeletingAccountIds();
+
   const rows = useMemo(
     () =>
       buildBankRows(banks, connections, locale).filter(
@@ -171,35 +177,25 @@ export const ConnectedBankList = ({ banks }: ConnectedBankListProps) => {
             </ItemContent>
             {row.connection === null ? null : (
               <ItemActions>
-                {row.connection.status === "ACTIVE" ? (
-                  <SyncButton
-                    isSyncing={resyncingId === row.connection.id}
-                    label={m.bank_row_sync({ institution: row.name })}
-                    onSync={() => {
-                      if (row.connection) {
-                        resync(row.connection);
-                      }
-                    }}
-                    size="icon-compact"
-                  />
-                ) : (
-                  <ReconnectBankButton
-                    institutionName={row.name}
-                    isReconnecting={connecting === row.connection.id}
-                    onReconnect={() => {
-                      if (row.connection) {
-                        void reconnect(row.connection);
-                      }
-                    }}
-                  />
-                )}
-                <DisconnectBankDialog
-                  accountCount={row.connection.accounts.length}
+                <BankActionsMenu
+                  connection={row.connection}
                   institutionName={row.name}
                   isDisconnecting={disconnectingId === row.connection.id}
-                  onConfirm={() => {
+                  isRedirecting={connecting === row.connection.id}
+                  isSyncing={resyncingId === row.connection.id}
+                  onDisconnect={() => {
                     if (row.connection) {
                       disconnect(row.connection.id);
+                    }
+                  }}
+                  onReconnect={() => {
+                    if (row.connection) {
+                      void reconnect(row.connection);
+                    }
+                  }}
+                  onSync={() => {
+                    if (row.connection) {
+                      resync(row.connection);
                     }
                   }}
                 />
@@ -208,8 +204,27 @@ export const ConnectedBankList = ({ banks }: ConnectedBankListProps) => {
           </Item>
           {row.connection ? (
             <ConnectionAccountRows
-              accountIds={row.connection.accounts.map((held) => held.id)}
+              accountIds={row.connection.accounts.flatMap((held) =>
+                held.inConsent ? [held.id] : []
+              )}
             />
+          ) : null}
+          {row.connection ? (
+            <ul className="flex flex-col gap-1 ps-10.5 pb-2.5">
+              {accountsOf(row.connection).flatMap((account) =>
+                account.inConsent
+                  ? []
+                  : [
+                      <li key={account.id}>
+                        <ConnectedAccountRow
+                          account={account}
+                          isDeleting={deletingIds.has(account.id)}
+                          onDelete={() => deleteAccounts.mutate([account.id])}
+                        />
+                      </li>,
+                    ]
+              )}
+            </ul>
           ) : null}
         </li>
       ))}

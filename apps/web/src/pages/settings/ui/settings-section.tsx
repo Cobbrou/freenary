@@ -18,7 +18,7 @@ const HEADER_ROW = "flex flex-wrap items-start justify-between gap-x-6 gap-y-3";
 const HEADER_TEXT = "flex max-w-prose min-w-0 flex-1 basis-64 flex-col";
 
 const ROWS_ON_THE_HEADING_EDGE =
-  "[&_[data-slot=item]]:px-0 [&>div]:px-0 [&>p]:px-0";
+  "[&_[data-slot=item]:not([data-variant=muted])]:px-0 [&>div]:px-0 [&>p]:px-0";
 
 const TOUCH_TARGETS =
   "pointer-coarse:[&_button]:min-h-11 pointer-coarse:[&_button]:min-w-11";

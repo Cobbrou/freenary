@@ -1,4 +1,5 @@
 export type { BankLinking } from "./model/bank-linking";
+export { rememberLeftOutAccounts } from "./model/left-out-accounts";
 export { type BankInstitution } from "./model/use-bank-connections";
 export { useBankLinking } from "./model/use-bank-linking";
 export { BankConnectionPanel } from "./ui/bank-connection-panel";
@@ -8,3 +9,4 @@ export {
 } from "./ui/bank-linking-notice";
 export { BankListSkeleton } from "./ui/bank-list-skeleton";
 export { ConnectedBankList } from "./ui/connected-bank-list";
+export { LeftOutAccountsDialog } from "./ui/left-out-accounts-dialog";

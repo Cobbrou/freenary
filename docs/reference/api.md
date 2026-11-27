@@ -65,6 +65,7 @@ The Access column comes from the middleware of each procedure in `packages/api/s
 
 | Procedure | HTTP route | Access | Input fields |
 | --- | --- | --- | --- |
+| `bankConnection.deleteAccounts` | `POST /api-reference/bankConnection/deleteAccounts` | Signed in | `accountIds` array of string, required |
 | `bankConnection.disconnect` | `POST /api-reference/bankConnection/disconnect` | Signed in | `connectionId` string, required |
 | `bankConnection.exchangeCode` | `POST /api-reference/bankConnection/exchangeCode` | Signed in | `params` object, required; `providerId` string, required |
 | `bankConnection.getProviderAvailability` | `POST /api-reference/bankConnection/getProviderAvailability` | Signed in | none |

@@ -516,17 +516,20 @@ describe("an excluded account over time", () => {
             ...mockProvider,
             fetchHoldings: undefined,
             fetchTransactions: () =>
-              Promise.resolve([
-                {
-                  amountMinor: -4200,
-                  bookingDate: "2026-10-02",
-                  creditorName: "Bakery",
-                  currency: "EUR",
-                  providerTransactionId: "synced-into-joint",
-                  remittanceLines: ["CB BAKERY"],
-                  status: "BOOK",
-                },
-              ]),
+              Promise.resolve({
+                deletedTransactionIds: [],
+                transactions: [
+                  {
+                    amountMinor: -4200,
+                    bookingDate: "2026-10-02",
+                    creditorName: "Bakery",
+                    currency: "EUR",
+                    providerTransactionId: "synced-into-joint",
+                    remittanceLines: ["CB BAKERY"],
+                    status: "BOOK",
+                  },
+                ],
+              }),
           },
           reporter,
           user: null,
