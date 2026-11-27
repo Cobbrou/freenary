@@ -388,7 +388,7 @@ const schemaEntries: SchemaEntry[] = Object.entries(serverEnvSchema);
 const clientEntries: SchemaEntry[] = Object.entries(clientEnvSchema);
 
 const declared = new Set([
-  ...schemaEntries.map(([name]) => name),
+  ...schemaEntries.flatMap(([name]) => [name, `${name}_FILE`]),
   ...clientEntries.map(([name]) => name),
   ...EXTERNAL.map((entry) => entry.name),
 ]);
@@ -475,7 +475,10 @@ const externalTable = (kind: Kind, header: string[]): string =>
   );
 
 const countParagraph = (): string =>
-  `The API server checks its environment once, at startup. The schema is [\`packages/env/src/schema.ts\`](${REPOSITORY_BLOB}/packages/env/src/schema.ts). It declares ${schemaEntries.length} variables with Zod, and \`packages/env/src/server.ts\` hands them to \`@t3-oss/env-core\`. The reference below, and \`${ENV_EXAMPLE_FILE}\`, are generated from that one file.`;
+  [
+    `The API server checks its environment once, at startup. The schema is [\`packages/env/src/schema.ts\`](${REPOSITORY_BLOB}/packages/env/src/schema.ts). It declares ${schemaEntries.length} variables with Zod, and \`packages/env/src/server.ts\` hands them to \`@t3-oss/env-core\`. The reference below, and \`${ENV_EXAMPLE_FILE}\`, are generated from that one file.`,
+    "Each of these variables can be read from a file instead, such as a Docker secret: set `<NAME>_FILE` to the path of the file, and leave `<NAME>` unset. One trailing newline is removed. Setting both, or a path that is not a file, stops the start. The `migrate` service reads `DATABASE_URL_FILE` the same way. See [Keep secrets out of the environment](../how-to/keep-secrets-out-of-the-environment.md).",
+  ].join("\n\n");
 
 const EXTERNAL_BLOCKS = {
   client: () =>
@@ -571,6 +574,9 @@ const envExampleBody = (): string => {
     "#",
     "# Copy this file to `.env`. `docker-compose.yml` reads every line of it, and",
     "# the development stack reads it too, through an optional `env_file`.",
+    "#",
+    "# Any server variable below can be read from a file instead, such as a Docker",
+    "# secret: set NAME_FILE=/run/secrets/name and leave NAME unset.",
     "",
     ...SECTIONS.flatMap(sectionEnvFileLines),
     "# --- Images and host ports ---",

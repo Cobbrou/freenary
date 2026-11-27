@@ -28,6 +28,7 @@ New to Freenary? Follow the tutorials in order.
 | Categorise transactions automatically | [Enable transaction categorisation](how-to/enable-transaction-categorisation.md) |
 | Update to a new release | [Update Freenary](how-to/update-freenary.md) |
 | Back up my data | [Back up and restore](how-to/back-up-and-restore.md) |
+| Keep secrets out of `docker inspect` | [Keep secrets out of the environment](how-to/keep-secrets-out-of-the-environment.md) |
 | Fix a stack that does not start or a failing sign-in | [Troubleshoot](how-to/troubleshoot.md) |
 
 ## Look something up

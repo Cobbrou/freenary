@@ -27,6 +27,7 @@ Every page is plain Markdown.
 - [Connect an AI agent over MCP](how-to/connect-an-ai-agent.md): point Claude Code or another agent at /mcp with an API key
 - [Update Freenary](how-to/update-freenary.md): image tags, pull, migrations
 - [Back up and restore](how-to/back-up-and-restore.md): pg_dump, pg_restore, keep .env
+- [Keep secrets out of the environment](how-to/keep-secrets-out-of-the-environment.md): Compose secrets and <NAME>_FILE variables
 - [Export your data](how-to/export-your-data.md): download your financial data as JSON from Settings › Export
 - [Troubleshoot](how-to/troubleshoot.md): real error messages and fixes
 
