@@ -1,7 +1,20 @@
 import "dotenv/config";
 import { createEnv } from "@t3-oss/env-core";
 
+import { readVariableFiles } from "./files";
 import { serverEnvSchema } from "./schema";
+
+const fileErrors = readVariableFiles(process.env, Object.keys(serverEnvSchema));
+
+if (fileErrors.length > 0) {
+  console.error("Invalid environment variables:");
+
+  for (const error of fileErrors) {
+    console.error(`- ${error}`);
+  }
+
+  process.exit(1);
+}
 
 export const env = createEnv({
   emptyStringAsUndefined: true,
