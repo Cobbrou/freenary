@@ -78,7 +78,7 @@ describe("cost of a cadence", () => {
 });
 
 describe("recurringSummary", () => {
-  const asOf = new Date(2026, 8, 8);
+  const asOf = new Date("2026-09-08T00:00:00.000Z");
 
   it("totals commitments only, and counts patterns beside them", () => {
     const summary = recurringSummary(
@@ -177,10 +177,10 @@ describe("recurringSummary", () => {
     const summary = recurringSummary(
       recurringData({
         items: [
-          item({ nextExpected: new Date(2026, 8, 10).toISOString() }),
+          item({ nextExpected: "2026-09-10T00:00:00.000Z" }),
           item({
             merchantKey: "rent",
-            nextExpected: new Date(2026, 8, 30).toISOString(),
+            nextExpected: "2026-09-30T00:00:00.000Z",
           }),
         ],
       }),
@@ -193,7 +193,7 @@ describe("recurringSummary", () => {
 });
 
 describe("forecastSeries", () => {
-  const asOf = new Date(2026, 8, 8);
+  const asOf = new Date("2026-09-08T00:00:00.000Z");
 
   it("has nothing to draw when no account reported a balance", () => {
     expect(
@@ -206,10 +206,10 @@ describe("forecastSeries", () => {
       recurringData({
         availableBalanceMinor: 100_000,
         items: [
-          item({ nextExpected: new Date(2026, 8, 10).toISOString() }),
+          item({ nextExpected: "2026-09-10T00:00:00.000Z" }),
           item({
             merchantKey: "rent",
-            nextExpected: new Date(2026, 8, 10).toISOString(),
+            nextExpected: "2026-09-10T00:00:00.000Z",
             typicalAmountMinor: 90_000,
           }),
         ],
@@ -260,7 +260,7 @@ describe("forecastSeries", () => {
         availableBalanceMinor: 5000,
         items: [
           item({
-            nextExpected: new Date(2026, 8, 9).toISOString(),
+            nextExpected: "2026-09-09T00:00:00.000Z",
             typicalAmountMinor: 90_000,
           }),
         ],
@@ -366,12 +366,12 @@ describe("recurringSections", () => {
 });
 
 describe("recurringInsights", () => {
-  const asOf = new Date(2026, 8, 8);
+  const asOf = new Date("2026-09-08T00:00:00.000Z");
 
   it("leads with what falls due this week", () => {
     const insights = recurringInsights(
       recurringData({
-        items: [item({ nextExpected: new Date(2026, 8, 10).toISOString() })],
+        items: [item({ nextExpected: "2026-09-10T00:00:00.000Z" })],
         plannedOutgoingMinor: 200_000,
       }),
       asOf
