@@ -396,7 +396,7 @@ export const fetchTransactionPages = Effect.fn("powens.fetchTransactionPages")(
     const collected: PowensTransaction[] = [];
     const firstPage = yield* powensUrl(
       "transactions",
-      `/users/me/accounts/${encodeURIComponent(accountId)}/transactions?limit=${MAX_TRANSACTIONS_PER_PAGE}&last_update=${encodeURIComponent(lastUpdate)}`
+      `/users/me/accounts/${encodeURIComponent(accountId)}/transactions?limit=${MAX_TRANSACTIONS_PER_PAGE}&all=true&last_update=${encodeURIComponent(lastUpdate)}`
     );
 
     let nextPage: string | undefined = firstPage;

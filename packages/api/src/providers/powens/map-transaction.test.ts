@@ -206,7 +206,7 @@ describe("mapPowensTransaction", () => {
 });
 
 describe("mapPowensTransactions", () => {
-  test("keeps only the bookable rows", () => {
+  test("keeps the bookable rows and lists the deleted ones apart", () => {
     const mapped = mapPowensTransactions(
       [
         transaction({ id: 1 }),
@@ -218,6 +218,11 @@ describe("mapPowensTransactions", () => {
       2
     );
 
-    expect(mapped.map((tx) => tx.providerTransactionId)).toEqual(["1", "4"]);
+    expect(mapped.transactions.map((tx) => tx.providerTransactionId)).toEqual([
+      "1",
+      "4",
+    ]);
+
+    expect(mapped.deletedTransactionIds).toEqual(["2"]);
   });
 });

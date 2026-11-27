@@ -22,7 +22,8 @@ In the steps, `<id>` is the provider id, such as `powens` or `enable-banking`. T
    - `listInstitutions(country)`: an `Effect` that returns `ProviderInstitution[]`, or fails with `BankInstitutionsUnavailable`.
    - `startConnection(request)`: returns `{ url }`, the consent page to send the user to. It must carry `request.redirectUrl` and `request.state`. When `request.providerSessionId` is set, the user reconnects that connection: return the page that reopens it if the provider has one, or a new consent page.
    - `completeConnection(request)`: reads `request.callbackParams` (the query string of the callback) and returns a `CompletedConnection` with its accounts. `request.providerSessionId` is set for a reconnection. If the account ids differ from the first consent, return each account's `identificationHash` or `iban`, so `packages/api/src/lib/reopen-connection.ts` finds the stored account.
-   - `closeConnection(request)` and `fetchTransactions(request)`.
+   - `closeConnection(request)`.
+   - `fetchTransactions(request)`: returns `{ transactions, deletedTransactionIds }`. The sync saves `transactions` and deletes the stored transactions whose `providerTransactionId` is in `deletedTransactionIds`. Return an empty `deletedTransactionIds` if the provider does not report deletions.
    - `needsReconnect(cause)`: `true` when an error thrown by `fetchAccounts` or `fetchTransactions` says that only the user can repair the connection, such as an expired consent. The connection then becomes `EXPIRED` and syncs skip it. Return `false` for a temporary failure.
 
    Optional members: `createUser` and `deleteUser` for a provider that scopes data per user (Powens does; the identity is stored in the `BankProviderUser` table), `fetchAccounts` for balances and `fetchHoldings` for investment positions. Amounts are in minor units (`amountMinor`, `balanceMinor`).
