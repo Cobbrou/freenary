@@ -39,7 +39,7 @@ x-app-env-file: &app-env-file
     required: false
 
 x-app-env: &app-env
-  DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-password}@postgres:5432/${POSTGRES_DB:-freenary}
+  DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-password}@postgres:5432/${POSTGRES_DB:-freenary}
   BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:-dev_secret_change_me_at_least_32chars}
   # Kiri routes every hostname to its container and ends HTTPS on the host, so
   # the apps keep serving plain HTTP. Web and server share the parent domain in
@@ -78,7 +78,7 @@ services:
     working_dir: /app/packages/db
     command: bun x prisma migrate deploy
     environment:
-      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-password}@postgres:5432/${POSTGRES_DB:-freenary}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-password}@postgres:5432/${POSTGRES_DB:-freenary}
     depends_on:
       postgres:
         condition: service_healthy
