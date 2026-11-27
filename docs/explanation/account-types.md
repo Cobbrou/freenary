@@ -87,13 +87,15 @@ Once a transaction or its merchant is excluded, a **Reason (optional)** field sh
 
 ### Accounts you exclude
 
-The **Exclude from analytics** switch on the page of a bank account leaves that account out of every figure on this page: **Current accounts**, **Available to spend**, **Net worth** and its chart, the holdings, and every spending, income and cash-flow figure. Use it for an account you see through your bank but do not want in your own figures, such as a joint account.
+The **Exclude from analytics** switch leaves a bank account out of every figure on this page: **Current accounts**, **Available to spend**, **Net worth** and its chart, the holdings, and every spending, income and cash-flow figure. Use it for an account you see through your bank but do not want in your own figures, such as a joint account.
+
+The switch sits under **Display** on the settings page of the account. **Settings** › **Bank accounts** lists the accounts of each bank under it, and opens that page when you select one; the **Account settings** button on the page of the account opens it too. The settings page also shows the account details your bank reports: its name, bank, type, currency, a masked IBAN and when it last synced.
 
 - The transactions of the account stay in the transaction list, struck through, and the transaction details say **Excluded with every transaction from this account.** Their **Exclude from analytics** switch stays on and cannot be changed there.
 - The transactions later syncs bring into the account are excluded too.
 - A move between the account and your other accounts is no longer an internal transfer. Money you move into it counts as spending from the account it left, and money it sends you counts as income. Freenary also forgets two kinds of owner names, so a later transfer to one of them counts as spending too: the names it learned from moves with the account, unless a move between two accounts you still count also shows them, and the holder names your bank reported for the account at its last sync, unless an account you still count reports them too. Syncs keep the holder names of each account in the `holderNameKeys` column of `bank_account`, and remember as yours only those of the accounts you count. An account last synced before Freenary kept these names has none to forget until its next sync. The names you marked as yours stay yours. Each time you turn the switch on or off, Freenary matches the internal transfers again in the background, and categorises the moves it releases. When a sync or a categorisation is already running, it does so once that run finishes; until then the transfers keep their previous state.
 - A **Reason (optional)** field shows under the switch while the account is excluded. Its reason shows on each of its transactions. Freenary stores the exclusion in the `excluded` and `exclusionReason` columns of `bank_account`.
-- The account stays on **Home**, marked **Excluded** after its bank, and its own page says **Excluded from analytics** under its name.
+- The account stays on **Home**, marked **Excluded** after its bank. **Settings** › **Bank accounts** marks it **Excluded**, and its own page shows **Excluded:** followed by the reason under its name, or **Excluded** alone when it has none.
 - Turned off, the switch deletes the reason, and every transaction of the account counts again, except the ones you excluded alone or with their merchant.
 
 ## Transfers between your own accounts

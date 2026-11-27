@@ -1,10 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { useMatches } from "@tanstack/react-router";
 
+import { accountName } from "@/entities/account";
 import { conversationsQueryOptions } from "@/entities/conversation";
 import { dashboardsQueryOptions } from "@/entities/dashboard";
+import { orpc } from "@/shared/api";
 
 import {
+  ACCOUNT_SETTINGS_ROUTE_ID,
   CONVERSATION_ROUTE_ID,
   DASHBOARD_ROUTE_ID,
   navTrailOf,
@@ -31,8 +34,21 @@ export const useNavTrail = () => {
         ?.title,
   });
 
+  const accountTitle = useQuery({
+    ...orpc.portfolio.getOverview.queryOptions(),
+    enabled: routeId === ACCOUNT_SETTINGS_ROUTE_ID,
+    select: ({ accounts }) => {
+      const account = accounts.find((item) => item.id === params.accountId);
+
+      return account ? accountName(account) : undefined;
+    },
+  });
+
   return {
     routeId,
-    trail: navTrailOf(routeId, conversationTitle.data ?? dashboardTitle.data),
+    trail: navTrailOf(
+      routeId,
+      conversationTitle.data ?? dashboardTitle.data ?? accountTitle.data
+    ),
   };
 };

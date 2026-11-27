@@ -1973,5 +1973,22 @@
   "exclusion_reason_label": "Reason (optional)",
   "exclusion_reason_placeholder": "Why is it excluded?",
   "exclusion_reason_save": "Save",
-  "exclusion_reason_value": "Reason: {reason}"
+  "exclusion_reason_value": "Reason: {reason}",
+  "bank_account_excluded_status": "Excluded from analytics",
+  "bank_account_excluded_reason_label": "Reason:",
+  "bank_account_total_label": "Total balance",
+  "bank_account_balance_label": "Balance",
+  "bank_account_settings_link": "Account settings",
+  "settings_bank_account_details_title": "Details",
+  "settings_bank_account_details_description": "Reported by your bank at each sync.",
+  "settings_bank_account_detail_name": "Name",
+  "settings_bank_account_detail_institution": "Institution",
+  "settings_bank_account_detail_type": "Type",
+  "settings_bank_account_detail_currency": "Currency",
+  "settings_bank_account_detail_iban": "IBAN",
+  "settings_bank_account_detail_last_synced": "Last synced",
+  "settings_bank_account_display_title": "Display",
+  "settings_bank_account_display_description": "Choose how this account shows up across the app.",
+  "settings_bank_account_excluded_badge": "Excluded",
+  "settings_bank_account_row_meta": "{type} · {currency}"
 }

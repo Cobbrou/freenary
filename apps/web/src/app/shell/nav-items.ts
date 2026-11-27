@@ -67,6 +67,9 @@ export const NAV_ITEMS = [
 
 const ACCOUNT_ROUTE_ID = "/_auth/accounts/$accountId";
 
+export const ACCOUNT_SETTINGS_ROUTE_ID =
+  "/_auth/settings_/bank-accounts/$accountId";
+
 export const CONVERSATION_ROUTE_ID = "/_auth/ask/$conversationId";
 
 export const DASHBOARD_ROUTE_ID = "/_auth/dashboards/$dashboardId";
@@ -91,6 +94,14 @@ export const navTrailOf = (
 ): string[] => {
   if (routeId === ACCOUNT_ROUTE_ID) {
     return [m.nav_home(), m.nav_bank_account()];
+  }
+
+  if (routeId === ACCOUNT_SETTINGS_ROUTE_ID) {
+    return [
+      m.nav_settings(),
+      m.settings_tab_bank_accounts(),
+      pageTitle ?? m.nav_bank_account(),
+    ];
   }
 
   if (routeId === CONVERSATION_ROUTE_ID) {

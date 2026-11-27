@@ -1982,5 +1982,22 @@
   "exclusion_reason_label": "Raison (facultatif)",
   "exclusion_reason_placeholder": "Pourquoi l’exclure ?",
   "exclusion_reason_save": "Enregistrer",
-  "exclusion_reason_value": "Raison : {reason}"
+  "exclusion_reason_value": "Raison : {reason}",
+  "bank_account_excluded_status": "Exclu des analyses",
+  "bank_account_excluded_reason_label": "Raison :",
+  "bank_account_total_label": "Solde total",
+  "bank_account_balance_label": "Solde",
+  "bank_account_settings_link": "Paramètres du compte",
+  "settings_bank_account_details_title": "Détails",
+  "settings_bank_account_details_description": "Transmis par votre banque à chaque synchronisation.",
+  "settings_bank_account_detail_name": "Nom",
+  "settings_bank_account_detail_institution": "Établissement",
+  "settings_bank_account_detail_type": "Type",
+  "settings_bank_account_detail_currency": "Devise",
+  "settings_bank_account_detail_iban": "IBAN",
+  "settings_bank_account_detail_last_synced": "Dernière synchronisation",
+  "settings_bank_account_display_title": "Affichage",
+  "settings_bank_account_display_description": "Choisissez comment ce compte apparaît dans l’app.",
+  "settings_bank_account_excluded_badge": "Exclu",
+  "settings_bank_account_row_meta": "{type} · {currency}"
 }

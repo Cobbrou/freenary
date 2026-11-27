@@ -1,3 +1,4 @@
+import { Badge } from "@freenary/ui/components/badge";
 import {
   Item,
   ItemActions,
@@ -6,10 +7,15 @@ import {
   ItemMedia,
   ItemTitle,
 } from "@freenary/ui/components/item";
+import { RiArrowRightSLine } from "@remixicon/react";
+import { useQuery } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 import { useMemo } from "react";
 
+import { ACCOUNT_TYPE_LABELS, accountName } from "@/entities/account";
 import { m } from "@/paraglide/messages.js";
 import { getLocale } from "@/paraglide/runtime.js";
+import { orpc } from "@/shared/api";
 import { SyncButton } from "@/shared/ui/sync-button";
 
 import { buildBankRows } from "../model/bank-rows";
@@ -38,6 +44,61 @@ const BankMark = ({ row }: { row: BankRow }) =>
       {initialOf(row.name)}
     </span>
   );
+
+const ConnectionAccountRows = ({ accountIds }: { accountIds: string[] }) => {
+  const overview = useQuery(orpc.portfolio.getOverview.queryOptions());
+  const accounts = (overview.data?.accounts ?? []).filter((account) =>
+    accountIds.includes(account.id)
+  );
+
+  if (accounts.length === 0) {
+    return null;
+  }
+
+  return (
+    <ul className="flex flex-col gap-0.5 ps-11 pb-2">
+      {accounts.map((account) => (
+        <li key={account.id}>
+          <Item
+            className="hover:bg-muted rounded-md px-2 py-2"
+            render={
+              <Link
+                params={{ accountId: account.id }}
+                to="/settings/bank-accounts/$accountId"
+              />
+            }
+            size="xs"
+          >
+            <ItemContent className="min-w-0">
+              <ItemTitle className="flex items-center gap-2">
+                {accountName(account)}
+                {account.excluded ? (
+                  <Badge color="gray" size="compact" variant="dot">
+                    {m.settings_bank_account_excluded_badge()}
+                  </Badge>
+                ) : null}
+              </ItemTitle>
+              <ItemDescription>
+                {account.currency
+                  ? m.settings_bank_account_row_meta({
+                      currency: account.currency,
+                      type: ACCOUNT_TYPE_LABELS[account.type](),
+                    })
+                  : ACCOUNT_TYPE_LABELS[account.type]()}
+              </ItemDescription>
+            </ItemContent>
+            <ItemActions>
+              <RiArrowRightSLine
+                aria-hidden="true"
+                className="text-muted-foreground size-4"
+              />
+            </ItemActions>
+          </Item>
+        </li>
+      ))}
+    </ul>
+  );
+};
 
 export const ConnectedBankList = ({ banks }: ConnectedBankListProps) => {
   const locale = getLocale();
@@ -145,6 +206,11 @@ export const ConnectedBankList = ({ banks }: ConnectedBankListProps) => {
               </ItemActions>
             )}
           </Item>
+          {row.connection ? (
+            <ConnectionAccountRows
+              accountIds={row.connection.accounts.map((held) => held.id)}
+            />
+          ) : null}
         </li>
       ))}
     </ul>
