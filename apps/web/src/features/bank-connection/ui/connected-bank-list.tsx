@@ -204,7 +204,9 @@ export const ConnectedBankList = ({ banks }: ConnectedBankListProps) => {
           </Item>
           {row.connection ? (
             <ConnectionAccountRows
-              accountIds={row.connection.accounts.map((held) => held.id)}
+              accountIds={row.connection.accounts.flatMap((held) =>
+                held.inConsent ? [held.id] : []
+              )}
             />
           ) : null}
           {row.connection ? (
