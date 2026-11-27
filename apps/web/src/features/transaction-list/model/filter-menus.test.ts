@@ -68,10 +68,16 @@ describe("pickedExclusionPreset", () => {
         {
           field: "exclusion",
           operator: "isAnyOf",
-          values: ["transaction", "merchant"],
+          values: ["transaction", "account", "merchant"],
         },
       ])
     ).toBe(0);
+
+    expect(
+      pickedExclusionPreset([
+        { field: "exclusion", operator: "is", values: ["account"] },
+      ])
+    ).toBe(1);
 
     expect(
       pickedExclusionPreset([

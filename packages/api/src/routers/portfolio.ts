@@ -2,6 +2,7 @@ import prisma from "@freenary/db";
 import { z } from "zod";
 
 import { protectedProcedure } from "../index";
+import { countedAccountsOf } from "../lib/account-types";
 import { balancesOf } from "../lib/accounts-summary";
 import {
   balanceHistory,
@@ -40,12 +41,12 @@ export const portfolioRouter = {
             id: true,
             type: true,
           },
-          where: { connection: { userId } },
+          where: countedAccountsOf(userId),
         }),
         prisma.transaction.findMany({
           select: { accountId: true, amount: true, currency: true, date: true },
           where: {
-            account: { connection: { userId } },
+            account: countedAccountsOf(userId),
             date: { gt: firstMonthEnd },
           },
         }),
@@ -83,6 +84,8 @@ export const portfolioRouter = {
           balances: BALANCES_SELECT,
           connection: { select: { institutionName: true } },
           currency: true,
+          excluded: true,
+          exclusionReason: true,
           id: true,
           name: true,
           type: true,
@@ -97,7 +100,7 @@ export const portfolioRouter = {
           unrealisedGainMinor: true,
           valuationMinor: true,
         },
-        where: { account: { connection: { userId } } },
+        where: { account: countedAccountsOf(userId) },
       }),
       userConverter(userId, now, now),
     ]);
@@ -115,6 +118,8 @@ export const portfolioRouter = {
           currency: held.currency,
         })),
         currency: account.currency,
+        excluded: account.excluded,
+        exclusionReason: account.exclusionReason,
         id: account.id,
         institutionName: account.connection.institutionName,
         name: account.name,

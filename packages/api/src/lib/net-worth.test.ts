@@ -20,6 +20,61 @@ const dollarsAtOneTen = converterOf(
 );
 
 describe("netWorthOf", () => {
+  it("leaves out an account the member excluded", () => {
+    const worth = netWorthOf(
+      [
+        {
+          balanceAt: MAY_FIRST,
+          balanceMinor: 120_000,
+          currency: "EUR",
+          type: "CHECKING",
+        },
+        {
+          balanceAt: MAY_SECOND,
+          balanceMinor: 80_000,
+          currency: "EUR",
+          excluded: true,
+          type: "CHECKING",
+        },
+        {
+          balanceAt: MAY_SECOND,
+          balanceMinor: -50_000,
+          currency: "EUR",
+          excluded: true,
+          type: "LOAN",
+        },
+      ],
+      euros
+    );
+
+    expect(worth).toEqual({
+      assetClasses: [{ amountMinor: 120_000, assetClass: "cash" }],
+      assetsMinor: 120_000,
+      balancesAt: MAY_FIRST,
+      excludedAccountCount: 0,
+      liabilitiesMinor: 0,
+      netWorthMinor: 120_000,
+      unconvertedAccountCount: 0,
+    });
+  });
+
+  it("values nothing when every account is excluded", () => {
+    expect(
+      netWorthOf(
+        [
+          {
+            balanceAt: MAY_FIRST,
+            balanceMinor: 80_000,
+            currency: "EUR",
+            excluded: true,
+            type: "CHECKING",
+          },
+        ],
+        euros
+      ).netWorthMinor
+    ).toBeNull();
+  });
+
   it("adds assets by class and takes debts off the total", () => {
     const worth = netWorthOf(
       [
@@ -358,6 +413,34 @@ describe("holdingsSummaryOf", () => {
 });
 
 describe("currentAccountsOf", () => {
+  it("leaves out the balance of an excluded account", () => {
+    expect(
+      currentAccountsOf(
+        [
+          {
+            balanceAt: MAY_FIRST,
+            balanceMinor: 120_000,
+            currency: "EUR",
+            type: "CHECKING",
+          },
+          {
+            balanceAt: MAY_SECOND,
+            balanceMinor: 40_000,
+            currency: "EUR",
+            excluded: true,
+            type: "CHECKING",
+          },
+        ],
+        euros
+      )
+    ).toEqual({
+      balanceMinor: 120_000,
+      balancesAt: MAY_FIRST,
+      currency: "EUR",
+      unconvertedBalanceCount: 0,
+    });
+  });
+
   it("dates the balance by the checking accounts it adds up, not by the others", () => {
     expect(
       currentAccountsOf(

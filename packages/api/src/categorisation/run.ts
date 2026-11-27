@@ -11,7 +11,7 @@ import {
   reportPipelineFailure,
 } from "../lib/sync-progress";
 import type { BudgetPipelineReason, SyncReporter } from "../lib/sync-progress";
-import { applyMerchantExclusions } from "../lib/transaction-exclusion";
+import { applyExclusions } from "../lib/transaction-exclusion";
 import {
   lowConfidenceTransactionIds,
   notifyTransactionsToCheck,
@@ -22,7 +22,10 @@ import {
   transactionClassifiers,
 } from "./classifier/registry";
 import { prismaClassificationStore } from "./classifier/store";
-import { matchInternalTransfers } from "./internal-transfer";
+import {
+  matchInternalTransfers,
+  rematchInternalTransfers,
+} from "./internal-transfer";
 import type { TransactionChannel } from "./normalise/types";
 import { categoriseBatch } from "./resolve";
 import type { CategoriseInput, TransactionPath } from "./types";
@@ -306,7 +309,7 @@ export const categoriseAfterSync = (
     catch: (cause) =>
       new BudgetPipelineFailed({ cause, reason: { kind: "categorisation" } }),
     try: async () => {
-      await applyMerchantExclusions(userId);
+      await applyExclusions(userId);
 
       if (force) {
         await clearResolutions({ connectionId, userId });
@@ -322,6 +325,53 @@ export const categoriseAfterSync = (
       )
     )
   );
+
+const takeStaleTransfers = async (userId: string): Promise<boolean> => {
+  const { count } = await prisma.syncRun.updateMany({
+    data: { transfersStale: false },
+    where: { transfersStale: true, userId },
+  });
+
+  return count > 0;
+};
+
+const markTransfersStale = (userId: string) =>
+  prisma.syncRun.updateMany({
+    data: { transfersStale: true },
+    where: { userId },
+  });
+
+export const matchTransfersInRun = async (
+  userId: string,
+  bookedSince: Date | null,
+  rematch: (userId: string) => Promise<number> = rematchInternalTransfers
+): Promise<{ hasRematchFailed: boolean }> => {
+  if (!(await takeStaleTransfers(userId))) {
+    await matchInternalTransfers(userId, bookedSince);
+
+    return { hasRematchFailed: false };
+  }
+
+  return await Effect.runPromise(
+    Effect.tryPromise(() => rematch(userId)).pipe(
+      Effect.matchEffect({
+        onFailure: (cause) =>
+          Effect.logWarning("Matching internal transfers failed", cause).pipe(
+            Effect.andThen(Effect.promise(() => markTransfersStale(userId))),
+            Effect.as({ hasRematchFailed: true })
+          ),
+        onSuccess: () => Effect.succeed({ hasRematchFailed: false }),
+      })
+    )
+  );
+};
+
+export const hasStaleTransfers = async (
+  userId: string,
+  { hasRematchFailed }: { hasRematchFailed: boolean }
+): Promise<boolean> =>
+  !hasRematchFailed &&
+  (await prisma.syncRun.count({ where: { transfersStale: true, userId } })) > 0;
 
 const startCategorisation = async (
   userId: string,
@@ -341,19 +391,27 @@ const startCategorisation = async (
         await resetPipelineResults(userId);
       }
 
-      return matchInternalTransfers(userId, null);
+      return matchTransfersInRun(userId, null);
     }).pipe(
-      Effect.andThen(categoriseAfterSync(userId, undefined, reporter, force)),
+      Effect.flatMap((matching) =>
+        categoriseAfterSync(userId, undefined, reporter, force).pipe(
+          Effect.map((outcome) => ({ ...outcome, matching }))
+        )
+      ),
       Effect.tapCause(Effect.logError),
       Effect.matchCauseEffect({
         onFailure: () => Effect.promise(() => reporter.finished()),
-        onSuccess: ({ categorised, failure }) =>
-          Effect.promise(() =>
-            reporter.finishedWith({
+        onSuccess: ({ categorised, failure, matching }) =>
+          Effect.promise(async () => {
+            await reporter.finishedWith({
               categorised,
               failures: failure ? [failure] : [],
-            })
-          ),
+            });
+
+            if (await hasStaleTransfers(userId, matching)) {
+              await startCategorisation(userId, false);
+            }
+          }),
       })
     )
   );
@@ -367,3 +425,20 @@ export const startRecategorisation = (userId: string): Promise<Date | null> =>
 export const startPendingCategorisation = (
   userId: string
 ): Promise<Date | null> => startCategorisation(userId, false);
+
+export const startTransferRematch = async (
+  userId: string
+): Promise<Date | null> => {
+  await prisma.syncRun.upsert({
+    create: {
+      finishedAt: new Date(),
+      phase: "FINISHED",
+      transfersStale: true,
+      userId,
+    },
+    update: { transfersStale: true },
+    where: { userId },
+  });
+
+  return startCategorisation(userId, false);
+};

@@ -1,10 +1,17 @@
 import prisma, { Prisma } from "@freenary/db";
 import { Data, Effect, Match } from "effect";
 
-import { matchInternalTransfers } from "../categorisation/internal-transfer";
 import { deriveMerchantKey } from "../categorisation/merchant-key";
-import { rememberOwnerNames } from "../categorisation/own-counterparty";
-import { categoriseAfterSync } from "../categorisation/run";
+import {
+  ownerNameKeysOf,
+  refreshHolderNames,
+} from "../categorisation/own-counterparty";
+import {
+  categoriseAfterSync,
+  hasStaleTransfers,
+  matchTransfersInRun,
+  startPendingCategorisation,
+} from "../categorisation/run";
 import { refreshExchangeRatesNow } from "../fx/rates";
 import { getProvider } from "../providers/registry";
 import type {
@@ -271,6 +278,10 @@ const writeTransactionBatch = async (
   `;
 
   const existing = new Set(updated.map((row) => row.providerTransactionId));
+  const account = await prisma.bankAccount.findUnique({
+    select: { excluded: true },
+    where: { id: accountId },
+  });
 
   await prisma.transaction.createMany({
     data: rows.flatMap(({ fields, providerTransactionId }) =>
@@ -282,6 +293,7 @@ const writeTransactionBatch = async (
               accountId,
               category: null,
               categoryOverride: false,
+              exclusion: account?.excluded ? ("ACCOUNT" as const) : null,
               providerTransactionId,
             },
           ]
@@ -417,6 +429,7 @@ const refreshProviderAccounts = async (
   for (const account of accounts) {
     const fields = {
       ...mainBalanceFields(account),
+      holderNameKeys: ownerNameKeysOf(account.holderNames ?? []),
       iban: account.iban ?? null,
       name: account.name ?? null,
       type: account.type,
@@ -449,11 +462,12 @@ const refreshProviderAccounts = async (
     rows.push(row);
   }
 
-  await rememberOwnerNames(
-    connection.userId,
-    accounts.flatMap((account) => account.holderNames ?? []),
-    "holder"
-  );
+  if ((await refreshHolderNames(connection.userId)) > 0) {
+    await prisma.syncRun.updateMany({
+      data: { transfersStale: true },
+      where: { userId: connection.userId },
+    });
+  }
 
   return rows;
 };
@@ -819,8 +833,8 @@ const runSyncAccounts = Effect.fnUntraced(function* runSyncAccounts(
 
   yield* Effect.promise(() => refreshExchangeRatesNow());
 
-  yield* Effect.promise(() =>
-    matchInternalTransfers(
+  const matching = yield* Effect.promise(() =>
+    matchTransfersInRun(
       userId,
       earliestImportedDay(connections, force, oldestPending)
     )
@@ -836,6 +850,7 @@ const runSyncAccounts = Effect.fnUntraced(function* runSyncAccounts(
   return {
     categorised,
     failures: failure ? [...connectionFailures, failure] : connectionFailures,
+    matching,
   };
 });
 
@@ -856,8 +871,14 @@ export const startAccountSync = async (
       Effect.tapCause(Effect.logError),
       Effect.matchCauseEffect({
         onFailure: () => Effect.promise(() => reporter.finished()),
-        onSuccess: (outcome) =>
-          Effect.promise(() => reporter.finishedWith(outcome)),
+        onSuccess: ({ matching, ...outcome }) =>
+          Effect.promise(async () => {
+            await reporter.finishedWith(outcome);
+
+            if (await hasStaleTransfers(userId, matching)) {
+              await startPendingCategorisation(userId);
+            }
+          }),
       })
     )
   );

@@ -79,6 +79,13 @@ model BankAccount {
   balanceAt          DateTime?
   /// False once a reconnection came back without this account. Its history stays, and syncs skip it.
   inConsent          Boolean         @default(true)
+  /// True when the member left this account out of every figure: its
+  /// transactions, balances and holdings. Its transactions stay listed.
+  excluded           Boolean         @default(false)
+  /// The member's own note on why the account is excluded.
+  exclusionReason    String?
+  /// The owner-name keys of the holders the bank reported at the last sync.
+  holderNameKeys     String[]        @default([])
   createdAt          DateTime       @default(now())
   updatedAt          DateTime       @updatedAt
   transactions       Transaction[]
@@ -261,6 +268,8 @@ model Transaction {
   isInternalTransfer   Boolean     @default(false)
   /// Why the member left this transaction out of every figure. Null counts it.
   exclusion            TransactionExclusion?
+  /// The member's own note on why they excluded this transaction, when `exclusion` is TRANSACTION.
+  exclusionReason      String?
   /// On the outgoing leg of a transfer between two currencies, what the
   /// exchange cost against the reference rate, in minor units of `currency`.
   exchangeFeeMinor     BigInt?
@@ -303,6 +312,8 @@ enum TransactionExclusion {
   TRANSACTION
   /// The member excluded every transaction of its merchant.
   MERCHANT
+  /// The member excluded every transaction of its account.
+  ACCOUNT
 }
 
 /// A merchant the member left out of every figure, past and future transactions alike.
@@ -314,6 +325,8 @@ model ExcludedMerchant {
   merchantKey  String
   /// User-friendly merchant name when known.
   merchantName String?
+  /// The member's own note on why the merchant is excluded.
+  reason       String?
   createdAt    DateTime @default(now())
 
   @@unique([userId, merchantKey])
@@ -379,6 +392,9 @@ model SyncRun {
   /// What went wrong in a finished `syncAccounts` run, `[]` when nothing did.
   /// Null while the run goes on, and for a run that ended without an outcome.
   failures             Json?
+  /// True when an account's exclusion changed while a run was going, so the
+  /// next run matches every internal transfer again.
+  transfersStale       Boolean   @default(false)
 
   @@map("sync_run")
 }

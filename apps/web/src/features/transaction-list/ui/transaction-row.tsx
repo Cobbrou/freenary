@@ -55,9 +55,18 @@ export const TransactionRow = ({
     : m.budget_transaction_paid({ amount, title });
 
   const excluded = isExcluded(transaction);
-  const label = excluded
-    ? m.budget_transaction_excluded_label({ label: paidOrReceived })
-    : paidOrReceived;
+  const exclusionReason = transaction.exclusionReason ?? null;
+  let label = paidOrReceived;
+
+  if (excluded) {
+    label =
+      exclusionReason === null
+        ? m.budget_transaction_excluded_label({ label: paidOrReceived })
+        : m.budget_transaction_excluded_reason_label({
+            label: paidOrReceived,
+            reason: exclusionReason,
+          });
+  }
 
   const { variant } = useSize();
 
@@ -106,8 +115,12 @@ export const TransactionRow = ({
           currency={transaction.currency}
         />
         {excluded ? (
-          <span className="text-muted-foreground text-xs font-normal">
-            {m.budget_transaction_excluded()}
+          <span className="text-muted-foreground max-w-48 truncate text-xs font-normal">
+            {exclusionReason === null
+              ? m.budget_transaction_excluded()
+              : m.budget_transaction_excluded_reason({
+                  reason: exclusionReason,
+                })}
           </span>
         ) : null}
         {originalText === null || excluded ? null : (

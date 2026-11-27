@@ -14,8 +14,12 @@ export interface ValuedAccount {
   balanceMinor: number | null;
   balances?: readonly HeldBalance[];
   currency: string | null;
+  excluded?: boolean;
   type: ProviderAccountType;
 }
+
+const countedAccountsOf = (accounts: readonly ValuedAccount[]) =>
+  accounts.filter((account) => account.excluded !== true);
 
 export interface NetWorth {
   assetClasses: { amountMinor: number; assetClass: AssetClass }[];
@@ -43,10 +47,11 @@ const laterOf = (current: Date | null, candidate: Date | null) => {
 };
 
 export const currentAccountsOf = (
-  accounts: ValuedAccount[],
+  allAccounts: ValuedAccount[],
   converter: Converter,
   asOf: Date = new Date()
 ): CurrentAccounts => {
+  const accounts = countedAccountsOf(allAccounts);
   const { availableBalanceMinor, currency, unconvertedBalanceCount } =
     accountsSummary(accounts, converter, asOf);
 
@@ -115,7 +120,7 @@ export const netWorthOf = (
   let valuedAccountCount = 0;
   let balancesAt: Date | null = null;
 
-  for (const account of accounts) {
+  for (const account of countedAccountsOf(accounts)) {
     const held = balancesOf(account);
     const balanceMinor = convertedBalanceOf(account, converter, asOf);
 

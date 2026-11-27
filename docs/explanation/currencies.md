@@ -22,7 +22,7 @@ The transaction list and the transaction details show each amount in its own cur
 
 An account can hold balances in several currencies, such as a euro balance and a dollar balance at Wise or Revolut. Freenary stores one row per currency in the `account_balance` table. The `currency` and `balanceMinor` columns of `bank_account` keep the main balance. With Enable Banking, the main balance is the one in the account currency the bank reports; a bank that reports `XXX`, the code for several currencies, gets the first balance it lists.
 
-Account balances list every currency the account holds, such as `€1,200.00 · $350.00`.
+Account balances list every currency the account holds, such as `€1,200.00 · $350.00`. The page of an account that holds several currencies shows its total in the reporting currency, then one entry per currency with its balance and, for the currencies other than the reporting one, the converted amount.
 
 ## The reporting currency
 

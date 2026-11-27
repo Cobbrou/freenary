@@ -16,7 +16,13 @@ import { client } from "@/shared/api";
 
 interface ExclusionChange {
   isExcluded: boolean;
-  scope: ExclusionScope;
+  reason?: string | null;
+  scope: Exclude<ExclusionScope, "account">;
+}
+
+interface ExclusionState {
+  exclusion: TransactionExclusion | null;
+  exclusionReason: string | null;
 }
 
 export const useTransactionExclusion = (transaction: Transaction) => {
@@ -25,7 +31,7 @@ export const useTransactionExclusion = (transaction: Transaction) => {
   const holdsTransaction = (page: { transactions: Transaction[] }) =>
     page.transactions.some((tx) => tx.id === transaction.id);
 
-  const patchExclusion = (exclusion: TransactionExclusion | null) => {
+  const patchExclusion = (state: ExclusionState) => {
     queryClient.setQueriesData<{
       pageParams: unknown[];
       pages: { transactions: Transaction[] }[];
@@ -45,7 +51,7 @@ export const useTransactionExclusion = (transaction: Transaction) => {
             ? {
                 ...page,
                 transactions: page.transactions.map((tx) =>
-                  tx.id === transaction.id ? { ...tx, exclusion } : tx
+                  tx.id === transaction.id ? { ...tx, ...state } : tx
                 ),
               }
             : page
@@ -55,13 +61,17 @@ export const useTransactionExclusion = (transaction: Transaction) => {
   };
 
   return useMutation<
-    unknown,
+    ExclusionState,
     Error,
     ExclusionChange,
-    { previous: TransactionExclusion | null }
+    { previous: ExclusionState }
   >({
-    mutationFn: ({ isExcluded, scope }) => {
-      const input = { excluded: isExcluded, transactionId: transaction.id };
+    mutationFn: ({ isExcluded, reason, scope }) => {
+      const input = {
+        excluded: isExcluded,
+        reason,
+        transactionId: transaction.id,
+      };
 
       return scope === "merchant"
         ? client.budget.excludeMerchant(input)
@@ -74,15 +84,31 @@ export const useTransactionExclusion = (transaction: Transaction) => {
 
       toast.error(m.budget_exclusion_update_error());
     },
-    onMutate: async ({ isExcluded, scope }) => {
+    onMutate: async ({ isExcluded, reason, scope }) => {
       await queryClient.cancelQueries({ queryKey: TRANSACTIONS_QUERY_KEY });
 
-      const previous = transaction.exclusion ?? null;
+      const previous = {
+        exclusion: transaction.exclusion ?? null,
+        exclusionReason: transaction.exclusionReason ?? null,
+      };
 
-      patchExclusion(isExcluded ? EXCLUSION_OF_SCOPE[scope] : null);
+      const lifted =
+        previous.exclusion === EXCLUSION_OF_SCOPE[scope] ? null : previous;
+
+      patchExclusion(
+        isExcluded
+          ? {
+              exclusion: previous.exclusion ?? EXCLUSION_OF_SCOPE[scope],
+              exclusionReason:
+                reason === undefined ? previous.exclusionReason : reason,
+            }
+          : (lifted ?? { exclusion: null, exclusionReason: null })
+      );
 
       return { previous };
     },
     onSettled: () => invalidateBudgetData(queryClient),
+    onSuccess: ({ exclusion, exclusionReason }) =>
+      patchExclusion({ exclusion, exclusionReason }),
   });
 };

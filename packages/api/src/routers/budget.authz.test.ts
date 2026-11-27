@@ -64,7 +64,9 @@ const createHousehold = async () => {
       userId: ownerId,
     },
     select: {
-      accounts: { select: { transactions: { select: { id: true } } } },
+      accounts: {
+        select: { id: true, transactions: { select: { id: true } } },
+      },
       id: true,
     },
   });
@@ -99,6 +101,7 @@ const createHousehold = async () => {
   });
 
   return {
+    accountId: connection.accounts[0]?.id ?? "",
     categoryId: category.id,
     connectionId: connection.id,
     conversationId: conversation.id,
@@ -158,9 +161,42 @@ const syncToTheEnd = async (client: Client, connectionId: string) => {
   );
 };
 
+const runFinished = (userId: string) =>
+  Effect.runPromise(
+    Effect.promise(() => prisma.syncRun.findUnique({ where: { userId } })).pipe(
+      Effect.repeat({
+        schedule: Schedule.spaced(SYNC_POLL_INTERVAL),
+        until: (run) => run === null || run.finishedAt !== null,
+      })
+    )
+  );
+
 type Attempt = (client: Client, household: Household) => Promise<object>;
 
 const REFUSED: [string, Attempt][] = [
+  [
+    "budget.excludeAccount",
+    async ({ budget }, { accountId, ownerId }) => {
+      const outcome = await budget.excludeAccount({
+        accountId,
+        excluded: true,
+        reason: "Joint",
+      });
+
+      await runFinished(ownerId);
+
+      return outcome;
+    },
+  ],
+  [
+    "budget.excludeTransaction",
+    ({ budget }, { transactionId }) =>
+      budget.excludeTransaction({
+        excluded: true,
+        reason: "Taken over",
+        transactionId,
+      }),
+  ],
   [
     "budget.updateTransactionCategory",
     ({ budget }, { transactionId }) =>

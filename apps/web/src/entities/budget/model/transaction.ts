@@ -19,6 +19,7 @@ export interface Transaction {
   originalCurrency?: string | null;
   exchangeFeeMinor?: number | null;
   exclusion?: TransactionExclusion | null;
+  exclusionReason?: string | null;
   hasMerchant?: boolean;
   isInternalTransfer?: boolean;
 }

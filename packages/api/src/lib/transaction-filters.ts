@@ -12,6 +12,7 @@ export const TRANSACTION_FILTER_FIELDS = [
 ] as const;
 
 export const EXCLUSION_FILTER_VALUES = [
+  "account",
   "merchant",
   "transaction",
 ] as const satisfies readonly ExclusionScope[];

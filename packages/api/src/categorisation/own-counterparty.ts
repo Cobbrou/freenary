@@ -237,13 +237,18 @@ export const ownCounterpartiesOf = ({
   };
 };
 
+const LEARNED_SOURCE = "pairing";
+
 export const loadOwnCounterparties = async (
-  userId: string
+  userId: string,
+  { withLearned = true }: { withLearned?: boolean } = {}
 ): Promise<OwnCounterparties> => {
   const [stored, member, overrides] = await Promise.all([
     prisma.ownCounterparty.findMany({
       select: { isOwn: true, key: true, kind: true },
-      where: { userId },
+      where: withLearned
+        ? { userId }
+        : { source: { not: LEARNED_SOURCE }, userId },
     }),
     prisma.user.findUnique({
       select: { firstName: true, lastName: true },
@@ -262,12 +267,8 @@ export const loadOwnCounterparties = async (
   });
 };
 
-export const rememberOwnerNames = async (
-  userId: string,
-  names: Iterable<string>,
-  source: "holder" | "pairing"
-): Promise<void> => {
-  const keys = [
+export const ownerNameKeysOf = (names: Iterable<string>): string[] =>
+  [
     ...new Set(
       [...names].flatMap((name) => {
         const key = ownerNameKeyOf(name);
@@ -277,11 +278,12 @@ export const rememberOwnerNames = async (
     ),
   ].filter(isOwnerNameKey);
 
-  if (keys.length === 0) {
-    return;
-  }
-
-  await prisma.ownCounterparty.createMany({
+const createOwnerNames = (
+  userId: string,
+  keys: readonly string[],
+  source: "holder" | typeof LEARNED_SOURCE
+) =>
+  prisma.ownCounterparty.createMany({
     data: keys.map((key) => ({
       isOwn: true,
       key,
@@ -291,6 +293,78 @@ export const rememberOwnerNames = async (
     })),
     skipDuplicates: true,
   });
+
+export const rememberOwnerNames = async (
+  userId: string,
+  names: Iterable<string>,
+  source: "holder" | typeof LEARNED_SOURCE
+): Promise<number> => {
+  const keys = ownerNameKeysOf(names);
+
+  if (keys.length === 0) {
+    return 0;
+  }
+
+  if (source === "holder") {
+    await prisma.ownCounterparty.updateMany({
+      data: { source },
+      where: {
+        key: { in: keys },
+        kind: "name",
+        source: LEARNED_SOURCE,
+        userId,
+      },
+    });
+  }
+
+  const { count } = await createOwnerNames(userId, keys, source);
+
+  return count;
+};
+
+export const refreshHolderNames = async (userId: string): Promise<number> => {
+  const accounts = await prisma.bankAccount.findMany({
+    select: { excluded: true, holderNameKeys: true },
+    where: { connection: { userId } },
+  });
+
+  const reportedBy = (excluded: boolean) =>
+    new Set(
+      accounts.flatMap((account) =>
+        account.excluded === excluded ? account.holderNameKeys : []
+      )
+    );
+
+  const included = reportedBy(false);
+  const forgotten = [...reportedBy(true)].filter((key) => !included.has(key));
+
+  const inserted = await rememberOwnerNames(userId, included, "holder");
+
+  if (forgotten.length === 0) {
+    return inserted;
+  }
+
+  const { count } = await prisma.ownCounterparty.deleteMany({
+    where: { key: { in: forgotten }, kind: "name", source: "holder", userId },
+  });
+
+  return inserted + count;
+};
+
+export const replaceLearnedOwnerNames = (
+  userId: string,
+  names: Iterable<string>
+) => {
+  const keys = ownerNameKeysOf(names);
+
+  return [
+    prisma.ownCounterparty.deleteMany({
+      where: { key: { notIn: keys }, source: LEARNED_SOURCE, userId },
+    }),
+    ...(keys.length === 0
+      ? []
+      : [createOwnerNames(userId, keys, LEARNED_SOURCE)]),
+  ];
 };
 
 export const recordCounterpartyDecision = async (
