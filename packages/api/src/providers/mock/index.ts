@@ -164,7 +164,7 @@ export const mockProvider: BankingProvider = {
           new Date()
         );
       }
-    );
+    ).then((transactions) => ({ deletedTransactionIds: [], transactions }));
   },
   id: "mock",
   isConfigured: () => true,

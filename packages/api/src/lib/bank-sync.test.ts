@@ -53,7 +53,8 @@ const reporter: SyncReporter = {
 const contextFailing = (
   failingAccountIds: readonly string[],
   deleteTransactions: ConnectionSyncContext["deleteTransactions"] = () =>
-    Promise.resolve({ count: 0 })
+    Promise.resolve({ count: 0 }),
+  deletedTransactionIds: readonly string[] = []
 ): ConnectionSyncContext => ({
   connection: {
     accounts: [checking, savings],
@@ -74,7 +75,10 @@ const contextFailing = (
     fetchTransactions: ({ providerAccountId }: FetchTransactionsRequest) =>
       failingAccountIds.includes(providerAccountId)
         ? Promise.reject(new Error("timeout"))
-        : Promise.resolve([]),
+        : Promise.resolve({
+            deletedTransactionIds: [...deletedTransactionIds],
+            transactions: [],
+          }),
   },
   reporter,
   user: null,
@@ -105,7 +109,31 @@ describe("importAccountsInSeries", () => {
     );
 
     expect(deleteTransactions.mock.calls).toEqual([
-      [staleTransactionsWhere(checking.id, "2026-10-01", [])],
+      [staleTransactionsWhere(checking.id, "2026-10-01", [], [])],
+    ]);
+  });
+
+  it("deletes the rows the provider reports as deleted", async () => {
+    const deleteTransactions = mock<
+      ConnectionSyncContext["deleteTransactions"]
+    >(() => Promise.resolve({ count: 0 }));
+
+    await Effect.runPromise(
+      importAccountsInSeries(
+        contextFailing([], deleteTransactions, ["booked-then-deleted"]),
+        [checking]
+      )
+    );
+
+    expect(deleteTransactions.mock.calls).toEqual([
+      [
+        staleTransactionsWhere(
+          checking.id,
+          "2026-10-01",
+          [],
+          ["booked-then-deleted"]
+        ),
+      ],
     ]);
   });
 
@@ -277,15 +305,18 @@ describe("syncWindow", () => {
 });
 
 describe("staleTransactionsWhere", () => {
-  it("drops every rejected row, and pending rows the bank stopped returning", () => {
+  it("drops every rejected row, the rows the bank deleted, and pending rows it stopped returning", () => {
     expect(
-      staleTransactionsWhere("account", "2026-10-20", [
-        transaction("booked", "BOOK"),
-        transaction("still-pending", "PDNG"),
-      ])
+      staleTransactionsWhere(
+        "account",
+        "2026-10-20",
+        [transaction("booked", "BOOK"), transaction("still-pending", "PDNG")],
+        ["deleted"]
+      )
     ).toEqual({
       OR: [
         { status: "RJCT" },
+        { providerTransactionId: { in: ["deleted"] } },
         {
           date: { gte: new Date("2026-10-20") },
           providerTransactionId: { notIn: ["booked", "still-pending"] },
@@ -338,7 +369,10 @@ describe("account currency", () => {
             fetchTransactions: (request: FetchTransactionsRequest) => {
               requested.push(request.accountCurrency);
 
-              return Promise.resolve([]);
+              return Promise.resolve({
+                deletedTransactionIds: [],
+                transactions: [],
+              });
             },
           },
         },

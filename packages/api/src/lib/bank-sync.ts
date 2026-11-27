@@ -562,10 +562,12 @@ const oldestPendingDate = async (
 export const staleTransactionsWhere = (
   accountId: string,
   dateFrom: string,
-  fetched: readonly ProviderTransaction[]
+  fetched: readonly ProviderTransaction[],
+  deletedTransactionIds: readonly string[]
 ): Prisma.TransactionWhereInput => ({
   OR: [
     { status: REJECTED },
+    { providerTransactionId: { in: [...deletedTransactionIds] } },
     {
       date: { gte: new Date(dateFrom) },
       providerTransactionId: {
@@ -588,20 +590,26 @@ const importAccount = async (context: AccountSyncContext): Promise<void> => {
     window,
   } = context;
 
-  const transactions = await provider.fetchTransactions({
-    accountCurrency: account.currency,
-    dateFrom: window.dateFrom,
-    dateTo: window.dateTo,
-    providerAccountId: account.providerAccountId,
-    providerSessionId: connection.providerSessionId,
-    user,
-  });
+  const { deletedTransactionIds, transactions } =
+    await provider.fetchTransactions({
+      accountCurrency: account.currency,
+      dateFrom: window.dateFrom,
+      dateTo: window.dateTo,
+      providerAccountId: account.providerAccountId,
+      providerSessionId: connection.providerSessionId,
+      user,
+    });
 
   const kept = transactions.filter((tx) => tx.status !== REJECTED);
 
   await upsertTransactionsInBatches(account.id, kept, connection, reporter);
   await deleteTransactions(
-    staleTransactionsWhere(account.id, window.dateFrom, kept)
+    staleTransactionsWhere(
+      account.id,
+      window.dateFrom,
+      kept,
+      deletedTransactionIds
+    )
   );
 
   const { fetchHoldings } = provider;

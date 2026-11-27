@@ -85,7 +85,14 @@ const fetchTransactions = Effect.fn("enableBanking.fetchTransactions")(
       request.dateTo
     );
 
-    return mapEBTransactions(raw, request.dateTo, request.accountCurrency);
+    return {
+      deletedTransactionIds: [],
+      transactions: mapEBTransactions(
+        raw,
+        request.dateTo,
+        request.accountCurrency
+      ),
+    };
   }
 );
 

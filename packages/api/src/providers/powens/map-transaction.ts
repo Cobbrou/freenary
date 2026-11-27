@@ -1,5 +1,5 @@
 import { minorUnitDigits } from "../../lib/money";
-import type { ProviderTransaction } from "../types";
+import type { FetchedTransactions, ProviderTransaction } from "../types";
 import type { PowensTransaction } from "./client";
 import { isReported, toMinorUnits } from "./client";
 
@@ -135,10 +135,19 @@ export const mapPowensTransactions = (
   transactions: readonly PowensTransaction[],
   currency: string,
   precision: number
-): ProviderTransaction[] => {
-  const mapped: ProviderTransaction[] = [];
+): FetchedTransactions => {
+  const mapped: FetchedTransactions = {
+    deletedTransactionIds: [],
+    transactions: [],
+  };
 
   for (const transaction of transactions) {
+    if (transaction.deleted) {
+      mapped.deletedTransactionIds.push(String(transaction.id));
+
+      continue;
+    }
+
     const providerTransaction = mapPowensTransaction(
       transaction,
       currency,
@@ -146,7 +155,7 @@ export const mapPowensTransactions = (
     );
 
     if (providerTransaction) {
-      mapped.push(providerTransaction);
+      mapped.transactions.push(providerTransaction);
     }
   }
 

@@ -45,6 +45,11 @@ export interface ProviderTransaction {
   psuNote?: string;
 }
 
+export interface FetchedTransactions {
+  transactions: ProviderTransaction[];
+  deletedTransactionIds: string[];
+}
+
 export interface ProviderUserSession {
   providerUserId: string;
   accessToken: string;
@@ -147,7 +152,7 @@ export interface BankingProvider {
   closeConnection: (request: ConnectionRequest) => Promise<void>;
   fetchTransactions: (
     request: FetchTransactionsRequest
-  ) => Promise<ProviderTransaction[]>;
+  ) => Promise<FetchedTransactions>;
   needsReconnect: (cause: unknown) => boolean;
   fetchAccounts?: (request: ConnectionRequest) => Promise<ProviderAccount[]>;
   fetchHoldings?: (request: FetchHoldingsRequest) => Promise<ProviderHolding[]>;
