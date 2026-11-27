@@ -1,8 +1,11 @@
+import { ACCOUNT_TYPE_LABELS } from "@/entities/account";
 import { m } from "@/paraglide/messages.js";
 import type { Locale } from "@/paraglide/runtime.js";
 import { countryName } from "@/shared/lib/countries";
 
 import type { BankConnection, BankInstitution } from "./use-bank-connections";
+
+export type ConnectedAccount = BankConnection["accounts"][number];
 
 export interface BankRow {
   connection: BankConnection | null;
@@ -18,11 +21,49 @@ export const institutionKey = (institution: {
   id: string;
 }): string => `${institution.country ?? ""}:${institution.id}`;
 
+const IBAN_TAIL_LENGTH = 4;
+
+export const connectedAccountLabel = (account: ConnectedAccount): string => {
+  const name = account.name ?? ACCOUNT_TYPE_LABELS[account.type]();
+  const iban = account.iban?.replaceAll(" ", "");
+
+  return iban ? `${name} ·· ${iban.slice(-IBAN_TAIL_LENGTH)}` : name;
+};
+
+export const notSharedAccountsOf = (
+  connection: BankConnection
+): ConnectedAccount[] =>
+  connection.accounts.filter((account) => !account.inConsent);
+
+export const accountsOf = (connection: BankConnection): ConnectedAccount[] => [
+  ...connection.accounts.filter((account) => account.inConsent),
+  ...notSharedAccountsOf(connection),
+];
+
+const accountsSummaryOf = (
+  connection: BankConnection,
+  locale: Locale
+): string => {
+  const notShared = notSharedAccountsOf(connection).length;
+  const shared = connection.accounts.length - notShared;
+
+  if (notShared === 0) {
+    return m.bank_account({ count: shared }, { locale });
+  }
+
+  return shared === 0
+    ? m.bank_row_no_account_shared({ count: notShared }, { locale })
+    : m.bank_row_accounts_not_shared(
+        {
+          accounts: m.bank_account({ count: shared }, { locale }),
+          count: notShared,
+        },
+        { locale }
+      );
+};
+
 const summaryOf = (connection: BankConnection, locale: Locale): string => {
-  const accounts = m.bank_account(
-    { count: connection.accounts.length },
-    { locale }
-  );
+  const accounts = accountsSummaryOf(connection, locale);
 
   if (connection.status !== "ACTIVE") {
     return m.bank_row_reconnect({ accounts }, { locale });

@@ -10,21 +10,28 @@ import {
   AlertDialogTrigger,
 } from "@freenary/ui/components/alert-dialog";
 import { Button } from "@freenary/ui/components/button";
+import type { RefObject } from "react";
 
 import { m } from "@/paraglide/messages.js";
 
 interface DisconnectBankDialogProps {
   accountCount: number;
+  finalFocus?: RefObject<HTMLElement | null>;
   institutionName: string;
   isDisconnecting: boolean;
   onConfirm: () => void;
+  onOpenChange?: (open: boolean) => void;
+  open?: boolean;
 }
 
 export const DisconnectBankDialog = ({
   accountCount,
+  finalFocus,
   institutionName,
   isDisconnecting,
   onConfirm,
+  onOpenChange,
+  open,
 }: DisconnectBankDialogProps) => {
   const description =
     accountCount > 0
@@ -32,20 +39,22 @@ export const DisconnectBankDialog = ({
       : m.bank_disconnect_confirm_description_none();
 
   return (
-    <AlertDialog>
-      <AlertDialogTrigger
-        render={
-          <Button
-            aria-label={m.bank_disconnect_aria_label({
-              institution: institutionName,
-            })}
-            variant="tertiary"
-          />
-        }
-      >
-        {m.bank_disconnect()}
-      </AlertDialogTrigger>
-      <AlertDialogContent>
+    <AlertDialog onOpenChange={onOpenChange} open={open}>
+      {open === undefined ? (
+        <AlertDialogTrigger
+          render={
+            <Button
+              aria-label={m.bank_disconnect_aria_label({
+                institution: institutionName,
+              })}
+              variant="tertiary"
+            />
+          }
+        >
+          {m.bank_disconnect()}
+        </AlertDialogTrigger>
+      ) : null}
+      <AlertDialogContent finalFocus={finalFocus}>
         <AlertDialogHeader>
           <AlertDialogTitle>
             {m.bank_disconnect_confirm_title({ institution: institutionName })}

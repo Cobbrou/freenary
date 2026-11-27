@@ -99,7 +99,7 @@ Set `BETTER_AUTH_URL` and `CORS_ORIGIN` to the address the other devices use, su
 
 ### A bank stops importing
 
-- The bank in **Settings** › **Bank accounts** reads **Reconnect to resume importing**. Its consent expired or was revoked, or the bank asks for the account holder. Syncs skip this bank. Its owner selects **Reconnect** and approves the access again. The accounts the bank returns keep their transactions. An account left out of the new consent keeps its history and is no longer synced, and an account the bank never returned before is added.
+- The bank in **Settings** › **Bank accounts** reads **Reconnect to resume importing**. Its consent expired or was revoked, or the bank asks for the account holder. Syncs skip this bank. Its owner opens the actions button next to the bank, selects **Reconnect** and approves the access again. The accounts the bank returns keep their transactions, and an account the bank never returned before is added. For an account left out of the new consent, Freenary asks whether to keep its history or delete it, as [Manage your bank connections](manage-bank-connections.md#change-which-accounts-a-bank-shares) explains.
 - A notice reads **Couldn’t sync** with the name of the bank, and the row does not ask to reconnect. The failure can be temporary, such as a timeout, so the next sync tries this bank again. The reason is in `docker compose logs server`.
 
 ### Sign-in fails

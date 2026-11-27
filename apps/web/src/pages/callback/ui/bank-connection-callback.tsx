@@ -5,6 +5,7 @@ import { useEffect } from "react";
 import { toast } from "sonner";
 
 import { invalidateBudgetData } from "@/entities/budget";
+import { rememberLeftOutAccounts } from "@/features/bank-connection";
 import { m } from "@/paraglide/messages.js";
 import { orpc } from "@/shared/api";
 
@@ -38,6 +39,7 @@ export const BankConnectionCallback = () => {
           : m.bank_callback_success();
 
       toast.success(message);
+      rememberLeftOutAccounts(exchangeResult.leftOutAccountIds);
       void queryClient.invalidateQueries({
         queryKey: orpc.bankConnection.listConnections.queryOptions().queryKey,
       });

@@ -59,7 +59,7 @@ export const reopenConnection = (
   connectionId: string,
   completed: CompletedConnection,
   exchangeNonce: string
-): Promise<{ id: string; institutionName: string }> =>
+): Promise<{ leftOutAccountIds: string[] }> =>
   prisma.$transaction(async (db) => {
     const known = await db.bankAccount.findMany({
       orderBy: { createdAt: "asc" },
@@ -67,6 +67,7 @@ export const reopenConnection = (
         iban: true,
         id: true,
         identificationHash: true,
+        inConsent: true,
         name: true,
         providerAccountId: true,
       },
@@ -78,10 +79,10 @@ export const reopenConnection = (
       where: { connectionId },
     });
 
-    for (const { account, knownId } of matchAccounts(
-      known,
-      completed.accounts
-    )) {
+    const matched = matchAccounts(known, completed.accounts);
+    const kept = new Set(matched.map(({ knownId }) => knownId));
+
+    for (const { account, knownId } of matched) {
       const {
         currency,
         iban,
@@ -116,14 +117,19 @@ export const reopenConnection = (
           }));
     }
 
-    return await db.bankConnection.update({
+    await db.bankConnection.update({
       data: {
         exchangeNonce,
         lastSyncedAt: null,
         providerSessionId: completed.providerSessionId,
         status: "ACTIVE",
       },
-      select: { id: true, institutionName: true },
       where: { id: connectionId },
     });
+
+    return {
+      leftOutAccountIds: known.flatMap(({ id, inConsent }) =>
+        inConsent && !kept.has(id) ? [id] : []
+      ),
+    };
   });

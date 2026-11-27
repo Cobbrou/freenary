@@ -5,6 +5,7 @@ import {
   BankLinkingUnavailable,
   BankListSkeleton,
   ConnectedBankList,
+  LeftOutAccountsDialog,
   useBankLinking,
 } from "@/features/bank-connection";
 import { m } from "@/paraglide/messages.js";
@@ -54,6 +55,7 @@ export const BankAccountsSection = () => {
       title={m.settings_tab_bank_accounts()}
     >
       <SettingsList>{renderList()}</SettingsList>
+      <LeftOutAccountsDialog />
     </SettingsPane>
   );
 };

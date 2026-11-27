@@ -46,7 +46,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 
 const PAIR_DATE_TOLERANCE_MS = DAY_MS;
 
-const CONFIRMED_PAIR_DATE_TOLERANCE_MS = 4 * DAY_MS;
+export const CONFIRMED_PAIR_DATE_TOLERANCE_MS = 4 * DAY_MS;
 
 export const CROSS_CURRENCY_TOLERANCE = 0.03;
 
@@ -830,3 +830,8 @@ export const rematchInternalTransfers = (
   { loadRates }: { loadRates?: typeof loadRateBook } = {}
 ): Promise<number> =>
   matchInternal(userId, { bookedSince: null, isRematch: true, loadRates });
+
+export const matchInternalTransfersOrFail = (
+  userId: string,
+  bookedSince: Date | null
+): Promise<number> => matchInternal(userId, { bookedSince, isRematch: false });

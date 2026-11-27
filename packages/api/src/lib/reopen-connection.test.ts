@@ -1,6 +1,10 @@
-import { describe, expect, it } from "bun:test";
+import { beforeAll, describe, expect, it } from "bun:test";
+import { randomUUID } from "node:crypto";
 
-import { matchAccounts } from "./reopen-connection";
+import prisma from "@freenary/db";
+import { startTestDatabase } from "@freenary/db/testing";
+
+import { matchAccounts, reopenConnection } from "./reopen-connection";
 import type { KnownAccount } from "./reopen-connection";
 
 const known = (
@@ -90,5 +94,55 @@ describe("matchAccounts", () => {
         ]
       )
     ).toEqual(["checking", null, null]);
+  });
+});
+
+describe("reopenConnection", () => {
+  beforeAll(async () => {
+    await startTestDatabase();
+  });
+
+  it("reports the accounts this consent left out, not the ones an earlier consent did", async () => {
+    const userId = `owner-${randomUUID()}`;
+
+    await prisma.user.create({
+      data: { email: `${userId}@example.test`, firstName: "Owner", id: userId },
+    });
+
+    const connection = await prisma.bankConnection.create({
+      data: {
+        accounts: {
+          create: [
+            { name: "Checking", providerAccountId: "checking" },
+            { name: "Savings", providerAccountId: "savings" },
+            { inConsent: false, name: "Joint", providerAccountId: "joint" },
+          ],
+        },
+        institutionName: "Mock Bank",
+        provider: "mock",
+        providerSessionId: randomUUID(),
+        userId,
+      },
+      select: {
+        accounts: { select: { id: true, providerAccountId: true } },
+        id: true,
+      },
+    });
+
+    const savings = connection.accounts.find(
+      (account) => account.providerAccountId === "savings"
+    );
+
+    expect(
+      await reopenConnection(
+        connection.id,
+        {
+          accounts: [{ providerAccountId: "checking" }],
+          institutionName: "Mock Bank",
+          providerSessionId: randomUUID(),
+        },
+        randomUUID()
+      )
+    ).toEqual({ leftOutAccountIds: [savings?.id ?? ""] });
   });
 });

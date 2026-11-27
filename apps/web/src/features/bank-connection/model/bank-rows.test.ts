@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { buildBankRows } from "./bank-rows";
+import { accountsOf, buildBankRows, connectedAccountLabel } from "./bank-rows";
 import type { BankConnection, BankInstitution } from "./use-bank-connections";
 
 const institution = (
@@ -15,11 +15,24 @@ const institution = (
   ...overrides,
 });
 
+const account = (
+  id: string,
+  overrides: Partial<BankConnection["accounts"][number]> = {}
+): BankConnection["accounts"][number] => ({
+  iban: null,
+  id,
+  inConsent: true,
+  name: null,
+  transactionCount: 0,
+  type: "CHECKING",
+  ...overrides,
+});
+
 const connection = (
   id: string,
   overrides: Partial<BankConnection> = {}
 ): BankConnection => ({
-  accounts: [{ iban: null, id: `${id}-account`, name: null }],
+  accounts: [account(`${id}-account`)],
   id,
   institutionCountry: "FR",
   institutionId: id,
@@ -84,10 +97,7 @@ describe("buildBankRows", () => {
       [institution("alpha"), institution("beta")],
       [
         connection("beta", {
-          accounts: [
-            { iban: null, id: "one", name: null },
-            { iban: null, id: "two", name: null },
-          ],
+          accounts: [account("one"), account("two")],
         }),
       ],
       "en"
@@ -95,6 +105,80 @@ describe("buildBankRows", () => {
 
     expect(rows[0]?.description).toBe("2 accounts · Not synced yet");
     expect(rows[1]?.description).toBe("ALPHAXXX");
+  });
+
+  test("the description counts the accounts the bank no longer shares apart", () => {
+    const rows = buildBankRows(
+      [institution("alpha")],
+      [
+        connection("alpha", {
+          accounts: [
+            account("one"),
+            account("two"),
+            account("three", { inConsent: false }),
+          ],
+        }),
+      ],
+      "en"
+    );
+
+    expect(rows[0]?.description).toBe(
+      "2 accounts · 1 not shared · Not synced yet"
+    );
+  });
+
+  test("the description says so when the bank shares none of the accounts", () => {
+    const rows = buildBankRows(
+      [institution("alpha")],
+      [
+        connection("alpha", {
+          accounts: [
+            account("one", { inConsent: false }),
+            account("two", { inConsent: false }),
+          ],
+        }),
+      ],
+      "en"
+    );
+
+    expect(rows[0]?.description).toBe(
+      "No account shared · 2 not shared · Not synced yet"
+    );
+  });
+
+  test("a bank lists its shared accounts before the ones it no longer shares", () => {
+    const accounts = accountsOf(
+      connection("alpha", {
+        accounts: [
+          account("one", { inConsent: false }),
+          account("two"),
+          account("three", { inConsent: false }),
+          account("four"),
+        ],
+      })
+    );
+
+    expect(accounts.map((item) => item.id)).toEqual([
+      "two",
+      "four",
+      "one",
+      "three",
+    ]);
+  });
+
+  test("an account reads as its name and the end of its IBAN", () => {
+    expect(
+      connectedAccountLabel(
+        account("joint", {
+          iban: "FR76 3000 1007 9412 3456 7890 098",
+          name: "Joint account",
+        })
+      )
+    ).toBe("Joint account ·· 0098");
+
+    expect(connectedAccountLabel(account("livret", { type: "LIVRET_A" }))).toBe(
+      "Livret A"
+    );
   });
 
   test("a connection that stopped importing says so", () => {

@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 
 import prisma from "@freenary/db";
-import type { Prisma } from "@freenary/db";
+import type { Prisma, TransactionClient } from "@freenary/db";
 import { env } from "@freenary/env/server";
 import { ORPCError } from "@orpc/server";
 import { Data, Effect, Option } from "effect";
@@ -29,6 +29,10 @@ import { startAccountSync } from "../lib/bank-sync";
 import { isoAlpha2CountryCode } from "../lib/country-code";
 import { exchangeOnceWith } from "../lib/exchange-once";
 import { institutionsLoaderWith } from "../lib/institutions-cache";
+import {
+  rematchReleasedTransfers,
+  releasePairedTransfers,
+} from "../lib/remove-bank-accounts";
 import { reopenConnection } from "../lib/reopen-connection";
 import { getDefaultProvider, getProvider } from "../providers/registry";
 import type {
@@ -145,6 +149,7 @@ type ExchangedConnection = Prisma.BankConnectionGetPayload<{
 
 interface Exchanged {
   readonly connection: ExchangedConnection;
+  readonly leftOutAccountIds: readonly string[];
   readonly syncStartedAt: Date | null;
 }
 
@@ -159,7 +164,9 @@ const findExchanged = async (
     where: { exchangeNonce, userId },
   });
 
-  return connection && { connection, syncStartedAt: null };
+  return (
+    connection && { connection, leftOutAccountIds: [], syncStartedAt: null }
+  );
 };
 
 const startFirstSync = (
@@ -223,12 +230,17 @@ const startConsent = async ({
   });
 };
 
+interface StoredConsent {
+  readonly connection: ExchangedConnection;
+  readonly leftOutAccountIds: readonly string[];
+}
+
 interface ConsentOutcome {
   readonly providerSessionId?: string;
   readonly store: (
     completed: CompletedConnection,
     exchangeNonce: string
-  ) => Promise<ExchangedConnection>;
+  ) => Promise<StoredConsent>;
 }
 
 const requireConnection = async (connectionId: string, userId: string) => {
@@ -252,12 +264,19 @@ const reopening = async (
   return {
     providerSessionId,
     store: async (completed, exchangeNonce) => {
-      await reopenConnection(connectionId, completed, exchangeNonce);
+      const { leftOutAccountIds } = await reopenConnection(
+        connectionId,
+        completed,
+        exchangeNonce
+      );
 
-      return await prisma.bankConnection.findUniqueOrThrow({
-        select: EXCHANGED_CONNECTION,
-        where: { id: connectionId },
-      });
+      return {
+        connection: await prisma.bankConnection.findUniqueOrThrow({
+          select: EXCHANGED_CONNECTION,
+          where: { id: connectionId },
+        }),
+        leftOutAccountIds,
+      };
     },
   };
 };
@@ -280,8 +299,8 @@ const opening = async (
   }
 
   return {
-    store: (completed, exchangeNonce) =>
-      prisma.bankConnection.upsert({
+    store: async (completed, exchangeNonce) => ({
+      connection: await prisma.bankConnection.upsert({
         create: {
           accounts: {
             create: completed.accounts.map((account) => ({
@@ -314,10 +333,66 @@ const opening = async (
           },
         },
       }),
+      leftOutAccountIds: [],
+    }),
   };
 };
 
+const deleteAccountsRefusal = async (
+  db: TransactionClient,
+  userId: string,
+  accountIds: readonly string[],
+  deleted: number
+): Promise<ORPCError<string, unknown>> => {
+  const kept = await db.bankAccount.count({
+    where: { connection: { userId }, id: { in: [...accountIds] } },
+  });
+
+  return kept + deleted === accountIds.length
+    ? new ORPCError("PRECONDITION_FAILED", {
+        message: "Bank account is still shared by its bank",
+      })
+    : new ORPCError("NOT_FOUND", { message: "Bank account not found" });
+};
+
+const SHARED_ACCOUNT_FIRST = [
+  { inConsent: "desc" },
+  { createdAt: "asc" },
+] satisfies Prisma.BankAccountOrderByWithRelationInput[];
+
 export const bankConnectionRouter = {
+  deleteAccounts: protectedProcedure
+    .input(
+      z.object({
+        accountIds: z.array(z.string().max(64)).min(1).max(100),
+      })
+    )
+    .handler(async ({ context, input }) => {
+      const userId = context.session.user.id;
+      const accountIds = [...new Set(input.accountIds)];
+
+      const released = await prisma.$transaction(async (db) => {
+        const removed = {
+          connection: { userId },
+          id: { in: accountIds },
+          inConsent: false,
+        } satisfies Prisma.BankAccountWhereInput;
+
+        const releasedLegs = await releasePairedTransfers(db, userId, removed);
+        const { count } = await db.bankAccount.deleteMany({ where: removed });
+
+        if (count !== accountIds.length) {
+          throw await deleteAccountsRefusal(db, userId, accountIds, count);
+        }
+
+        return releasedLegs;
+      });
+
+      await rematchReleasedTransfers(userId, released);
+
+      return { accountsRemoved: accountIds.length };
+    }),
+
   disconnect: protectedProcedure
     .input(z.object({ connectionId: z.string() }))
     .handler(async ({ context, input }) => {
@@ -351,7 +426,17 @@ export const bankConnectionRouter = {
             .catch(() => false)
         : false;
 
-      await prisma.bankConnection.delete({ where: { id: connection.id } });
+      const released = await prisma.$transaction(async (db) => {
+        const releasedLegs = await releasePairedTransfers(db, userId, {
+          connectionId: connection.id,
+        });
+
+        await db.bankConnection.delete({ where: { id: connection.id } });
+
+        return releasedLegs;
+      });
+
+      await rematchReleasedTransfers(userId, released);
 
       await releaseProviderUser(userId, provider);
 
@@ -404,25 +489,26 @@ export const bankConnectionRouter = {
 
       const { nonce } = connectionState;
 
-      const { connection, syncStartedAt } = await exchangeOnce({
-        claim: () => claimStateNonce(nonce, userId),
-        exchange: async () => {
-          const completed = await provider.completeConnection({
-            callbackParams: input.params,
-            providerSessionId: outcome.providerSessionId,
-            user: providerUser,
-          });
+      const { connection, leftOutAccountIds, syncStartedAt } =
+        await exchangeOnce({
+          claim: () => claimStateNonce(nonce, userId),
+          exchange: async () => {
+            const completed = await provider.completeConnection({
+              callbackParams: input.params,
+              providerSessionId: outcome.providerSessionId,
+              user: providerUser,
+            });
 
-          const stored = await outcome.store(completed, nonce);
+            const stored = await outcome.store(completed, nonce);
 
-          return {
-            connection: stored,
-            syncStartedAt: await startFirstSync(userId, stored.id),
-          };
-        },
-        findExchanged: () => findExchanged(nonce, userId),
-        nonce,
-      });
+            return {
+              ...stored,
+              syncStartedAt: await startFirstSync(userId, stored.connection.id),
+            };
+          },
+          findExchanged: () => findExchanged(nonce, userId),
+          nonce,
+        });
 
       return {
         accounts: connection.accounts.map((account) => ({
@@ -432,6 +518,7 @@ export const bankConnectionRouter = {
         })),
         connectionId: connection.id,
         institutionName: connection.institutionName,
+        leftOutAccountIds: [...leftOutAccountIds],
         returnTo: connectionState.returnTo,
         sessionId: connection.providerSessionId,
         syncStartedAt,
@@ -447,8 +534,15 @@ export const bankConnectionRouter = {
       orderBy: { createdAt: "asc" },
       select: {
         accounts: {
-          orderBy: { createdAt: "asc" },
-          select: { iban: true, id: true, name: true },
+          orderBy: SHARED_ACCOUNT_FIRST,
+          select: {
+            _count: { select: { transactions: true } },
+            iban: true,
+            id: true,
+            inConsent: true,
+            name: true,
+            type: true,
+          },
         },
         id: true,
         institutionCountry: true,
@@ -460,7 +554,15 @@ export const bankConnectionRouter = {
       where: { userId: context.session.user.id },
     });
 
-    return { connections };
+    return {
+      connections: connections.map(({ accounts, ...connection }) => ({
+        ...connection,
+        accounts: accounts.map(({ _count, ...account }) => ({
+          ...account,
+          transactionCount: _count.transactions,
+        })),
+      })),
+    };
   }),
 
   listInstitutions: protectedProcedure.handler(async () => {

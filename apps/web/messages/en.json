@@ -368,12 +368,51 @@
       }
     }
   ],
+  "bank_account_delete": "Delete account",
+  "bank_account_delete_aria_label": "Delete {account}",
+  "bank_account_delete_cancel": "Cancel",
+  "bank_account_delete_confirm_description": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "This deletes the account and its {count} transaction from freenary. This can’t be undone.",
+        "countPlural=other": "This deletes the account and its {count} transactions from freenary. This can’t be undone."
+      }
+    }
+  ],
+  "bank_account_delete_confirm_title": "Delete {account}?",
+  "bank_account_delete_error": "Couldn’t delete the account. Try again.",
+  "bank_account_delete_success": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} account deleted",
+        "countPlural=other": "{count} accounts deleted"
+      }
+    }
+  ],
   "bank_account_loading": "Loading this bank account",
   "bank_account_missing_description": "Its bank connection was removed, or the bank stopped reporting it.",
   "bank_account_missing_home": "Back to Home",
   "bank_account_missing_title": "This bank account is not connected",
+  "bank_account_not_shared": "Not shared",
+  "bank_account_not_shared_detail": "No longer shared with freenary",
+  "bank_account_transaction_count": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} transaction",
+        "countPlural=other": "{count} transactions"
+      }
+    }
+  ],
   "bank_account_transactions_empty_incoming": "No incoming transactions found on this account.",
   "bank_account_transactions_empty_outgoing": "No outgoing transactions found on this account.",
+  "bank_actions_label": "Actions for {institution}",
+  "bank_actions_sync": "Sync now",
   "bank_callback_declined": "Bank connection cancelled. Nothing was linked.",
   "bank_callback_failed": "Bank connection failed. You can try again.",
   "bank_callback_incomplete": "The bank sent back an incomplete response.",
@@ -425,7 +464,44 @@
       }
     }
   ],
+  "bank_edit_access": "Edit access",
+  "bank_edit_access_cancel": "Cancel",
+  "bank_edit_access_confirm": "Continue to {institution}",
+  "bank_edit_access_confirm_description": "You’ll go to {institution} to choose which accounts freenary can read. If you leave an account out, you’ll choose next whether to keep its history.",
+  "bank_edit_access_confirm_title": "Edit access to {institution}?",
   "bank_error_retry_description": "Reload the page to try again.",
+  "bank_left_out_delete": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "Delete {count} account",
+        "countPlural=other": "Delete {count} accounts"
+      }
+    }
+  ],
+  "bank_left_out_delete_none": "Delete accounts",
+  "bank_left_out_description": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "freenary can’t sync this account anymore. Choose what to do with its history.",
+        "countPlural=other": "freenary can’t sync these accounts anymore. Choose what to do with their history."
+      }
+    }
+  ],
+  "bank_left_out_keep": "Keep history",
+  "bank_left_out_title": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} account is no longer shared",
+        "countPlural=other": "{count} accounts are no longer shared"
+      }
+    }
+  ],
   "bank_linking_check_error_description": "Reload the page to try again.",
   "bank_linking_check_error_title": "Could not check bank linking",
   "bank_linking_unavailable_description": "This instance has no banking provider configured, so there is nothing to link against yet.",
@@ -436,7 +512,31 @@
   "bank_list_loading": "Loading banks",
   "bank_reconnect": "Reconnect",
   "bank_reconnect_aria_label": "Reconnect {institution}",
+  "bank_row_accounts_not_shared": [
+    {
+      "declarations": [
+        "input count",
+        "input accounts",
+        "local countPlural = count: plural"
+      ],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{accounts} · {count} not shared",
+        "countPlural=other": "{accounts} · {count} not shared"
+      }
+    }
+  ],
   "bank_row_never_synced": "{accounts} · Not synced yet",
+  "bank_row_no_account_shared": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "No account shared · {count} not shared",
+        "countPlural=other": "No account shared · {count} not shared"
+      }
+    }
+  ],
   "bank_row_reconnect": "{accounts} · Reconnect to resume importing",
   "bank_row_sync": "Re-sync {institution}",
   "bank_row_synced": "{accounts} · Synced {date}",

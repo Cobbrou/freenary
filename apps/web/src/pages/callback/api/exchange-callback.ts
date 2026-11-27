@@ -39,6 +39,7 @@ const exchangeCallbackCode = (
   }).pipe(
     Effect.map((exchanged) => ({
       accounts: exchanged.accounts,
+      leftOutAccountIds: exchanged.leftOutAccountIds,
       ok: true as const,
       returnTo: exchanged.returnTo,
     })),
