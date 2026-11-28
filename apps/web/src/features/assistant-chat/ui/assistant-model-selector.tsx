@@ -8,9 +8,14 @@ import {
 } from "@freenary/ui/components/command-menu";
 import type { CommandMenuItemData } from "@freenary/ui/components/command-menu";
 import { Spinner } from "@freenary/ui/components/spinner";
-import { RiCpuLine, RiExpandUpDownLine, RiServerLine } from "@remixicon/react";
+import {
+  RiCloseLine,
+  RiCpuLine,
+  RiExpandUpDownLine,
+  RiServerLine,
+} from "@remixicon/react";
 import { useQuery } from "@tanstack/react-query";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { m } from "@/paraglide/messages.js";
 import { getLocale } from "@/paraglide/runtime.js";
@@ -19,11 +24,14 @@ import { remixIcon } from "@/shared/lib/remix-icon";
 import {
   BROWSER_MODELS_QUERY_KEY,
   browserModelCatalog,
+  cancelBrowserModelLoad,
+  loadBrowserModel,
 } from "../model/browser/engine";
 import { browserModelLabel } from "../model/browser/models";
 import { SERVER_MODEL } from "../model/model-choice";
 
 interface AssistantModelSelectorProps {
+  cancelled: boolean;
   disabled: boolean;
   loadingProgress?: number;
   onSelect: (modelId: string) => void;
@@ -48,6 +56,7 @@ const percent = (fraction: number): string =>
   }).format(fraction);
 
 export const AssistantModelSelector = ({
+  cancelled,
   disabled,
   loadingProgress,
   onSelect,
@@ -56,6 +65,8 @@ export const AssistantModelSelector = ({
   webGpu,
 }: AssistantModelSelectorProps) => {
   const [open, setOpen] = useState(false);
+  const menuButton = useRef<HTMLButtonElement>(null);
+  const focusMenuAfterCancel = useRef(false);
   const webGpuAvailable = webGpu === true;
   const catalog = useQuery({
     enabled: open && webGpuAvailable,
@@ -68,6 +79,10 @@ export const AssistantModelSelector = ({
     (modelId: string) => {
       onSelect(modelId);
       setOpen(false);
+
+      if (modelId !== SERVER_MODEL) {
+        void loadBrowserModel(modelId);
+      }
     },
     [onSelect]
   );
@@ -114,18 +129,50 @@ export const AssistantModelSelector = ({
   const hasOptions = serverModel !== null || webGpuAvailable;
   const stillDownloading = loadingProgress !== undefined;
 
+  useEffect(() => {
+    if (!stillDownloading && focusMenuAfterCancel.current) {
+      focusMenuAfterCancel.current = false;
+      menuButton.current?.focus();
+    }
+  }, [stillDownloading]);
+
+  let announcement = "";
+
+  if (stillDownloading) {
+    announcement = m.assistant_browser_loading({ model: label });
+  } else if (cancelled) {
+    announcement = m.assistant_browser_cancelled({ model: label });
+  }
+
+  const loadAnnouncement = <output className="sr-only">{announcement}</output>;
+
   if (stillDownloading) {
     return (
-      <Button disabled leadingIcon={Spinner} size="compact" variant="ghost">
-        <span className="inline-flex max-w-56 items-center gap-1.5">
-          <span className="min-w-0 truncate">
-            {m.assistant_browser_loading({ model: label })}
+      <>
+        {loadAnnouncement}
+        <Button disabled leadingIcon={Spinner} size="compact" variant="ghost">
+          <span className="inline-flex max-w-56 items-center gap-1.5">
+            <span className="min-w-0 truncate">
+              {m.assistant_browser_loading({ model: label })}
+            </span>
+            <span className="shrink-0 tabular-nums">
+              {percent(loadingProgress)}
+            </span>
           </span>
-          <span className="shrink-0 tabular-nums">
-            {percent(loadingProgress)}
-          </span>
-        </span>
-      </Button>
+        </Button>
+        <Button
+          aria-label={m.assistant_browser_cancel_label({ model: label })}
+          leadingIcon={remixIcon(RiCloseLine)}
+          onClick={() => {
+            focusMenuAfterCancel.current = true;
+            cancelBrowserModelLoad();
+          }}
+          size="compact"
+          variant="ghost"
+        >
+          {m.assistant_browser_cancel()}
+        </Button>
+      </>
     );
   }
 
@@ -135,12 +182,14 @@ export const AssistantModelSelector = ({
 
   return (
     <>
+      {loadAnnouncement}
       <Button
         aria-expanded={open}
         aria-haspopup="dialog"
         disabled={disabled}
         leadingIcon={modelIcon}
         onClick={() => setOpen(true)}
+        ref={menuButton}
         size="compact"
         trailingIcon={remixIcon(RiExpandUpDownLine)}
         variant="ghost"

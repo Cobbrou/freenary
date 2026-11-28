@@ -58,6 +58,7 @@ export const AssistantComposer = ({
       leftSlot={
         model && (
           <AssistantModelSelector
+            cancelled={model.cancelled}
             disabled={streaming}
             loadingProgress={browserLoadProgress(model)}
             onSelect={rememberModel}

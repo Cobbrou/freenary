@@ -113,9 +113,35 @@ export const AssistantChat = ({
   });
 
   const { error, messages, regenerate, sendMessage, status, stop } = chat;
-  const { commit } = model;
+  const { cancelled, commit } = model;
+  const wasCancelled = useRef(cancelled);
 
   useEffect(() => () => window.clearTimeout(acknowledgeTimer.current), []);
+
+  useEffect(() => {
+    const justCancelled = cancelled && !wasCancelled.current;
+    wasCancelled.current = cancelled;
+
+    if (!justCancelled) {
+      return;
+    }
+
+    const waiting =
+      (queuedSent.current ? undefined : queuedQuestion) ??
+      (pendingSent.current ? undefined : pendingQuestion);
+
+    if (waiting === undefined) {
+      return;
+    }
+
+    setDraft((current) => current || waiting);
+    setQueuedQuestion(undefined);
+
+    if (pendingQuestion !== undefined && !pendingSent.current) {
+      pendingSent.current = true;
+      onPendingQuestionSent();
+    }
+  }, [cancelled, onPendingQuestionSent, pendingQuestion, queuedQuestion]);
 
   const ask = useCallback(
     (text: string) => {

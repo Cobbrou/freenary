@@ -41,6 +41,7 @@ export interface AssistantChatOptions {
 
 export interface AssistantModelState {
   browserModel: BrowserModelStatus;
+  cancelled: boolean;
   commit: () => void;
   deferred: boolean;
   ready: boolean;
@@ -81,7 +82,12 @@ export const useAssistantModel = (
 
   const selected = resolveModelChoice(remembered, serverModel, deviceDefault);
   const browserSelected = selected !== null && selected !== SERVER_MODEL;
-  const deferred = browserSelected && selected !== remembered;
+  const cancelled =
+    browserSelected &&
+    browserModel.phase === "cancelled" &&
+    browserModel.modelId === selected;
+
+  const deferred = browserSelected && (selected !== remembered || cancelled);
 
   useEffect(() => {
     const engineBusy = browserModel.phase === "loading";
@@ -99,10 +105,16 @@ export const useAssistantModel = (
   }, [browserModel, browserSelected, deferred, selected, webGpu]);
 
   const commit = useCallback(() => {
-    if (deferred && selected !== null) {
-      rememberModel(selected);
+    if (!deferred || selected === null) {
+      return;
     }
-  }, [deferred, selected]);
+
+    rememberModel(selected);
+
+    if (cancelled) {
+      void loadBrowserModel(selected);
+    }
+  }, [cancelled, deferred, selected]);
 
   const ready =
     selected === SERVER_MODEL ||
@@ -110,7 +122,15 @@ export const useAssistantModel = (
       browserModel.phase === "ready" &&
       browserModel.modelId === selected);
 
-  return { browserModel, commit, deferred, ready, selected, webGpu };
+  return {
+    browserModel,
+    cancelled,
+    commit,
+    deferred,
+    ready,
+    selected,
+    webGpu,
+  };
 };
 
 export const useAssistantChat = ({

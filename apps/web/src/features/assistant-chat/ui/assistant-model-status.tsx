@@ -37,6 +37,28 @@ export const AssistantModelStatus = ({
     );
   }
 
+  const chosenModelCancelled =
+    browserModel.phase === "cancelled" && browserModel.modelId === selected;
+
+  if (chosenModelCancelled) {
+    return (
+      <div className="text-muted-foreground flex items-center justify-center gap-2 text-xs">
+        <span className="text-pretty">
+          {m.assistant_browser_cancelled({
+            model: browserModelLabel(selected),
+          })}
+        </span>
+        <Button
+          onClick={() => loadBrowserModel(selected)}
+          size="compact"
+          variant="ghost"
+        >
+          {m.assistant_browser_load()}
+        </Button>
+      </div>
+    );
+  }
+
   if (deferred) {
     return (
       <p className="text-muted-foreground text-center text-xs text-pretty">
