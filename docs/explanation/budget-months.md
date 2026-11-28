@@ -43,6 +43,7 @@ In every rule, a salary paid on the day a period starts counts in that period, t
 - The **Transactions** page: the period navigator steps through budget months. **1M** is one budget month, **3M** three, and **1Y** the twelve budget months named after the months of that year. Unless the rule is day 1, the navigator shows the dates the period covers. **Monthly avg.** and **Monthly median** take one value per budget month.
 - Home and dashboard widgets that speak of this month: **Spent this month**, **Income this month**, **Saved this month**, **Available to spend** and its end date, **Budgets** and its days left, **Top categories this month**, and the months of **Income vs spending**.
 - The months the **Recent transactions** widget reaches back.
+- The **Year in review**: its year is the twelve budget months named January to December. See [How the year in review works](year-in-review.md).
 
 ## What stays on calendar months
 

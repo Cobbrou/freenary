@@ -54,6 +54,7 @@ Every page is plain Markdown.
 - [How account types change the totals](explanation/account-types.md): which accounts count in balances, net worth and spending
 - [How currencies are converted](explanation/currencies.md): own currency per transaction, reporting currency, European Central Bank rates, exchanges between currencies
 - [How budget months work](explanation/budget-months.md): the start day, which month a payday counts in, which figures follow it
+- [How the year in review works](explanation/year-in-review.md): when it opens, which days a year covers, what each figure counts
 
 ## Optional
 
