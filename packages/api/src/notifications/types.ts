@@ -1,5 +1,6 @@
 export const NOTIFICATION_TYPES = {
   transactionsToCheck: "transactions_to_check",
+  yearInReview: "year_in_review",
 } as const;
 
 export type NotificationType =

@@ -71,6 +71,7 @@ import { userConverter, userCurrency } from "../lib/user-currency";
 import { spendingWeeksStart, weeklySpending } from "../lib/weekly-spending";
 import { categorySuggestionProcedures } from "./category-suggestions";
 import { savedFilterProcedures } from "./saved-filters";
+import { yearReviewProcedures } from "./year-review";
 
 const exclusionOrNotFound = <T>(
   outcome: T | null,
@@ -98,6 +99,7 @@ const exclusionInput = z.object({
 export const budgetRouter = {
   ...categorySuggestionProcedures,
   ...savedFilterProcedures,
+  ...yearReviewProcedures,
   excludeAccount: protectedProcedure
     .input(
       z.object({

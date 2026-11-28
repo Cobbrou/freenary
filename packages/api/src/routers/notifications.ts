@@ -7,8 +7,10 @@ import {
   effectiveCategory,
   pipelineCategory,
 } from "../lib/transaction-category";
+import { reviewOpenedAt } from "../lib/year-review";
 import { stillToCheck } from "../notifications/transactions-to-check";
 import { isNotificationType, NOTIFICATION_TYPES } from "../notifications/types";
+import { raiseYearInReview } from "../notifications/year-in-review";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const READ_RETENTION_MS = 30 * DAY_MS;
@@ -37,6 +39,10 @@ const forgetExpired = (userId: string, now: Date) =>
       OR: [
         { readAt: { lt: new Date(now.getTime() - READ_RETENTION_MS) } },
         { dismissedAt: { lt: new Date(now.getTime() - UNDO_WINDOW_MS) } },
+        {
+          createdAt: { lt: reviewOpenedAt(now) },
+          type: NOTIFICATION_TYPES.yearInReview,
+        },
       ],
       userId,
     },
@@ -128,7 +134,10 @@ export const notificationsRouter = {
   list: protectedProcedure.handler(async ({ context }) => {
     const userId = context.session.user.id;
 
-    await forgetExpired(userId, new Date());
+    const now = new Date();
+
+    await forgetExpired(userId, now);
+    await raiseYearInReview(userId, now);
 
     const notifications = await listed(userId);
     const unreadCount = await prisma.notification.count({

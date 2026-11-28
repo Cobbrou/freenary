@@ -955,6 +955,45 @@
         }
       }
     },
+    "/budget/getYearInReview": {
+      "post": {
+        "operationId": "budget.getYearInReview",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "year": {
+                    "type": "integer",
+                    "minimum": 1970,
+                    "maximum": 9999
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {},
+                    {
+                      "not": {}
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/budget/excludeAccount": {
       "post": {
         "operationId": "budget.excludeAccount",

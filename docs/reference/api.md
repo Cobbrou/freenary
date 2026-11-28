@@ -83,6 +83,7 @@ The Access column comes from the middleware of each procedure in `packages/api/s
 | `budget.deleteSavedFilter` | `POST /api-reference/budget/deleteSavedFilter` | Signed in | `id` string, required |
 | `budget.listSavedFilters` | `POST /api-reference/budget/listSavedFilters` | Signed in | none |
 | `budget.saveFilter` | `POST /api-reference/budget/saveFilter` | Signed in | `filters` array of object, required; `name` string, required; `search` string |
+| `budget.getYearInReview` | `POST /api-reference/budget/getYearInReview` | Signed in | `year` integer |
 | `budget.excludeAccount` | `POST /api-reference/budget/excludeAccount` | Signed in | `accountId` string, required; `excluded` boolean, required; `reason` string or null |
 | `budget.excludeMerchant` | `POST /api-reference/budget/excludeMerchant` | Signed in | `excluded` boolean, required; `reason` string or null; `transactionId` string, required |
 | `budget.excludeTransaction` | `POST /api-reference/budget/excludeTransaction` | Signed in | `excluded` boolean, required; `reason` string or null; `transactionId` string, required |
