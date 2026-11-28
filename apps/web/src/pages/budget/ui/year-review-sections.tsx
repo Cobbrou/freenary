@@ -46,6 +46,8 @@ const CHART_MARGIN = { bottom: 28, left: 8, right: 8, top: 8 };
 
 const CATEGORIES_SHOWN = 8;
 
+const MONTH_LABELS = { base: 6, sm: 12 };
+
 const RANKED_BODY = "h-[300px]";
 
 const tooltipSchema = z.object({
@@ -112,7 +114,7 @@ export const MonthsSection = ({ review }: { review: YearReview }) => {
         >
           <Bar dataKey="incoming" fill={IN_COLOR} />
           <Bar dataKey="outgoing" fill={OUT_COLOR} />
-          <BarXAxis />
+          <BarXAxis maxLabels={MONTH_LABELS} />
           <ChartTooltip
             rows={(point) =>
               tooltipSchema.safeParse(point).data?.tooltipRows ?? []
@@ -273,10 +275,7 @@ export const RecurringSection = ({ review }: { review: YearReview }) => {
         {formatCurrency(totalMinor, review.currency)}
       </p>
       <p className="text-muted-foreground text-sm">
-        {m.year_review_recurring_total({
-          amount: formatCurrency(totalMinor, review.currency),
-          count: merchantCount,
-        })}
+        {m.year_review_recurring_total({ count: merchantCount })}
       </p>
       {items.length === 0 ? (
         <EmptyList />

@@ -2158,15 +2158,11 @@
   "year_review_recurring_title": "Recurring payments",
   "year_review_recurring_total": [
     {
-      "declarations": [
-        "input amount",
-        "input count",
-        "local countPlural = count: plural"
-      ],
+      "declarations": ["input count", "local countPlural = count: plural"],
       "selectors": ["countPlural"],
       "match": {
-        "countPlural=one": "{amount} over the year, to {count} merchant",
-        "countPlural=other": "{amount} over the year, to {count} merchants"
+        "countPlural=one": "{count} merchant over the year",
+        "countPlural=other": "{count} merchants over the year"
       }
     }
   ],

@@ -172,7 +172,7 @@ const merchantYears = (
   rows: readonly YearRow[],
   keeps: (row: YearRow & { merchantKey: string }) => boolean
 ): MerchantYear[] => {
-  const merchants = new Map<string, MerchantYear & { lastSeen: number }>();
+  const merchants = new Map<string, MerchantYear>();
 
   for (const row of rows) {
     const { merchantKey } = row;
@@ -181,28 +181,21 @@ const merchantYears = (
       continue;
     }
 
-    const merchant = merchants.get(merchantKey) ?? {
+    const name = (row.counterpartyName ?? merchantKey).trim().toLowerCase();
+    const merchant = merchants.get(name) ?? {
       count: 0,
-      lastSeen: 0,
-      merchantKey,
+      merchantKey: name,
       merchantName: null,
       totalMinor: 0,
     };
 
     merchant.count += 1;
     merchant.totalMinor -= row.amount;
-
-    if (row.counterpartyName && row.date.getTime() >= merchant.lastSeen) {
-      merchant.merchantName = row.counterpartyName;
-      merchant.lastSeen = row.date.getTime();
-    }
-
-    merchants.set(merchantKey, merchant);
+    merchant.merchantName = row.counterpartyName ?? merchant.merchantName;
+    merchants.set(name, merchant);
   }
 
-  return [...merchants.values()].map(
-    ({ lastSeen: _lastSeen, ...merchant }) => merchant
-  );
+  return [...merchants.values()];
 };
 
 export const topMerchantsOf = (rows: readonly YearRow[]) => {

@@ -35,8 +35,8 @@ Every figure counts the same transactions as **Budget**: those of cash-flow acco
 | **Savings rate** | Net plus transfers to savings, securities and retirement, divided by income. |
 | **Spending per month** | Money in and out per budget month of the year. |
 | **Spending per category** | Money out per category, against the year before. |
-| **Top merchants** | The 10 merchants with the most money out, and the 10 with the most payments. Transfers to savings are left out. |
-| **Recurring payments** | Money out of the year to merchants that the recurring payment detection finds over that year. |
+| **Top merchants** | The 10 merchants with the most money out, and the 10 with the most payments, grouped by counterparty name. Transfers to savings are left out. |
+| **Recurring payments** | Money out of the year to merchants that the recurring payment detection finds as fixed payments over that year, such as rent, bills and subscriptions. Behavioural repeats, such as weekly groceries, are left out. |
 | **Net worth** | The balance of every account that is not excluded, at the end of the year before and at each month end of the year, rewound from today's balances. |
 
 ## Comparing with the year before

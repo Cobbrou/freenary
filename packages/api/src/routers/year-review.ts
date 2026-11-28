@@ -157,7 +157,11 @@ export const yearReviewProcedures = {
             previousRows.length > 0 ? yearFiguresOf(previousRows, rule) : null,
           recurring: recurringYearOf(
             rows,
-            new Set(recurring.map((expense) => expense.merchantKey))
+            new Set(
+              recurring.flatMap((expense) =>
+                expense.kind === "fixed" ? [expense.merchantKey] : []
+              )
+            )
           ),
           to: current.to.toISOString(),
           unconvertedCount:

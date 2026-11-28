@@ -147,14 +147,13 @@ describe("categoriesOf", () => {
 
 describe("topMerchantsOf", () => {
   const rows = [
-    row({ amount: -500, counterpartyName: "Old name", merchantKey: "cafe" }),
+    row({ amount: -500, counterpartyName: "Corner Cafe", merchantKey: "cafe" }),
     row({
       amount: -500,
-      counterpartyName: "Corner Cafe",
-      date: new Date("2026-09-01T00:00:00.000Z"),
-      merchantKey: "cafe",
+      counterpartyName: "CORNER CAFE",
+      merchantKey: "cafe-terminal-2",
     }),
-    row({ amount: -500, merchantKey: "cafe" }),
+    row({ amount: -500, counterpartyName: "Corner Cafe", merchantKey: "cafe" }),
     row({ amount: -90_000, merchantKey: "airline" }),
     row({
       amount: -200_000,
@@ -170,12 +169,12 @@ describe("topMerchantsOf", () => {
 
     expect(byAmount.map((merchant) => merchant.merchantKey)).toEqual([
       "airline",
-      "cafe",
+      "corner cafe",
     ]);
 
     expect(byCount[0]).toEqual({
       count: 3,
-      merchantKey: "cafe",
+      merchantKey: "corner cafe",
       merchantName: "Corner Cafe",
       totalMinor: 1500,
     });
@@ -185,14 +184,14 @@ describe("topMerchantsOf", () => {
     expect(recurringYearOf(rows, new Set(["cafe"]))).toEqual({
       items: [
         {
-          count: 3,
-          merchantKey: "cafe",
+          count: 2,
+          merchantKey: "corner cafe",
           merchantName: "Corner Cafe",
-          totalMinor: 1500,
+          totalMinor: 1000,
         },
       ],
       merchantCount: 1,
-      totalMinor: 1500,
+      totalMinor: 1000,
     });
   });
 });

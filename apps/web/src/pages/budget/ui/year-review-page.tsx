@@ -15,9 +15,10 @@ import {
 } from "@freenary/ui/components/select";
 import { Skeleton } from "@freenary/ui/components/skeleton";
 import { cn } from "@freenary/ui/lib/utils";
-import { RiPlayFill, RiSparkling2Line } from "@remixicon/react";
+import { RiSparkling2Line } from "@remixicon/react";
 import { useQuery } from "@tanstack/react-query";
 import { getRouteApi } from "@tanstack/react-router";
+import { Play } from "kubai-icons-react";
 import { useState } from "react";
 
 import { m } from "@/paraglide/messages.js";
@@ -219,11 +220,7 @@ const Hero = ({
       {formatCurrency(review.current.expensesMinor, review.currency)}
     </p>
     <div>
-      <Button
-        className="bg-white text-black hover:bg-white/90"
-        onClick={onPlay}
-      >
-        <RiPlayFill aria-hidden="true" />
+      <Button leadingIcon={Play} onClick={onPlay}>
         {m.year_review_play()}
       </Button>
     </div>

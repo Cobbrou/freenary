@@ -136,10 +136,7 @@ const slideContent = (slide: StorySlide, review: YearReview): ReactNode => {
       ),
       recurring: ({ merchantCount, totalMinor }) => (
         <SlideText
-          body={m.year_review_recurring_total({
-            amount: money(totalMinor),
-            count: merchantCount,
-          })}
+          body={m.year_review_recurring_total({ count: merchantCount })}
           headline={money(totalMinor)}
           title={m.year_review_story_recurring_title()}
         />

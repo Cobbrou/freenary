@@ -2167,15 +2167,11 @@
   "year_review_recurring_title": "Paiements récurrents",
   "year_review_recurring_total": [
     {
-      "declarations": [
-        "input amount",
-        "input count",
-        "local countPlural = count: plural"
-      ],
+      "declarations": ["input count", "local countPlural = count: plural"],
       "selectors": ["countPlural"],
       "match": {
-        "countPlural=one": "{amount} sur l’année, à {count} marchand",
-        "countPlural=other": "{amount} sur l’année, à {count} marchands"
+        "countPlural=one": "{count} marchand sur l’année",
+        "countPlural=other": "{count} marchands sur l’année"
       }
     }
   ],
