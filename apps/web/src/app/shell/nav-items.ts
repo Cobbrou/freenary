@@ -74,6 +74,8 @@ export const CONVERSATION_ROUTE_ID = "/_auth/ask/$conversationId";
 
 export const DASHBOARD_ROUTE_ID = "/_auth/dashboards/$dashboardId";
 
+const YEAR_REVIEW_ROUTE_ID = "/_auth/year-in-review";
+
 const ASK_ROUTE_IDS = new Set([
   "/_auth/ask",
   "/_auth/ask/",
@@ -106,6 +108,10 @@ export const navTrailOf = (
 
   if (routeId === CONVERSATION_ROUTE_ID) {
     return [m.nav_ask(), pageTitle ?? m.ask_untitled_chat()];
+  }
+
+  if (routeId === YEAR_REVIEW_ROUTE_ID) {
+    return [m.nav_year_review()];
   }
 
   if (routeId === DASHBOARD_ROUTE_ID) {

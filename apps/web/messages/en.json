@@ -1146,6 +1146,7 @@
   ],
   "nav_settings": "Settings",
   "nav_tab_bar_label": "Main",
+  "nav_year_review": "Year in review",
   "notifications_dismiss": "Dismiss “{title}”",
   "notifications_dismiss_all": "Dismiss all",
   "notifications_dismiss_tooltip": "Dismiss",
@@ -1182,6 +1183,18 @@
   ],
   "notifications_undo": "Undo",
   "notifications_update_error": "Could not update your notifications. Try again.",
+  "notifications_year_review_body": "Where your money went, month by month.",
+  "notifications_year_review_bundle": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} more year in review",
+        "countPlural=other": "{count} more years in review"
+      }
+    }
+  ],
+  "notifications_year_review_title": "Your {year} in review is ready",
   "onboarding_back": "Back",
   "onboarding_bank_description": "Connect at least one bank account to import your transactions and balances.",
   "onboarding_bank_title": "Connect your bank",
@@ -2064,6 +2077,7 @@
   "bank_account_exclusion_update_error": "Failed to update the account exclusion",
   "bank_account_meta_excluded": "{institution} · {type} · Excluded from analytics",
   "home_account_excluded": "{institution} · Excluded",
+  "home_year_review_cta": "See my year",
   "budget_detail_excluded_account": "Excluded with every transaction from this account.",
   "budget_filter_exclusion_account": "Account",
   "budget_filter_exclusion_accounts": "Excluded accounts",
@@ -2090,5 +2104,116 @@
   "settings_bank_account_display_title": "Display",
   "settings_bank_account_display_description": "Choose how this account shows up across the app.",
   "settings_bank_account_excluded_badge": "Excluded",
-  "settings_bank_account_row_meta": "{type} · {currency}"
+  "settings_bank_account_row_meta": "{type} · {currency}",
+  "year_review_basis_budget_months": "Your budget months, from {from} to {to}.",
+  "year_review_basis_calendar": "Calendar year, from 1 January to 31 December.",
+  "year_review_categories_chart_label": "Spending per category this year",
+  "year_review_categories_title": "Spending per category",
+  "year_review_change": "{change} vs {year}",
+  "year_review_closed_description": "It opens on 15 December and stays until the end of January.",
+  "year_review_closed_title": "Your year in review is on its way",
+  "year_review_compare_none": "No transactions in {year}, so there is nothing to compare with.",
+  "year_review_compare_partial": "One of the two years has less than 12 months of data, so the changes compare unequal periods.",
+  "year_review_empty_list": "Nothing this year.",
+  "year_review_expenses": "Spending",
+  "year_review_in_progress": "The year is not over: figures stop at today.",
+  "year_review_income": "Income",
+  "year_review_load_error": "Could not load your year in review.",
+  "year_review_loading": "Loading your year in review",
+  "year_review_merchants_by_amount": "By amount",
+  "year_review_merchants_by_count": "By payments",
+  "year_review_merchants_chart_label": "Your top 10 merchants this year",
+  "year_review_merchants_switch_label": "Rank merchants",
+  "year_review_merchants_title": "Top merchants",
+  "year_review_months_chart_label": "Money in and out per month",
+  "year_review_months_title": "Spending per month",
+  "year_review_net": "Net",
+  "year_review_net_worth_chart_label": "Net worth at the end of each month",
+  "year_review_net_worth_down": "Down {amount} over the year",
+  "year_review_net_worth_title": "Net worth",
+  "year_review_net_worth_up": "Up {amount} over the year",
+  "year_review_no_data_description": "There is nothing to review for {year} yet.",
+  "year_review_no_data_title": "No transactions this year",
+  "year_review_partial": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "Only {count} month of this year has data.",
+        "countPlural=other": "Only {count} months of this year have data."
+      }
+    }
+  ],
+  "year_review_payments": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} payment",
+        "countPlural=other": "{count} payments"
+      }
+    }
+  ],
+  "year_review_play": "Play your year",
+  "year_review_recurring_title": "Recurring payments",
+  "year_review_recurring_total": [
+    {
+      "declarations": [
+        "input amount",
+        "input count",
+        "local countPlural = count: plural"
+      ],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{amount} over the year, to {count} merchant",
+        "countPlural=other": "{amount} over the year, to {count} merchants"
+      }
+    }
+  ],
+  "year_review_savings_rate": "Savings rate",
+  "year_review_savings_rate_hint": "Share of income kept or moved to savings.",
+  "year_review_story_category_body": "{share} of your spending",
+  "year_review_story_category_title": "Your top category",
+  "year_review_story_details": "See the details",
+  "year_review_story_intro_body": "Here is where your money went this year.",
+  "year_review_story_intro_title": "{year}, wrapped up",
+  "year_review_story_largest_body": "{merchant}, on {date}",
+  "year_review_story_largest_title": "Your biggest payment",
+  "year_review_story_merchant_title": "Where most of your money went",
+  "year_review_story_month_body": "{amount} spent",
+  "year_review_story_month_title": "Your priciest month",
+  "year_review_story_net_worth_title": "Your net worth",
+  "year_review_story_next": "Next",
+  "year_review_story_outro_body": "Every figure is on the page, or watch it again.",
+  "year_review_story_outro_title": "That was {year}",
+  "year_review_story_overspent_body": "{amount} more than you earned",
+  "year_review_story_overspent_title": "You spent more than you earned",
+  "year_review_story_pause": "Pause",
+  "year_review_story_play": "Play",
+  "year_review_story_previous": "Previous",
+  "year_review_story_progress": "Slide {current} of {total}",
+  "year_review_story_recurring_title": "Your subscriptions and bills",
+  "year_review_story_regular_body": [
+    {
+      "declarations": [
+        "input amount",
+        "input count",
+        "local countPlural = count: plural"
+      ],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} payment, {amount} in all",
+        "countPlural=other": "{count} payments, {amount} in all"
+      }
+    }
+  ],
+  "year_review_story_regular_title": "Your regular spot",
+  "year_review_story_replay": "Watch again",
+  "year_review_story_saved_body": "{amount} of your income kept",
+  "year_review_story_saved_title": "You kept",
+  "year_review_story_spent_down": "{change} less than last year",
+  "year_review_story_spent_title": "You spent",
+  "year_review_story_spent_up": "{change} more than last year",
+  "year_review_title": "Your {year} in review",
+  "year_review_year_label": "Year"
 }

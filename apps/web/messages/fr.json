@@ -1155,6 +1155,7 @@
   ],
   "nav_settings": "Paramètres",
   "nav_tab_bar_label": "Principale",
+  "nav_year_review": "Bilan de l’année",
   "notifications_dismiss": "Effacer « {title} »",
   "notifications_dismiss_all": "Tout effacer",
   "notifications_dismiss_tooltip": "Effacer",
@@ -1191,6 +1192,18 @@
   ],
   "notifications_undo": "Annuler",
   "notifications_update_error": "Impossible de mettre à jour vos notifications. Réessayez.",
+  "notifications_year_review_body": "Où est passé votre argent, mois par mois.",
+  "notifications_year_review_bundle": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} autre bilan",
+        "countPlural=other": "{count} autres bilans"
+      }
+    }
+  ],
+  "notifications_year_review_title": "Votre bilan {year} est prêt",
   "onboarding_back": "Retour",
   "onboarding_bank_description": "Connectez au moins un compte bancaire pour importer vos transactions et vos soldes.",
   "onboarding_bank_title": "Connectez votre banque",
@@ -2073,6 +2086,7 @@
   "bank_account_exclusion_update_error": "Échec de la mise à jour de l’exclusion du compte",
   "bank_account_meta_excluded": "{institution} · {type} · Exclu des analyses",
   "home_account_excluded": "{institution} · Exclu",
+  "home_year_review_cta": "Voir mon année",
   "budget_detail_excluded_account": "Exclue avec toutes les transactions de ce compte.",
   "budget_filter_exclusion_account": "Compte",
   "budget_filter_exclusion_accounts": "Comptes exclus",
@@ -2099,5 +2113,116 @@
   "settings_bank_account_display_title": "Affichage",
   "settings_bank_account_display_description": "Choisissez comment ce compte apparaît dans l’app.",
   "settings_bank_account_excluded_badge": "Exclu",
-  "settings_bank_account_row_meta": "{type} · {currency}"
+  "settings_bank_account_row_meta": "{type} · {currency}",
+  "year_review_basis_budget_months": "Vos mois budgétaires, du {from} au {to}.",
+  "year_review_basis_calendar": "Année civile, du 1er janvier au 31 décembre.",
+  "year_review_categories_chart_label": "Dépenses par catégorie cette année",
+  "year_review_categories_title": "Dépenses par catégorie",
+  "year_review_change": "{change} vs {year}",
+  "year_review_closed_description": "Il ouvre le 15 décembre et reste jusqu’à la fin janvier.",
+  "year_review_closed_title": "Votre bilan de l’année arrive bientôt",
+  "year_review_compare_none": "Aucune transaction en {year} : rien à comparer.",
+  "year_review_compare_partial": "L’une des deux années compte moins de 12 mois de données : les évolutions comparent des périodes inégales.",
+  "year_review_empty_list": "Rien cette année.",
+  "year_review_expenses": "Dépenses",
+  "year_review_in_progress": "L’année n’est pas finie : les chiffres s’arrêtent à aujourd’hui.",
+  "year_review_income": "Revenus",
+  "year_review_load_error": "Impossible de charger votre bilan de l’année.",
+  "year_review_loading": "Chargement de votre bilan de l’année",
+  "year_review_merchants_by_amount": "Par montant",
+  "year_review_merchants_by_count": "Par paiements",
+  "year_review_merchants_chart_label": "Vos 10 premiers marchands cette année",
+  "year_review_merchants_switch_label": "Classer les marchands",
+  "year_review_merchants_title": "Top marchands",
+  "year_review_months_chart_label": "Entrées et sorties d’argent par mois",
+  "year_review_months_title": "Dépenses par mois",
+  "year_review_net": "Solde",
+  "year_review_net_worth_chart_label": "Patrimoine à la fin de chaque mois",
+  "year_review_net_worth_down": "En baisse de {amount} sur l’année",
+  "year_review_net_worth_title": "Patrimoine",
+  "year_review_net_worth_up": "En hausse de {amount} sur l’année",
+  "year_review_no_data_description": "Rien à résumer pour {year} pour l’instant.",
+  "year_review_no_data_title": "Aucune transaction cette année",
+  "year_review_partial": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "Seul {count} mois de cette année a des données.",
+        "countPlural=other": "Seuls {count} mois de cette année ont des données."
+      }
+    }
+  ],
+  "year_review_payments": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} paiement",
+        "countPlural=other": "{count} paiements"
+      }
+    }
+  ],
+  "year_review_play": "Revivre mon année",
+  "year_review_recurring_title": "Paiements récurrents",
+  "year_review_recurring_total": [
+    {
+      "declarations": [
+        "input amount",
+        "input count",
+        "local countPlural = count: plural"
+      ],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{amount} sur l’année, à {count} marchand",
+        "countPlural=other": "{amount} sur l’année, à {count} marchands"
+      }
+    }
+  ],
+  "year_review_savings_rate": "Taux d’épargne",
+  "year_review_savings_rate_hint": "Part des revenus gardée ou placée en épargne.",
+  "year_review_story_category_body": "{share} de vos dépenses",
+  "year_review_story_category_title": "Votre catégorie phare",
+  "year_review_story_details": "Voir le détail",
+  "year_review_story_intro_body": "Voici où est passé votre argent cette année.",
+  "year_review_story_intro_title": "{year}, l’année en bref",
+  "year_review_story_largest_body": "{merchant}, le {date}",
+  "year_review_story_largest_title": "Votre plus gros paiement",
+  "year_review_story_merchant_title": "Là où est allé le plus d’argent",
+  "year_review_story_month_body": "{amount} dépensés",
+  "year_review_story_month_title": "Votre mois le plus cher",
+  "year_review_story_net_worth_title": "Votre patrimoine",
+  "year_review_story_next": "Suivant",
+  "year_review_story_outro_body": "Retrouvez chaque chiffre sur la page, ou revoyez le récit.",
+  "year_review_story_outro_title": "C’était {year}",
+  "year_review_story_overspent_body": "{amount} de plus que vos revenus",
+  "year_review_story_overspent_title": "Vous avez dépensé plus que vos revenus",
+  "year_review_story_pause": "Mettre en pause",
+  "year_review_story_play": "Lecture",
+  "year_review_story_previous": "Précédent",
+  "year_review_story_progress": "Écran {current} sur {total}",
+  "year_review_story_recurring_title": "Vos abonnements et factures",
+  "year_review_story_regular_body": [
+    {
+      "declarations": [
+        "input amount",
+        "input count",
+        "local countPlural = count: plural"
+      ],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} paiement, {amount} au total",
+        "countPlural=other": "{count} paiements, {amount} au total"
+      }
+    }
+  ],
+  "year_review_story_regular_title": "Votre adresse fétiche",
+  "year_review_story_replay": "Revoir",
+  "year_review_story_saved_body": "{amount} de vos revenus mis de côté",
+  "year_review_story_saved_title": "Vous avez mis de côté",
+  "year_review_story_spent_down": "{change} de moins que l’an dernier",
+  "year_review_story_spent_title": "Vous avez dépensé",
+  "year_review_story_spent_up": "{change} de plus que l’an dernier",
+  "year_review_title": "Votre bilan {year}",
+  "year_review_year_label": "Année"
 }
