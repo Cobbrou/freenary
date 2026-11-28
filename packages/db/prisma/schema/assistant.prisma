@@ -26,6 +26,9 @@ model ConversationMessage {
   /// same millisecond, so `createdAt` cannot order them.
   ordinal        Int
   parts          Json
+  /// An answer that errored, or ended with no content. It is kept so its
+  /// question stays in the conversation, and left out of the model's history.
+  failed         Boolean          @default(false)
   createdAt      DateTime         @default(now())
 
   @@unique([conversationId, ordinal])

@@ -1,3 +1,4 @@
+import { isFailedAnswer } from "@freenary/api/assistant/turn";
 import { Button } from "@freenary/ui/components/button";
 import type { BrandAvatarState } from "@freenary/ui/lib/brand-avatar/states";
 import { RiRefreshLine } from "@remixicon/react";
@@ -38,6 +39,8 @@ interface TranscriptTailProps {
 }
 
 const ACKNOWLEDGE_MS = 1600;
+
+const STORED_FAILURE = new Error("answer_failed");
 
 const TranscriptTail = ({
   avatarState,
@@ -173,6 +176,15 @@ export const AssistantChat = ({
   const redoLastTurn = useCallback(() => redo(null), [redo]);
 
   const lastMessage = messages.at(-1);
+  const storedFailure =
+    error === undefined &&
+    status === "ready" &&
+    lastMessage !== undefined &&
+    isFailedAnswer(lastMessage)
+      ? STORED_FAILURE
+      : undefined;
+
+  const shownError = error ?? storedFailure;
   const toolRunning =
     lastMessage?.parts.some(
       (part) =>
@@ -195,7 +207,9 @@ export const AssistantChat = ({
   });
 
   const streaming = status === "streaming" || status === "submitted";
-  const settled = status === "ready" && model.ready;
+  const settled =
+    status === "ready" && model.ready && storedFailure === undefined;
+
   const makeDashboard = useCallback(
     () => ask(m.ask_make_dashboard_prompt()),
     [ask]
@@ -229,7 +243,7 @@ export const AssistantChat = ({
         <TranscriptTail
           avatarState={avatarState}
           awaitingFirstChunk={awaitingFirstChunk}
-          error={error}
+          error={shownError}
           onRetry={redoLastTurn}
           retrying={turn?.retrying ?? false}
         />

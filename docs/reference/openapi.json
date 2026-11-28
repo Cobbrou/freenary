@@ -173,7 +173,6 @@
                       },
                       "parts": {
                         "type": "array",
-                        "minItems": 1,
                         "items": {
                           "anyOf": [
                             {
@@ -247,6 +246,10 @@
                   "conversationId": {
                     "type": "string"
                   },
+                  "failed": {
+                    "type": "boolean",
+                    "default": false
+                  },
                   "question": {
                     "type": "array",
                     "minItems": 1,
@@ -263,8 +266,21 @@
                       "required": ["text", "type"]
                     }
                   },
-                  "regeneratedMessageId": {
-                    "type": "string"
+                  "regeneration": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "messageId": {
+                            "type": "string"
+                          }
+                        }
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "default": null
                   }
                 },
                 "required": ["answer", "conversationId", "question"]

@@ -89,6 +89,7 @@ export const assistantRouter = {
         conversationId: conversation.id,
         messages: messages.map((message) => ({
           id: message.id,
+          metadata: { failed: message.failed },
           parts: message.parts,
           role:
             message.role === "USER"
@@ -112,11 +113,15 @@ export const assistantRouter = {
       z.object({
         answer: z.object({
           id: z.uuid(),
-          parts: z.array(answerPartSchema).min(1),
+          parts: z.array(answerPartSchema),
         }),
         conversationId: z.string(),
+        failed: z.boolean().default(false),
         question: questionPartsSchema,
-        regeneratedMessageId: z.string().optional(),
+        regeneration: z
+          .object({ messageId: z.string().optional() })
+          .nullable()
+          .default(null),
       })
     )
     .handler(async ({ context, input }) => {
@@ -145,7 +150,7 @@ export const assistantRouter = {
       /* SAFETY: each part is a plain JSON object whose `type` is a string, which is the whole of what `UIMessage["parts"]` guarantees structurally. */
       const parts = answerableParts(input.answer.parts as UIMessage["parts"]);
 
-      if (!hasContent(parts)) {
+      if (!(input.failed || hasContent(parts))) {
         throw new ORPCError("BAD_REQUEST", { message: "Empty answer" });
       }
 
@@ -153,10 +158,8 @@ export const assistantRouter = {
 
       await appendTurn(conversation.id, input.question, parts, {
         answerId: input.answer.id,
-        replaceMessageIds: regeneratedTurnIds(
-          stored,
-          input.regeneratedMessageId
-        ),
+        failed: input.failed,
+        replaceMessageIds: regeneratedTurnIds(stored, input.regeneration),
       });
 
       return { ok: true };

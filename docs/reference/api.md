@@ -52,7 +52,7 @@ The Access column comes from the middleware of each procedure in `packages/api/s
 | `assistant.getConversation` | `POST /api-reference/assistant/getConversation` | Signed in | `conversationId` string, required |
 | `assistant.getStatus` | `POST /api-reference/assistant/getStatus` | Signed in | none |
 | `assistant.listConversations` | `POST /api-reference/assistant/listConversations` | Signed in | none |
-| `assistant.saveTurn` | `POST /api-reference/assistant/saveTurn` | Signed in | `answer` object, required; `conversationId` string, required; `question` array of object, required; `regeneratedMessageId` string |
+| `assistant.saveTurn` | `POST /api-reference/assistant/saveTurn` | Signed in | `answer` object, required; `conversationId` string, required; `failed` boolean; `question` array of object, required; `regeneration` object or null |
 
 ## auth
 

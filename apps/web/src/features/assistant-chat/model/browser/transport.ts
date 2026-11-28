@@ -6,7 +6,8 @@ import {
 import { assistantTools } from "@freenary/api/assistant/tools";
 import {
   answerableParts,
-  isStorableOutcome,
+  isFailedAnswer,
+  isFailedOutcome,
   isStoredPart,
   MAX_QUESTION_CHARS,
   MAX_STEPS,
@@ -119,10 +120,13 @@ export const createBrowserChatTransport = ({
       dashboards
     );
 
-    const replayable = messages.slice(0, -1).map((message) => ({
-      ...message,
-      parts: answerableParts(message.parts),
-    }));
+    const replayable = messages
+      .slice(0, -1)
+      .flatMap((message) =>
+        isFailedAnswer(message)
+          ? []
+          : [{ ...message, parts: answerableParts(message.parts) }]
+      );
 
     const history = fitHistory(
       replayable,
@@ -152,10 +156,6 @@ export const createBrowserChatTransport = ({
           isStoredPart
         );
 
-        if (!isStorableOutcome({ finishReason, isAborted, parts })) {
-          return;
-        }
-
         const saved = await Effect.runPromise(
           Effect.result(
             Effect.tryPromise({
@@ -164,13 +164,14 @@ export const createBrowserChatTransport = ({
                 client.assistant.saveTurn({
                   answer: { id: answerId, parts },
                   conversationId: chatId,
+                  failed: isFailedOutcome({ finishReason, isAborted, parts }),
                   question: question.parts.flatMap((part) =>
                     part.type === "text"
                       ? [{ text: part.text, type: "text" as const }]
                       : []
                   ),
-                  regeneratedMessageId:
-                    trigger === "regenerate-message" ? messageId : undefined,
+                  regeneration:
+                    trigger === "regenerate-message" ? { messageId } : null,
                 }),
             })
           )

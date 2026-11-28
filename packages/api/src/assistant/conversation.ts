@@ -7,6 +7,7 @@ import { conversationTitle, questionText } from "./conversation-title";
 
 export interface AppendTurnOptions {
   answerId: string;
+  failed: boolean;
   replaceMessageIds: string[];
 }
 
@@ -68,7 +69,7 @@ export const deleteConversation = (userId: string, conversationId: string) =>
 export const conversationMessages = (conversationId: string) =>
   prisma.conversationMessage.findMany({
     orderBy: { ordinal: "asc" },
-    select: { id: true, parts: true, role: true },
+    select: { failed: true, id: true, parts: true, role: true },
     where: { conversationId },
   });
 
@@ -76,7 +77,7 @@ export const appendTurn = async (
   conversationId: string,
   userParts: UIMessage["parts"],
   assistantParts: UIMessage["parts"],
-  { answerId, replaceMessageIds }: AppendTurnOptions
+  { answerId, failed, replaceMessageIds }: AppendTurnOptions
 ) => {
   const title = conversationTitle(questionText(userParts));
 
@@ -117,6 +118,7 @@ export const appendTurn = async (
         },
         {
           conversationId,
+          failed,
           id: answerId,
           ordinal: next + 1,
           parts: asJson(assistantParts),

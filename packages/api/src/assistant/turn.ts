@@ -14,6 +14,7 @@ export type StoredPart =
   | ToolUIPart;
 
 interface StoredRow {
+  failed: boolean;
   id: string;
   role: "USER" | "ASSISTANT";
 }
@@ -60,7 +61,7 @@ export const hasContent = (parts: UIMessage["parts"]): boolean =>
       isToolPart(part) || (part.type === "text" && part.text.trim().length > 0)
   );
 
-export const isStorableOutcome = ({
+export const isFailedOutcome = ({
   finishReason,
   isAborted,
   parts,
@@ -69,24 +70,32 @@ export const isStorableOutcome = ({
   isAborted: boolean;
   parts: UIMessage["parts"];
 }): boolean =>
-  !(
-    isAborted ||
-    finishReason === undefined ||
-    finishReason === FAILED_FINISH_REASON ||
-    !hasContent(parts)
-  );
+  !hasContent(parts) ||
+  (!isAborted &&
+    (finishReason === undefined || finishReason === FAILED_FINISH_REASON));
+
+export const isFailedAnswer = (message: UIMessage): boolean =>
+  message.role === "assistant" &&
+  Predicate.hasProperty(message.metadata, "failed") &&
+  message.metadata.failed === true;
 
 export const regeneratedTurnIds = (
   stored: readonly StoredRow[],
-  regeneratedMessageId: string | undefined
+  regeneration: { messageId?: string | undefined } | null
 ): string[] => {
   const trailingAnswer = stored.at(-1);
   const trailingQuestion = stored.at(-2);
 
-  return regeneratedMessageId !== undefined &&
-    trailingAnswer?.id === regeneratedMessageId &&
-    trailingAnswer.role === "ASSISTANT" &&
+  return regeneration !== null &&
+    trailingAnswer?.role === "ASSISTANT" &&
+    (trailingAnswer.failed || trailingAnswer.id === regeneration.messageId) &&
     trailingQuestion?.role === "USER"
     ? [trailingQuestion.id, trailingAnswer.id]
     : [];
 };
+
+export const replayableRows = <Row extends StoredRow>(
+  stored: readonly Row[],
+  replaceMessageIds: readonly string[]
+): Row[] =>
+  stored.filter((row) => !(row.failed || replaceMessageIds.includes(row.id)));

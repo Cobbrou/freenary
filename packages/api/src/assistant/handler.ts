@@ -21,11 +21,12 @@ import { assistantModel } from "./provider";
 import { assistantTools } from "./tools";
 import {
   answerableParts,
-  isStorableOutcome,
+  isFailedOutcome,
   LOCALE,
   MAX_QUESTION_CHARS,
   MAX_STEPS,
   regeneratedTurnIds,
+  replayableRows,
 } from "./turn";
 
 export interface AssistantChatOptions {
@@ -178,17 +179,14 @@ export const handleAssistantChat = async ({
   const question = postedQuestion as UIMessage;
   const replaceMessageIds = regeneratedTurnIds(
     stored,
-    body.trigger === REGENERATE_TRIGGER ? body.messageId : undefined
+    body.trigger === REGENERATE_TRIGGER ? { messageId: body.messageId } : null
   );
-
-  const replayableHistory =
-    replaceMessageIds.length > 0 ? stored.slice(0, -2) : stored;
 
   /* SAFETY: the stream route writes `UIMessage.parts` as produced, and the only
      other writer, `assistant.saveTurn`, admits parts through `answerPartSchema`
      in `routers/assistant.ts`: each a plain object whose `type` is a string,
      which is the whole of what `UIMessage["parts"]` guarantees structurally. */
-  const history = replayableHistory.map(
+  const history = replayableRows(stored, replaceMessageIds).map(
     (row) =>
       ({
         id: row.id,
@@ -223,12 +221,9 @@ export const handleAssistantChat = async ({
     onFinish: ({ finishReason, isAborted, responseMessage }) => {
       const parts = answerableParts(responseMessage.parts);
 
-      if (!isStorableOutcome({ finishReason, isAborted, parts })) {
-        return;
-      }
-
       return appendTurn(conversation.id, question.parts, parts, {
         answerId,
+        failed: isFailedOutcome({ finishReason, isAborted, parts }),
         replaceMessageIds,
       });
     },
